@@ -234,7 +234,7 @@
                 <div style="font-size: 3.5rem; margin-bottom: 0.5rem;">✨</div>
                 <h2 style="margin: 0; font-weight: 800; font-size: 1.4rem;">Get Full Access</h2>
                 <p style="font-size: 0.85rem; color: #64748b; margin: 12px 0; line-height: 1.5;">Join the 2026 cohort. Unlock detailed analytics and live competitions.</p>
-                <button id="pay-btn" onclick="payWithPaystack()" class="upgrade-btn">Unlock for ₦2,000</button>
+                <button id="pay-btn" onclick="payWithPaystack()" class="upgrade-btn">Unlock for ₦100</button>
             </div>
         </div>
         <% } %>
@@ -263,7 +263,7 @@
             let handler = PaystackPop.setup({
                 key: '<%= paystack_key %>',
                 email: '<%= user.email %>',
-                amount: 2000 * 100, 
+                amount: 100 * 100, 
                 currency: 'NGN',
                 callback: function(response) {
                     window.location.href = "/verify-payment?reference=" + response.reference;
