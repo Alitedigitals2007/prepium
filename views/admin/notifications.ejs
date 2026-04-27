@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Prepium | Notifications</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --brand: #0062ff; --brand-light: #e6f0ff; --bg: #f4f7fe; --text: #1b2559; --sidebar-width: 260px; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; }
+
+        /* SIDEBAR */
+        .sidebar { width: var(--sidebar-width); height: 100vh; background: white; border-right: 1px solid #e0e5f2; position: fixed; padding: 40px 20px; box-sizing: border-box; display: flex; flex-direction: column; }
+        .logo { font-size: 1.5rem; font-weight: 800; color: var(--brand); text-decoration: none; margin-bottom: 50px; display: block; }
+        .nav-link { text-decoration: none; color: #a3aed0; font-weight: 700; padding: 15px 20px; border-radius: 12px; margin-bottom: 10px; display: flex; align-items: center; transition: 0.3s; }
+        .nav-link:hover, .nav-link.active { background: var(--brand-light); color: var(--brand); }
+
+        /* MAIN CONTENT */
+        .main-content { margin-left: var(--sidebar-width); width: calc(100% - var(--sidebar-width)); min-height: 100vh; }
+        .header { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); padding: 20px 40px; border-bottom: 1px solid #e0e5f2; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        
+        .container { padding: 40px; max-width: 1000px; margin: auto; }
+        .card { background: white; padding: 30px; border-radius: 24px; border: 1px solid #e0e5f2; box-shadow: 0 4px 20px rgba(0,0,0,0.02); margin-bottom: 30px; }
+        
+        input, textarea { width: 100%; padding: 14px; border: 1px solid #e0e5f2; border-radius: 14px; font-family: inherit; font-weight: 600; box-sizing: border-box; background: #fcfdfe; margin-bottom: 15px; }
+        .btn-primary { background: var(--brand); color: white; padding: 16px 30px; border: none; border-radius: 16px; font-weight: 800; cursor: pointer; }
+
+        /* NOTIF LIST */
+        .notif-item { background: white; padding: 20px; border-radius: 20px; border: 1px solid #e0e5f2; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .notif-dot { height: 10px; width: 10px; background: var(--brand); border-radius: 50%; margin-right: 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <a href="/admin/dashboard" class="logo">PREPIUM</a>
+        <nav>
+            <a href="/admin/dashboard" class="nav-link">📊 Dashboard</a>
+            <a href="/admin/subjects" class="nav-link">📚 Subjects</a>
+            <a href="/admin/users" class="nav-link">👥 Students</a>
+            <a href="/admin/notifications" class="nav-link active">🔔 Notifications</a>
+        </nav>
+        <div style="margin-top: auto;"><a href="/logout" class="nav-link" style="color: #ee5d50;">🚪 Logout</a></div>
+    </div>
+
+    <div class="main-content">
+        <header class="header">
+            <div><div style="font-size:0.8rem; color:#a3aed0;">Admin / Communication</div><h2 style="margin:0;">Notifications</h2></div>
+            <div style="font-weight:700;">Atilola Israel (Alite)</div>
+        </header>
+
+        <div class="container">
+            <div class="card" style="border-top: 8px solid var(--brand);">
+                <h3 style="margin-top:0;">Broadcast Announcement</h3>
+                <form action="/admin/notifications/send" method="POST">
+                    <input type="text" name="title" placeholder="Notification Title (e.g. New Mock Exam Available)" required>
+                    <textarea name="message" rows="3" placeholder="Message to students..." required></textarea>
+                    <button type="submit" class="btn-primary">🚀 Send to All Students</button>
+                </form>
+            </div>
+
+            <h3>Broadcast History</h3>
+            <% notifications.forEach(n => { %>
+                <div class="notif-item">
+                    <div style="display:flex; align-items:center;">
+                        <div class="notif-dot"></div>
+                        <div>
+                            <div style="font-weight:800;"><%= n.title %></div>
+                            <div style="font-size:0.9rem; color:#707eae;"><%= n.message %></div>
+                        </div>
+                    </div>
+                    <div style="font-size:0.8rem; color:#a3aed0; font-weight:700;">
+                        <%= new Date(n.created_at).toLocaleDateString() %>
+                    </div>
+                </div>
+            <% }) %>
+        </div>
+    </div>
+</body>
+</html>

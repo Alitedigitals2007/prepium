@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prepium Admin | Subjects</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --brand: #0062ff; 
+            --brand-light: #eef4ff;
+            --bg: #f4f7fe; 
+            --sidebar: #0b1437; 
+            --danger: #ff4d4f; 
+            --success: #05cd99;
+            --text-main: #1b2559;
+            --text-muted: #a3aed0;
+        }
+
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); 
+            margin: 0; 
+            display: flex; 
+            color: var(--text-main);
+        }
+
+        /* Sidebar Glassmorphism */
+        .sidebar { 
+            width: 280px; 
+            background: var(--sidebar); 
+            height: 100vh; 
+            color: white; 
+            padding: 2.5rem 1.5rem; 
+            position: fixed;
+            transition: all 0.3s ease;
+        }
+
+        .logo { 
+            font-size: 1.6rem; 
+            font-weight: 800; 
+            margin-bottom: 3.5rem; 
+            color: white; 
+            text-decoration: none; 
+            display: flex;
+            align-items: center;
+            letter-spacing: -1px;
+        }
+
+        .nav-item { 
+            display: flex;
+            align-items: center;
+            color: #a3aed0; 
+            text-decoration: none; 
+            padding: 16px 20px; 
+            border-radius: 16px; 
+            margin-bottom: 8px; 
+            font-weight: 700; 
+            transition: 0.3s;
+        }
+
+        .nav-item:hover, .nav-item.active { 
+            background: rgba(255, 255, 255, 0.1); 
+            color: white; 
+        }
+
+        /* Main Area */
+        .main { 
+            margin-left: 280px; 
+            padding: 2.5rem 4rem; 
+            width: 100%; 
+            box-sizing: border-box; 
+        }
+
+        .header-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .header-flex h1 { font-size: 1.8rem; font-weight: 800; margin: 0; }
+
+        /* Floating Add Box */
+        .add-card { 
+            background: white; 
+            padding: 1.5rem; 
+            border-radius: 24px; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.03); 
+            margin-bottom: 3rem;
+            border: 1px solid #fff;
+        }
+
+        .add-grid { 
+            display: grid; 
+            grid-template-columns: 1.5fr 1fr auto; 
+            gap: 20px; 
+            align-items: end; 
+        }
+
+        .form-group label { 
+            font-size: 0.75rem; 
+            font-weight: 800; 
+            color: var(--text-muted); 
+            text-transform: uppercase; 
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        input { 
+            width: 100%;
+            background: #f4f7fe;
+            border: 1px solid #e0e5f2;
+            padding: 16px; 
+            border-radius: 16px; 
+            font-family: inherit;
+            font-weight: 600;
+            color: var(--text-main);
+            box-sizing: border-box;
+            transition: 0.2s;
+        }
+
+        input:focus { outline: none; border-color: var(--brand); background: white; }
+
+        .btn-primary { 
+            background: var(--brand); 
+            color: white; 
+            padding: 16px 30px; 
+            border: none; 
+            border-radius: 16px; 
+            font-weight: 800; 
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0, 98, 255, 0.2);
+            transition: 0.3s;
+        }
+
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 25px rgba(0, 98, 255, 0.3); }
+
+        /* Subject Grid (Replacing Table) */
+        .subjects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        .subject-card {
+            background: white;
+            padding: 24px;
+            border-radius: 24px;
+            border: 1px solid #e0e5f2;
+            transition: 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .subject-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(112, 144, 176, 0.15);
+        }
+
+        .category-tag {
+            background: var(--brand-light);
+            color: var(--brand);
+            padding: 6px 12px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .subject-name {
+            font-size: 1.25rem;
+            font-weight: 800;
+            margin: 15px 0 20px;
+            display: block;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 10px;
+            border-top: 1px solid #f4f7fe;
+            padding-top: 20px;
+        }
+
+        .action-btn {
+            flex: 1;
+            text-align: center;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.8rem;
+            padding: 10px;
+            border-radius: 12px;
+            transition: 0.2s;
+        }
+
+        .btn-q { background: var(--brand); color: white; }
+        .btn-edit { background: #f4f7fe; color: var(--text-main); }
+        .btn-del { background: #fff1f0; color: var(--danger); }
+
+        .action-btn:hover { opacity: 0.8; }
+
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <a href="/admin/dashboard" class="logo">PREPIUM</a>
+        <a href="/admin/dashboard" class="nav-item">🏠 Dashboard</a>
+        <a href="/admin/subjects" class="nav-item active">📚 Subjects</a>
+        <a href="/admin/notifications" class="nav-item">🔔 Notifications</a>
+    </div>
+
+    <main class="main">
+        <div class="header-flex">
+            <div>
+                <h1>Manage Subjects</h1>
+                <p style="color: var(--text-muted); margin-top: 5px;">Build your curriculum and manage quiz content.</p>
+            </div>
+        </div>
+        
+        <div class="add-card">
+            <form action="/admin/subjects/add" method="POST" class="add-grid">
+                <div class="form-group">
+                    <label>Course Title</label>
+                    <input type="text" name="name" placeholder="e.g. PHY 301: Quantum Mechanics" required>
+                </div>
+                <div class="form-group">
+                    <label>Level / Dept</label>
+                    <input type="text" name="category" placeholder="e.g. 300 Level" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Create Subject</button>
+            </form>
+        </div>
+
+        <div class="subjects-grid">
+            <% subjects.forEach(sub => { %>
+            <div class="subject-card">
+                <span class="category-tag"><%= sub.category %></span>
+                <span class="subject-name"><%= sub.name %></span>
+                
+                <div class="card-actions">
+                    <a href="/admin/questions/manage/<%= sub.id %>" class="action-btn btn-q">Questions</a>
+                    <a href="/admin/subjects/edit/<%= sub.id %>" class="action-btn btn-edit">Edit</a>
+                    <a href="/admin/subjects/delete/<%= sub.id %>" class="action-btn btn-del" onclick="return confirm('Delete this subject?')">Delete</a>
+                </div>
+            </div>
+            <% }) %>
+        </div>
+    </main>
+
+</body>
+</html>

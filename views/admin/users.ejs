@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Prepium | Students</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --brand: #0062ff; --brand-light: #e6f0ff; --bg: #f4f7fe; --text: #1b2559; --sidebar-width: 260px; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; }
+
+        .sidebar { width: var(--sidebar-width); height: 100vh; background: white; border-right: 1px solid #e0e5f2; position: fixed; padding: 40px 20px; box-sizing: border-box; display: flex; flex-direction: column; }
+        .logo { font-size: 1.5rem; font-weight: 800; color: var(--brand); text-decoration: none; margin-bottom: 50px; display: block; }
+        .nav-link { text-decoration: none; color: #a3aed0; font-weight: 700; padding: 15px 20px; border-radius: 12px; margin-bottom: 10px; display: flex; align-items: center; }
+        .nav-link:hover, .nav-link.active { background: var(--brand-light); color: var(--brand); }
+
+        .main-content { margin-left: var(--sidebar-width); width: calc(100% - var(--sidebar-width)); min-height: 100vh; }
+        .header { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); padding: 20px 40px; border-bottom: 1px solid #e0e5f2; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        
+        .container { padding: 40px; }
+        .table-card { background: white; border-radius: 24px; padding: 30px; border: 1px solid #e0e5f2; box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
+        
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; color: #a3aed0; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; padding: 15px; border-bottom: 1px solid #f4f7fe; }
+        td { padding: 20px 15px; font-weight: 700; font-size: 0.9rem; border-bottom: 1px solid #f4f7fe; }
+        
+        .status-badge { padding: 6px 12px; border-radius: 10px; font-size: 0.75rem; background: #dcfce7; color: #15803d; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <a href="/admin/dashboard" class="logo">PREPIUM</a>
+        <nav>
+            <a href="/admin/dashboard" class="nav-link">📊 Dashboard</a>
+            <a href="/admin/subjects" class="nav-link">📚 Subjects</a>
+            <a href="/admin/users" class="nav-link active">👥 Students</a>
+            <a href="/admin/notifications" class="nav-link">🔔 Notifications</a>
+        </nav>
+        <div style="margin-top: auto;"><a href="/logout" class="nav-link" style="color: #ee5d50;">🚪 Logout</a></div>
+    </div>
+
+    <div class="main-content">
+        <header class="header">
+            <div><div style="font-size:0.8rem; color:#a3aed0;">Admin / Management</div><h2 style="margin:0;">User Database</h2></div>
+            <div style="background:white; padding:8px 16px; border-radius:50px; border:1px solid #e0e5f2; font-weight:700;"><%= users.length %> Total Students</div>
+        </header>
+
+        <div class="container">
+            <div class="table-card">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Student Name</th>
+                            <th>Email Address</th>
+                            <th>Status</th>
+                            <th>Joined Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% users.forEach(user => { %>
+                            <tr>
+                                <td><%= user.username %></td>
+                                <td style="color: #707eae;"><%= user.email %></td>
+                                <td><span class="status-badge">Active Student</span></td>
+                                <td style="color: #a3aed0;"><%= new Date(user.created_at).toLocaleDateString('en-GB') %></td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

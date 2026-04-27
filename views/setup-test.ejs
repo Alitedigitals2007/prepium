@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Prepium | Setup Test</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --brand: #0062ff; --bg: #f8fafc; --text: #1e293b; --danger: #ef4444; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); 
+            margin: 0; 
+            padding-bottom: 220px; /* Space for the floating summary footer and bottom nav */
+            color: var(--text); 
+            display: flex; 
+            justify-content: center; 
+        }
+
+        .app-shell { width: 100%; max-width: 430px; background: white; min-height: 100vh; position: relative; }
+
+        /* Header Area */
+        .top-bar { 
+            padding: 1.5rem 1.2rem; 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            background: white; 
+            border-bottom: 1px solid #f1f5f9;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .back-btn { text-decoration: none; font-size: 1.4rem; color: var(--text); }
+        .section-label { padding: 1.5rem 1.2rem 0.8rem; font-size: 0.75rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; }
+
+        /* Subject Cards */
+        .subject-card-wrapper {
+            background: #f8fafc;
+            border: 2px solid #f1f5f9;
+            border-radius: 24px;
+            padding: 1.2rem;
+            margin: 0 1.2rem 12px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .subject-card-wrapper.active { border-color: var(--brand); background: white; box-shadow: 0 10px 25px rgba(0, 98, 255, 0.08); }
+        
+        .subject-main { display: flex; justify-content: space-between; align-items: center; }
+        .check-container { display: flex; align-items: center; gap: 12px; cursor: pointer; font-weight: 800; font-size: 1rem; }
+        .check-container input { width: 20px; height: 20px; accent-color: var(--brand); cursor: pointer; }
+        
+        .q-limit-pill { font-size: 0.7rem; font-weight: 700; color: #64748b; background: #e2e8f0; padding: 4px 10px; border-radius: 8px; }
+
+        /* Input Section (Hidden until checked) */
+        .input-area { 
+            margin-top: 15px; 
+            display: none; 
+            align-items: center; 
+            gap: 12px; 
+            border-top: 1px dashed #e2e8f0; 
+            padding-top: 15px; 
+            animation: slideDown 0.3s ease-out;
+        }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .qty-input { 
+            width: 100px; 
+            padding: 10px; 
+            border-radius: 12px; 
+            border: 2px solid #cbd5e1; 
+            font-weight: 800; 
+            text-align: center; 
+            font-family: inherit;
+        }
+        .qty-input:focus { border-color: var(--brand); }
+        .error-msg { color: var(--danger); font-size: 0.75rem; font-weight: 800; display: none; }
+
+        /* Floating Summary Footer */
+        .summary-footer { 
+            position: fixed; 
+            bottom: 85px; 
+            width: 100%; 
+            max-width: 430px; 
+            background: white; 
+            padding: 1.2rem; 
+            border-top: 1px solid #f1f5f9; 
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.05); 
+            z-index: 99;
+        }
+        .total-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .time-box { display: flex; align-items: center; gap: 8px; background: #f1f5f9; padding: 8px 12px; border-radius: 12px; }
+        .time-input { width: 60px; background: transparent; border: none; font-weight: 800; text-align: center; font-size: 1rem; }
+
+        .start-btn {
+            background: var(--brand);
+            color: white;
+            padding: 1.2rem;
+            border-radius: 20px;
+            border: none;
+            width: 100%;
+            font-weight: 800;
+            font-size: 1.1rem;
+            box-shadow: 0 8px 20px rgba(0, 98, 255, 0.3);
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .start-btn:disabled { background: #cbd5e1; box-shadow: none; cursor: not-allowed; }
+
+        /* Bottom Nav */
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; max-width: 430px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); height: 85px; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #f1f5f9; z-index: 101; }
+        .nav-link { text-decoration: none; color: #94a3b8; font-size: 0.65rem; font-weight: 800; text-align: center; }
+        .nav-link.active { color: var(--brand); }
+        .nav-link i { display: block; font-size: 1.4rem; margin-bottom: 4px; font-style: normal; }
+        .fab { width: 62px; height: 62px; background: var(--brand); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 2.2rem; transform: translateY(-30px); border: 6px solid white; text-decoration: none; box-shadow: 0 10px 20px rgba(0,98,255,0.2); }
+    </style>
+</head>
+<body>
+
+    <div class="app-shell">
+        <header class="top-bar">
+            <a href="/dashboard" class="back-btn">←</a>
+            <h2 style="margin: 0; font-weight: 800; font-size: 1.2rem;">Exam Setup</h2>
+        </header>
+
+        <form action="/start-quiz" method="POST" id="quizForm">
+            <div class="section-label">Select Subjects (Max 4)</div>
+            
+            <div class="subject-grid">
+                <% subjects.forEach(sub => { %>
+                    <div class="subject-card-wrapper" id="wrapper-<%= sub.id %>">
+                        <div class="subject-main">
+                            <label class="check-container">
+                                <input type="checkbox" name="subject_ids" value="<%= sub.id %>" 
+                                       onchange="toggleSubject(this, '<%= sub.id %>')">
+                                <span class="subject-name text-capitalize"><%= sub.name %></span>
+                            </label>
+                            <span class="q-limit-pill">Available: <%= sub.total_questions %></span>
+                        </div>
+                        
+                        <div class="input-area" id="input-container-<%= sub.id %>">
+                            <div style="flex: 1;">
+                                <span style="font-size: 0.7rem; font-weight: 800; color: #64748b; display: block; margin-bottom: 5px;">QUESTIONS</span>
+                                <input type="number" 
+                                       name="questions_<%= sub.id %>" 
+                                       class="qty-input" 
+                                       placeholder="0" 
+                                       min="1" 
+                                       max="<%= sub.total_questions %>"
+                                       oninput="validateAndTotal()">
+                            </div>
+                            <span class="error-msg" id="err-<%= sub.id %>">⚠️ Max is <%= sub.total_questions %></span>
+                        </div>
+                    </div>
+                <% }) %>
+            </div>
+
+            <div class="summary-footer">
+                <div class="total-row">
+                    <div>
+                        <span style="font-size: 0.75rem; font-weight: 800; color: #94a3b8; display: block;">TOTAL QUESTIONS</span>
+                        <span style="font-size: 1.4rem; font-weight: 800; color: var(--brand);" id="displayTotal">0</span>
+                    </div>
+                    <div class="time-box">
+                        <span>⏳</span>
+                        <input type="number" name="duration" class="time-input" placeholder="0" required>
+                        <span style="font-weight: 800; font-size: 0.7rem; color: #64748b;">MINS</span>
+                    </div>
+                </div>
+                <button type="submit" class="start-btn" id="submitBtn" disabled>Begin Practice 🚀</button>
+            </div>
+        </form>
+
+        <nav class="bottom-nav">
+            <a href="/dashboard" class="nav-link"><i>🏠</i>Home</a>
+            <a href="/history" class="nav-link"><i>📜</i>History</a>
+            <a href="/setup-test" class="fab">+</a>
+            <a href="/subjects" class="nav-link"><i>📚</i>Library</a>
+            <a href="/profile" class="nav-link"><i>👤</i>Profile</a>
+        </nav>
+    </div>
+
+    <script>
+        function toggleSubject(checkbox, id) {
+            const container = document.getElementById('input-container-' + id);
+            const wrapper = document.getElementById('wrapper-' + id);
+            const selected = document.querySelectorAll('input[name="subject_ids"]:checked');
+
+            if (selected.length > 4) {
+                checkbox.checked = false;
+                alert("You can only select up to 4 subjects for a single test.");
+                return;
+            }
+
+            if (checkbox.checked) {
+                container.style.display = "flex";
+                wrapper.classList.add('active');
+            } else {
+                container.style.display = "none";
+                wrapper.classList.remove('active');
+                const inputField = container.querySelector('input');
+                inputField.value = ""; // Clear input when unchecked
+            }
+            validateAndTotal();
+        }
+
+        function validateAndTotal() {
+            let grandTotal = 0;
+            let hasValidationError = false;
+            const activeCheckboxes = document.querySelectorAll('input[name="subject_ids"]:checked');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            activeCheckboxes.forEach(cb => {
+                const id = cb.value;
+                const inputField = document.querySelector(`input[name="questions_${id}"]`);
+                const maxAllowed = parseInt(inputField.getAttribute('max'));
+                const userVal = parseInt(inputField.value) || 0;
+                const errorLabel = document.getElementById('err-' + id);
+
+                if (userVal > maxAllowed) {
+                    errorLabel.style.display = "block";
+                    inputField.style.borderColor = "var(--danger)";
+                    hasValidationError = true;
+                } else {
+                    errorLabel.style.display = "none";
+                    inputField.style.borderColor = "#cbd5e1";
+                    if (userVal > 0) grandTotal += userVal;
+                }
+            });
+
+            document.getElementById('displayTotal').innerText = grandTotal;
+
+            // Enable button only if total > 0 and no errors exist
+            if (grandTotal > 0 && !hasValidationError) {
+                submitBtn.disabled = false;
+            } else {
+                submitBtn.disabled = true;
+            }
+        }
+    </script>
+</body>
+</html>

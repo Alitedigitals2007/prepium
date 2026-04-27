@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up | Prepium</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        /* Reuse the same CSS as Login for consistency */
+        :root { --brand: #0062ff; --bg: #f8fafc; --text: #1e293b; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; display: flex; justify-content: center; }
+        .auth-shell { width: 100%; max-width: 430px; background: white; min-height: 100vh; display: flex; flex-direction: column; padding: 2.5rem 2rem; }
+        .logo-small { color: var(--brand); font-weight: 800; font-size: 1.2rem; margin-bottom: 2rem; display: block; text-decoration: none; }
+        h1 { font-size: 1.8rem; font-weight: 800; margin: 0; }
+        p { color: #64748b; font-size: 0.95rem; margin-top: 8px; }
+        .form-group { margin-bottom: 1.2rem; }
+        label { display: block; font-size: 0.8rem; font-weight: 700; margin-bottom: 8px; color: var(--text); padding-left: 4px; }
+        input { width: 100%; padding: 1.1rem; border-radius: 16px; border: 2px solid #f1f5f9; background: #f8fafc; font-size: 1rem; outline: none; transition: 0.3s; }
+        input:focus { border-color: var(--brand); background: white; box-shadow: 0 0 0 4px rgba(0,98,255,0.08); }
+        .btn-primary { background: var(--brand); color: white; border: none; width: 100%; padding: 1.2rem; border-radius: 18px; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: 1rem; box-shadow: 0 10px 20px rgba(0,98,255,0.15); }
+        .footer { text-align: center; margin-top: auto; padding-top: 2rem; font-size: 0.9rem; color: #64748b; }
+        .footer a { color: var(--brand); text-decoration: none; font-weight: 700; }
+    </style>
+</head>
+<body>
+
+    <div class="auth-shell">
+        <a href="/" class="logo-small">Prepium.</a>
+        
+        <div class="header">
+            <h1>Create Account</h1>
+            <p>Join thousands of students acing their exams.</p>
+        </div>
+
+        <form action="/auth/signup" method="POST">
+            <div class="form-group">
+                <label>FULL NAME</label>
+                <input type="text" name="fullname" placeholder="Atilola Israel" required>
+            </div>
+            <div class="form-group">
+                <label>EMAIL ADDRESS</label>
+                <input type="email" name="email" placeholder="alite@example.com" required>
+            </div>
+            <div class="form-group">
+                <label>CREATE PASSWORD</label>
+                <input type="password" name="password" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn-primary">Create My Account</button>
+        </form>
+
+        <div class="footer">
+            Already have an account? <a href="/login">Login</a>
+        </div>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Notifications | Prepium</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --brand: #0062ff; --bg: #f8fafc; --text: #1e293b; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); 
+            margin: 0; 
+            display: flex; 
+            justify-content: center; 
+            color: var(--text);
+        }
+
+        .app-shell { 
+            width: 100%; 
+            max-width: 430px; 
+            background: white; 
+            min-height: 100vh; 
+            padding: 1.5rem;
+            box-shadow: 0 0 40px rgba(0,0,0,0.03);
+        }
+
+        .header { 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            margin-bottom: 2rem; 
+        }
+        
+        .btn-back { 
+            width: 40px; 
+            height: 40px; 
+            background: #eff6ff; 
+            border-radius: 12px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            text-decoration: none; 
+            color: var(--brand); 
+            font-weight: 800;
+        }
+        
+        h1 { font-size: 1.4rem; font-weight: 800; margin: 0; }
+
+        .notif-list { display: flex; flex-direction: column; gap: 12px; }
+        
+        .notif-card { 
+            background: #f8fafc; 
+            padding: 1.2rem; 
+            border-radius: 24px; 
+            border: 1px solid #f1f5f9; 
+            position: relative;
+            transition: all 0.2s;
+        }
+        
+        /* Subtle styling for read vs unread */
+        .notif-card.read { opacity: 0.8; background: #ffffff; }
+
+        .unread-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--brand);
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            box-shadow: 0 0 10px rgba(0, 98, 255, 0.4);
+        }
+
+        .notif-title { 
+            font-weight: 800; 
+            font-size: 0.95rem; 
+            color: var(--text); 
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .notif-message { 
+            font-size: 0.85rem; 
+            color: #64748b; 
+            line-height: 1.5; 
+            margin: 0;
+        }
+
+        .notif-time { 
+            font-size: 0.7rem; 
+            color: #94a3b8; 
+            font-weight: 700; 
+            margin-top: 10px; 
+            display: block; 
+            text-transform: uppercase;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 5rem 2rem;
+        }
+        .empty-icon { font-size: 3.5rem; margin-bottom: 1rem; display: block; opacity: 0.5; }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <div class="header">
+            <a href="/dashboard" class="btn-back">‹</a>
+            <h1>Notifications</h1>
+        </div>
+
+        <div class="notif-list">
+            <% if(notifications && notifications.length > 0) { %>
+                <% notifications.forEach(n => { %>
+                    <div class="notif-card <%= n.is_read ? 'read' : '' %>">
+                        <div class="notif-title">
+                            <% if (!n.is_read) { %>
+                                <span class="unread-dot"></span>
+                            <% } %>
+                            <%= n.title %>
+                        </div>
+                        <p class="notif-message"><%= n.message %></p>
+                        <span class="notif-time">
+                            <%= new Date(n.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) %>
+                        </span>
+                    </div>
+                <% }) %>
+            <% } else { %>
+                <div class="empty-state">
+                    <span class="empty-icon">📫</span>
+                    <p style="color: #94a3b8; font-weight: 600;">No new updates.<br>We'll notify you here!</p>
+                </div>
+            <% } %>
+        </div>
+    </div>
+</body>
+</html>

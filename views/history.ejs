@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prepium | Quiz History</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root { 
+            --brand: #0062ff; 
+            --brand-light: #e6efff;
+            --bg: #f8fafc; 
+            --text: #1e293b; 
+            --text-light: #64748b;
+            --white: #ffffff;
+            --border: #e2e8f0;
+            --danger: #ef4444;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Navigation */
+        nav {
+            width: 260px;
+            background: var(--white);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 30px 20px;
+            position: fixed;
+            height: 100vh;
+            z-index: 100;
+            transition: transform 0.3s ease;
+        }
+
+        .logo {
+            font-weight: 800;
+            font-size: 1.5rem;
+            color: var(--brand);
+            margin-bottom: 40px;
+            padding-left: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-links { list-style: none; flex-grow: 1; }
+        .nav-links li { margin-bottom: 8px; }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-light);
+            font-weight: 700;
+            font-size: 0.95rem;
+            padding: 12px 15px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s;
+        }
+
+        .nav-links a:hover { background: var(--bg); color: var(--brand); }
+        .nav-links a.active { background: var(--brand-light); color: var(--brand); }
+
+        .logout { color: var(--danger) !important; margin-top: auto; }
+
+        /* Main Content Area */
+        main {
+            margin-left: 260px;
+            width: calc(100% - 260px);
+            padding: 0 40px 40px 40px;
+            transition: all 0.3s ease;
+        }
+
+        header {
+            height: 80px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            position: sticky;
+            top: 0;
+            background: var(--bg);
+            z-index: 50;
+        }
+
+        .menu-toggle { display: none; font-size: 1.2rem; cursor: pointer; }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--white);
+            padding: 8px 16px;
+            border-radius: 50px;
+            border: 1px solid var(--border);
+        }
+
+        .avatar {
+            width: 32px; height: 32px;
+            background: var(--brand);
+            color: white;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 0.8rem;
+        }
+
+        .user-name { font-weight: 700; font-size: 0.9rem; }
+
+        /* Content Styles */
+        .container { max-width: 800px; margin: auto; }
+        .page-title { font-weight: 800; font-size: 2rem; margin-bottom: 8px; }
+        .page-desc { color: var(--text-light); margin-bottom: 30px; font-weight: 500; }
+
+        .history-card { 
+            background: var(--white); 
+            padding: 24px; 
+            border-radius: 20px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02); 
+            margin-bottom: 16px;
+            border: 1px solid transparent;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .history-card:hover { 
+            transform: translateY(-3px); 
+            border-color: var(--brand-light);
+            box-shadow: 0 10px 20px rgba(0, 98, 255, 0.05);
+        }
+
+        .subj-info { font-weight: 800; font-size: 1.2rem; margin-bottom: 6px; color: var(--text); }
+        .date-info { 
+            font-size: 0.85rem; color: var(--text-light); font-weight: 600; 
+            display: flex; align-items: center; gap: 12px; 
+        }
+        
+        .score-box { text-align: right; }
+        .score-pill { 
+            background: var(--brand-light); 
+            padding: 10px 20px; 
+            border-radius: 14px; 
+            font-weight: 800; 
+            color: var(--brand); 
+            font-size: 1.1rem;
+            display: inline-block;
+        }
+
+        .perc-badge {
+            display: block; font-size: 0.75rem; font-weight: 700;
+            margin-top: 6px; color: var(--text-light);
+        }
+
+        .empty-state { 
+            text-align: center; padding: 100px 20px; background: white; 
+            border-radius: 24px; border: 2px dashed var(--border);
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 992px) {
+            nav { transform: translateX(-100%); }
+            nav.open { transform: translateX(0); }
+            main { margin-left: 0; width: 100%; padding: 20px; }
+            .menu-toggle { display: block; }
+        }
+
+        @media (max-width: 600px) {
+            .history-card { flex-direction: column; align-items: flex-start; gap: 20px; }
+            .score-box { text-align: left; width: 100%; border-top: 1px solid var(--bg); pt: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav id="sidebar">
+        <div class="logo">
+            <i class="fas fa-graduation-cap"></i> Prepium
+        </div>
+        <ul class="nav-links">
+            <li><a href="/dashboard"><i class="fas fa-columns"></i> Dashboard</a></li>
+            <li><a href="/subjects"><i class="fas fa-layer-group"></i> Subjects</a></li>
+            <li><a href="/history" class="active"><i class="fas fa-history"></i> Quiz History</a></li>
+            <li><a href="/profile"><i class="fas fa-user-circle"></i> My Profile</a></li>
+            <li><a href="/logout" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <header>
+            <div class="menu-toggle" id="menuToggle">
+                <i class="fas fa-bars"></i>
+            </div>
+            
+            <div class="user-profile">
+                <div class="avatar">
+                    <%= (user && user.name) ? user.name.charAt(0).toUpperCase() : 'U' %>
+                </div>
+                <span class="user-name">
+                    <%= (user && user.name) ? user.name : 'Student' %>
+                </span>
+            </div>
+        </header>
+
+        <div class="container">
+            <h1 class="page-title">History</h1>
+            <p class="page-desc">Review your past quiz attempts and track your academic growth.</p>
+
+            <% if (history && history.length > 0) { %>
+                <% history.forEach(item => { %>
+                    <div class="history-card">
+                        <div class="info-side">
+                            <div class="subj-info"><%= item.subject_name %></div>
+                            <div class="date-info">
+                                <span><i class="far fa-calendar-alt"></i> <%= new Date(item.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) %></span>
+                                <span><i class="far fa-clock"></i> <%= item.time_taken || '0:00' %></span>
+                            </div>
+                        </div>
+                        <div class="score-box">
+                            <div class="score-pill">
+                                <%= item.score %> / <%= item.total_questions %>
+                            </div>
+                            <span class="perc-badge">
+                                <i class="fas fa-chart-line"></i> <%= item.percentage %>% Accuracy
+                            </span>
+                        </div>
+                    </div>
+                <% }) %>
+            <% } else { %>
+                <div class="empty-state">
+                    <i class="fas fa-clipboard-list" style="font-size: 3.5rem; color: var(--border); margin-bottom: 20px; display: block;"></i>
+                    <h3 style="font-weight: 800; margin-bottom: 12px; color: var(--text);">No History Found</h3>
+                    <p style="color: var(--text-light); font-weight: 600; max-width: 300px; margin: 0 auto 24px auto;">It looks like you haven't completed any quizzes yet. Start learning today!</p>
+                    <a href="/dashboard" style="background: var(--brand); color: white; padding: 12px 24px; border-radius: 12px; font-weight: 800; text-decoration: none; display: inline-block; transition: opacity 0.2s;">
+                        Browse Subjects
+                    </a>
+                </div>
+            <% } %>
+        </div>
+    </main>
+
+    <script>
+        // Simple Mobile Menu Toggle
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.getElementById('sidebar');
+
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+        });
+
+        // Close sidebar if clicking outside on mobile
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 992 && !sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
+                sidebar.classList.remove('open');
+            }
+        });
+    </script>
+
+</body>
+</html>
