@@ -167,30 +167,27 @@ app.post('/login', async (req, res) => {
     }
 });
 
-app.get('/verify-payment', isAuth, async (req, res) => {
+// Add this to your app.js / server file
+app.get('/verify-payment', async (req, res) => {
     const { reference } = req.query;
-    const userId = req.session.user.id;
 
     try {
-        // 1. (Optional but Recommended) Verify with Paystack API here
-        // For now, we will assume the reference is valid for a quick fix:
-        
-        // 2. Update the user's payment status in the database
+        // 1. Verify with Paystack (Optional but recommended for security)
+        // 2. Update the Database
         await pool.query(
             'UPDATE users SET has_paid = true WHERE id = $1', 
-            [userId]
+            [req.session.user.id]
         );
 
-        // 3. Update the session so the UI reflects "Premium" immediately
+        // 3. CRITICAL: Update the session data so the UI changes immediately
         req.session.user.has_paid = true;
 
-        // 4. Redirect back to dashboard with a success message
-        console.log(`Payment successful for User ${userId}, Reference: ${reference}`);
-        res.redirect('/dashboard');
+        // 4. Send them back to the dashboard
+        res.redirect('/dashboard?payment=success');
 
     } catch (err) {
-        console.error("Verification Error:", err);
-        res.status(500).send("Internal Server Error during payment verification.");
+        console.error(err);
+        res.redirect('/dashboard?payment=failed');
     }
 });
 
