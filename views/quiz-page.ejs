@@ -16,7 +16,6 @@
         };
     </script>
     <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" id="MathJax-script" async></script>
-
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     
     <style>
@@ -28,7 +27,6 @@
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         #timer { font-weight: 800; color: var(--brand); background: #eff6ff; padding: 6px 12px; border-radius: 10px; border: 1px solid #dbeafe; }
         
-        /* Palette Grid Always Visible */
         .palette-container { background: #f8fafc; border-radius: 16px; margin-top: 10px; border: 1px solid #e2e8f0; padding: 12px; }
         .palette-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(35px, 1fr)); gap: 6px; max-height: 150px; overflow-y: auto; }
         .q-num { aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1.5px solid #e2e8f0; font-size: 0.7rem; font-weight: 800; background: white; cursor: pointer; }
@@ -45,10 +43,22 @@
         
         .quiz-footer { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 16px 20px; display: flex; gap: 10px; border-top: 1px solid #f1f5f9; z-index: 1000; }
         .nav-btn { flex: 1; padding: 14px; border-radius: 16px; border: none; font-weight: 800; cursor: pointer; font-family: inherit; }
-        /* Floating Submit Style */
         .submit-trigger { background: var(--danger) !important; color: white !important; flex: 0.6; }
 
-        .mjx-chtml { font-size: 110% !important; }
+        /* CALCULATOR STYLES */
+        #calc-container { position: fixed; bottom: 90px; right: 20px; z-index: 2000; display: flex; flex-direction: column; align-items: flex-end; }
+        #calc-toggle { width: 56px; height: 56px; border-radius: 20px; background: var(--text); color: white; border: none; box-shadow: 0 8px 24px rgba(0,0,0,0.2); cursor: pointer; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
+        
+        #calc-box { width: 280px; background: white; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); border: 1px solid #e2e8f0; padding: 16px; margin-bottom: 15px; display: none; transform-origin: bottom right; animation: popUp 0.3s ease-out; }
+        @keyframes popUp { from { opacity: 0; transform: scale(0.8) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+        .calc-screen { width: 100%; background: #f1f5f9; border: none; padding: 15px; border-radius: 12px; text-align: right; font-size: 1.2rem; font-weight: 800; color: var(--text); margin-bottom: 12px; }
+        .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .c-btn { padding: 12px 5px; border: none; border-radius: 10px; background: #f8fafc; font-weight: 800; font-family: inherit; cursor: pointer; font-size: 0.9rem; }
+        .c-btn:active { background: #e2e8f0; }
+        .c-btn.op { background: #eff6ff; color: var(--brand); }
+        .c-btn.eq { background: var(--brand); color: white; }
+        .c-btn.ac { background: #fff1f2; color: var(--danger); }
     </style>
 </head>
 <body>
@@ -72,6 +82,42 @@
         <div id="options-container"></div>
     </div>
 
+    <div id="calc-container">
+        <div id="calc-box">
+            <div style="font-size: 0.7rem; font-weight: 800; color: #94a3b8; margin-bottom: 10px; display: flex; justify-content: space-between;">
+                <span>PREPIUM CALC</span>
+                <span style="color: var(--brand)">DEG</span>
+            </div>
+            <input type="text" id="display" class="calc-screen" readonly value="0">
+            <div class="calc-grid">
+                <button class="c-btn ac" onclick="clearCalc()">AC</button>
+                <button class="c-btn op" onclick="press('(')">(</button>
+                <button class="c-btn op" onclick="press(')')">)</button>
+                <button class="c-btn op" onclick="press('/')">÷</button>
+                
+                <button class="c-btn" onclick="press('7')">7</button>
+                <button class="c-btn" onclick="press('8')">8</button>
+                <button class="c-btn" onclick="press('9')">9</button>
+                <button class="c-btn op" onclick="press('*')">×</button>
+                
+                <button class="c-btn" onclick="press('4')">4</button>
+                <button class="c-btn" onclick="press('5')">5</button>
+                <button class="c-btn" onclick="press('6')">6</button>
+                <button class="c-btn op" onclick="press('-')">-</button>
+                
+                <button class="c-btn" onclick="press('1')">1</button>
+                <button class="c-btn" onclick="press('2')">2</button>
+                <button class="c-btn" onclick="press('3')">3</button>
+                <button class="c-btn op" onclick="press('+')">+</button>
+                
+                <button class="c-btn" onclick="press('0')">0</button>
+                <button class="c-btn" onclick="press('.')">.</button>
+                <button class="c-btn eq" style="grid-column: span 2;" onclick="solve()">=</button>
+            </div>
+        </div>
+        <button id="calc-toggle" onclick="toggleCalc()">🖩</button>
+    </div>
+
     <form id="submit-form" action="/submit-exam" method="POST" style="display: none;">
         <input type="hidden" name="answers" id="answers-input">
         <input type="hidden" name="quizId" value="<%= quiz.id %>">
@@ -92,13 +138,28 @@
         let currentIndex = 0;
         let userAnswers = new Array(questions.length).fill(null);
 
+        // CALCULATOR LOGIC
+        function toggleCalc() {
+            const box = document.getElementById('calc-box');
+            box.style.display = (box.style.display === 'block') ? 'none' : 'block';
+        }
+        function press(val) {
+            const d = document.getElementById('display');
+            if(d.value === "0" || d.value === "Error") d.value = val;
+            else d.value += val;
+        }
+        function clearCalc() { document.getElementById('display').value = "0"; }
+        function solve() {
+            const d = document.getElementById('display');
+            try { d.value = eval(d.value.replace('×', '*').replace('÷', '/')); }
+            catch(e) { d.value = "Error"; }
+        }
+
         async function renderQuestion() {
             const q = questions[currentIndex];
             if (!q) return;
 
             document.getElementById('progress-text').innerText = `Question ${currentIndex + 1} of ${questions.length}`;
-            
-            // SHOW SUBJECT NAME: mapping 'subject_name' or 'subject' from your data
             document.getElementById('subject-label').innerText = q.subject_name || q.subject || "General";
             document.getElementById('q-text').innerHTML = q.question_text || q.question || "No question text found";
 
@@ -115,7 +176,6 @@
             });
             document.getElementById('options-container').innerHTML = html;
 
-            // Update Next button state
             const btn = document.getElementById('next-btn');
             if (currentIndex === questions.length - 1) {
                 btn.style.opacity = "0.5";
@@ -158,11 +218,7 @@
             const unanswered = total - answeredCount;
 
             let message = `You have answered ${answeredCount} out of ${total} questions.`;
-            if (unanswered > 0) {
-                message += `\n\nWarning: ${unanswered} questions are still unanswered. \n\nDo you want to submit anyway?`;
-            } else {
-                message += `\n\nReady to submit?`;
-            }
+            if (unanswered > 0) message += `\n\nWarning: ${unanswered} questions are still unanswered. \n\nSubmit anyway?`;
 
             if(confirm(message)) {
                 document.getElementById('answers-input').value = JSON.stringify(userAnswers);
