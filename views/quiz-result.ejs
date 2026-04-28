@@ -9,7 +9,7 @@
     <style>
         :root { --brand: #0062ff; --bg: #f8fafc; --success: #22c55e; --danger: #ef4444; --text: #1e293b; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); padding: 20px; color: var(--text); }
-        .container { max-width: 500px; margin: auto; }
+        .container { max-width: 550px; margin: auto; }
         .card { background: white; padding: 25px; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); margin-bottom: 20px; }
         
         /* Stats Grid */
@@ -17,7 +17,6 @@
         .stat-box { background: #f1f5f9; padding: 15px; border-radius: 20px; text-align: center; }
         .stat-label { font-size: 0.65rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; display: block; }
         .stat-val { font-weight: 800; font-size: 1.1rem; }
-
         .perc-text { font-size: 3.5rem; font-weight: 800; color: var(--brand); margin: 0; text-align: center; }
 
         /* Subject Breakdown */
@@ -29,9 +28,16 @@
         .review-card { border-left: 6px solid #cbd5e1; }
         .review-card.correct { border-left-color: var(--success); }
         .review-card.wrong { border-left-color: var(--danger); }
+        .q-text { font-weight: 800; margin-bottom: 18px; font-size: 1.05rem; color: #0f172a; line-height: 1.5; }
         
-        .q-text { font-weight: 800; margin-bottom: 12px; font-size: 1rem; color: #334155; }
+        /* Options List in Review */
+        .review-options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; }
+        .rev-opt { padding: 12px 15px; border-radius: 12px; border: 1.5px solid #f1f5f9; font-size: 0.9rem; font-weight: 600; display: flex; align-items: center; }
+        .rev-opt span { margin-right: 10px; font-weight: 800; opacity: 0.5; }
         
+        .rev-opt.is-correct { border-color: var(--success); background: #f0fdf4; color: #166534; }
+        .rev-opt.is-wrong { border-color: var(--danger); background: #fef2f2; color: #991b1b; }
+
         details { background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; margin-top: 15px; cursor: pointer; }
         summary { padding: 12px; font-size: 0.8rem; font-weight: 800; color: var(--brand); list-style: none; }
         .details-inner { padding: 12px; font-size: 0.85rem; color: #475569; border-top: 1px solid #e2e8f0; }
@@ -58,7 +64,7 @@
         </div>
 
         <div class="card">
-            <h3 style="margin-top:0; font-weight:800; font-size:0.9rem; color:#94a3b8;">SUBJECT PERFORMANCE</h3>
+            <h3 style="margin-top:0; font-weight:800; font-size:0.75rem; color:#94a3b8; text-transform: uppercase;">Subject Performance</h3>
             <% Object.keys(subjectStats).forEach(subject => { %>
                 <div class="subj-row">
                     <span class="subj-name"><%= subject %></span>
@@ -71,27 +77,38 @@
 
         <% results.forEach((r, i) => { %>
             <div class="card review-card <%= r.isCorrect ? 'correct' : 'wrong' %>">
-                <div class="q-text"><%= r.question_text %></div>
-                
-                <div style="font-size: 0.9rem; font-weight: 700;">
-                    <% if(r.isCorrect) { %>
-                        <span style="color: var(--success);">✓ You picked Option <%= r.userChoice.toUpperCase() %></span>
-                    <% } else { %>
-                        <span style="color: var(--danger);">✗ You picked Option <%= (r.userChoice || 'None').toUpperCase() %></span><br>
-                        <span style="color: var(--success); display: block; margin-top: 5px;">Correct Answer: Option <%= r.correctAnswer.toUpperCase() %></span>
-                    <% } %>
+                <div class="q-text">
+                    <span style="color: #94a3b8; font-size: 0.8rem; display: block; margin-bottom: 4px;">QUESTION <%= i + 1 %></span>
+                    <%= r.question_text %>
+                </div>
+
+                <div class="review-options">
+                    <% ['a', 'b', 'c', 'd'].forEach(opt => { 
+                        let optClass = '';
+                        // Highlight if it's the correct answer
+                        if(opt === r.correctAnswer) optClass = 'is-correct';
+                        // Highlight if user picked it and it was wrong
+                        if(opt === r.userChoice && !r.isCorrect) optClass = 'is-wrong';
+                    %>
+                        <div class="rev-opt <%= optClass %>">
+                            <span><%= opt.toUpperCase() %></span>
+                            <%= r['option_' + opt] %>
+                            <% if(opt === r.correctAnswer) { %> <b style="margin-left: auto;">✓</b> <% } %>
+                            <% if(opt === r.userChoice && !r.isCorrect) { %> <b style="margin-left: auto;">✗</b> <% } %>
+                        </div>
+                    <% }) %>
                 </div>
 
                 <% if(r.hint || r.explanation) { %>
                 <details>
-                    <summary>View Hint & Solution ▼</summary>
+                    <summary>View Solution & Explanation ▼</summary>
                     <div class="details-inner">
                         <% if(r.hint) { %>
                             <div class="hint-tag">HINT</div>
                             <p style="margin-top:0;"><i><%= r.hint %></i></p>
                         <% } %>
                         <% if(r.explanation) { %>
-                            <p style="margin-bottom:0;"><b>Explanation:</b> <%= r.explanation %></p>
+                            <p style="margin-bottom:0;"><b>Analysis:</b> <%= r.explanation %></p>
                         <% } %>
                     </div>
                 </details>
@@ -99,7 +116,7 @@
             </div>
         <% }) %>
 
-        <a href="/dashboard" class="btn-finish">Back to Dashboard</a>
+        <a href="/dashboard" class="btn-finish">Finish Review</a>
     </div>
 
 </body>
