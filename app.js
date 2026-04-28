@@ -117,24 +117,30 @@ app.post('/auth/login', async (req, res) => {
             const isMatch = await bcrypt.compare(password, user.password);
 
             if (isMatch) {
-                // Store ID, Name, AND is_admin status in the session
+                // FIX: Store ALL necessary fields including has_paid
                 req.session.user = { 
                     id: user.id, 
                     fullname: user.fullname, 
                     email: user.email,
-                    is_admin: user.is_admin // <--- CRITICAL for the isAdmin middleware
+                    is_admin: user.is_admin,
+                    has_paid: user.has_paid, // <--- CRITICAL: Dashboard needs this!
+                    current_streak: user.current_streak || 0
                 };
 
-                // Redirect admins to the admin dashboard, others to student dashboard
-                if (user.is_admin) {
-                    return res.redirect('/admin/dashboard');
-                }
-                return res.redirect('/dashboard');
+                // Explicitly save the session before redirecting (fixes many "logged out" bugs)
+                return req.session.save(() => {
+                    if (user.is_admin) {
+                        return res.redirect('/admin/dashboard');
+                    }
+                    return res.redirect('/dashboard');
+                });
             }
         }
-        res.render('login', { error: "Invalid credentials" });
+        // Use a redirect or pass the error correctly to the EJS
+        res.render('login', { error: "Invalid email or password" });
+        
     } catch (err) {
-        console.error(err);
+        console.error("Login Error:", err);
         res.status(500).send("Server Error");
     }
 });
