@@ -23,19 +23,16 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; padding-bottom: 120px; color: var(--text); overflow-x: hidden; }
 
-        /* Header & Progress */
         .quiz-header { position: sticky; top: 0; background: white; z-index: 1000; border-bottom: 1px solid #f1f5f9; padding: 12px 16px; }
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         #timer { font-weight: 800; color: var(--brand); background: #eff6ff; padding: 6px 12px; border-radius: 10px; border: 1px solid #dbeafe; }
         
-        /* Palette Grid */
         .palette-container { background: #f8fafc; border-radius: 16px; margin-top: 10px; border: 1px solid #e2e8f0; padding: 12px; }
         .palette-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(35px, 1fr)); gap: 6px; max-height: 120px; overflow-y: auto; }
         .q-num { aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1.5px solid #e2e8f0; font-size: 0.7rem; font-weight: 800; background: white; cursor: pointer; }
         .q-num.answered { background: var(--success); color: white; border-color: var(--success); }
         .q-num.current { border: 2.5px solid var(--brand); color: var(--brand); background: #eff6ff; }
 
-        /* Question UI */
         .question-card { margin: 15px; background: white; padding: 24px; border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; }
         #subject-label { font-size: 0.7rem; font-weight: 800; color: var(--brand); text-transform: uppercase; margin-bottom: 8px; display: inline-block; background: #eff6ff; padding: 4px 10px; border-radius: 6px; }
         #q-text { font-size: 1.15rem; font-weight: 800; line-height: 1.6; margin-bottom: 24px; color: #0f172a; }
@@ -44,25 +41,24 @@
         .option-btn.selected { background: var(--brand); color: white; border-color: var(--brand); }
         .opt-label { opacity: 0.5; margin-right: 15px; font-weight: 800; font-size: 0.85rem; }
         
-        /* Footer Nav */
         .quiz-footer { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 16px 20px; display: flex; gap: 10px; border-top: 1px solid #f1f5f9; z-index: 1000; }
         .nav-btn { flex: 1; padding: 14px; border-radius: 16px; border: none; font-weight: 800; cursor: pointer; font-family: inherit; }
         .submit-trigger { background: var(--danger) !important; color: white !important; flex: 0.6; }
 
-        /* SCIENTIFIC CALCULATOR STYLES */
+        /* ADVANCED SCIENTIFIC CALCULATOR */
         #calc-container { position: fixed; bottom: 90px; right: 20px; z-index: 2000; display: flex; flex-direction: column; align-items: flex-end; }
-        #calc-toggle { width: 56px; height: 56px; border-radius: 18px; background: var(--text); color: white; border: none; box-shadow: 0 8px 24px rgba(0,0,0,0.2); cursor: pointer; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
+        #calc-toggle { width: 56px; height: 56px; border-radius: 18px; background: var(--text); color: white; border: none; box-shadow: 0 8px 24px rgba(0,0,0,0.2); cursor: pointer; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; }
         
-        #calc-box { width: 300px; background: white; border-radius: 28px; box-shadow: 0 20px 50px rgba(0,0,0,0.2); border: 1px solid #e2e8f0; padding: 20px; margin-bottom: 15px; display: none; transform-origin: bottom right; animation: popUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        #calc-box { width: 320px; background: white; border-radius: 28px; box-shadow: 0 20px 50px rgba(0,0,0,0.2); border: 1px solid #e2e8f0; padding: 20px; margin-bottom: 15px; display: none; transform-origin: bottom right; animation: popUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes popUp { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
 
         .calc-screen { width: 100%; background: #f8fafc; border: 2px solid #f1f5f9; padding: 15px; border-radius: 15px; text-align: right; font-size: 1.3rem; font-weight: 800; color: var(--text); margin-bottom: 12px; outline: none; }
         .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-        .c-btn { padding: 14px 5px; border: none; border-radius: 12px; background: #f1f5f9; font-weight: 800; font-family: inherit; cursor: pointer; font-size: 0.95rem; transition: 0.1s; }
+        .c-btn { padding: 12px 5px; border: none; border-radius: 12px; background: #f1f5f9; font-weight: 800; font-family: inherit; cursor: pointer; font-size: 0.9rem; transition: 0.1s; }
         .c-btn:active { transform: scale(0.95); background: #e2e8f0; }
-        .c-btn.sci { background: #eff6ff; color: var(--brand); font-size: 0.8rem; }
+        .c-btn.sci { background: #eff6ff; color: var(--brand); font-size: 0.75rem; }
         .c-btn.op { background: #f8fafc; border: 1px solid #e2e8f0; color: var(--brand); }
-        .c-btn.eq { background: var(--brand); color: white; grid-column: span 2; }
+        .c-btn.eq { background: var(--brand); color: white; }
         .c-btn.ac { background: #fff1f2; color: var(--danger); }
     </style>
 </head>
@@ -90,35 +86,40 @@
     <div id="calc-container">
         <div id="calc-box">
             <div style="font-size: 0.7rem; font-weight: 800; color: #94a3b8; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-                <span>SCIENTIFIC</span>
-                <span style="background: var(--brand); color: white; padding: 2px 6px; border-radius: 4px;">PREPIUM</span>
+                <span>PRO SCIENTIFIC</span>
+                <span id="calc-mode" style="background: var(--brand); color: white; padding: 2px 6px; border-radius: 4px;">RAD</span>
             </div>
             <input type="text" id="display" class="calc-screen" readonly value="0">
             <div class="calc-grid">
-                <button class="c-btn sci" onclick="sci('sqrt')">√</button>
-                <button class="c-btn sci" onclick="press('**')">xʸ</button>
-                <button class="c-btn sci" onclick="sci('pi')">π</button>
+                <button class="c-btn sci" onclick="sciTrig('sin')">sin</button>
+                <button class="c-btn sci" onclick="sciTrig('cos')">cos</button>
+                <button class="c-btn sci" onclick="sciTrig('tan')">tan</button>
                 <button class="c-btn ac" onclick="clearCalc()">AC</button>
+                
+                <button class="c-btn sci" onclick="sciOp('sqrt')">√</button>
+                <button class="c-btn sci" onclick="press('**')">xʸ</button>
+                <button class="c-btn sci" onclick="press(Math.PI.toFixed(4))">π</button>
+                <button class="c-btn op" onclick="press('/')">÷</button>
                 
                 <button class="c-btn" onclick="press('7')">7</button>
                 <button class="c-btn" onclick="press('8')">8</button>
                 <button class="c-btn" onclick="press('9')">9</button>
-                <button class="c-btn op" onclick="press('/')">÷</button>
+                <button class="c-btn op" onclick="press('*')">×</button>
                 
                 <button class="c-btn" onclick="press('4')">4</button>
                 <button class="c-btn" onclick="press('5')">5</button>
                 <button class="c-btn" onclick="press('6')">6</button>
-                <button class="c-btn op" onclick="press('*')">×</button>
+                <button class="c-btn op" onclick="press('-')">-</button>
                 
                 <button class="c-btn" onclick="press('1')">1</button>
                 <button class="c-btn" onclick="press('2')">2</button>
                 <button class="c-btn" onclick="press('3')">3</button>
-                <button class="c-btn op" onclick="press('-')">-</button>
+                <button class="c-btn op" onclick="press('+')">+</button>
                 
                 <button class="c-btn" onclick="press('0')">0</button>
                 <button class="c-btn" onclick="press('.')">.</button>
+                <button class="c-btn" onclick="backspace()">⌫</button>
                 <button class="c-btn eq" onclick="solve()">=</button>
-                <button class="c-btn op" style="grid-column: 4; grid-row: 5;" onclick="press('+')">+</button>
             </div>
         </div>
         <button id="calc-toggle" onclick="toggleCalc()">🖩</button>
@@ -144,7 +145,7 @@
         let currentIndex = 0;
         let userAnswers = new Array(questions.length).fill(null);
 
-        // --- CALCULATOR LOGIC ---
+        /* --- CALCULATOR ENGINE --- */
         function toggleCalc() {
             const box = document.getElementById('calc-box');
             box.style.display = (box.style.display === 'block') ? 'none' : 'block';
@@ -155,21 +156,35 @@
             else d.value += val;
         }
         function clearCalc() { document.getElementById('display').value = "0"; }
-        function sci(type) {
+        function backspace() {
             const d = document.getElementById('display');
-            if(type === 'sqrt') d.value = Math.sqrt(eval(d.value));
-            if(type === 'pi') press(Math.PI.toFixed(5));
+            d.value = d.value.length > 1 ? d.value.slice(0, -1) : "0";
+        }
+        function sciOp(type) {
+            const d = document.getElementById('display');
+            try {
+                if(type === 'sqrt') d.value = Math.sqrt(eval(d.value)).toFixed(4);
+            } catch(e) { d.value = "Error"; }
+        }
+        function sciTrig(func) {
+            const d = document.getElementById('display');
+            try {
+                let val = eval(d.value);
+                // Standard Math trig functions use Radians
+                if(func === 'sin') d.value = Math.sin(val).toFixed(4);
+                if(func === 'cos') d.value = Math.cos(val).toFixed(4);
+                if(func === 'tan') d.value = Math.tan(val).toFixed(4);
+            } catch(e) { d.value = "Error"; }
         }
         function solve() {
             const d = document.getElementById('display');
             try { 
-                // Basic Sanitization
                 let result = eval(d.value);
                 d.value = Number.isInteger(result) ? result : result.toFixed(4);
             } catch(e) { d.value = "Error"; }
         }
 
-        // --- EXAM ENGINE ---
+        /* --- EXAM ENGINE --- */
         async function renderQuestion() {
             const q = questions[currentIndex];
             if (!q) return;
