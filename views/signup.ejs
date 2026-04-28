@@ -2,26 +2,65 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sign Up | Prepium</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        /* Reuse the same CSS as Login for consistency */
         :root { --brand: #0062ff; --bg: #f8fafc; --text: #1e293b; }
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; display: flex; justify-content: center; }
-        .auth-shell { width: 100%; max-width: 430px; background: white; min-height: 100vh; display: flex; flex-direction: column; padding: 2.5rem 2rem; }
+        
+        .auth-shell { 
+            width: 100%; 
+            max-width: 430px; 
+            background: white; 
+            min-height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            padding: 2.5rem 2rem; 
+            box-shadow: 0 0 40px rgba(0,0,0,0.03);
+        }
+        
         .logo-small { color: var(--brand); font-weight: 800; font-size: 1.2rem; margin-bottom: 2rem; display: block; text-decoration: none; }
-        h1 { font-size: 1.8rem; font-weight: 800; margin: 0; }
-        p { color: #64748b; font-size: 0.95rem; margin-top: 8px; }
+        h1 { font-size: 1.8rem; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
+        p { color: #64748b; font-size: 0.95rem; margin-top: 8px; line-height: 1.5; }
+        
+        .header { margin-bottom: 2rem; }
         .form-group { margin-bottom: 1.2rem; }
-        label { display: block; font-size: 0.8rem; font-weight: 700; margin-bottom: 8px; color: var(--text); padding-left: 4px; }
-        input { width: 100%; padding: 1.1rem; border-radius: 16px; border: 2px solid #f1f5f9; background: #f8fafc; font-size: 1rem; outline: none; transition: 0.3s; }
+        
+        label { display: block; font-size: 0.75rem; font-weight: 800; margin-bottom: 8px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; padding-left: 4px; }
+        input { 
+            width: 100%; 
+            padding: 1.1rem; 
+            border-radius: 20px; 
+            border: 2px solid #f1f5f9; 
+            background: #f8fafc; 
+            font-size: 1rem; 
+            font-weight: 600;
+            outline: none; 
+            transition: all 0.3s ease; 
+        }
         input:focus { border-color: var(--brand); background: white; box-shadow: 0 0 0 4px rgba(0,98,255,0.08); }
-        .btn-primary { background: var(--brand); color: white; border: none; width: 100%; padding: 1.2rem; border-radius: 18px; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: 1rem; box-shadow: 0 10px 20px rgba(0,98,255,0.15); }
-        .footer { text-align: center; margin-top: auto; padding-top: 2rem; font-size: 0.9rem; color: #64748b; }
-        .footer a { color: var(--brand); text-decoration: none; font-weight: 700; }
+        
+        .btn-primary { 
+            background: var(--brand); 
+            color: white; 
+            border: none; 
+            width: 100%; 
+            padding: 1.2rem; 
+            border-radius: 22px; 
+            font-size: 1.05rem; 
+            font-weight: 800; 
+            cursor: pointer; 
+            margin-top: 1.5rem; 
+            box-shadow: 0 10px 25px rgba(0,98,255,0.2); 
+            transition: transform 0.2s;
+        }
+        .btn-primary:active { transform: scale(0.98); }
+        
+        .footer { text-align: center; margin-top: auto; padding-top: 2.5rem; font-size: 0.95rem; color: #64748b; font-weight: 600; }
+        .footer a { color: var(--brand); text-decoration: none; font-weight: 800; }
     </style>
 </head>
 <body>
@@ -36,15 +75,15 @@
 
         <form action="/auth/signup" method="POST">
             <div class="form-group">
-                <label>FULL NAME</label>
+                <label>Full Name</label>
                 <input type="text" name="fullname" placeholder="Atilola Israel" required>
             </div>
             <div class="form-group">
-                <label>EMAIL ADDRESS</label>
+                <label>Email Address</label>
                 <input type="email" name="email" placeholder="alite@example.com" required>
             </div>
             <div class="form-group">
-                <label>CREATE PASSWORD</label>
+                <label>Create Password</label>
                 <input type="password" name="password" placeholder="••••••••" required>
             </div>
             <button type="submit" class="btn-primary">Create My Account</button>
@@ -55,5 +94,43 @@
         </div>
     </div>
 
+    <script>
+        // Check for success or error messages in the URL
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // Define the Toast configuration
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer)
+                toast.addEventListener('mouseleave', Swal.resumeTimer)
+            }
+        });
+
+        // Trigger Toast if signup was successful
+        if (urlParams.has('registered')) {
+            Toast.fire({
+                icon: 'success',
+                title: 'Registration Successful!',
+                text: 'Welcome to Prepium'
+            });
+            
+            // Clean the URL so the toast doesn't show again on refresh
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        // Trigger Toast if there was an error (e.g., email exists)
+        if (urlParams.has('error')) {
+            Toast.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: urlParams.get('error') || 'Registration failed'
+            });
+        }
+    </script>
 </body>
 </html>
