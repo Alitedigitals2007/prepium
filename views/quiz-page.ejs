@@ -23,41 +23,46 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; padding-bottom: 120px; color: var(--text); overflow-x: hidden; }
 
+        /* Header & Progress */
         .quiz-header { position: sticky; top: 0; background: white; z-index: 1000; border-bottom: 1px solid #f1f5f9; padding: 12px 16px; }
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         #timer { font-weight: 800; color: var(--brand); background: #eff6ff; padding: 6px 12px; border-radius: 10px; border: 1px solid #dbeafe; }
         
+        /* Palette Grid */
         .palette-container { background: #f8fafc; border-radius: 16px; margin-top: 10px; border: 1px solid #e2e8f0; padding: 12px; }
-        .palette-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(35px, 1fr)); gap: 6px; max-height: 150px; overflow-y: auto; }
+        .palette-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(35px, 1fr)); gap: 6px; max-height: 120px; overflow-y: auto; }
         .q-num { aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1.5px solid #e2e8f0; font-size: 0.7rem; font-weight: 800; background: white; cursor: pointer; }
         .q-num.answered { background: var(--success); color: white; border-color: var(--success); }
         .q-num.current { border: 2.5px solid var(--brand); color: var(--brand); background: #eff6ff; }
 
+        /* Question UI */
         .question-card { margin: 15px; background: white; padding: 24px; border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; }
         #subject-label { font-size: 0.7rem; font-weight: 800; color: var(--brand); text-transform: uppercase; margin-bottom: 8px; display: inline-block; background: #eff6ff; padding: 4px 10px; border-radius: 6px; }
-        #q-text { font-size: 1.2rem; font-weight: 800; line-height: 1.6; margin-bottom: 24px; color: #0f172a; }
+        #q-text { font-size: 1.15rem; font-weight: 800; line-height: 1.6; margin-bottom: 24px; color: #0f172a; }
 
         .option-btn { width: 100%; padding: 18px; margin-bottom: 12px; border-radius: 16px; border: 2px solid #f1f5f9; background: white; text-align: left; font-family: inherit; font-weight: 700; cursor: pointer; transition: 0.2s; display: flex; align-items: center; }
         .option-btn.selected { background: var(--brand); color: white; border-color: var(--brand); }
         .opt-label { opacity: 0.5; margin-right: 15px; font-weight: 800; font-size: 0.85rem; }
         
+        /* Footer Nav */
         .quiz-footer { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 16px 20px; display: flex; gap: 10px; border-top: 1px solid #f1f5f9; z-index: 1000; }
         .nav-btn { flex: 1; padding: 14px; border-radius: 16px; border: none; font-weight: 800; cursor: pointer; font-family: inherit; }
         .submit-trigger { background: var(--danger) !important; color: white !important; flex: 0.6; }
 
-        /* CALCULATOR STYLES */
+        /* SCIENTIFIC CALCULATOR STYLES */
         #calc-container { position: fixed; bottom: 90px; right: 20px; z-index: 2000; display: flex; flex-direction: column; align-items: flex-end; }
-        #calc-toggle { width: 56px; height: 56px; border-radius: 20px; background: var(--text); color: white; border: none; box-shadow: 0 8px 24px rgba(0,0,0,0.2); cursor: pointer; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
+        #calc-toggle { width: 56px; height: 56px; border-radius: 18px; background: var(--text); color: white; border: none; box-shadow: 0 8px 24px rgba(0,0,0,0.2); cursor: pointer; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
         
-        #calc-box { width: 280px; background: white; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); border: 1px solid #e2e8f0; padding: 16px; margin-bottom: 15px; display: none; transform-origin: bottom right; animation: popUp 0.3s ease-out; }
-        @keyframes popUp { from { opacity: 0; transform: scale(0.8) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        #calc-box { width: 300px; background: white; border-radius: 28px; box-shadow: 0 20px 50px rgba(0,0,0,0.2); border: 1px solid #e2e8f0; padding: 20px; margin-bottom: 15px; display: none; transform-origin: bottom right; animation: popUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popUp { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
 
-        .calc-screen { width: 100%; background: #f1f5f9; border: none; padding: 15px; border-radius: 12px; text-align: right; font-size: 1.2rem; font-weight: 800; color: var(--text); margin-bottom: 12px; }
+        .calc-screen { width: 100%; background: #f8fafc; border: 2px solid #f1f5f9; padding: 15px; border-radius: 15px; text-align: right; font-size: 1.3rem; font-weight: 800; color: var(--text); margin-bottom: 12px; outline: none; }
         .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-        .c-btn { padding: 12px 5px; border: none; border-radius: 10px; background: #f8fafc; font-weight: 800; font-family: inherit; cursor: pointer; font-size: 0.9rem; }
-        .c-btn:active { background: #e2e8f0; }
-        .c-btn.op { background: #eff6ff; color: var(--brand); }
-        .c-btn.eq { background: var(--brand); color: white; }
+        .c-btn { padding: 14px 5px; border: none; border-radius: 12px; background: #f1f5f9; font-weight: 800; font-family: inherit; cursor: pointer; font-size: 0.95rem; transition: 0.1s; }
+        .c-btn:active { transform: scale(0.95); background: #e2e8f0; }
+        .c-btn.sci { background: #eff6ff; color: var(--brand); font-size: 0.8rem; }
+        .c-btn.op { background: #f8fafc; border: 1px solid #e2e8f0; color: var(--brand); }
+        .c-btn.eq { background: var(--brand); color: white; grid-column: span 2; }
         .c-btn.ac { background: #fff1f2; color: var(--danger); }
     </style>
 </head>
@@ -84,35 +89,36 @@
 
     <div id="calc-container">
         <div id="calc-box">
-            <div style="font-size: 0.7rem; font-weight: 800; color: #94a3b8; margin-bottom: 10px; display: flex; justify-content: space-between;">
-                <span>PREPIUM CALC</span>
-                <span style="color: var(--brand)">DEG</span>
+            <div style="font-size: 0.7rem; font-weight: 800; color: #94a3b8; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                <span>SCIENTIFIC</span>
+                <span style="background: var(--brand); color: white; padding: 2px 6px; border-radius: 4px;">PREPIUM</span>
             </div>
             <input type="text" id="display" class="calc-screen" readonly value="0">
             <div class="calc-grid">
+                <button class="c-btn sci" onclick="sci('sqrt')">√</button>
+                <button class="c-btn sci" onclick="press('**')">xʸ</button>
+                <button class="c-btn sci" onclick="sci('pi')">π</button>
                 <button class="c-btn ac" onclick="clearCalc()">AC</button>
-                <button class="c-btn op" onclick="press('(')">(</button>
-                <button class="c-btn op" onclick="press(')')">)</button>
-                <button class="c-btn op" onclick="press('/')">÷</button>
                 
                 <button class="c-btn" onclick="press('7')">7</button>
                 <button class="c-btn" onclick="press('8')">8</button>
                 <button class="c-btn" onclick="press('9')">9</button>
-                <button class="c-btn op" onclick="press('*')">×</button>
+                <button class="c-btn op" onclick="press('/')">÷</button>
                 
                 <button class="c-btn" onclick="press('4')">4</button>
                 <button class="c-btn" onclick="press('5')">5</button>
                 <button class="c-btn" onclick="press('6')">6</button>
-                <button class="c-btn op" onclick="press('-')">-</button>
+                <button class="c-btn op" onclick="press('*')">×</button>
                 
                 <button class="c-btn" onclick="press('1')">1</button>
                 <button class="c-btn" onclick="press('2')">2</button>
                 <button class="c-btn" onclick="press('3')">3</button>
-                <button class="c-btn op" onclick="press('+')">+</button>
+                <button class="c-btn op" onclick="press('-')">-</button>
                 
                 <button class="c-btn" onclick="press('0')">0</button>
                 <button class="c-btn" onclick="press('.')">.</button>
-                <button class="c-btn eq" style="grid-column: span 2;" onclick="solve()">=</button>
+                <button class="c-btn eq" onclick="solve()">=</button>
+                <button class="c-btn op" style="grid-column: 4; grid-row: 5;" onclick="press('+')">+</button>
             </div>
         </div>
         <button id="calc-toggle" onclick="toggleCalc()">🖩</button>
@@ -133,12 +139,12 @@
         let questions = [];
         try {
             questions = JSON.parse(document.getElementById('raw-questions').value);
-        } catch (e) { console.error("JSON Parse Error"); }
+        } catch (e) { console.error("Data Error"); }
 
         let currentIndex = 0;
         let userAnswers = new Array(questions.length).fill(null);
 
-        // CALCULATOR LOGIC
+        // --- CALCULATOR LOGIC ---
         function toggleCalc() {
             const box = document.getElementById('calc-box');
             box.style.display = (box.style.display === 'block') ? 'none' : 'block';
@@ -149,47 +155,46 @@
             else d.value += val;
         }
         function clearCalc() { document.getElementById('display').value = "0"; }
+        function sci(type) {
+            const d = document.getElementById('display');
+            if(type === 'sqrt') d.value = Math.sqrt(eval(d.value));
+            if(type === 'pi') press(Math.PI.toFixed(5));
+        }
         function solve() {
             const d = document.getElementById('display');
-            try { d.value = eval(d.value.replace('×', '*').replace('÷', '/')); }
-            catch(e) { d.value = "Error"; }
+            try { 
+                // Basic Sanitization
+                let result = eval(d.value);
+                d.value = Number.isInteger(result) ? result : result.toFixed(4);
+            } catch(e) { d.value = "Error"; }
         }
 
+        // --- EXAM ENGINE ---
         async function renderQuestion() {
             const q = questions[currentIndex];
             if (!q) return;
 
-            document.getElementById('progress-text').innerText = `Question ${currentIndex + 1} of ${questions.length}`;
-            document.getElementById('subject-label').innerText = q.subject_name || q.subject || "General";
-            document.getElementById('q-text').innerHTML = q.question_text || q.question || "No question text found";
+            document.getElementById('progress-text').innerText = `Q${currentIndex + 1} of ${questions.length}`;
+            document.getElementById('subject-label').innerText = q.subject_name || "General";
+            document.getElementById('q-text').innerHTML = q.question_text || q.question;
 
             const opts = ['a', 'b', 'c', 'd'];
             let html = '';
             opts.forEach(o => {
                 const isSelected = userAnswers[currentIndex] === o ? 'selected' : '';
-                const content = q[`option_${o}`] || "Option missing";
                 html += `
                     <button class="option-btn ${isSelected}" onclick="selectOption('${o}')">
                         <span class="opt-label">${o.toUpperCase()}</span>
-                        <span>${content}</span>
+                        <span>${q[`option_${o}`]}</span>
                     </button>`;
             });
             document.getElementById('options-container').innerHTML = html;
 
             const btn = document.getElementById('next-btn');
-            if (currentIndex === questions.length - 1) {
-                btn.style.opacity = "0.5";
-                btn.innerText = "End of Quiz";
-            } else {
-                btn.style.opacity = "1";
-                btn.innerText = "Next";
-            }
-
+            btn.innerText = (currentIndex === questions.length - 1) ? "Done" : "Next";
+            
             updatePalette();
-
-            if (window.MathJax) {
-                MathJax.typesetPromise([document.getElementById('q-text'), document.getElementById('options-container')]).catch((err) => console.log(err));
-            }
+            if (window.MathJax) MathJax.typesetPromise();
         }
 
         function selectOption(val) {
@@ -213,14 +218,8 @@
         }
 
         function triggerSubmit() {
-            const answeredCount = userAnswers.filter(a => a !== null).length;
-            const total = questions.length;
-            const unanswered = total - answeredCount;
-
-            let message = `You have answered ${answeredCount} out of ${total} questions.`;
-            if (unanswered > 0) message += `\n\nWarning: ${unanswered} questions are still unanswered. \n\nSubmit anyway?`;
-
-            if(confirm(message)) {
+            const answered = userAnswers.filter(a => a !== null).length;
+            if(confirm(`Answered: ${answered}/${questions.length}. Submit now?`)) {
                 document.getElementById('answers-input').value = JSON.stringify(userAnswers);
                 document.getElementById('submit-form').submit();
             }
@@ -228,22 +227,16 @@
 
         function updatePalette() {
             document.getElementById('palette').innerHTML = questions.map((_, i) => {
-                let cls = 'q-num';
-                if (userAnswers[i]) cls += ' answered';
-                if (i === currentIndex) cls += ' current';
+                let cls = 'q-num' + (userAnswers[i] ? ' answered' : '') + (i === currentIndex ? ' current' : '');
                 return `<div class="${cls}" onclick="jumpTo(${i})">${i + 1}</div>`;
             }).join('');
         }
 
         function startTimer() {
             const endTime = new Date("<%= quiz.endTime %>").getTime();
-            const timerInt = setInterval(() => {
+            setInterval(() => {
                 const diff = endTime - new Date().getTime();
-                if (diff <= 0) {
-                    clearInterval(timerInt);
-                    document.getElementById('answers-input').value = JSON.stringify(userAnswers);
-                    document.getElementById('submit-form').submit();
-                }
+                if (diff <= 0) document.getElementById('submit-form').submit();
                 const m = Math.floor(diff / 60000), s = Math.floor((diff % 60000) / 1000);
                 document.getElementById('timer').innerText = `${m}:${s < 10 ? '0' + s : s}`;
             }, 1000);
