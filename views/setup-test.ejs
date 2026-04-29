@@ -10,7 +10,7 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
         
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; padding-bottom: 240px; color: var(--text); display: flex; justify-content: center; }
-        .app-shell { width: 100%; max-width: 430px; background: white; min-height: 100vh; position: relative; }
+        .app-shell { width: 100%; max-width: 430px; background: white; min-height: 100vh; position: relative; box-shadow: 0 0 40px rgba(0,0,0,0.02); }
 
         /* Header Area */
         .header-fixed { position: sticky; top: 0; background: white; z-index: 100; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; }
@@ -21,7 +21,6 @@
         .search-box { background: #f1f5f9; border-radius: 14px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; flex: 1; border: 1.5px solid transparent; }
         .search-input { border: none; background: transparent; width: 100%; font-family: inherit; font-weight: 600; font-size: 0.9rem; }
         
-        /* View Toggle Switch */
         .view-toggle { background: #f1f5f9; border-radius: 12px; display: flex; padding: 4px; border: 1px solid #e2e8f0; }
         .view-btn { border: none; background: transparent; padding: 6px 12px; border-radius: 8px; cursor: pointer; transition: 0.2s; font-size: 1rem; }
         .view-btn.active { background: white; box-shadow: 0 4px 8px rgba(0,0,0,0.06); }
@@ -31,12 +30,10 @@
         /* Subject Layouts */
         .subject-container { padding: 0 1.2rem; display: grid; gap: 12px; transition: 0.3s; }
         
-        /* Grid Mode Styles */
         .subject-container.grid-view { grid-template-columns: 1fr 1fr; }
         .subject-container.grid-view .subject-card { text-align: center; }
         .subject-container.grid-view .subject-main { justify-content: center; }
         
-        /* List Mode Styles */
         .subject-container.list-view { grid-template-columns: 1fr; }
         .subject-container.list-view .subject-card { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.2rem; }
         .subject-container.list-view .input-area { margin-top: 0; border: none; padding-top: 0; width: 80px; }
@@ -55,26 +52,18 @@
         
         .q-limit-pill { font-size: 0.6rem; font-weight: 800; color: #64748b; background: #f1f5f9; padding: 4px 8px; border-radius: 6px; display: inline-block; margin-top: 5px; }
 
-        .input-area { 
-            margin-top: 12px; 
-            display: none; 
-            border-top: 1px solid rgba(0,0,0,0.05); 
-            padding-top: 12px; 
-            animation: fadeIn 0.2s ease;
-        }
+        .input-area { margin-top: 12px; display: none; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 12px; animation: fadeIn 0.2s ease; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
         .qty-input { width: 100%; padding: 8px; border-radius: 10px; border: 1.5px solid #e2e8f0; font-weight: 800; text-align: center; color: var(--brand); }
-        .qty-input:focus { border-color: var(--brand); background: white; }
 
-        /* Floating Summary Footer */
-        .summary-footer { position: fixed; bottom: 85px; width: 100%; max-width: 430px; background: rgba(255,255,255,0.9); backdrop-filter: blur(15px); padding: 1.2rem; border-top: 1px solid #f1f5f9; z-index: 99; box-shadow: 0 -10px 25px rgba(0,0,0,0.03); }
+        /* Summary Footer */
+        .summary-footer { position: fixed; bottom: 85px; width: 100%; max-width: 430px; background: rgba(255,255,255,0.95); backdrop-filter: blur(15px); padding: 1.2rem; border-top: 1px solid #f1f5f9; z-index: 99; }
         .total-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        
         .time-selector { background: white; padding: 10px 14px; border-radius: 16px; border: 1.5px solid #e2e8f0; display: flex; align-items: center; gap: 8px; }
         .time-input { width: 45px; border: none; font-weight: 800; text-align: center; font-size: 1.1rem; color: var(--brand); }
 
-        .start-btn { background: var(--brand); color: white; padding: 1.1rem; border-radius: 18px; border: none; width: 100%; font-weight: 800; font-size: 1rem; box-shadow: 0 10px 20px rgba(0,98,255,0.2); transition: 0.2s; cursor: pointer; }
+        .start-btn { background: var(--brand); color: white; padding: 1.1rem; border-radius: 18px; border: none; width: 100%; font-weight: 800; font-size: 1rem; box-shadow: 0 10px 20px rgba(0,98,255,0.2); cursor: pointer; }
         .start-btn:disabled { background: #cbd5e1; box-shadow: none; cursor: not-allowed; }
 
         /* Navigation */
@@ -101,19 +90,23 @@
             <div class="search-container">
                 <div class="search-box">
                     <span>🔍</span>
-                    <input type="text" id="subjectSearch" class="search-input" placeholder="Search subjects..." onkeyup="filterSubjects()">
+                    <input type="text" id="subjectSearch" class="search-input" placeholder="Search courses..." onkeyup="filterSubjects()">
                 </div>
             </div>
         </div>
 
         <form action="/start-quiz" method="POST" id="quizForm">
             <div class="section-label">
-                <span>Available Subjects</span>
+                <span>Select Subjects</span>
                 <span id="selectionCount" style="color: var(--brand);">0/4 Selected</span>
             </div>
             
             <div class="subject-container grid-view" id="subjectList">
-                <% subjects.forEach(sub => { %>
+                <% 
+                   // SORTING ALPHABETICALLY BY NAME
+                   subjects.sort((a, b) => a.name.localeCompare(b.name)); 
+                   subjects.forEach(sub => { 
+                %>
                     <div class="subject-card" id="wrapper-<%= sub.id %>">
                         <div class="subject-main">
                             <label class="check-container">
@@ -153,29 +146,18 @@
             <a href="/history" class="nav-link"><i>📊</i>Stats</a>
             <a href="/setup-test" class="fab">+</a>
             <a href="/subjects" class="nav-link"><i>📚</i>Library</a>
-            <a href="/profile" class="nav-link"><i>👤</i>Me</a>
+            <a href="/profile" class="nav-link active"><i>👤</i>Me</a>
         </nav>
     </div>
 
     <script>
-        // Switch between Grid and List view
         function switchView(type) {
             const list = document.getElementById('subjectList');
-            const gridBtn = document.getElementById('gridBtn');
-            const listBtn = document.getElementById('listBtn');
-            
-            if (type === 'grid') {
-                list.classList.replace('list-view', 'grid-view');
-                gridBtn.classList.add('active');
-                listBtn.classList.remove('active');
-            } else {
-                list.classList.replace('grid-view', 'list-view');
-                listBtn.classList.add('active');
-                gridBtn.classList.remove('active');
-            }
+            document.getElementById('gridBtn').classList.toggle('active', type === 'grid');
+            document.getElementById('listBtn').classList.toggle('active', type === 'list');
+            list.className = `subject-container ${type}-view`;
         }
 
-        // Search logic
         function filterSubjects() {
             const input = document.getElementById('subjectSearch').value.toLowerCase();
             const cards = document.getElementsByClassName('subject-card');
@@ -185,7 +167,6 @@
             }
         }
 
-        // Toggle question inputs when checkbox is clicked
         function toggleSubject(checkbox, id) {
             const container = document.getElementById('input-container-' + id);
             const wrapper = document.getElementById('wrapper-' + id);
@@ -193,7 +174,7 @@
 
             if (selected.length > 4) {
                 checkbox.checked = false;
-                alert("You can only choose up to 4 subjects.");
+                alert("Max 4 subjects allowed.");
                 return;
             }
 
@@ -201,24 +182,16 @@
             container.style.display = checkbox.checked ? "block" : "none";
             wrapper.classList.toggle('active', checkbox.checked);
             
-            if (!checkbox.checked) {
-                container.querySelector('input').value = ""; 
-            }
+            if (!checkbox.checked) container.querySelector('input').value = ""; 
             validateAndTotal();
         }
 
-        // Calculate total questions and enable button
         function validateAndTotal() {
-            let total = 0;
-            let error = false;
-            const checked = document.querySelectorAll('input[name="subject_ids"]:checked');
-            
-            checked.forEach(cb => {
+            let total = 0, error = false;
+            document.querySelectorAll('input[name="subject_ids"]:checked').forEach(cb => {
                 const input = document.querySelector(`input[name="questions_${cb.value}"]`);
                 const val = parseInt(input.value) || 0;
-                const max = parseInt(input.max);
-                
-                if (val > max) {
+                if (val > parseInt(input.max)) {
                     input.style.borderColor = "var(--danger)";
                     error = true;
                 } else {
@@ -226,7 +199,6 @@
                     total += val;
                 }
             });
-
             document.getElementById('displayTotal').innerText = total;
             document.getElementById('submitBtn').disabled = (total === 0 || error);
         }
