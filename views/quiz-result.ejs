@@ -7,19 +7,19 @@
     <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        :root { --brand: #0062ff; --bg: #f8fafc; --success: #22c55e; --danger: #ef4444; --text: #1e293b; --header-height: 70px; }
+        :root { --brand: #0062ff; --bg: #f8fafc; --success-blue: #0062ff; --danger: #ef4444; --text: #1e293b; --header-height: 70px; }
         
         * { box-sizing: border-box; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; padding-top: calc(var(--header-height) + 20px); color: var(--text); line-height: 1.5; }
 
-        /* PROFESSIONAL STICKY HEADER */
+        /* STICKY HEADER */
         header { position: fixed; top: 0; left: 0; right: 0; height: var(--header-height); background: white; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
         .logo { font-weight: 800; font-size: 1.4rem; color: var(--brand); letter-spacing: -0.5px; }
         .user-tag { background: #eff6ff; color: var(--brand); padding: 6px 12px; border-radius: 10px; font-weight: 800; font-size: 0.8rem; }
 
         .container { max-width: 600px; margin: auto; padding: 0 15px; }
         
-        /* SCORE GRAPH & SUMMARY */
+        /* SCORE VISUALIZATION */
         .card { background: white; padding: 25px; border-radius: 28px; box-shadow: 0 10px 40px rgba(0,0,0,0.04); margin-bottom: 24px; border: 1px solid #f1f5f9; position: relative; }
         .score-visual { display: flex; flex-direction: column; align-items: center; padding: 10px 0; }
         .progress-circle { width: 150px; height: 150px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
@@ -27,37 +27,37 @@
             conic-gradient(var(--brand) <%= percentage %>%, #f1f5f9 0); margin-bottom: 15px; }
         .progress-val { font-size: 2.2rem; font-weight: 800; color: var(--brand); }
 
-        /* COLLAPSIBLE SUBJECT PERFORMANCE */
+        /* COLLAPSIBLE SUBJECT REPORT */
         .breakdown { background: white; border-radius: 20px; border: 1.5px solid #e2e8f0; margin-bottom: 30px; overflow: hidden; }
         .breakdown summary { padding: 18px; font-weight: 800; font-size: 0.9rem; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; background: #fff; }
-        .breakdown summary::after { content: 'Expand Report +'; font-size: 0.7rem; color: var(--brand); text-transform: uppercase; }
-        .breakdown[open] summary::after { content: 'Collapse −'; }
+        .breakdown summary::after { content: 'View Report +'; font-size: 0.7rem; color: var(--brand); text-transform: uppercase; }
+        .breakdown[open] summary::after { content: 'Close Report −'; }
         .breakdown-list { padding: 0 18px 18px; border-top: 1px solid #f1f5f9; }
         .subj-item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f8fafc; font-weight: 700; font-size: 0.85rem; color: #64748b; }
 
-        /* REVIEW CARD LOGIC */
+        /* QUESTION CARDS */
         .q-card { border-top: 12px solid #cbd5e1; }
-        .q-card.is-correct-q { border-top-color: var(--success); }
+        .q-card.is-correct-q { border-top-color: var(--brand); }
         .q-card.is-wrong-q { border-top-color: var(--danger); }
         .q-meta { font-size: 0.65rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 10px; display: block; }
         .q-text { font-weight: 800; font-size: 1.1rem; color: #0f172a; margin-bottom: 24px; }
 
-        /* OPTION BOXES: THE KEY FIX */
+        /* OPTION BOXES: BLUE FOR CORRECT */
         .opt-group { display: flex; flex-direction: column; gap: 12px; }
         .opt-item { padding: 16px 20px; border-radius: 18px; border: 2.5px solid #f1f5f9; font-weight: 700; display: flex; align-items: center; position: relative; transition: 0.2s; }
         .opt-prefix { width: 32px; height: 32px; background: #f1f5f9; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-weight: 800; color: #94a3b8; font-size: 0.85rem; }
 
-        /* STYLING FOR CORRECT ANSWER */
-        .opt-item.ans-true { border-color: var(--success); background: #f0fdf4; color: #166534; }
-        .opt-item.ans-true .opt-prefix { background: var(--success); color: white; }
-        .opt-item.ans-true::after { content: 'CORRECT ANSWER ✓'; position: absolute; right: 15px; font-size: 0.6rem; font-weight: 800; color: var(--success); }
+        /* Correct Answer = Blue Theme */
+        .opt-item.ans-true { border-color: var(--success-blue); background: #eff6ff; color: var(--brand); }
+        .opt-item.ans-true .opt-prefix { background: var(--brand); color: white; }
+        .opt-item.ans-true::after { content: 'CORRECT ✓'; position: absolute; right: 15px; font-size: 0.6rem; font-weight: 800; }
 
-        /* STYLING FOR USER WRONG CHOICE */
+        /* Wrong Choice = Red Theme */
         .opt-item.ans-wrong-user { border-color: var(--danger); background: #fef2f2; color: #991b1b; }
         .opt-item.ans-wrong-user .opt-prefix { background: var(--danger); color: white; }
-        .opt-item.ans-wrong-user::after { content: 'YOUR CHOICE ✗'; position: absolute; right: 15px; font-size: 0.6rem; font-weight: 800; color: var(--danger); }
+        .opt-item.ans-wrong-user::after { content: 'WRONG ✗'; position: absolute; right: 15px; font-size: 0.6rem; font-weight: 800; }
 
-        /* SOLUTION COLLAPSIBLE */
+        /* SOLUTION CONTENT */
         .sol-toggle { margin-top: 25px; border-radius: 16px; background: #f8fafc; border: 1px solid #e2e8f0; }
         .sol-toggle summary { padding: 14px; font-size: 0.75rem; font-weight: 800; text-align: center; color: #64748b; cursor: pointer; list-style: none; }
         .sol-body { padding: 15px; font-size: 0.85rem; border-top: 1px solid #e2e8f0; line-height: 1.6; color: #475569; }
@@ -95,19 +95,17 @@
             </div>
         </details>
 
-        <p style="font-weight: 800; color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-left: 5px;">Question Scrutiny</p>
-
         <% results.forEach((r, i) => { %>
             <div class="card q-card <%= r.isCorrect ? 'is-correct-q' : 'is-wrong-q' %>">
-                <span class="q-meta">Attempted Question <%= i + 1 %></span>
+                <span class="q-meta">Question <%= i + 1 %></span>
                 <div class="q-text"><%= r.question_text %></div>
 
                 <div class="opt-group">
                     <% ['a', 'b', 'c', 'd'].forEach(letter => { 
                         let state = '';
-                        // Case 1: This is the actual correct answer
+                        // Logic: Always show correct answer in Blue
                         if(letter === r.correctAnswer) state = 'ans-true';
-                        // Case 2: This is what the user picked and it was WRONG
+                        // Logic: If user was wrong, show their choice in Red
                         else if(letter === r.userChoice && !r.isCorrect) state = 'ans-wrong-user';
                     %>
                         <div class="opt-item <%= state %>">
@@ -119,13 +117,13 @@
 
                 <% if(r.hint || r.explanation) { %>
                     <details class="sol-toggle">
-                        <summary>VIEW DETAILED ANALYSIS</summary>
+                        <summary>ANALYSIS & HINTS</summary>
                         <div class="sol-body">
                             <% if(r.hint) { %>
                                 <p style="margin-top:0;"><b>💡 Hint:</b> <i><%= r.hint %></i></p>
                             <% } %>
                             <% if(r.explanation) { %>
-                                <p style="margin-bottom:0;"><b>🔍 Explanation:</b> <%= r.explanation %></p>
+                                <p style="margin-bottom:0;"><b>🔍 Solution:</b> <%= r.explanation %></p>
                             <% } %>
                         </div>
                     </details>
@@ -134,7 +132,7 @@
         <% }) %>
 
         <div class="footer-nav">
-            <a href="/dashboard" class="btn-primary">Finish Review</a>
+            <a href="/dashboard" class="btn-primary">Return to Dashboard</a>
         </div>
     </div>
 
