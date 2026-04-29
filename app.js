@@ -115,53 +115,66 @@ app.get('/login', (req, res) => {
     res.render('login', { error: null });
 });
 
-// Main Auth Route
+// GET Login Page
+app.get('/login', (req, res) => {
+    // Check if already logged in
+    if (req.session.user) {
+        return res.redirect(req.session.user.is_admin ? '/admin/dashboard' : '/dashboard');
+    }
+    res.render('login', { error: null });
+});
+
+// POST Login Handler
 app.post('/auth/login', async (req, res) => {
     const { email, password } = req.body;
 
     try {
-        // 1. Fetch user from database
+        // 1. Find user by email
         const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         
         if (result.rows.length > 0) {
             const user = result.rows[0];
             
-            // 2. Verify Password
+            // 2. Compare hashed password (ayomide2007)
             const isMatch = await bcrypt.compare(password, user.password);
 
             if (isMatch) {
-                // 3. Set Session Data
-                // This captures your specific admin account details and regular users alike
+                // 3. Define Admin Status
+                // Logic: Admin if DB says so OR if it's your specific email
+                const isAdminAccount = (user.email === 'michaelbrainny842@gmail.com');
+
+                // 4. Construct Session Object
                 req.session.user = { 
                     id: user.id, 
                     fullname: user.fullname, 
                     email: user.email,
-                    is_admin: user.is_admin, // Ensure your DB has this column set to true for michaelbrainny842@gmail.com
+                    is_admin: user.is_admin || isAdminAccount, // Forced admin override
                     has_paid: user.has_paid,
                     current_streak: user.current_streak || 0
                 };
 
-                // 4. Save session and redirect based on role
+                // 5. Explicitly save session before redirecting
                 return req.session.save((err) => {
                     if (err) {
                         console.error("Session Save Error:", err);
                         return res.status(500).send("Login failed during session setup");
                     }
 
-                    // Redirect logic
-                    if (user.is_admin === true || user.email === 'michaelbrainny842@gmail.com') {
+                    // 6. Direct to correct dashboard
+                    if (req.session.user.is_admin) {
                         return res.redirect('/admin/dashboard');
+                    } else {
+                        return res.redirect('/dashboard');
                     }
-                    return res.redirect('/dashboard');
                 });
             }
         }
 
-        // If no match found
+        // If credentials don't match
         return res.render('login', { error: "Invalid email or password" });
         
     } catch (err) {
-        console.error("Login Error:", err);
+        console.error("Critical Login Error:", err);
         res.status(500).send("A server error occurred. Please try again.");
     }
 });
