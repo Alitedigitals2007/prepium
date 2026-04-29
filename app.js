@@ -201,42 +201,33 @@ app.get('/profile', isAuth, async (req, res) => {
     try {
         const userId = req.session.user.id;
         
-        // 1. Get user info
+        // 1. Get fresh user info
         const userRes = await pool.query(
-            'SELECT fullname, email, has_paid, current_streak FROM users WHERE id = $1', 
+            'SELECT fullname, email, has_paid FROM users WHERE id = $1', 
             [userId]
         );
         const user = userRes.rows[0];
 
-        // 2. Get Performance Stats
+        // 2. Get Performance Stats - Calculating average based on percentage column
         const statsRes = await pool.query(
-            'SELECT COUNT(*) as total_tests, ROUND(AVG(score)) as avg_score FROM results WHERE user_id = $1',
+            'SELECT COUNT(*) as total_tests, AVG(percentage) as avg_pct FROM quiz_results WHERE user_id = $1',
             [userId]
         );
-        const stats = statsRes.rows[0];
+        
+        const statsRow = statsRes.rows[0];
 
         res.render('profile', { 
             user, 
             stats: {
-                total: stats.total_tests || 0,
-                average: stats.avg_score || 0
+                total: parseInt(statsRow.total_tests) || 0,
+                average: Math.round(statsRow.avg_pct) || 0
             }
         });
     } catch (err) {
-        console.error(err);
+        console.error("Profile Load Error:", err);
         res.status(500).send("Error loading profile");
     }
 });
-
-const isAdmin = (req, res, next) => {
-    // Check if user is logged in AND is_admin is true
-    if (req.session.user && req.session.user.is_admin === true) {
-        return next();
-    } else {
-        // If they aren't an admin, kick them out to the dashboard or login
-        return res.status(403).send("Access Denied: You do not have permission to view this page.");
-    }
-};
 
 app.get('/admin/dashboard', isAdmin, async (req, res) => {
     try {
