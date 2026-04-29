@@ -3,85 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prepium | Review Portal</title>
+    <title>Prepium | Performance Review</title>
     <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        :root { --brand: #0062ff; --bg: #f8fafc; --success-blue: #0062ff; --danger: #ef4444; --text: #1e293b; --header-height: 70px; }
+        :root { --brand: #0062ff; --bg: #f8fafc; --danger: #ef4444; --text: #1e293b; --header-h: 70px; }
         
         * { box-sizing: border-box; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; padding-top: calc(var(--header-height) + 20px); color: var(--text); line-height: 1.5; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; padding-top: calc(var(--header-h) + 20px); color: var(--text); }
 
-        header { position: fixed; top: 0; left: 0; right: 0; height: var(--header-height); background: white; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+        /* STICKY HEADER */
+        header { position: fixed; top: 0; left: 0; right: 0; height: var(--header-h); background: white; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
         .logo { font-weight: 800; font-size: 1.4rem; color: var(--brand); letter-spacing: -0.5px; }
-        .user-tag { background: #eff6ff; color: var(--brand); padding: 6px 12px; border-radius: 10px; font-weight: 800; font-size: 0.8rem; }
+        .session-tag { background: #eff6ff; color: var(--brand); padding: 6px 12px; border-radius: 10px; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; }
 
         .container { max-width: 600px; margin: auto; padding: 0 15px; }
         
+        /* SCORE CHART */
         .card { background: white; padding: 25px; border-radius: 28px; box-shadow: 0 10px 40px rgba(0,0,0,0.04); margin-bottom: 24px; border: 1px solid #f1f5f9; position: relative; }
-        .score-visual { display: flex; flex-direction: column; align-items: center; padding: 10px 0; }
-        .progress-circle { width: 150px; height: 150px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        .score-section { display: flex; flex-direction: column; align-items: center; text-align: center; }
+        .chart { width: 140px; height: 140px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
             background: radial-gradient(closest-side, white 82%, transparent 0), 
             conic-gradient(var(--brand) <%= percentage %>%, #f1f5f9 0); margin-bottom: 15px; }
-        .progress-val { font-size: 2.2rem; font-weight: 800; color: var(--brand); }
+        .chart-pct { font-size: 2rem; font-weight: 800; color: var(--brand); }
 
+        /* COLLAPSIBLE BREAKDOWN */
         .breakdown { background: white; border-radius: 20px; border: 1.5px solid #e2e8f0; margin-bottom: 30px; overflow: hidden; }
-        .breakdown summary { padding: 18px; font-weight: 800; font-size: 0.9rem; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; background: #fff; }
-        .breakdown summary::after { content: 'View Report +'; font-size: 0.7rem; color: var(--brand); text-transform: uppercase; }
+        .breakdown summary { padding: 18px; font-weight: 800; font-size: 0.9rem; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+        .breakdown summary::after { content: 'Report Details +'; font-size: 0.7rem; color: var(--brand); text-transform: uppercase; }
         .breakdown[open] summary::after { content: 'Close Report −'; }
-        .breakdown-list { padding: 0 18px 18px; border-top: 1px solid #f1f5f9; }
-        .subj-item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f8fafc; font-weight: 700; font-size: 0.85rem; color: #64748b; }
+        .breakdown-inner { padding: 0 18px 18px; border-top: 1px solid #f1f5f9; }
+        .subj-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f8fafc; font-weight: 700; font-size: 0.85rem; color: #64748b; }
 
+        /* QUESTION CARDS */
         .q-card { border-top: 12px solid #cbd5e1; }
         .q-card.is-correct-q { border-top-color: var(--brand); }
         .q-card.is-wrong-q { border-top-color: var(--danger); }
-        .q-meta { font-size: 0.65rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 10px; display: block; }
-        .q-text { font-weight: 800; font-size: 1.1rem; color: #0f172a; margin-bottom: 24px; }
+        .q-num { font-size: 0.65rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px; display: block; }
+        .q-text { font-weight: 800; font-size: 1.1rem; color: #0f172a; margin-bottom: 25px; }
 
-        .opt-group { display: flex; flex-direction: column; gap: 12px; }
-        .opt-item { padding: 16px 20px; border-radius: 18px; border: 2.5px solid #f1f5f9; font-weight: 700; display: flex; align-items: center; position: relative; transition: 0.2s; background: white; }
-        .opt-prefix { width: 32px; height: 32px; background: #f1f5f9; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-weight: 800; color: #94a3b8; font-size: 0.85rem; }
+        /* OPTION HIGHLIGHTING */
+        .opt-list { display: flex; flex-direction: column; gap: 12px; }
+        .opt-item { padding: 16px 20px; border-radius: 18px; border: 2px solid #f1f5f9; font-weight: 700; display: flex; align-items: center; position: relative; transition: 0.2s; background: white; }
+        .opt-prefix { width: 32px; height: 32px; background: #f1f5f9; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-weight: 800; color: #94a3b8; }
 
-        /* CORRECT OPTION (BLUE) */
-        .opt-item.ans-true { border-color: var(--brand); background: #eff6ff; color: var(--brand); }
-        .opt-item.ans-true .opt-prefix { background: var(--brand); color: white; }
-        .opt-item.ans-true::after { content: 'CORRECT ✓'; position: absolute; right: 15px; font-size: 0.6rem; font-weight: 800; }
+        /* CORRECT: BLUE THEME */
+        .opt-item.is-correct-choice { border-color: var(--brand); background: #eff6ff; color: var(--brand); }
+        .opt-item.is-correct-choice .opt-prefix { background: var(--brand); color: white; }
+        .opt-item.is-correct-choice::after { content: 'CORRECT ✓'; position: absolute; right: 15px; font-size: 0.6rem; font-weight: 800; }
 
-        /* WRONG PICK (RED) */
-        .opt-item.ans-wrong-user { border-color: var(--danger); background: #fef2f2; color: #991b1b; }
-        .opt-item.ans-wrong-user .opt-prefix { background: var(--danger); color: white; }
-        .opt-item.ans-wrong-user::after { content: 'YOUR CHOICE ✗'; position: absolute; right: 15px; font-size: 0.6rem; font-weight: 800; }
+        /* WRONG: RED THEME */
+        .opt-item.is-wrong-choice { border-color: var(--danger); background: #fef2f2; color: #991b1b; }
+        .opt-item.is-wrong-choice .opt-prefix { background: var(--danger); color: white; }
+        .opt-item.is-wrong-choice::after { content: 'YOUR CHOICE ✗'; position: absolute; right: 15px; font-size: 0.6rem; font-weight: 800; }
 
-        .sol-toggle { margin-top: 25px; border-radius: 16px; background: #f8fafc; border: 1px solid #e2e8f0; cursor: pointer; }
-        .sol-toggle summary { padding: 14px; font-size: 0.75rem; font-weight: 800; text-align: center; color: #64748b; list-style: none; }
-        .sol-body { padding: 15px; font-size: 0.85rem; border-top: 1px solid #e2e8f0; line-height: 1.6; color: #475569; }
+        /* SOLUTION */
+        .sol-details { margin-top: 25px; border-radius: 16px; background: #f8fafc; border: 1px solid #e2e8f0; cursor: pointer; }
+        .sol-details summary { padding: 14px; font-size: 0.75rem; font-weight: 800; text-align: center; color: #64748b; list-style: none; }
+        .sol-text { padding: 15px; font-size: 0.85rem; border-top: 1px solid #e2e8f0; line-height: 1.6; color: #475569; }
 
-        .footer-nav { margin: 40px 0; text-align: center; }
-        .btn-primary { background: var(--brand); color: white; padding: 18px 40px; border-radius: 20px; text-decoration: none; font-weight: 800; display: inline-block; box-shadow: 0 10px 25px rgba(0,98,255,0.2); }
+        .footer { margin: 40px 0; text-align: center; }
+        .btn-dash { background: var(--brand); color: white; padding: 18px 45px; border-radius: 20px; text-decoration: none; font-weight: 800; display: inline-block; box-shadow: 0 10px 25px rgba(0,98,255,0.2); }
     </style>
 </head>
 <body>
 
     <header>
         <div class="logo">PREPIUM</div>
-        <div class="user-tag">Review Session</div>
+        <div class="session-tag">Result Scrutiny</div>
     </header>
 
     <div class="container">
-        <div class="card score-visual">
-            <div class="progress-circle">
-                <div class="progress-val"><%= percentage %>%</div>
+        <div class="card score-section">
+            <div class="chart">
+                <span class="chart-pct"><%= percentage %>%</span>
             </div>
             <div style="font-weight: 800; font-size: 1rem; color: #64748b;">
-                Score: <span style="color: var(--text)"><%= score %> / <%= total %></span>
+                You scored <%= score %> out of <%= total %>
             </div>
         </div>
 
         <details class="breakdown">
             <summary>Subject Performance Report</summary>
-            <div class="breakdown-list">
+            <div class="breakdown-inner">
                 <% Object.keys(subjectStats).forEach(subject => { %>
-                    <div class="subj-item">
+                    <div class="subj-row">
                         <span><%= subject %></span>
                         <span style="color: var(--brand)"><%= subjectStats[subject].correct %> / <%= subjectStats[subject].total %></span>
                     </div>
@@ -91,19 +97,19 @@
 
         <% results.forEach((r, i) => { %>
             <div class="card q-card <%= r.isCorrect ? 'is-correct-q' : 'is-wrong-q' %>">
-                <span class="q-meta">Question <%= i + 1 %></span>
+                <span class="q-num">Question <%= i + 1 %></span>
                 <div class="q-text"><%= r.question_text %></div>
 
-                <div class="opt-group">
+                <div class="opt-list">
                     <% ['a', 'b', 'c', 'd'].forEach(letter => { 
                         let stateClass = '';
-                        // 1. If this is the correct answer, make it Blue
-                        if(letter === r.correctAnswer) {
-                            stateClass = 'ans-true';
+                        // Always highlight the correct answer in BLUE
+                        if(letter.toLowerCase() === r.correctAnswer.toLowerCase()) {
+                            stateClass = 'is-correct-choice';
                         } 
-                        // 2. If user chose this and it was WRONG, make it Red
-                        else if(letter === r.userChoice && !r.isCorrect) {
-                            stateClass = 'ans-wrong-user';
+                        // Highlight user pick in RED only if it was wrong
+                        else if(letter.toLowerCase() === r.userChoice.toLowerCase() && !r.isCorrect) {
+                            stateClass = 'is-wrong-choice';
                         }
                     %>
                         <div class="opt-item <%= stateClass %>">
@@ -114,9 +120,9 @@
                 </div>
 
                 <% if(r.hint || r.explanation) { %>
-                    <details class="sol-toggle">
+                    <details class="sol-details">
                         <summary>ANALYSIS & HINTS</summary>
-                        <div class="sol-body">
+                        <div class="sol-text">
                             <% if(r.hint) { %>
                                 <p style="margin-top:0;"><b>💡 Hint:</b> <i><%= r.hint %></i></p>
                             <% } %>
@@ -129,8 +135,8 @@
             </div>
         <% }) %>
 
-        <div class="footer-nav">
-            <a href="/dashboard" class="btn-primary">Return to Dashboard</a>
+        <div class="footer">
+            <a href="/dashboard" class="btn-dash">Back to Dashboard</a>
         </div>
     </div>
 
