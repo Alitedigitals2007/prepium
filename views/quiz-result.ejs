@@ -12,117 +12,123 @@
         .container { max-width: 550px; margin: auto; }
         .card { background: white; padding: 25px; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); margin-bottom: 20px; position: relative; border: 1px solid #f1f5f9; }
         
-        /* Results Header */
-        .header-card { text-align: center; background: white; }
-        .perc-text { font-size: 3.5rem; font-weight: 800; color: var(--brand); margin: 0; }
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
-        .stat-box { background: #f1f5f9; padding: 15px; border-radius: 20px; }
-        .stat-label { font-size: 0.65rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; display: block; }
+        /* Centered Performance Card */
+        .header-card { text-align: center; }
+        .perc-text { font-size: 3.8rem; font-weight: 800; color: var(--brand); margin: 0; line-height: 1; }
+        .stat-box { background: #eff6ff; padding: 15px; border-radius: 20px; margin-top: 15px; border: 1px solid #dbeafe; }
+        .stat-label { font-size: 0.7rem; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; letter-spacing: 0.5px; }
 
-        /* Review Card Status */
+        /* Collapsible Subject Report */
+        .report-toggle { background: white; border: 1px solid #e2e8f0; border-radius: 20px; margin-bottom: 25px; overflow: hidden; }
+        .report-toggle summary { padding: 18px; font-weight: 800; font-size: 0.85rem; color: #1e293b; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+        .report-toggle summary::after { content: '↓'; color: var(--brand); font-size: 1.1rem; }
+        .report-content { padding: 0 18px 18px 18px; border-top: 1px solid #f1f5f9; }
+        .subj-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f8fafc; }
+        .subj-name { font-weight: 700; color: #64748b; font-size: 0.85rem; }
+
+        /* Review Card Logic */
         .review-card { border-left: 8px solid #cbd5e1; }
         .review-card.correct-q { border-left-color: var(--success); }
         .review-card.wrong-q { border-left-color: var(--danger); }
         
-        .badge { position: absolute; top: 15px; right: 20px; font-size: 0.65rem; font-weight: 800; padding: 4px 10px; border-radius: 8px; text-transform: uppercase; }
+        .badge { position: absolute; top: 18px; right: 20px; font-size: 0.65rem; font-weight: 800; padding: 5px 12px; border-radius: 8px; text-transform: uppercase; }
         .correct-q .badge { background: #f0fdf4; color: var(--success); }
         .wrong-q .badge { background: #fef2f2; color: var(--danger); }
 
-        .q-text { font-weight: 800; margin-bottom: 20px; font-size: 1.05rem; color: #0f172a; line-height: 1.6; padding-right: 80px; }
+        .q-text { font-weight: 800; margin-bottom: 22px; font-size: 1.05rem; color: #0f172a; line-height: 1.6; padding-right: 85px; }
         
-        /* Option Logic - CRITICAL SECTION */
+        /* Options Review Styling */
         .opt-container { display: flex; flex-direction: column; gap: 10px; }
-        .opt-row { padding: 14px 18px; border-radius: 16px; border: 2px solid #f1f5f9; font-size: 0.9rem; font-weight: 700; display: flex; align-items: center; justify-content: space-between; transition: 0.2s; }
+        .opt-row { padding: 14px 18px; border-radius: 16px; border: 2px solid #f1f5f9; font-size: 0.95rem; font-weight: 700; display: flex; align-items: center; justify-content: space-between; }
         .opt-row .lbl { margin-right: 12px; font-weight: 800; color: #94a3b8; }
 
-        /* CLASS: This is the Correct Answer (Always Green) */
-        .opt-row.is-the-right-answer { border-color: var(--success); background: #f0fdf4; color: #166534; }
-        .opt-row.is-the-right-answer .lbl { color: var(--success); }
+        /* Visual Feedback */
+        .opt-row.is-correct { border-color: var(--success); background: #f0fdf4; color: #166534; }
+        .opt-row.is-correct .lbl { color: var(--success); }
+        .opt-row.is-wrong-pick { border-color: var(--danger); background: #fef2f2; color: #991b1b; }
+        .opt-row.is-wrong-pick .lbl { color: var(--danger); }
 
-        /* CLASS: This is what you chose WRONGLY (Always Red) */
-        .opt-row.user-made-mistake { border-color: var(--danger); background: #fef2f2; color: #991b1b; }
-        .opt-row.user-made-mistake .lbl { color: var(--danger); }
+        .status-tag { font-size: 0.75rem; font-weight: 800; padding: 4px 10px; border-radius: 6px; }
 
-        .status-icon { font-weight: 800; font-size: 1.1rem; }
+        /* Solution Expansion */
+        .sol-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; margin-top: 20px; }
+        .sol-box summary { padding: 15px; font-size: 0.75rem; font-weight: 800; color: var(--brand); list-style: none; cursor: pointer; text-align: center; }
+        .sol-body { padding: 0 15px 15px 15px; font-size: 0.85rem; color: #475569; border-top: 1px solid #e2e8f0; padding-top: 15px; line-height: 1.6; }
+        .hint-badge { background: #fef9c3; color: #854d0e; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 0.65rem; margin-bottom: 10px; display: inline-block; }
 
-        /* Hint & Explanation */
-        details { background: #f8fafc; border-radius: 16px; border: 1px solid #e2e8f0; margin-top: 20px; cursor: pointer; }
-        summary { padding: 14px; font-size: 0.75rem; font-weight: 800; color: var(--brand); list-style: none; display: flex; justify-content: space-between; align-items: center; }
-        .details-content { padding: 0 15px 15px 15px; font-size: 0.85rem; color: #475569; line-height: 1.5; }
-        .hint-tag { background: #fef9c3; color: #854d0e; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 0.6rem; display: inline-block; margin-bottom: 8px; }
-
-        .btn-finish { display: block; text-align: center; padding: 20px; background: var(--brand); color: white; text-decoration: none; border-radius: 20px; font-weight: 800; margin-top: 40px; box-shadow: 0 10px 20px rgba(0,98,255,0.15); }
+        .btn-home { display: block; text-align: center; padding: 20px; background: var(--brand); color: white; text-decoration: none; border-radius: 20px; font-weight: 800; margin: 40px 0; box-shadow: 0 10px 25px rgba(0,98,255,0.2); }
     </style>
 </head>
 <body>
 
     <div class="container">
         <div class="card header-card">
-            <span class="stat-label">Final Grade</span>
+            <span class="stat-label">Exam Performance</span>
             <h1 class="perc-text"><%= percentage %>%</h1>
-            <div class="stats-grid">
-                <div class="stat-box">
-                    <span class="stat-label">Score</span>
-                    <span style="font-weight: 800;"><%= score %> / <%= total %></span>
-                </div>
-                <div class="stat-box">
-                    <span class="stat-label">Time Spent</span>
-                    <span style="font-weight: 800;"><%= timeUsed %></span>
-                </div>
+            <div class="stat-box">
+                <span class="stat-label">Final Score</span>
+                <span style="font-weight: 800; font-size: 1.2rem;"><%= score %> / <%= total %></span>
             </div>
         </div>
 
-        <h3 style="font-weight: 800; margin: 30px 0 15px 5px; color: #64748b; font-size: 0.85rem;">QUESTION REVIEW</h3>
+        <details class="report-toggle">
+            <summary>VIEW SUBJECT BREAKDOWN</summary>
+            <div class="report-content">
+                <% Object.keys(subjectStats).forEach(subject => { %>
+                    <div class="subj-row">
+                        <span class="subj-name"><%= subject %></span>
+                        <span style="font-weight: 800; color: var(--text);">
+                            <%= subjectStats[subject].correct %> / <%= subjectStats[subject].total %>
+                        </span>
+                    </div>
+                <% }) %>
+            </div>
+        </details>
+
+        <h3 style="font-weight: 800; margin: 30px 0 15px 5px; color: #64748b; font-size: 0.9rem; letter-spacing: 0.5px;">SCRUTINY & REVIEW</h3>
 
         <% results.forEach((r, i) => { %>
             <div class="card review-card <%= r.isCorrect ? 'correct-q' : 'wrong-q' %>">
-                <div class="badge"><%= r.isCorrect ? 'Correct' : 'Incorrect' %></div>
+                <div class="badge"><%= r.isCorrect ? 'Passed' : 'Failed' %></div>
                 
                 <div class="q-text">
-                    <span style="color: var(--brand); font-size: 0.7rem; display: block; text-transform: uppercase;">Question <%= i + 1 %></span>
+                    <span style="color: var(--brand); font-size: 0.75rem; display: block; margin-bottom: 4px;">QUESTION <%= i + 1 %></span>
                     <%= r.question_text %>
                 </div>
 
                 <div class="opt-container">
-                    <% ['a', 'b', 'c', 'd'].forEach(letter => { 
-                        let rowClass = '';
-                        let icon = '';
+                    <% ['a', 'b', 'c', 'd'].forEach(key => { 
+                        let cls = '';
+                        let tag = '';
 
-                        // 1. Check if this specific letter is the actual correct answer
-                        if(letter === r.correctAnswer) {
-                            rowClass = 'is-the-right-answer';
-                            icon = '✓';
-                        } 
-                        // 2. Check if the user chose this letter AND it was wrong
-                        else if(letter === r.userChoice && !r.isCorrect) {
-                            rowClass = 'user-made-mistake';
-                            icon = '✗';
+                        // Logic: Always show correct answer green, show user's choice red if wrong.
+                        if(key === r.correctAnswer) {
+                            cls = 'is-correct';
+                            tag = 'Correct Answer ✓';
+                        } else if(key === r.userChoice && !r.isCorrect) {
+                            cls = 'is-wrong-pick';
+                            tag = 'Your Choice ✗';
                         }
                     %>
-                        <div class="opt-row <%= rowClass %>">
-                            <span><span class="lbl"><%= letter.toUpperCase() %></span> <%= r['option_' + letter] %></span>
-                            
-                            <div class="status-icon">
-                                <% if(letter === r.correctAnswer) { %>
-                                    <span style="color: var(--success)">Correct</span>
-                                <% } else if(letter === r.userChoice && !r.isCorrect) { %>
-                                    <span style="color: var(--danger)">Your Pick</span>
-                                <% } %>
-                            </div>
+                        <div class="opt-row <%= cls %>">
+                            <span><span class="lbl"><%= key.toUpperCase() %></span> <%= r['option_' + key] %></span>
+                            <% if(tag) { %>
+                                <span class="status-tag"><%= tag %></span>
+                            <% } %>
                         </div>
                     <% }) %>
                 </div>
 
                 <% if(r.hint || r.explanation) { %>
-                <details>
-                    <summary><span>EXPLANATION & HINT</span> <span>▼</span></summary>
-                    <div class="details-content">
+                <details class="sol-box">
+                    <summary>REASONING & SOLUTION</summary>
+                    <div class="sol-body">
                         <% if(r.hint) { %>
-                            <div class="hint-tag">EXAM TIP</div>
+                            <div class="hint-badge">EXAM TIP</div>
                             <p style="margin-top:0;"><i><%= r.hint %></i></p>
                         <% } %>
                         <% if(r.explanation) { %>
-                            <p style="margin-bottom:0;"><b>Step-by-Step:</b><br> <%= r.explanation %></p>
+                            <p style="margin-bottom:0;"><b>Detailed Explanation:</b><br> <%= r.explanation %></p>
                         <% } %>
                     </div>
                 </details>
@@ -130,7 +136,7 @@
             </div>
         <% }) %>
 
-        <a href="/dashboard" class="btn-finish">Back to Dashboard</a>
+        <a href="/dashboard" class="btn-home">Finish & Exit</a>
     </div>
 
 </body>
