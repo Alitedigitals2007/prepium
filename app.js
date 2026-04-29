@@ -201,30 +201,29 @@ app.get('/profile', isAuth, async (req, res) => {
     try {
         const userId = req.session.user.id;
         
-        // 1. Get fresh user info
+        // 1. Get user info
         const userRes = await pool.query(
-            'SELECT fullname, email, has_paid FROM users WHERE id = $1', 
+            'SELECT fullname, email, has_paid, current_streak FROM users WHERE id = $1', 
             [userId]
         );
         const user = userRes.rows[0];
 
-        // 2. Get Performance Stats - Calculating average based on percentage column
+        // 2. Get Performance Stats
         const statsRes = await pool.query(
-            'SELECT COUNT(*) as total_tests, AVG(percentage) as avg_pct FROM quiz_results WHERE user_id = $1',
+            'SELECT COUNT(*) as total_tests, ROUND(AVG(score)) as avg_score FROM results WHERE user_id = $1',
             [userId]
         );
-        
-        const statsRow = statsRes.rows[0];
+        const stats = statsRes.rows[0];
 
         res.render('profile', { 
             user, 
             stats: {
-                total: parseInt(statsRow.total_tests) || 0,
-                average: Math.round(statsRow.avg_pct) || 0
+                total: stats.total_tests || 0,
+                average: stats.avg_score || 0
             }
         });
     } catch (err) {
-        console.error("Profile Load Error:", err);
+        console.error(err);
         res.status(500).send("Error loading profile");
     }
 });
