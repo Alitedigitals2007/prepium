@@ -7,14 +7,14 @@
     <script src="https://js.paystack.co/v1/inline.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        :root { --brand: #0062ff; --bg: #f8fafc; --text: #1e293b; --gold: #f59e0b; }
+        :root { --brand: #0062ff; --bg: #f8fafc; --text: #0f172a; --sub: #64748b; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
         
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif; 
             background: var(--bg); 
             margin: 0; 
-            padding-bottom: 100px; 
+            padding: 0;
             color: var(--text); 
             display: flex; 
             justify-content: center; 
@@ -26,239 +26,214 @@
             background: white; 
             min-height: 100vh; 
             position: relative; 
-            box-shadow: 0 0 40px rgba(0,0,0,0.03); 
+            box-shadow: 0 0 60px rgba(0,0,0,0.05);
+            padding-bottom: 100px;
         }
 
-        /* Header Area */
-        .top-bar { padding: 1.5rem 1.2rem; display: flex; justify-content: space-between; align-items: center; }
-        .profile-info { display: flex; align-items: center; gap: 12px; }
-        .avatar { 
-            width: 44px; 
-            height: 44px; 
-            background: linear-gradient(135deg, var(--brand), #00d2ff); 
-            border-radius: 15px; 
+        /* Modernized Header */
+        .header-main { 
+            padding: 2.5rem 1.5rem 1.5rem;
+            background: linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%);
+        }
+        .user-profile { display: flex; align-items: center; gap: 15px; }
+        .avatar-circle { 
+            width: 52px; 
+            height: 52px; 
+            background: var(--brand); 
+            border-radius: 18px; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
             color: white; 
             font-weight: 800; 
-            font-size: 1.2rem; 
+            font-size: 1.3rem;
+            box-shadow: 0 10px 20px rgba(0, 98, 255, 0.15);
         }
         
-        .status-badge { font-size: 0.6rem; font-weight: 800; padding: 4px 10px; border-radius: 8px; text-transform: uppercase; margin-top: 4px; display: inline-block; letter-spacing: 0.5px; }
-        .paid { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
-        .unpaid { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
-        .streak-pill { 
-            font-size: 0.75rem; 
+        .welcome-msg h1 { margin: 0; font-size: 1.4rem; font-weight: 800; letter-spacing: -0.5px; }
+        .tier-pill { 
+            font-size: 0.65rem; 
             font-weight: 800; 
-            color: var(--gold); 
-            display: flex; 
-            align-items: center; 
-            gap: 4px; 
-            background: #fffbeb; 
-            padding: 6px 12px; 
-            border-radius: 12px; 
-            border: 1px solid #fef3c7; 
+            padding: 4px 10px; 
+            border-radius: 8px; 
+            text-transform: uppercase; 
+            margin-top: 4px; 
+            display: inline-block;
         }
+        .paid { background: #e0f2fe; color: var(--brand); }
+        .unpaid { background: #f1f5f9; color: var(--sub); }
 
-        /* Navigation Grid */
-        .section-label { padding: 0 1.2rem; font-size: 0.75rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin: 1.5rem 0 0.8rem; letter-spacing: 0.8px; }
-        .action-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 0 1.2rem; }
-        .action-card { 
-            background: #f8fafc; 
+        /* Unified Action Grid */
+        .menu-grid { 
+            display: grid; 
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 15px; 
+            padding: 1.5rem; 
+        }
+        .menu-card { 
+            background: #ffffff; 
             border: 1px solid #f1f5f9; 
-            padding: 1.4rem 5px; 
-            border-radius: 24px; 
+            padding: 2rem 1rem; 
+            border-radius: 30px; 
             text-align: center; 
             text-decoration: none; 
-            color: inherit; 
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+            transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.01);
         }
-        .action-card:active { transform: scale(0.94); background: #f1f5f9; }
-        .locked { opacity: 0.4; filter: grayscale(1); pointer-events: none; }
-        .action-card span:first-child { font-size: 1.8rem; margin-bottom: 8px; display: block; }
-        .action-card b { font-size: 0.75rem; font-weight: 800; display: block; }
-
-        /* Recent Activity */
-        .activity-card { margin: 1.2rem; background: #ffffff; border: 1px solid #f1f5f9; border-radius: 28px; padding: 0.5rem 1.2rem; }
-        .activity-row { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid #f8fafc; }
-        .activity-row:last-child { border-bottom: none; }
-        .subject-name { font-weight: 700; font-size: 0.9rem; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
-        .score-badge { background: #eff6ff; color: var(--brand); padding: 6px 14px; border-radius: 12px; font-weight: 800; font-size: 0.85rem; }
-
-        /* Paywall */
-        .paywall-overlay { 
-            position: absolute; 
-            top: 180px; 
-            left: 0; 
-            right: 0; 
-            bottom: 85px; 
-            background: rgba(255, 255, 255, 0.8); 
-            backdrop-filter: blur(12px); 
-            -webkit-backdrop-filter: blur(12px); 
-            z-index: 100; 
-            display: flex; 
-            justify-content: center; 
-            align-items: flex-start; 
-            padding-top: 40px; 
+        .menu-card:active { transform: translateY(2px); background: #f8fafc; }
+        .menu-card i { 
+            font-size: 2.2rem; 
+            display: block; 
+            margin-bottom: 12px; 
+            font-style: normal;
         }
-        .lock-box { 
-            background: white; 
-            width: 88%; 
-            padding: 2.5rem 2rem; 
-            border-radius: 35px; 
-            box-shadow: 0 20px 40px rgba(0,0,0,0.08); 
-            text-align: center; 
-            border: 1px solid #f1f5f9; 
+        .menu-card b { font-size: 0.9rem; font-weight: 800; color: var(--text); }
+        .menu-card p { font-size: 0.7rem; color: var(--sub); margin: 5px 0 0; font-weight: 600; }
+        
+        .locked-card { opacity: 0.5; filter: grayscale(1); pointer-events: none; }
+
+        /* Paywall Styling */
+        .paywall-container { 
+            margin: 1.5rem;
+            background: #1e293b;
+            border-radius: 32px;
+            padding: 2rem;
+            color: white;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .paywall-container::after {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(0,98,255,0.2) 0%, transparent 70%);
         }
         .upgrade-btn { 
             background: var(--brand); 
             color: white; 
-            padding: 1.2rem; 
-            border-radius: 20px; 
-            text-decoration: none; 
+            padding: 1.1rem; 
+            border-radius: 18px; 
             font-weight: 800; 
             display: block; 
             margin-top: 1.5rem; 
             border: none; 
             width: 100%; 
-            font-size: 1.05rem; 
-            box-shadow: 0 8px 16px rgba(0, 98, 255, 0.25); 
+            font-size: 1rem; 
             cursor: pointer;
+            position: relative;
+            z-index: 1;
         }
 
-        /* Bottom Navbar */
-        .bottom-nav { 
+        /* Navigation Bar */
+        .nav-bar { 
             position: fixed; 
             bottom: 0; 
             width: 100%; 
             max-width: 430px; 
-            background: rgba(255, 255, 255, 0.95); 
-            backdrop-filter: blur(10px); 
+            background: rgba(255, 255, 255, 0.98); 
             height: 85px; 
             display: flex; 
             justify-content: space-around; 
             align-items: center; 
             border-top: 1px solid #f1f5f9; 
-            z-index: 101; 
-            padding-bottom: env(safe-area-inset-bottom); 
+            z-index: 1000;
+            padding-bottom: 15px;
         }
-        .nav-link { text-decoration: none; color: #94a3b8; font-size: 0.65rem; font-weight: 800; text-align: center; transition: 0.2s; position: relative; }
-        .nav-link.active { color: var(--brand); }
-        .nav-link i { display: block; font-size: 1.4rem; margin-bottom: 4px; font-style: normal; }
-        
-        /* Notification Dot */
-        .notification-dot { 
-            position: absolute; 
-            top: -2px; 
-            right: calc(50% - 18px); 
-            width: 10px; 
-            height: 10px; 
-            background-color: #ff4d4d; 
-            border-radius: 50%; 
-            border: 2px solid white; 
-            animation: pulse 1.5s infinite; 
-        }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+        .nav-item { text-decoration: none; color: #94a3b8; font-size: 0.65rem; font-weight: 800; text-align: center; }
+        .nav-item.active { color: var(--brand); }
+        .nav-item i { display: block; font-size: 1.4rem; margin-bottom: 4px; font-style: normal; }
 
-        .fab { 
-            width: 62px; 
-            height: 62px; 
+        .center-fab { 
+            width: 60px; 
+            height: 60px; 
             background: var(--brand); 
-            border-radius: 50%; 
+            border-radius: 22px; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
             color: white; 
-            font-size: 2.2rem; 
-            transform: translateY(-30px); 
-            border: 6px solid white; 
-            box-shadow: 0 12px 24px rgba(0, 98, 255, 0.35); 
-            text-decoration: none; 
+            font-size: 2rem; 
+            transform: translateY(-25px); 
+            border: 5px solid white; 
+            box-shadow: 0 10px 20px rgba(0, 98, 255, 0.3);
+            text-decoration: none;
         }
+        
+        .dot { height: 8px; width: 8px; background: #ef4444; border-radius: 50%; position: absolute; top: 0; right: 0; border: 2px solid white; }
     </style>
 </head>
 <body>
 
     <div class="app-shell">
-        <header class="top-bar">
-            <div class="profile-info">
-                <div class="avatar"><%= user.fullname ? user.fullname.charAt(0).toUpperCase() : 'U' %></div>
-                <div>
-                    <div style="font-weight: 800; font-size: 1.1rem;"><%= user.fullname ? user.fullname.split(' ')[0] : 'Student' %></div>
-                    <span class="status-badge <%= user.has_paid ? 'paid' : 'unpaid' %>">
-                        <%= user.has_paid ? 'Premium' : 'Basic Member' %>
+        <header class="header-main">
+            <div class="user-profile">
+                <div class="avatar-circle">
+                    <%= user.fullname ? user.fullname.charAt(0).toUpperCase() : 'U' %>
+                </div>
+                <div class="welcome-msg">
+                    <h1>Hi, <%= user.fullname ? user.fullname.split(' ')[0] : 'Student' %></h1>
+                    <span class="tier-pill <%= user.has_paid ? 'paid' : 'unpaid' %>">
+                        <%= user.has_paid ? 'Premium Access' : 'Basic Plan' %>
                     </span>
                 </div>
             </div>
-            <div class="streak-pill">
-                <span>🔥</span> <%= user.current_streak || 0 %>
-            </div>
         </header>
 
-        <div class="section-label">Main Menu</div>
-        <div class="action-grid">
-            <a href="/subjects" class="action-card">
-        <span>📚</span><b>Library</b>
-    </a>
-            <a href="<%= user.has_paid ? '/competition' : '#' %>" class="action-card <%= !user.has_paid ? 'locked' : '' %>">
-                <span>🏆</span><b>Compete</b>
+        <div class="menu-grid">
+            <a href="/subjects" class="menu-card">
+                <i>📚</i>
+                <b>Study Library</b>
+                <p>Browse Courses</p>
             </a>
-            <a href="/history" class="action-card">
-                <span>📜</span><b>History</b>
+            
+            <a href="/history" class="menu-card">
+                <i>📜</i>
+                <b>Performance</b>
+                <p>Past Results</p>
             </a>
-        </div>
 
-        <div class="section-label">Recent Attempts</div>
-        <div class="activity-card">
-            <% if (typeof history !== 'undefined' && history.length > 0) { %>
-                <% history.forEach(item => { %>
-                <div class="activity-row">
-                    <div>
-                        <div class="subject-name text-capitalize"><%= item.subject || 'General Practice' %></div>
-                        <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 600;"><%= item.time %></div>
-                    </div>
-                    <span class="score-badge"><%= item.score %>%</span>
-                </div>
-                <% }) %>
-            <% } else { %>
-                <div style="text-align: center; padding: 2.5rem 0;">
-                    <p style="color: #94a3b8; font-size: 0.85rem; font-weight: 600; line-height: 1.4;">No history found.<br>Your scores will appear here.</p>
-                </div>
-            <% } %>
+            <a href="<%= user.has_paid ? '/competition' : '#' %>" class="menu-card <%= !user.has_paid ? 'locked-card' : '' %>">
+                <i>🏆</i>
+                <b>Live Arena</b>
+                <p>Global Rank</p>
+            </a>
+
+            <a href="/profile" class="menu-card">
+                <i>⚙️</i>
+                <b>Settings</b>
+                <p>Account Prefs</p>
+            </a>
         </div>
 
         <% if (!user.has_paid) { %>
-        <div class="paywall-overlay">
-            <div class="lock-box">
-                <div style="font-size: 3.5rem; margin-bottom: 0.5rem;">✨</div>
-                <h2 style="margin: 0; font-weight: 800; font-size: 1.4rem;">Get Full Access</h2>
-                <p style="font-size: 0.85rem; color: #64748b; margin: 12px 0; line-height: 1.5;">Join the 2026 cohort. Unlock detailed analytics and live competitions.</p>
-                <button id="pay-btn" onclick="payWithPaystack()" class="upgrade-btn">Unlock for ₦500</button>
-            </div>
+        <div class="paywall-container">
+            <h2 style="margin: 0; font-size: 1.2rem;">Ready for 2026?</h2>
+            <p style="font-size: 0.8rem; opacity: 0.8; margin: 10px 0;">Unlock full analytics, custom mock exams, and premium subjects.</p>
+            <button id="pay-btn" onclick="payWithPaystack()" class="upgrade-btn">Get Premium — ₦500</button>
         </div>
         <% } %>
 
-        <nav class="bottom-nav">
-            <a href="/dashboard" class="nav-link active"><i>🏠</i>Home</a>
-            <a href="/history" class="nav-link"><i>📜</i>History</a>
-            <a href="<%= user.has_paid ? '/setup-test' : '#' %>" class="fab">+</a>
-            <a href="/notifications" class="nav-link">
-                <i>🔔</i>
-                <% if (locals.hasNewNotifs === true) { %>
-                    <span class="notification-dot"></span>
-                <% } %>
-                Alerts
+        <nav class="nav-bar">
+            <a href="/dashboard" class="nav-item active"><i>🏠</i>Home</a>
+            <a href="/history" class="nav-item"><i>📊</i>Stats</a>
+            
+            <a href="<%= user.has_paid ? '/setup-test' : '#' %>" class="center-fab">+</a>
+            
+            <a href="/notifications" class="nav-item" style="position: relative;">
+                <i>🔔</i>Alerts
+                <% if (locals.hasNewNotifs) { %><span class="dot"></span><% } %>
             </a>
-            <a href="/profile" class="nav-link"><i>👤</i>Profile</a>
+            <a href="/profile" class="nav-item"><i>👤</i>Profile</a>
         </nav>
     </div>
 
     <script>
         function payWithPaystack() {
             const btn = document.getElementById('pay-btn');
-            btn.innerHTML = "Processing...";
-            btn.style.opacity = "0.7";
+            btn.innerHTML = "Opening Secure Pay...";
+            btn.disabled = true;
 
             let handler = PaystackPop.setup({
                 key: '<%= paystack_key %>',
@@ -269,8 +244,8 @@
                     window.location.href = "/verify-payment?reference=" + response.reference;
                 },
                 onClose: function() {
-                    btn.innerHTML = "Unlock for ₦500";
-                    btn.style.opacity = "1";
+                    btn.innerHTML = "Get Premium — ₦500";
+                    btn.disabled = false;
                 }
             });
             handler.openIframe();
