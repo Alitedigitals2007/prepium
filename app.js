@@ -36,11 +36,12 @@ const hasPaid = (req, res, next) => {
 };
 
 const isAdmin = (req, res, next) => {
-    // Checks if user is logged in AND has the 'admin' role
-    if (req.session.user && req.session.user.role === 'admin') {
+    // Check if the session user exists AND the is_admin flag is true
+    if (req.session.user && req.session.user.is_admin === true) {
         return next();
     }
-    // If not admin, redirect to dashboard or show error
+    
+    // If they aren't an admin, they stay out
     res.status(403).send("Access Denied: Admins Only");
 };
 
