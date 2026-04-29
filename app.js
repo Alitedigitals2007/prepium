@@ -110,75 +110,59 @@ app.post('/auth/signup', async (req, res) => {
     }
 });
 
-// Login Page
+// Login Page GET route
 app.get('/login', (req, res) => {
-    res.render('login');
+    res.render('login', { error: null });
 });
 
+// Main Auth Route
 app.post('/auth/login', async (req, res) => {
     const { email, password } = req.body;
 
     try {
+        // 1. Fetch user from database
         const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         
         if (result.rows.length > 0) {
             const user = result.rows[0];
+            
+            // 2. Verify Password
             const isMatch = await bcrypt.compare(password, user.password);
 
             if (isMatch) {
-                // FIX: Store ALL necessary fields including has_paid
+                // 3. Set Session Data
+                // This captures your specific admin account details and regular users alike
                 req.session.user = { 
                     id: user.id, 
                     fullname: user.fullname, 
                     email: user.email,
-                    is_admin: user.is_admin,
-                    has_paid: user.has_paid, // <--- CRITICAL: Dashboard needs this!
+                    is_admin: user.is_admin, // Ensure your DB has this column set to true for michaelbrainny842@gmail.com
+                    has_paid: user.has_paid,
                     current_streak: user.current_streak || 0
                 };
 
-                // Explicitly save the session before redirecting (fixes many "logged out" bugs)
-                return req.session.save(() => {
-                    if (user.is_admin) {
+                // 4. Save session and redirect based on role
+                return req.session.save((err) => {
+                    if (err) {
+                        console.error("Session Save Error:", err);
+                        return res.status(500).send("Login failed during session setup");
+                    }
+
+                    // Redirect logic
+                    if (user.is_admin === true || user.email === 'michaelbrainny842@gmail.com') {
                         return res.redirect('/admin/dashboard');
                     }
                     return res.redirect('/dashboard');
                 });
             }
         }
-        // Use a redirect or pass the error correctly to the EJS
-        res.render('login', { error: "Invalid email or password" });
+
+        // If no match found
+        return res.render('login', { error: "Invalid email or password" });
         
     } catch (err) {
         console.error("Login Error:", err);
-        res.status(500).send("Server Error");
-    }
-});
-
-app.post('/login', async (req, res) => {
-    const { email, password } = req.body;
-    try {
-        // Make sure you aren't selecting a column you haven't created yet
-        const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-        
-        if (result.rows.length > 0) {
-            const user = result.rows[0];
-            
-            // Check password (assuming you use bcrypt)
-            const match = await bcrypt.compare(password, user.password);
-            if (match) {
-                // Store user info in session
-                req.session.user = { 
-                    id: user.id, 
-                    fullname: user.fullname, 
-                    email: user.email 
-                };
-                return res.redirect('/dashboard');
-            }
-        }
-        res.render('login', { error: 'Invalid email or password' });
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Server Error");
+        res.status(500).send("A server error occurred. Please try again.");
     }
 });
 
