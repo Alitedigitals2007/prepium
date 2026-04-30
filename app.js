@@ -34,20 +34,17 @@ const hasPaid = (req, res, next) => {
     if (req.session.user.has_paid) return next();
     res.redirect('/payment');
 };
-const isAdmin = (req, res, next) => {
-    // 1. Check if user is logged in
-    if (!req.session.user) {
-        return res.redirect('/login');
-    }
 
-    // 2. Check for admin status (Boolean check)
-    if (req.session.user.is_admin === true) {
+const isAdmin = (req, res, next) => {
+    // Check if the session user exists AND the is_admin flag is true
+    if (req.session.user && req.session.user.is_admin === true) {
         return next();
     }
-
-    // 3. If they are a regular user trying to access /admin
+    
+    // If they aren't an admin, they stay out
     res.status(403).send("Access Denied: Admins Only");
 };
+
 // Generate Test (The Logic)
 app.post('/start-test', isAuth, hasPaid, async (req, res) => {
     const { subjectIds, numQuestions } = req.body; // array of IDs
@@ -99,47 +96,18 @@ app.get('/signup', (req, res) => {
     res.render('signup');
 });
 
-// Process Sign Up with Ambassador Referral Logic
+// Process Sign Up
 app.post('/auth/signup', async (req, res) => {
-    // added referred_by and is_premium to the request body
-    const { fullname, email, password, referred_by, is_premium } = req.body; 
-    
+    const { fullname, email, password } = req.body;
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
-        
-        // 1. Insert the new user into the database
-        // We store the referred_by code so we know who brought them in
         await pool.query(
-            'INSERT INTO users (full_name, email, password, referred_by_code, is_premium) VALUES ($1, $2, $3, $4, $5)',
-            [fullname, email, hashedPassword, referred_by || null, is_premium === 'true']
+            'INSERT INTO users (fullname, email, password) VALUES ($1, $2, $3)',
+            [fullname, email, hashedPassword]
         );
-
-        // 2. Logic for Ambassador Payment (₦150)
-        // Only trigger if a code was used AND the user is Premium
-        if (referred_by && is_premium === 'true') {
-            const ambCheck = await pool.query(
-                'SELECT id FROM ambassadors WHERE unique_code = $1',
-                [referred_by]
-            );
-
-            if (ambCheck.rows.length > 0) {
-                // Update Ambassador's earnings and referral count
-                await pool.query(
-                    `UPDATE ambassadors 
-                     SET total_earned = total_earned + 150, 
-                         total_referrals = total_referrals + 1 
-                     WHERE unique_code = $1`,
-                    [referred_by]
-                );
-                console.log(`Referral credited to Ambassador: ${referred_by}`);
-            }
-        }
-
         res.redirect('/login?msg=Account created! Please login.');
-        
     } catch (err) {
-        console.error("Signup Error:", err);
-        res.send("Error: Email might already exist or database connection failed.");
+        res.send("Error: Email might already exist.");
     }
 });
 
@@ -771,95 +739,5 @@ app.get('/history', isStudent, async (req, res) => {
         res.render('history', { user: req.session.user, history: [] });
     }
 });
-
-app.post('/ambassador/login', async (req, res) => {
-    const { unique_code } = req.body;
-    try {
-        const result = await pool.query('SELECT * FROM ambassadors WHERE unique_code = $1', [unique_code]);
-        if (result.rows.length > 0) {
-            req.session.ambassador = result.rows[0]; // Store ambassador info in session
-            res.redirect('/ambassador/dashboard');
-        } else {
-            res.send("Invalid Ambassador ID.");
-        }
-    } catch (err) {
-        res.status(500).send("Login error.");
-    }
-});
-
-app.get('/ambassador/dashboard', async (req, res) => {
-    if (!req.session.ambassador) return res.redirect('/ambassador/login');
-    
-    try {
-        // Refresh ambassador data from DB (to see new earnings)
-        const ambResult = await pool.query(
-            'SELECT * FROM ambassadors WHERE unique_code = $1', 
-            [req.session.ambassador.unique_code]
-        );
-        
-        // Fetch the list of people they referred
-        const referrals = await pool.query(
-            'SELECT full_name, email, created_at FROM users WHERE referred_by_code = $1',
-            [req.session.ambassador.unique_code]
-        );
-
-        res.render('ambassador-dashboard', {
-            ambassador: ambResult.rows[0],
-            referrals: referrals.rows
-        });
-    } catch (err) {
-        res.send("Error loading dashboard.");
-    }
-});
-// GET Admin Dashboard - See all Ambassadors
-app.get('/admin/ambassadors', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM ambassadors ORDER BY created_at DESC');
-        res.render('admin-dashboard', { 
-            ambassadors: result.rows,
-            title: "Admin | Manage Ambassadors" 
-        });
-    } catch (err) {
-        console.error("Admin Dashboard Error:", err);
-        res.status(500).send("Error fetching ambassadors.");
-    }
-});
-
-// POST Create Ambassador
-app.post('/admin/add-ambassador', async (req, res) => {
-    const { name, unique_code } = req.body;
-
-    try {
-        // Insert name and the code (which is their login/pass)
-        await pool.query(
-            'INSERT INTO ambassadors (name, unique_code) VALUES ($1, $2)',
-            [name, unique_code]
-        );
-        
-        console.log(`New Ambassador Created: ${name} (${unique_code})`);
-        res.redirect('/admin/ambassadors?success=Ambassador added');
-    } catch (err) {
-        console.error("Error creating ambassador:", err);
-        res.send("Error: That Unique Code might already be taken.");
-    }
-});
-
-// POST Reset Payout after paying them
-app.post('/admin/payout-complete/:id', async (req, res) => {
-    const ambId = req.params.id;
-
-    try {
-        // Reset earned balance to 0 after payout
-        await pool.query(
-            'UPDATE ambassadors SET total_earned = 0 WHERE id = $1',
-            [ambId]
-        );
-        
-        res.redirect('/admin/ambassadors?msg=Payout recorded');
-    } catch (err) {
-        res.status(500).send("Error updating payout status.");
-    }
-});
-
 
 app.listen(3000, () => console.log('Prepium running on http://localhost:3000'));
