@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Portal | Prepium Ambassadors</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --brand: #0062ff; --bg: #f1f5f9; --text: #0f172a; --danger: #ef4444; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 2rem; }
+        
+        .container { max-width: 1100px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+        
+        /* Form Section */
+        .admin-card { background: white; padding: 2rem; border-radius: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 2rem; }
+        h2 { margin-top: 0; font-weight: 800; font-size: 1.4rem; }
+        
+        .form-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+        input { flex: 1; padding: 1rem; border-radius: 12px; border: 2px solid #e2e8f0; outline: none; font-size: 1rem; min-width: 250px; }
+        input:focus { border-color: var(--brand); }
+        
+        .btn-add { background: var(--brand); color: white; border: none; padding: 1rem 2rem; border-radius: 12px; font-weight: 700; cursor: pointer; }
+
+        /* Table Section */
+        .table-wrap { background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f8fafc; text-align: left; padding: 1.2rem; font-size: 0.75rem; text-transform: uppercase; color: #64748b; letter-spacing: 1px; }
+        td { padding: 1.2rem; border-top: 1px solid #f1f5f9; font-size: 0.95rem; }
+
+        .badge-code { background: #e0e7ff; color: #4338ca; padding: 4px 8px; border-radius: 6px; font-family: monospace; font-weight: 700; }
+        .amount-owed { color: var(--danger); font-weight: 800; }
+        
+        .btn-payout { background: #10b981; color: white; border: none; padding: 0.6rem 1rem; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 0.85rem; }
+        .btn-payout:hover { background: #059669; }
+        
+        .empty-state { text-align: center; padding: 3rem; color: #64748b; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1 style="margin: 0; font-weight: 800;">Ambassador Management</h1>
+                <p style="color: #64748b; margin: 4px 0 0 0;">Create accounts and handle payments.</p>
+            </div>
+            <a href="/admin/dashboard" style="text-decoration: none; font-weight: 700; color: var(--brand);">← Back to Main Admin</a>
+        </div>
+
+        <!-- Add New Ambassador Form -->
+        <div class="admin-card">
+            <h2>Add New Ambassador</h2>
+            <form action="/admin/add-ambassador" method="POST" class="form-row">
+                <input type="text" name="name" placeholder="Ambassador's Full Name" required>
+                <input type="text" name="unique_code" placeholder="Create Unique Code (e.g. ALITE01)" required>
+                <button type="submit" class="btn-add">Create Ambassador</button>
+            </form>
+        </div>
+
+        <!-- Ambassadors List -->
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ambassador</th>
+                        <th>Unique Code</th>
+                        <th>Referrals</th>
+                        <th>Owed (₦)</th>
+                        <th>Bank Payout Details</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (ambassadors.length > 0) { %>
+                        <% ambassadors.forEach(amb => { %>
+                            <tr>
+                                <td><strong><%= amb.name %></strong></td>
+                                <td><span class="badge-code"><%= amb.unique_code %></span></td>
+                                <td><%= amb.total_referrals %></td>
+                                <td class="amount-owed">₦<%= amb.total_earned %></td>
+                                <td style="font-size: 0.85rem; color: #475569; max-width: 250px;">
+                                    <%= amb.bank_details || 'No bank info provided' %>
+                                </td>
+                                <td>
+                                    <% if (amb.total_earned > 0) { %>
+                                        <form action="/admin/payout-complete/<%= amb.id %>" method="POST" onsubmit="return confirm('Confirm that you have paid ₦<%= amb.total_earned %> to <%= amb.name %>?')">
+                                            <button type="submit" class="btn-payout">Confirm Payout</button>
+                                        </form>
+                                    <% } else { %>
+                                        <span style="color: #94a3b8; font-size: 0.8rem; font-weight: 600;">UP TO DATE</span>
+                                    <% } %>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    <% } else { %>
+                        <tr>
+                            <td colspan="6" class="empty-state">No ambassadors found. Create one above to get started.</td>
+                        </tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+
+        <footer style="margin-top: 3rem; text-align: center; opacity: 0.5; font-size: 0.8rem;">
+            Prepium Admin Console • Project Alite
+        </footer>
+    </div>
+
+</body>
+</html>
