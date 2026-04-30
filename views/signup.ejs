@@ -28,7 +28,7 @@
         .form-group { margin-bottom: 1.2rem; }
         
         label { display: block; font-size: 0.75rem; font-weight: 800; margin-bottom: 8px; color: #94a3b8; text-transform: uppercase; padding-left: 4px; }
-        input, select { 
+        input { 
             width: 100%; 
             padding: 1.1rem; 
             border-radius: 20px; 
@@ -37,13 +37,9 @@
             font-size: 1rem; 
             outline: none; 
             transition: 0.3s; 
-            font-family: inherit;
         }
-        input:focus, select:focus { border-color: var(--brand); background: white; box-shadow: 0 0 0 4px rgba(0,98,255,0.08); }
+        input:focus { border-color: var(--brand); background: white; box-shadow: 0 0 0 4px rgba(0,98,255,0.08); }
         
-        /* Custom styling for the dropdown */
-        select { appearance: none; cursor: pointer; }
-
         .btn-primary { 
             background: var(--brand); 
             color: white; 
@@ -60,18 +56,6 @@
         
         .footer { text-align: center; margin-top: auto; padding-top: 2rem; font-size: 0.9rem; color: #64748b; }
         .footer a { color: var(--brand); text-decoration: none; font-weight: 700; }
-
-        .referral-tag {
-            background: #e0e7ff;
-            color: #4338ca;
-            padding: 10px 15px;
-            border-radius: 12px;
-            font-size: 0.85rem;
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
     </style>
 </head>
 <body>
@@ -89,39 +73,19 @@
                 <label>Full Name</label>
                 <input type="text" name="fullname" placeholder="Atilola Israel" required>
             </div>
-
             <div class="form-group">
                 <label>Email Address</label>
                 <input type="email" name="email" placeholder="alite@example.com" required>
             </div>
-
             <div class="form-group">
                 <label>Create Password</label>
                 <input type="password" name="password" placeholder="••••••••" required>
             </div>
-
-            <!-- New: Ambassador Referral Code -->
-            <div class="form-group">
-                <label>Referral Code (Optional)</label>
-                <input type="text" name="referred_by" placeholder="E.g. PREP-123">
-            </div>
-
-            <!-- New: Premium Selection for Payout Logic -->
-            <div class="form-group">
-                <label>Membership Plan</label>
-                <select name="is_premium">
-                    <option value="false">Basic (Free Access)</option>
-                    <option value="true">Premium (All Features - ₦1,500/mo)</option>
-                </select>
-            </div>
-
             <button type="submit" class="btn-primary">Create My Account</button>
         </form>
 
         <div class="footer">
             Already have an account? <a href="/login">Login</a>
-            <br><br>
-            <small style="opacity: 0.6;">Built by Alite</small>
         </div>
     </div>
 
