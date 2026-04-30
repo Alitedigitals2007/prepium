@@ -182,7 +182,7 @@
         </header>
 
         <div class="menu-grid">
-            <a href="/subjects" class="menu-card">
+<a href="<%= user.has_paid ? '/csubjects' : '#' %>" class="menu-card <%= !user.has_paid ? 'locked-card' : '' %>">
                 <i>📚</i>
                 <b>Study Library</b>
                 <p>Browse Courses</p>
