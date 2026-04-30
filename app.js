@@ -34,17 +34,20 @@ const hasPaid = (req, res, next) => {
     if (req.session.user.has_paid) return next();
     res.redirect('/payment');
 };
-
 const isAdmin = (req, res, next) => {
-    // Check if the session user exists AND the is_admin flag is true
-    if (req.session.user && req.session.user.is_admin === true) {
+    // 1. Check if user is logged in
+    if (!req.session.user) {
+        return res.redirect('/login');
+    }
+
+    // 2. Check for admin status (Boolean check)
+    if (req.session.user.is_admin === true) {
         return next();
     }
-    
-    // If they aren't an admin, they stay out
+
+    // 3. If they are a regular user trying to access /admin
     res.status(403).send("Access Denied: Admins Only");
 };
-
 // Generate Test (The Logic)
 app.post('/start-test', isAuth, hasPaid, async (req, res) => {
     const { subjectIds, numQuestions } = req.body; // array of IDs
