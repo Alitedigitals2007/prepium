@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ambassador Portal | Prepium</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --brand: #0062ff; 
+            --bg: #f8fafc; 
+            --text: #1e293b; 
+            --success: #10b981;
+            --surface: #ffffff;
+        }
+        
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); 
+            margin: 0; 
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        /* Layout */
+        .dashboard-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .logo { color: var(--brand); font-weight: 800; font-size: 1.4rem; text-decoration: none; }
+        .logout-btn { color: #ef4444; text-decoration: none; font-weight: 700; font-size: 0.9rem; }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .card {
+            background: var(--surface);
+            padding: 1.8rem;
+            border-radius: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            border: 1px solid #f1f5f9;
+        }
+
+        .card h3 { 
+            margin: 0; 
+            font-size: 0.75rem; 
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+            color: #94a3b8; 
+            margin-bottom: 10px;
+        }
+
+        .card .value { font-size: 2rem; font-weight: 800; color: var(--text); }
+        .card.balance .value { color: var(--brand); }
+
+        /* Unique ID Box */
+        .code-box {
+            background: #eff6ff;
+            border: 2px dashed var(--brand);
+            padding: 1rem;
+            border-radius: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .code-box span { font-weight: 800; font-size: 1.1rem; color: var(--brand); }
+
+        /* Form & Table Sections */
+        .section-title { font-weight: 800; font-size: 1.2rem; margin-bottom: 1.2rem; }
+
+        .bank-form {
+            background: var(--surface);
+            padding: 1.8rem;
+            border-radius: 24px;
+            margin-bottom: 2.5rem;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 1.1rem;
+            border-radius: 18px;
+            border: 2px solid #f1f5f9;
+            background: #f8fafc;
+            font-family: inherit;
+            font-size: 1rem;
+            resize: none;
+            outline: none;
+            margin-bottom: 1rem;
+        }
+
+        textarea:focus { border-color: var(--brand); background: white; }
+
+        .btn-update {
+            background: var(--text);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-update:hover { opacity: 0.9; transform: translateY(-2px); }
+
+        /* Referrals Table */
+        .table-container {
+            background: var(--surface);
+            border-radius: 24px;
+            overflow: hidden;
+            border: 1px solid #f1f5f9;
+        }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { background: #f8fafc; padding: 1rem 1.5rem; font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; }
+        td { padding: 1.2rem 1.5rem; border-top: 1px solid #f1f5f9; font-size: 0.95rem; }
+
+        .status-premium { color: var(--success); font-weight: 700; font-size: 0.8rem; }
+
+        @media (max-width: 600px) {
+            .dashboard-container { padding: 1.5rem 1rem; }
+            .card .value { font-size: 1.6rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <header>
+            <a href="#" class="logo">Prepium.</a>
+            <a href="/logout" class="logout-btn">Sign Out</a>
+        </header>
+
+        <div class="header-intro">
+            <h1 style="margin: 0; font-size: 1.8rem;">Hello, <%= ambassador.name %>!</h1>
+            <p style="color: #64748b; margin-bottom: 2rem;">Manage your earnings and referral stats.</p>
+        </div>
+
+        <div class="code-box">
+            <p style="margin: 0; font-size: 0.9rem; font-weight: 600; color: #1e40af;">Your Ambassador Code:</p>
+            <span><%= ambassador.unique_code %></span>
+        </div>
+
+        <div class="stats-grid">
+            <div class="card">
+                <h3>Total Referrals</h3>
+                <div class="value"><%= ambassador.total_referrals %></div>
+            </div>
+            <div class="card balance">
+                <h3>Current Balance</h3>
+                <div class="value">₦<%= ambassador.total_earned %></div>
+            </div>
+        </div>
+
+        <div class="section-title">Payout Settings</div>
+        <div class="bank-form">
+            <form action="/ambassador/update-bank" method="POST">
+                <label style="display: block; font-size: 0.75rem; font-weight: 800; color: #94a3b8; margin-bottom: 10px; text-transform: uppercase;">Bank Payout Details</label>
+                <textarea name="bank_details" rows="3" placeholder="Example: Kuda Bank - 2012345678 - John Doe"><%= ambassador.bank_details %></textarea>
+                <button type="submit" class="btn-update">Save Payout Details</button>
+            </form>
+        </div>
+
+        <div class="section-title">Recent Referrals</div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student Name</th>
+                        <th>Status</th>
+                        <th>Joined Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (referrals.length > 0) { %>
+                        <% referrals.forEach(user => { %>
+                            <tr>
+                                <td style="font-weight: 600;"><%= user.fullname %></td>
+                                <td>
+                                    <% if(user.is_premium) { %>
+                                        <span class="status-premium">PREMIUM</span>
+                                    <% } else { %>
+                                        <span style="color: #94a3b8; font-size: 0.8rem;">BASIC</span>
+                                    <% } %>
+                                </td>
+                                <td style="color: #64748b;"><%= new Date(user.created_at).toLocaleDateString('en-GB') %></td>
+                            </tr>
+                        <% }) %>
+                    <% } else { %>
+                        <tr>
+                            <td colspan="3" style="text-align: center; color: #94a3b8; padding: 3rem;">No referrals yet. Share your code to start earning!</td>
+                        </tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+
+        <footer style="text-align: center; margin-top: 4rem; opacity: 0.4; font-size: 0.8rem;">
+            Prepium Ambassador Portal • Built by Alite
+        </footer>
+    </div>
+
+</body>
+</html>
