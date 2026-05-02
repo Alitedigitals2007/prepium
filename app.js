@@ -19,6 +19,7 @@ const pool = new Pool({
 // or just use it directly if they are in app.js
 
 app.set('view engine', 'ejs');
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 app.use(session({ secret: 'prepium_secret', resave: false, saveUninitialized: true }));
@@ -1417,6 +1418,56 @@ app.post('/admin/suggestions/status', async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).send("Error changing chat status");
+    }
+});
+
+// =========================================================
+// AMBASSADOR HELPER & CONTROLLER LOGIC
+// =========================================================
+
+/**
+ * 1. GET ROUTE: Serve the registration page
+ */
+app.get('/be-ambassador', (req, res) => {
+    res.render('be-ambassador'); 
+});
+
+app.post('/ambassador/register', async (req, res) => {
+    try {
+        // Log to see exactly what Express is receiving
+        console.log("Incoming request body:", req.body);
+
+        if (!req.body) {
+            return res.status(400).json({ error: "No data received by the server." });
+        }
+
+        const { name, bank_details } = req.body;
+
+        if (!name || !bank_details) {
+            return res.status(400).json({ error: 'Please enter your name and bank details.' });
+        }
+
+        let unique_code = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // 1. Check if the code exists using your existing 'pool'
+        let existing = await pool.query('SELECT id FROM ambassadors WHERE unique_code = $1', [unique_code]);
+        while (existing.rows && existing.rows.length > 0) {
+            unique_code = Math.floor(100000 + Math.random() * 900000).toString();
+            existing = await pool.query('SELECT id FROM ambassadors WHERE unique_code = $1', [unique_code]);
+        }
+
+        // 2. Insert user data directly using your existing 'pool'
+        await pool.query(
+            `INSERT INTO ambassadors (name, unique_code, bank_details, total_referrals, total_earned, total_withdrawn) 
+             VALUES ($1, $2, $3, 0, 0, 0)`,
+            [name, unique_code, bank_details]
+        );
+
+        res.json({ success: true, referral_code: unique_code, name });
+
+    } catch (err) {
+        console.error('Database Registration Error:', err);
+        res.status(500).json({ error: 'Failed to complete registration.' });
     }
 });
 

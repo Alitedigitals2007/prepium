@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Prepium | Become an Ambassador</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { 
+            --brand: #0062ff; 
+            --brand-light: #e6efff;
+            --bg: #f8fafc; 
+            --text: #0f172a; 
+            --sub: #64748b;
+            --border: #edf2f7;
+            --white: #ffffff;
+            --success: #10b981;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            display: flex; 
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .app-shell { 
+            width: 100%; 
+            max-width: 430px; 
+            background: var(--white); 
+            min-height: 100vh; 
+            position: relative; 
+            box-shadow: 0 0 40px rgba(0,0,0,0.02);
+            display: flex;
+            flex-direction: column;
+            padding: 2.5rem 1.5rem;
+        }
+
+        @media (min-height: 700px) {
+            .app-shell {
+                min-height: auto;
+                height: auto;
+                border-radius: 32px;
+                border: 1px solid var(--border);
+                margin: 20px 0;
+            }
+        }
+
+        .logo-head {
+            font-weight: 800; font-size: 1.35rem; color: var(--brand); text-decoration: none;
+            letter-spacing: -0.5px; margin-bottom: 1.5rem; display: inline-block;
+        }
+        .logo-head span { color: var(--text); }
+
+        .progress-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+        .progress-line {
+            position: absolute;
+            top: 50%; left: 0; transform: translateY(-50%);
+            height: 4px; width: 100%; background: var(--border); z-index: 1;
+        }
+        .progress-line-fill {
+            position: absolute;
+            top: 50%; left: 0; transform: translateY(-50%);
+            height: 4px; width: 0%; background: var(--brand); z-index: 1;
+            transition: width 0.4s ease;
+        }
+        .progress-step {
+            width: 34px; height: 34px; border-radius: 50%; background: var(--white);
+            border: 3px solid var(--border); display: flex; justify-content: center;
+            align-items: center; font-size: 0.85rem; font-weight: 800; color: var(--sub);
+            z-index: 2; transition: all 0.3s ease;
+        }
+        .progress-step.active { border-color: var(--brand); color: var(--brand); }
+        .progress-step.completed { border-color: var(--brand); background: var(--brand); color: var(--white); }
+
+        .step-panel { display: none; }
+        .step-panel.active { display: flex; flex-direction: column; flex-grow: 1; }
+
+        h1 { font-size: 1.55rem; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.5px; }
+        p.desc { color: var(--sub); font-size: 0.88rem; font-weight: 600; line-height: 1.5; margin-bottom: 1.75rem; }
+
+        .perk-card {
+            background: #fafcfe; border: 1px solid var(--border); border-radius: 20px;
+            padding: 1.15rem; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 14px;
+        }
+        .perk-card i { font-size: 1.25rem; color: var(--brand); margin-top: 2px; }
+        .perk-title { font-weight: 800; font-size: 0.92rem; margin-bottom: 2px; }
+        .perk-desc { font-size: 0.82rem; color: var(--sub); font-weight: 600; }
+
+        .form-group { margin-bottom: 1.15rem; }
+        label { display: block; font-size: 0.72rem; font-weight: 800; margin-bottom: 6px; color: var(--text); text-transform: uppercase; letter-spacing: 0.3px; }
+        
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .input-wrapper i {
+            position: absolute;
+            left: 1.15rem;
+            color: var(--sub);
+            font-size: 1.1rem;
+            transition: color 0.25s;
+        }
+
+        input, textarea { 
+            width: 100%; padding: 1.05rem 1.15rem; border-radius: 18px; border: 1px solid var(--border); 
+            background: var(--bg); font-size: 0.92rem; font-weight: 600; outline: none; transition: all 0.25s; 
+            font-family: inherit;
+        }
+        input:focus, textarea:focus { border-color: var(--brand); background: white; box-shadow: 0 0 0 4px rgba(0, 98, 255, 0.08); }
+        input.with-icon { padding-left: 3.2rem; }
+        input:focus + i { color: var(--brand); }
+        textarea { resize: none; height: 110px; }
+
+        .btn-action {
+            background: var(--brand); color: white; border: none; width: 100%; padding: 1.15rem;
+            border-radius: 20px; font-size: 0.95rem; font-weight: 800; cursor: pointer; display: flex;
+            justify-content: center; align-items: center; gap: 10px; margin-top: auto;
+            box-shadow: 0 8px 24px rgba(0, 98, 255, 0.18); transition: all 0.25s; text-decoration: none;
+        }
+        .btn-action:hover { background: #0056e0; transform: translateY(-1px); }
+        .btn-action:disabled { background: var(--sub); opacity: 0.6; cursor: not-allowed; }
+
+        .success-box { text-align: center; }
+        .success-icon { font-size: 3.2rem; color: var(--success); margin-bottom: 1.25rem; display: inline-block; }
+        
+        .code-display {
+            background: var(--brand-light); color: var(--brand); padding: 14px; 
+            border-radius: 20px; font-size: 1.7rem; font-weight: 800; letter-spacing: 3px;
+            border: 2px dashed rgba(0, 98, 255, 0.3); margin: 1rem 0;
+            display: flex; justify-content: center; align-items: center; gap: 12px; cursor: pointer;
+        }
+
+        .info-panel {
+            background: #fdfdfd; border: 1px solid var(--border); padding: 1.15rem;
+            border-radius: 20px; font-size: 0.88rem; font-weight: 600; color: var(--text);
+            line-height: 1.6; margin: 1.25rem 0; text-align: left; border-left: 4px solid var(--brand);
+        }
+        .info-panel strong { color: var(--text); font-weight: 800; }
+        .info-panel a { color: var(--brand); font-weight: 800; text-decoration: none; word-break: break-all; }
+        .info-panel a:hover { text-decoration: underline; }
+
+        .cert-container { 
+            background: #fdfdfd; border: 1px solid var(--border); padding: 14px; border-radius: 24px;
+            margin: 1.25rem 0; box-shadow: 0 4px 12px rgba(0,0,0,0.015);
+        }
+        canvas { width: 100%; border-radius: 16px; border: 1px solid var(--border); display: block; margin-bottom: 12px; }
+        
+        .download-btn {
+            background: white; border: 1.5px solid var(--brand); color: var(--brand); width: 100%;
+            padding: 0.95rem; border-radius: 16px; font-size: 0.88rem; font-weight: 800; cursor: pointer;
+            display: flex; justify-content: center; align-items: center; gap: 10px; transition: all 0.25s;
+        }
+        .download-btn:hover { background: #f4f8ff; }
+
+        .whatsapp-btn { background: #25d366; color: white; box-shadow: 0 8px 24px rgba(37, 211, 102, 0.22); margin-top: 1rem; }
+        .whatsapp-btn:hover { background: #1ebd5b; }
+
+        .login-toggle-link {
+            text-align: center; font-size: 0.88rem; font-weight: 700; color: var(--sub);
+            margin-top: 1.75rem; cursor: pointer; display: block; text-decoration: none;
+        }
+        .login-toggle-link span { color: var(--brand); font-weight: 800; }
+    </style>
+</head>
+<body>
+
+    <div class="app-shell">
+        <a href="/" class="logo-head">PREPIUM<span>.</span></a>
+
+        <div class="progress-container" id="progressBar">
+            <div class="progress-line"></div>
+            <div class="progress-line-fill" id="progressFill"></div>
+            <div class="progress-step active" id="pStep1">1</div>
+            <div class="progress-step" id="pStep2">2</div>
+            <div class="progress-step" id="pStep3">3</div>
+        </div>
+
+        <div class="step-panel active" id="step1">
+            <h1>Ambassador Perks</h1>
+            <p class="desc">Earn commissions directly, build your network, and access premium exam prep tools.</p>
+
+            <div class="perk-card">
+                <i class="fas fa-wallet"></i>
+                <div>
+                    <div class="perk-title">Instant Rewards</div>
+                    <div class="perk-desc">Direct payouts straight into your preferred bank account for every student signup.</div>
+                </div>
+            </div>
+
+            <div class="perk-card">
+                <i class="fas fa-file-invoice"></i>
+                <div>
+                    <div class="perk-title">Digital Certificate</div>
+                    <div class="perk-desc">An official personalized digital Prepium Brand Ambassador Certificate.</div>
+                </div>
+            </div>
+
+            <button class="btn-action" onclick="goToStep(2)">Proceed to Form ➔</button>
+            <div class="login-toggle-link" onclick="goToStep('login')">Already registered? <span>Sign in</span></div>
+        </div>
+
+        <div class="step-panel" id="step2">
+            <h1>Create Your Profile</h1>
+            <p class="desc">Fill in your full name and bank account details to start earning directly.</p>
+
+            <form id="ambassadorForm">
+                <div class="form-group">
+                    <label for="name">Full Name</label>
+                    <input type="text" id="name" placeholder="Atilola Israel" required autocomplete="name">
+                </div>
+
+                <div class="form-group">
+                    <label for="bank_details">Bank Details</label>
+                    <textarea id="bank_details" placeholder="OPay | 9154681851 | Atilola Israel" required></textarea>
+                </div>
+
+                <button type="submit" class="btn-action" id="submitBtn">Generate Unique ID ➔</button>
+            </form>
+            <div class="login-toggle-link" onclick="goToStep(1)" style="margin-top: 1.25rem;">❮ Go Back</div>
+        </div>
+
+        <div class="step-panel" id="stepLogin">
+            <h1>Ambassador Portal</h1>
+            <p class="desc">Access your portal with your unique referral code.</p>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="login_code">Referral Code</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="login_code" class="with-icon" placeholder="E.g. 582934" required autocomplete="off">
+                        <i class="fas fa-key"></i>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-action" id="loginBtn">Log in to Portal ➔</button>
+            </form>
+            <div class="login-toggle-link" onclick="goToStep(1)" style="margin-top: 1.25rem;">❮ Back to Registration</div>
+        </div>
+
+        <div class="step-panel success-box" id="step3">
+            <span class="success-icon"><i class="fas fa-circle-check"></i></span>
+            <h1>Success!</h1>
+            <p class="desc">You are now an officially registered Prepium Ambassador!</p>
+
+            <p style="font-size: 0.72rem; font-weight: 800; color: var(--sub); text-transform: uppercase;">Your Referral Code</p>
+            <div class="code-display" id="refCodeText" onclick="copyReferralCode()">000000</div>
+            <p style="font-size: 0.75rem; font-weight: 700; color: var(--sub); margin-bottom: 1rem;">Tap to copy code</p>
+
+            <div class="info-panel">
+                <i class="fas fa-info-circle" style="color: var(--brand); margin-right: 6px;"></i>
+                To track your earnings, referral stats, and withdrawals, log in to your dashboard anytime via <a id="dynamicPortalLink" href="#"><strong>Sign In Here</strong></a> using your unique referral code.
+            </div>
+
+            <div class="cert-container">
+                <canvas id="certCanvas" width="800" height="600"></canvas>
+                <button class="download-btn" id="dlCertBtn"><i class="fas fa-download"></i> Download Certificate</button>
+            </div>
+
+            <a id="waShareBtn" href="#" class="btn-action whatsapp-btn" target="_blank"><i class="fab fa-whatsapp"></i> Share on WhatsApp</a>
+            <a id="portalBtn" href="#" class="btn-action" style="background: var(--text); box-shadow: none; margin-top: 1rem;"><i class="fas fa-sign-in-alt"></i> Go to Dashboard</a>
+        </div>
+    </div>
+
+    <script>
+        function goToStep(step) {
+            document.querySelectorAll('.step-panel').forEach(el => el.classList.remove('active'));
+            const fill = document.getElementById('progressFill');
+            const p1 = document.getElementById('pStep1');
+            const p2 = document.getElementById('pStep2');
+            const p3 = document.getElementById('pStep3');
+            const progressBar = document.getElementById('progressBar');
+
+            if (step === 'login') {
+                progressBar.style.display = 'none';
+                document.getElementById('stepLogin').classList.add('active');
+                return;
+            }
+
+            progressBar.style.display = 'flex';
+
+            if (step === 1) {
+                fill.style.width = '0%';
+                p1.className = 'progress-step active';
+                p2.className = 'progress-step';
+                p3.className = 'progress-step';
+                document.getElementById('step1').classList.add('active');
+            } else if (step === 2) {
+                fill.style.width = '50%';
+                p1.className = 'progress-step completed';
+                p2.className = 'progress-step active';
+                p3.className = 'progress-step';
+                document.getElementById('step2').classList.add('active');
+            } else if (step === 3) {
+                fill.style.width = '100%';
+                p1.className = 'progress-step completed';
+                p2.className = 'progress-step completed';
+                p3.className = 'progress-step completed';
+                document.getElementById('step3').classList.add('active');
+            }
+        }
+
+        const ambassadorForm = document.getElementById('ambassadorForm');
+        ambassadorForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = "Processing submission...";
+
+            const name = document.getElementById('name').value;
+            const bank_details = document.getElementById('bank_details').value;
+
+            fetch('/ambassador/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, bank_details })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('refCodeText').innerHTML = `${data.referral_code} <i class="far fa-copy" style="font-size: 1.1rem;"></i>`;
+                    document.getElementById('refCodeText').setAttribute('data-code', data.referral_code);
+                    
+                    // Dynamic host resolution: updates dynamically whether live or on localhost
+                    const currentHost = window.location.origin;
+                    const loginUrl = `${currentHost}/ambassador/login`;
+                    
+                    const dynamicLink = document.getElementById('dynamicPortalLink');
+                    dynamicLink.href = loginUrl;
+                    dynamicLink.innerHTML = `<strong>${loginUrl}</strong>`;
+
+                    const portalBtn = document.getElementById('portalBtn');
+                    portalBtn.href = loginUrl;
+
+                    generateCertificate(data.name, data.referral_code);
+
+                    const waText = encodeURIComponent(
+                        `Hi! 👋 I have officially registered as a Prepium Ambassador!\n\n` +
+                        `Use my referral code to prepare for your exams: *${data.referral_code}*\n\n` +
+                        `Register on Prepium and let's ace our exams together! 🚀`
+                    );
+                    document.getElementById('waShareBtn').href = `https://wa.me/?text=${waText}`;
+
+                    goToStep(3);
+                } else {
+                    alert(data.error || "An error occurred. Please try again.");
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "Generate Unique ID ➔";
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Please check your connection and try again.");
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Generate Unique ID ➔";
+            });
+        });
+
+        function copyReferralCode() {
+            const codeToCopy = document.getElementById('refCodeText').getAttribute('data-code');
+            if (codeToCopy) {
+                navigator.clipboard.writeText(codeToCopy);
+                alert('Referral ID copied: ' + codeToCopy);
+            }
+        }
+
+        const loginForm = document.getElementById('loginForm');
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const loginBtn = document.getElementById('loginBtn');
+            loginBtn.disabled = true;
+            loginBtn.textContent = "Validating access...";
+
+            const referral_code = document.getElementById('login_code').value;
+
+            fetch('/ambassador/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ referral_code })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = data.redirect;
+                } else {
+                    alert(data.error || "Login failed. Please check your code.");
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = "Log in to Portal ➔";
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Please check your internet connection.");
+                loginBtn.disabled = false;
+                loginBtn.textContent = "Log in to Portal ➔";
+            });
+        });
+
+        function generateCertificate(name, code) {
+            const canvas = document.getElementById('certCanvas');
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = '#0062ff';
+            ctx.lineWidth = 16;
+            ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(34, 34, canvas.width - 68, canvas.height - 68);
+
+            ctx.fillStyle = '#0062ff';
+            ctx.font = '800 28px "Plus Jakarta Sans", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('PREPIUM.', canvas.width / 2, 105);
+
+            ctx.fillStyle = '#0f172a';
+            ctx.font = '800 32px "Plus Jakarta Sans", sans-serif';
+            ctx.fillText('CERTIFICATE OF APPOINTMENT', canvas.width / 2, 185);
+
+            ctx.fillStyle = '#64748b';
+            ctx.font = '600 15px "Plus Jakarta Sans", sans-serif';
+            ctx.fillText('THIS ACKNOWLEDGES THAT', canvas.width / 2, 235);
+
+            ctx.fillStyle = '#0f172a';
+            ctx.font = '800 38px "Plus Jakarta Sans", sans-serif';
+            ctx.fillText(name.toUpperCase(), canvas.width / 2, 305);
+
+            ctx.fillStyle = '#edf2f7';
+            ctx.fillRect(canvas.width / 4, 340, canvas.width / 2, 3);
+
+            ctx.fillStyle = '#64748b';
+            ctx.font = '600 15px "Plus Jakarta Sans", sans-serif';
+            ctx.fillText('HAS OFFICIALLY REGISTERED AS AN AUTHORIZED', canvas.width / 2, 380);
+
+            ctx.fillStyle = '#0062ff';
+            ctx.font = '800 24px "Plus Jakarta Sans", sans-serif';
+            ctx.fillText('PREPIUM BRAND AMBASSADOR', canvas.width / 2, 420);
+
+            ctx.fillStyle = '#0f172a';
+            ctx.font = '700 16px "Plus Jakarta Sans", sans-serif';
+            ctx.fillText(`REFERRAL CODE: ${code}`, canvas.width / 2, 480);
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '700 13px "Plus Jakarta Sans", sans-serif';
+            ctx.fillText('VALIDATED BY THE PREPIUM TEAM', canvas.width / 2, 535);
+
+            document.getElementById('dlCertBtn').onclick = function() {
+                const imgURL = canvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                link.download = `Prepium-Ambassador-${name.replace(/\s+/g, '-')}.png`;
+                link.href = imgURL;
+                link.click();
+            };
+        }
+    </script>
+</body>
+</html>
