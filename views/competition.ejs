@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prepium Arena | Coming Soon</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --brand: #0062ff; 
+            --bg: #f8fafc; 
+            --text: #1e293b; 
+            --accent: #10b981;
+        }
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            margin: 0; 
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        header { 
+            background: white;
+            border-bottom: 1px solid #f1f5f9;
+            padding: 1.2rem 2rem;
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .logo { 
+            color: var(--brand); 
+            font-weight: 800; 
+            font-size: 1.4rem; 
+            text-decoration: none; 
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .logo span {
+            background: #eff6ff;
+            color: var(--brand);
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 8px;
+            letter-spacing: 0.5px;
+        }
+        .btn-back { 
+            background: var(--text); 
+            color: white; 
+            text-decoration: none;
+            padding: 0.7rem 1.3rem; 
+            border-radius: 12px; 
+            font-weight: 700;
+            font-size: 0.95rem;
+            transition: 0.2s;
+        }
+        .btn-back:hover { background: var(--brand); }
+
+        .main-container { 
+            flex: 1;
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 3rem 1.5rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .coming-soon-card {
+            background: white;
+            padding: 3.5rem 2rem;
+            border-radius: 32px;
+            border: 1px solid #f1f5f9;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.02);
+            text-align: center;
+            width: 100%;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: #ecfdf5;
+            color: #047857;
+            padding: 8px 18px;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            margin-bottom: 1.5rem;
+            border: 1px solid #d1fae5;
+        }
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: pulse-animation 1.6s infinite;
+        }
+
+        @keyframes pulse-animation {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        h1 {
+            font-size: 2.6rem;
+            font-weight: 800;
+            margin: 0 0 1rem 0;
+            letter-spacing: -0.5px;
+            color: var(--text);
+        }
+        .subtitle {
+            font-size: 1.1rem;
+            color: #64748b;
+            max-width: 550px;
+            margin: 0 auto 2.5rem auto;
+            line-height: 1.6;
+        }
+
+        .teaser-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+        .teaser-item {
+            background: #f8fafc;
+            border: 1px solid #f1f5f9;
+            padding: 1.2rem;
+            border-radius: 18px;
+        }
+        .teaser-item h3 {
+            margin: 0 0 5px 0;
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--text);
+        }
+        .teaser-item p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: #64748b;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <a href="/" class="logo">Prepium <span>Arena</span></a>
+        <a href="/dashboard" class="btn-back">Back</a>
+    </header>
+
+    <div class="main-container">
+        <div class="coming-soon-card">
+            
+            <div class="status-badge">
+                <span class="pulse-dot"></span>
+                COMING SOON
+            </div>
+
+            <h1>The Prepium Arena</h1>
+            <p class="subtitle">Compete with top students in real-time, test your logic, speed, and precision, and stand a chance to win cash rewards.</p>
+
+            <div class="teaser-grid">
+                <div class="teaser-item">
+                    <h3>🏆 Grand Prizes</h3>
+                    <p>Financial rewards for top scorers</p>
+                </div>
+                <div class="teaser-item">
+                    <h3>⚡ Live Leaderboard</h3>
+                    <p>See your rank move in real-time</p>
+                </div>
+                <div class="teaser-item">
+                    <h3>🧩 CBT Gameplay</h3>
+                    <p>Curated logical & academic tasks</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>

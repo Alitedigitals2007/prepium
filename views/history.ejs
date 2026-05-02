@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Prepium | Quiz History</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -12,14 +12,14 @@
             --brand: #0062ff; 
             --brand-light: #e6efff;
             --bg: #f8fafc; 
-            --text: #1e293b; 
+            --text: #0f172a; 
             --text-light: #64748b;
             --white: #ffffff;
             --border: #e2e8f0;
             --danger: #ef4444;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif; 
@@ -40,19 +40,21 @@
             position: fixed;
             height: 100vh;
             z-index: 100;
-            transition: transform 0.3s ease;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .logo {
             font-weight: 800;
-            font-size: 1.5rem;
+            font-size: 1.4rem;
             color: var(--brand);
             margin-bottom: 40px;
             padding-left: 10px;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
+            letter-spacing: -0.5px;
         }
+        .logo span { color: var(--text); }
 
         .nav-links { list-style: none; flex-grow: 1; }
         .nav-links li { margin-bottom: 8px; }
@@ -61,19 +63,20 @@
             text-decoration: none;
             color: var(--text-light);
             font-weight: 700;
-            font-size: 0.95rem;
+            font-size: 0.92rem;
             padding: 12px 15px;
-            border-radius: 12px;
+            border-radius: 14px;
             display: flex;
             align-items: center;
             gap: 12px;
-            transition: all 0.2s;
+            transition: all 0.25s ease;
         }
 
         .nav-links a:hover { background: var(--bg); color: var(--brand); }
         .nav-links a.active { background: var(--brand-light); color: var(--brand); }
 
         .logout { color: var(--danger) !important; margin-top: auto; }
+        .logout:hover { background: #fee2e2 !important; }
 
         /* Main Content Area */
         main {
@@ -88,14 +91,14 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             position: sticky;
             top: 0;
             background: var(--bg);
             z-index: 50;
         }
 
-        .menu-toggle { display: none; font-size: 1.2rem; cursor: pointer; }
+        .menu-toggle { display: none; font-size: 1.25rem; cursor: pointer; color: var(--text); }
 
         .user-profile {
             display: flex;
@@ -105,6 +108,7 @@
             padding: 8px 16px;
             border-radius: 50px;
             border: 1px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
         }
 
         .avatar {
@@ -113,73 +117,79 @@
             color: white;
             border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
-            font-weight: 800; font-size: 0.8rem;
+            font-weight: 800; font-size: 0.85rem;
         }
 
-        .user-name { font-weight: 700; font-size: 0.9rem; }
+        .user-name { font-weight: 700; font-size: 0.88rem; }
 
         /* Content Styles */
         .container { max-width: 800px; margin: auto; }
-        .page-title { font-weight: 800; font-size: 2rem; margin-bottom: 8px; }
-        .page-desc { color: var(--text-light); margin-bottom: 30px; font-weight: 500; }
+        .page-title { font-weight: 800; font-size: 1.85rem; margin-bottom: 6px; letter-spacing: -0.5px; }
+        .page-desc { color: var(--text-light); margin-bottom: 30px; font-weight: 600; font-size: 0.92rem; }
 
         .history-card { 
             background: var(--white); 
-            padding: 24px; 
+            padding: 22px 26px; 
             border-radius: 20px; 
             display: flex; 
             justify-content: space-between; 
             align-items: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.02); 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.015); 
             margin-bottom: 16px;
-            border: 1px solid transparent;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid var(--border);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .history-card:hover { 
-            transform: translateY(-3px); 
-            border-color: var(--brand-light);
-            box-shadow: 0 10px 20px rgba(0, 98, 255, 0.05);
+            transform: translateY(-2px); 
+            border-color: var(--brand);
+            box-shadow: 0 10px 24px rgba(0, 98, 255, 0.06);
         }
 
-        .subj-info { font-weight: 800; font-size: 1.2rem; margin-bottom: 6px; color: var(--text); }
+        .subj-info { font-weight: 800; font-size: 1.15rem; margin-bottom: 4px; color: var(--text); letter-spacing: -0.3px; }
         .date-info { 
-            font-size: 0.85rem; color: var(--text-light); font-weight: 600; 
-            display: flex; align-items: center; gap: 12px; 
+            font-size: 0.82rem; color: var(--text-light); font-weight: 600; 
+            display: flex; align-items: center; gap: 8px; 
         }
         
         .score-box { text-align: right; }
         .score-pill { 
             background: var(--brand-light); 
-            padding: 10px 20px; 
-            border-radius: 14px; 
+            padding: 8px 16px; 
+            border-radius: 12px; 
             font-weight: 800; 
             color: var(--brand); 
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             display: inline-block;
+            letter-spacing: -0.2px;
         }
 
         .perc-badge {
-            display: block; font-size: 0.75rem; font-weight: 700;
+            display: block; font-size: 0.72rem; font-weight: 700;
             margin-top: 6px; color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
         }
 
         .empty-state { 
-            text-align: center; padding: 100px 20px; background: white; 
-            border-radius: 24px; border: 2px dashed var(--border);
+            text-align: center; padding: 80px 20px; background: white; 
+            border-radius: 24px; border: 1px solid var(--border);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.01);
         }
 
         /* Mobile Adjustments */
         @media (max-width: 992px) {
             nav { transform: translateX(-100%); }
-            nav.open { transform: translateX(0); }
+            nav.open { transform: translateX(0); box-shadow: 0 0 40px rgba(0,0,0,0.1); }
             main { margin-left: 0; width: 100%; padding: 20px; }
             .menu-toggle { display: block; }
         }
 
         @media (max-width: 600px) {
-            .history-card { flex-direction: column; align-items: flex-start; gap: 20px; }
-            .score-box { text-align: left; width: 100%; border-top: 1px solid var(--bg); pt: 15px; }
+            .history-card { flex-direction: row; align-items: center; padding: 18px 20px; }
+            .subj-info { font-size: 1rem; }
+            .score-pill { font-size: 0.95rem; padding: 6px 12px; }
+            .page-title { font-size: 1.6rem; }
         }
     </style>
 </head>
@@ -187,7 +197,7 @@
 
     <nav id="sidebar">
         <div class="logo">
-            <i class="fas fa-graduation-cap"></i> Prepium
+            PREPIUM<span>.</span>
         </div>
         <ul class="nav-links">
             <li><a href="/dashboard"><i class="fas fa-columns"></i> Dashboard</a></li>
@@ -206,16 +216,16 @@
             
             <div class="user-profile">
                 <div class="avatar">
-                    <%= (user && user.name) ? user.name.charAt(0).toUpperCase() : 'U' %>
+                    <%= (user && user.fullname) ? user.fullname.charAt(0).toUpperCase() : 'U' %>
                 </div>
                 <span class="user-name">
-                    <%= (user && user.name) ? user.name : 'Student' %>
+                    <%= (user && user.fullname) ? user.fullname : 'Student' %>
                 </span>
             </div>
         </header>
 
         <div class="container">
-            <h1 class="page-title">History</h1>
+            <h1 class="page-title">Performance History</h1>
             <p class="page-desc">Review your past quiz attempts and track your academic growth.</p>
 
             <% if (history && history.length > 0) { %>
@@ -225,7 +235,6 @@
                             <div class="subj-info"><%= item.subject_name %></div>
                             <div class="date-info">
                                 <span><i class="far fa-calendar-alt"></i> <%= new Date(item.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) %></span>
-                                <span><i class="far fa-clock"></i> <%= item.time_taken || '0:00' %></span>
                             </div>
                         </div>
                         <div class="score-box">
@@ -240,11 +249,11 @@
                 <% }) %>
             <% } else { %>
                 <div class="empty-state">
-                    <i class="fas fa-clipboard-list" style="font-size: 3.5rem; color: var(--border); margin-bottom: 20px; display: block;"></i>
-                    <h3 style="font-weight: 800; margin-bottom: 12px; color: var(--text);">No History Found</h3>
-                    <p style="color: var(--text-light); font-weight: 600; max-width: 300px; margin: 0 auto 24px auto;">It looks like you haven't completed any quizzes yet. Start learning today!</p>
-                    <a href="/dashboard" style="background: var(--brand); color: white; padding: 12px 24px; border-radius: 12px; font-weight: 800; text-decoration: none; display: inline-block; transition: opacity 0.2s;">
-                        Browse Subjects
+                    <i class="fas fa-clipboard-list" style="font-size: 3rem; color: var(--brand-light); margin-bottom: 20px; display: inline-block;"></i>
+                    <h3 style="font-weight: 800; margin-bottom: 8px; color: var(--text); letter-spacing: -0.4px;">No History Found</h3>
+                    <p style="color: var(--text-light); font-weight: 600; max-width: 300px; margin: 0 auto 24px auto; font-size: 0.88rem;">It looks like you haven't completed any quizzes yet. Start learning today!</p>
+                    <a href="/dashboard" style="background: var(--brand); color: white; padding: 12px 24px; border-radius: 14px; font-weight: 800; text-decoration: none; display: inline-block; transition: all 0.2s; font-size: 0.9rem;">
+                        Browse Subjects ➔
                     </a>
                 </div>
             <% } %>
@@ -252,15 +261,16 @@
     </main>
 
     <script>
-        // Simple Mobile Menu Toggle
+        // Responsive Menu Toggle handler
         const menuToggle = document.getElementById('menuToggle');
         const sidebar = document.getElementById('sidebar');
 
-        menuToggle.addEventListener('click', () => {
+        menuToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
             sidebar.classList.toggle('open');
         });
 
-        // Close sidebar if clicking outside on mobile
+        // Auto-close overlay when selecting out on mobile viewport
         document.addEventListener('click', (e) => {
             if (window.innerWidth <= 992 && !sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
                 sidebar.classList.remove('open');

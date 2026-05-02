@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prepium Admin | Support Messaging</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --brand: #0062ff; --bg: #f8fafc; --sidebar: #1e293b; --text: #0f172a; --sub: #64748b; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; display: flex; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+        .sidebar { width: 260px; background: var(--sidebar); height: 100vh; color: white; padding: 2rem 1.5rem; position: fixed; left:0; top:0; display: flex; flex-direction: column; justify-content: space-between; z-index: 100; }
+        .logo { font-size: 1.5rem; font-weight: 800; color: var(--brand); text-decoration: none; display: block; margin-bottom: 2.5rem; }
+        .logo span { color: white; }
+        .nav-group { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+        .nav-item { display: flex; align-items: center; gap: 12px; color: #94a3b8; text-decoration: none; padding: 12px 16px; border-radius: 12px; font-size: 0.88rem; font-weight: 600; transition: all 0.3s ease; }
+        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.08); color: white; }
+        .nav-item.logout { color: #f87171; margin-top: auto; }
+
+        .main { margin-left: 260px; padding: 3rem; width: calc(100% - 260px); min-height: 100vh; box-sizing: border-box; }
+        .panel-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 30px; margin-top: 1.5rem; }
+        
+        .panel-card { background: white; padding: 1.8rem; border-radius: 24px; border: 1px solid #e2e8f0; height: calc(100vh - 180px); display: flex; flex-direction: column; }
+        .panel-card h3 { margin: 0 0 1rem; font-size: 1.15rem; font-weight: 800; letter-spacing: -0.3px; }
+        
+        .scrollable-area { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 4px; }
+        
+        /* Thread Listing for Admins */
+        .admin-thread { display: flex; justify-content: space-between; align-items: center; padding: 14px; border: 1px solid #f1f5f9; border-radius: 16px; text-decoration: none; color: inherit; transition: 0.2s; }
+        .admin-thread:hover, .admin-thread.active { border-color: var(--brand); background: #f0f7ff; }
+        .admin-thread h4 { margin: 0; font-size: 0.85rem; font-weight: 800; }
+        .admin-thread p { margin: 3px 0 0; font-size: 0.72rem; color: var(--sub); font-weight: 600; }
+        
+        .badge { font-size: 0.62rem; font-weight: 800; padding: 4px 10px; border-radius: 6px; text-transform: uppercase; }
+        .Open { background: #dcfce7; color: #15803d; }
+        .Closed { background: #f1f5f9; color: #64748b; }
+
+        /* Chat Message Bubbles */
+        .chat-bubble { max-width: 85%; padding: 12px 16px; border-radius: 16px; font-size: 0.85rem; line-height: 1.45; font-weight: 600; }
+        .chat-bubble.admin { background: var(--brand); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .chat-bubble.user { background: #f1f5f9; color: var(--text); align-self: flex-start; border-bottom-left-radius: 4px; }
+        .bubble-time { font-size: 0.62rem; display: block; margin-top: 5px; opacity: 0.75; text-align: right; }
+        .chat-bubble.user .bubble-time { color: var(--sub); text-align: left; }
+
+        .chat-form { display: flex; gap: 10px; border-top: 1px solid #f1f5f9; padding-top: 1.2rem; align-items: center; }
+        .reply-input { flex: 1; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 0.88rem; padding: 12px; font-family: inherit; font-weight: 600; background: #f8fafc; color: var(--text); }
+        .reply-input:focus { border-color: var(--brand); background: white; }
+        .btn-action { background: var(--brand); border: none; color: white; border-radius: 12px; font-size: 0.82rem; font-weight: 800; padding: 12px 20px; cursor: pointer; }
+        
+        .control-strip { display: flex; justify-content: space-between; align-items: center; background: #fafafa; border: 1px solid #f1f5f9; padding: 10px 16px; border-radius: 14px; margin-bottom: 12px; }
+    </style>
+</head>
+<body>
+
+    <nav class="sidebar">
+        <div style="width: 100%;">
+            <a href="/admin/dashboard" class="logo">PREPIUM<span>.</span></a>
+            <div class="nav-group">
+                <a href="/admin/dashboard" class="nav-item">🏠 Dashboard</a>
+                <a href="/admin/subjects" class="nav-item">📚 Manage Subjects</a>
+                <a href="/admin/notifications" class="nav-item">🔔 Notifications</a>
+                <a href="/admin/users" class="nav-item">👥 Students</a>
+                <a href="/admin/suggestions" class="nav-item active">💡 Suggestions</a>
+            </div>
+        </div>
+        <a href="/logout" class="nav-item logout">🚪 Logout</a>
+    </nav>
+
+    <main class="main">
+        <div class="welcome">
+            <h1 style="margin: 0; font-size: 1.65rem;">Support Threads</h1>
+            <p style="margin: 4px 0 0; color: var(--sub); font-size: 0.88rem; font-weight: 600;">Manage incoming feature suggestions and messages directly.</p>
+        </div>
+
+        <div class="panel-grid">
+            <div class="panel-card">
+                <h3>Incoming Chat Sessions</h3>
+                <div class="scrollable-area">
+                    <% if (threads && threads.length > 0) { %>
+                        <% threads.forEach(t => { %>
+                            <a href="/admin/suggestions?threadId=<%= t.id %>" class="admin-thread <%= currentThread && currentThread.id === t.id ? 'active' : '' %>">
+                                <div>
+                                    <h4><%= t.title %></h4>
+                                    <p>By <%= t.fullname %> &bull; <%= new Date(t.created_at).toLocaleDateString() %></p>
+                                </div>
+                                <span class="badge <%= t.status %>"><%= t.status %></span>
+                            </a>
+                        <% }) %>
+                    <% } else { %>
+                        <p style="text-align: center; color: var(--sub); font-size: 0.85rem;">No active student chats yet.</p>
+                    <% } %>
+                </div>
+            </div>
+
+            <div class="panel-card">
+                <% if (currentThread) { %>
+                    <div class="control-strip">
+                        <div>
+                            <span style="font-size: 0.72rem; color: var(--sub); font-weight: 800; text-transform: uppercase; letter-spacing: 0.3px;">Chat Discussion Context</span>
+                            <h4 style="margin: 0; font-size: 0.9rem; font-weight: 800;"><%= currentThread.title %></h4>
+                        </div>
+                        <form action="/admin/suggestions/status" method="POST">
+                            <input type="hidden" name="thread_id" value="<%= currentThread.id %>">
+                            <% if (currentThread.status === 'Open') { %>
+                                <input type="hidden" name="status" value="Closed">
+                                <button type="submit" class="btn-action" style="background: #ef4444;">Close Chat Room</button>
+                            <% } else { %>
+                                <input type="hidden" name="status" value="Open">
+                                <button type="submit" class="btn-action" style="background: var(--brand);">Reopen Chat Room</button>
+                            <% } %>
+                        </form>
+                    </div>
+
+                    <div class="scrollable-area" style="background: #fafafa; border-radius: 18px; padding: 1.2rem; border: 1px solid #f1f5f9; margin-bottom: 12px;">
+                        <% activeMessages.forEach(msg => { %>
+                            <div class="chat-bubble <%= msg.sender_role.toLowerCase() %>">
+                                <%= msg.message %>
+                                <span class="bubble-time"><%= new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) %></span>
+                            </div>
+                        <% }) %>
+                    </div>
+
+                    <form action="/admin/suggestions/reply" method="POST" class="chat-form">
+                        <input type="hidden" name="thread_id" value="<%= currentThread.id %>">
+                        <input type="text" name="message" class="reply-input" placeholder="Type a message reply text here..." autocomplete="off" required>
+                        <button type="submit" class="btn-action">Reply</button>
+                    </form>
+                <% } else { %>
+                    <div style="flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; color: var(--sub);">
+                        <span style="font-size: 2.2rem; margin-bottom: 8px;">💬</span>
+                        <p style="margin: 0; font-size: 0.88rem; font-weight: 600;">Pick any chat thread on the left side to get started.</p>
+                    </div>
+                <% } %>
+            </div>
+        </div>
+    </main>
+
+</body>
+</html>

@@ -3,108 +3,153 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Portal | Prepium Ambassadors</title>
+    <title>Admin: Manage Ambassadors | Prepium</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { --brand: #0062ff; --bg: #f1f5f9; --text: #0f172a; --danger: #ef4444; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 2rem; }
+        :root { 
+            --brand: #0062ff; 
+            --bg: #f8fafc; 
+            --text: #1e293b; 
+            --success: #10b981; 
+            --warning: #f59e0b;
+        }
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            margin: 0; 
+            padding: 2rem 1rem; 
+        }
         
-        .container { max-width: 1100px; margin: 0 auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-        
-        /* Form Section */
-        .admin-card { background: white; padding: 2rem; border-radius: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 2rem; }
-        h2 { margin-top: 0; font-weight: 800; font-size: 1.4rem; }
-        
+        .container { max-width: 1200px; margin: 0 auto; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem; }
+        .logo { color: var(--brand); font-weight: 800; font-size: 1.3rem; text-decoration: none; }
+        .logout { color: #ef4444; font-weight: 700; text-decoration: none; font-size: 0.9rem; }
+
+        .page-title { font-size: 1.8rem; font-weight: 800; margin: 0 0 5px 0; }
+        .page-subtitle { color: #64748b; margin-top: 0; margin-bottom: 2rem; }
+
+        /* ADD AMBASSADOR FORM STYLE */
+        .add-box { 
+            background: white; 
+            padding: 1.5rem; 
+            border-radius: 24px; 
+            border: 1px solid #f1f5f9; 
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03);
+            margin-bottom: 2.5rem;
+        }
+        .add-box h2 { font-size: 1.1rem; font-weight: 800; margin: 0 0 1rem 0; }
         .form-row { display: flex; gap: 1rem; flex-wrap: wrap; }
-        input { flex: 1; padding: 1rem; border-radius: 12px; border: 2px solid #e2e8f0; outline: none; font-size: 1rem; min-width: 250px; }
-        input:focus { border-color: var(--brand); }
-        
-        .btn-add { background: var(--brand); color: white; border: none; padding: 1rem 2rem; border-radius: 12px; font-weight: 700; cursor: pointer; }
+        .form-group { flex: 1; min-width: 200px; }
+        .form-group label { display: block; font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }
+        .form-group input { width: 100%; padding: 0.9rem; border-radius: 12px; border: 2px solid #e2e8f0; background: #f8fafc; font-size: 0.95rem; outline: none; }
+        .form-group input:focus { border-color: var(--brand); background: white; }
+        .btn-submit { background: var(--text); color: white; border: none; padding: 0 1.5rem; height: 50px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; align-self: flex-end; }
+        .btn-submit:hover { background: var(--brand); transform: translateY(-1px); }
 
-        /* Table Section */
-        .table-wrap { background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        table { width: 100%; border-collapse: collapse; }
-        th { background: #f8fafc; text-align: left; padding: 1.2rem; font-size: 0.75rem; text-transform: uppercase; color: #64748b; letter-spacing: 1px; }
-        td { padding: 1.2rem; border-top: 1px solid #f1f5f9; font-size: 0.95rem; }
+        .table-wrap { background: white; border-radius: 24px; overflow: hidden; border: 1px solid #f1f5f9; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03); }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { background: #f8fafc; padding: 1.2rem 1.5rem; font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+        td { padding: 1.2rem 1.5rem; border-top: 1px solid #f1f5f9; font-size: 0.95rem; vertical-align: middle; }
+        
+        .amb-name { font-weight: 700; color: var(--text); display: block; }
+        .amb-code { font-family: monospace; color: var(--brand); font-weight: 700; font-size: 0.9rem; background: #eff6ff; padding: 2px 6px; border-radius: 4px; }
+        
+        .val-earned { color: var(--text); font-weight: 700; }
+        .val-withdrawn { color: #64748b; font-weight: 600; }
+        .val-outstanding { color: #b45309; font-weight: 800; background: #fef3c7; padding: 4px 8px; border-radius: 8px; }
+        .val-settled { color: var(--success); font-weight: 800; background: #dcfce7; padding: 4px 8px; border-radius: 8px; }
 
-        .badge-code { background: #e0e7ff; color: #4338ca; padding: 4px 8px; border-radius: 6px; font-family: monospace; font-weight: 700; }
-        .amount-owed { color: var(--danger); font-weight: 800; }
-        
-        .btn-payout { background: #10b981; color: white; border: none; padding: 0.6rem 1rem; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 0.85rem; }
-        .btn-payout:hover { background: #059669; }
-        
-        .empty-state { text-align: center; padding: 3rem; color: #64748b; }
+        .bank-box { font-size: 0.85rem; color: #475569; max-width: 220px; line-height: 1.4; word-wrap: break-word; }
+
+        .btn-payout { background: var(--text); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 12px; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: 0.2s; text-decoration: none; display: inline-block; }
+        .btn-payout:hover { background: var(--brand); transform: translateY(-1px); }
+        .disabled-btn { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; padding: 0.6rem 1.2rem; border-radius: 12px; font-weight: 700; font-size: 0.85rem; display: inline-block; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <div class="header">
-            <div>
-                <h1 style="margin: 0; font-weight: 800;">Ambassador Management</h1>
-                <p style="color: #64748b; margin: 4px 0 0 0;">Create accounts and handle payments.</p>
-            </div>
-            <a href="/admin/dashboard" style="text-decoration: none; font-weight: 700; color: var(--brand);">← Back to Main Admin</a>
-        </div>
+        <header>
+            <a href="/admin/dashboard" class="logo">Prepium Admin</a>
+            <a href="/admin/logout" class="logout">Sign Out</a>
+        </header>
 
-        <!-- Add New Ambassador Form -->
-        <div class="admin-card">
+        <h1 class="page-title">Ambassador Financial Console</h1>
+        <p class="page-subtitle">Manage ambassador metrics, track outstanding balances, and mark payouts.</p>
+
+        <div class="add-box">
             <h2>Add New Ambassador</h2>
             <form action="/admin/add-ambassador" method="POST" class="form-row">
-                <input type="text" name="name" placeholder="Ambassador's Full Name" required>
-                <input type="text" name="unique_code" placeholder="Create Unique Code (e.g. ALITE01)" required>
-                <button type="submit" class="btn-add">Create Ambassador</button>
+                <div class="form-group">
+                    <label>Ambassador Name</label>
+                    <input type="text" name="name" placeholder="e.g. John Doe" required>
+                </div>
+                <div class="form-group">
+                    <label>Unique Referral ID</label>
+                    <input type="text" name="unique_code" placeholder="e.g. ALITE20" required>
+                </div>
+                <button type="submit" class="btn-submit">Add Profile</button>
             </form>
         </div>
 
-        <!-- Ambassadors List -->
         <div class="table-wrap">
             <table>
                 <thead>
                     <tr>
                         <th>Ambassador</th>
                         <th>Unique Code</th>
-                        <th>Referrals</th>
-                        <th>Owed (₦)</th>
-                        <th>Bank Payout Details</th>
-                        <th>Action</th>
+                        <th>Total Referrals</th>
+                        <th>Total Earned</th>
+                        <th>Withdrawn</th>
+                        <th>Outstanding</th>
+                        <th>Payout Details</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <% if (ambassadors.length > 0) { %>
+                    <% if (ambassadors && ambassadors.length > 0) { %>
                         <% ambassadors.forEach(amb => { %>
                             <tr>
-                                <td><strong><%= amb.name %></strong></td>
-                                <td><span class="badge-code"><%= amb.unique_code %></span></td>
-                                <td><%= amb.total_referrals %></td>
-                                <td class="amount-owed">₦<%= amb.total_earned %></td>
-                                <td style="font-size: 0.85rem; color: #475569; max-width: 250px;">
-                                    <%= amb.bank_details || 'No bank info provided' %>
+                                <td>
+                                    <span class="amb-name"><%= amb.name %></span>
                                 </td>
                                 <td>
-                                    <% if (amb.total_earned > 0) { %>
-                                        <form action="/admin/payout-complete/<%= amb.id %>" method="POST" onsubmit="return confirm('Confirm that you have paid ₦<%= amb.total_earned %> to <%= amb.name %>?')">
-                                            <button type="submit" class="btn-payout">Confirm Payout</button>
+                                    <span class="amb-code"><%= amb.unique_code %></span>
+                                </td>
+                                <td style="font-weight: 700; text-align: center;"><%= amb.total_referrals %></td>
+                                <td><span class="val-earned">₦<%= amb.total_earned %></span></td>
+                                <td><span class="val-withdrawn">₦<%= amb.total_withdrawn %></span></td>
+                                <td>
+                                    <% if (amb.outstanding > 0) { %>
+                                        <span class="val-outstanding">₦<%= amb.outstanding %></span>
+                                    <% } else { %>
+                                        <span class="val-settled">₦0 (SETTLED)</span>
+                                    <% } %>
+                                </td>
+                                <td>
+                                    <div class="bank-box"><%= amb.bank_details || 'No bank info saved.' %></div>
+                                </td>
+                                <td>
+                                    <% if (amb.outstanding > 0) { %>
+                                        <form action="/admin/payout-complete/<%= amb.id %>" method="POST" style="margin:0;">
+                                            <button type="submit" class="btn-payout" onclick="return confirm('Mark this ₦<%= amb.outstanding %> payout as paid?')">Record Payout</button>
                                         </form>
                                     <% } else { %>
-                                        <span style="color: #94a3b8; font-size: 0.8rem; font-weight: 600;">UP TO DATE</span>
+                                        <span class="disabled-btn">Paid Up</span>
                                     <% } %>
                                 </td>
                             </tr>
                         <% }) %>
                     <% } else { %>
                         <tr>
-                            <td colspan="6" class="empty-state">No ambassadors found. Create one above to get started.</td>
+                            <td colspan="8" style="text-align: center; padding: 3rem; color: #94a3b8;">No ambassadors registered yet.</td>
                         </tr>
                     <% } %>
                 </tbody>
             </table>
         </div>
-
-        <footer style="margin-top: 3rem; text-align: center; opacity: 0.5; font-size: 0.8rem;">
-            Prepium Admin Console • Project Alite
-        </footer>
     </div>
 
 </body>

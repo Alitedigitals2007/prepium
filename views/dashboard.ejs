@@ -5,9 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Prepium | Dashboard</title>
     <script src="https://js.paystack.co/v1/inline.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { --brand: #0062ff; --bg: #f8fafc; --text: #0f172a; --sub: #64748b; }
+        :root { 
+            --brand: #0062ff; 
+            --bg: #f8fafc; 
+            --text: #0f172a; 
+            --sub: #64748b; 
+        }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
         
         body { 
@@ -27,138 +32,165 @@
             min-height: 100vh; 
             position: relative; 
             box-shadow: 0 0 60px rgba(0,0,0,0.05);
-            padding-bottom: 100px;
+            padding-bottom: 110px;
         }
 
-        /* Modernized Header */
+        /* Modernized Responsive Header */
         .header-main { 
-            padding: 2.5rem 1.5rem 1.5rem;
+            padding: 2rem 1.5rem 1.5rem;
             background: linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%);
+            border-bottom: 1px solid #f1f5f9;
         }
-        .user-profile { display: flex; align-items: center; gap: 15px; }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Prepium App Logo */
+        .brand-logo {
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: -0.8px;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .brand-logo span {
+            color: var(--brand);
+        }
+
+        /* Fast Top-Right CTA Button */
+        .top-upgrade-btn {
+            background: var(--brand);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 14px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 62, 255, 0.25);
+            animation: pulse-glow 2s infinite;
+            text-wrap: nowrap;
+        }
+        @keyframes pulse-glow {
+            0% { transform: scale(1); box-shadow: 0 4px 12px rgba(0, 62, 255, 0.25); }
+            50% { transform: scale(1.03); box-shadow: 0 4px 16px rgba(0, 62, 255, 0.45); }
+            100% { transform: scale(1); box-shadow: 0 4px 12px rgba(0, 62, 255, 0.25); }
+        }
+
+        .user-profile { display: flex; align-items: center; gap: 14px; }
         .avatar-circle { 
-            width: 52px; 
-            height: 52px; 
-            background: var(--brand); 
-            border-radius: 18px; 
+            width: 54px; 
+            height: 54px; 
+            background: #f1f5f9; 
+            color: var(--brand);
+            border: 2px solid #e2e8f0;
+            border-radius: 20px; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
-            color: white; 
             font-weight: 800; 
-            font-size: 1.3rem;
-            box-shadow: 0 10px 20px rgba(0, 98, 255, 0.15);
+            font-size: 1.35rem;
         }
         
-        .welcome-msg h1 { margin: 0; font-size: 1.4rem; font-weight: 800; letter-spacing: -0.5px; }
+        .welcome-msg h1 { margin: 0; font-size: 1.35rem; font-weight: 800; letter-spacing: -0.5px; }
         .tier-pill { 
             font-size: 0.65rem; 
             font-weight: 800; 
             padding: 4px 10px; 
             border-radius: 8px; 
             text-transform: uppercase; 
-            margin-top: 4px; 
+            margin-top: 5px; 
             display: inline-block;
+            letter-spacing: 0.3px;
         }
         .paid { background: #e0f2fe; color: var(--brand); }
         .unpaid { background: #f1f5f9; color: var(--sub); }
 
-        /* Unified Action Grid */
+        /* Mobile Action Grid */
         .menu-grid { 
             display: grid; 
             grid-template-columns: repeat(2, 1fr); 
-            gap: 15px; 
-            padding: 1.5rem; 
+            gap: 14px; 
+            padding: 1.2rem 1.5rem; 
         }
         .menu-card { 
             background: #ffffff; 
             border: 1px solid #f1f5f9; 
-            padding: 2rem 1rem; 
-            border-radius: 30px; 
+            padding: 1.5rem 1rem; 
+            border-radius: 24px; 
             text-align: center; 
             text-decoration: none; 
-            transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: 0.2s;
             box-shadow: 0 4px 6px rgba(0,0,0,0.01);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
         .menu-card:active { transform: translateY(2px); background: #f8fafc; }
         .menu-card i { 
-            font-size: 2.2rem; 
+            font-size: 1.8rem; 
             display: block; 
-            margin-bottom: 12px; 
+            margin-bottom: 8px; 
             font-style: normal;
         }
-        .menu-card b { font-size: 0.9rem; font-weight: 800; color: var(--text); }
-        .menu-card p { font-size: 0.7rem; color: var(--sub); margin: 5px 0 0; font-weight: 600; }
+        .menu-card b { font-size: 0.88rem; font-weight: 800; color: var(--text); display: block; }
+        .menu-card p { font-size: 0.68rem; color: var(--sub); margin: 4px 0 0; font-weight: 600; }
         
-        .locked-card { opacity: 0.5; filter: grayscale(1); pointer-events: none; }
-
-        /* Paywall Styling */
-        .paywall-container { 
-            margin: 1.5rem;
-            background: #1e293b;
-            border-radius: 32px;
-            padding: 2rem;
-            color: white;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-        .paywall-container::after {
-            content: '';
-            position: absolute;
-            top: -50%; left: -50%;
-            width: 200%; height: 200%;
-            background: radial-gradient(circle, rgba(0,98,255,0.2) 0%, transparent 70%);
-        }
-        .upgrade-btn { 
-            background: var(--brand); 
-            color: white; 
-            padding: 1.1rem; 
-            border-radius: 18px; 
-            font-weight: 800; 
-            display: block; 
-            margin-top: 1.5rem; 
-            border: none; 
-            width: 100%; 
-            font-size: 1rem; 
-            cursor: pointer;
-            position: relative;
-            z-index: 1;
+        /* Premium lock state */
+        .locked-card { 
+            opacity: 0.55; 
+            filter: grayscale(1); 
+            cursor: not-allowed;
+            background: #fafafa;
         }
 
-        /* Navigation Bar */
+        /* App Sticky Bottom Navigation Bar */
         .nav-bar { 
             position: fixed; 
             bottom: 0; 
             width: 100%; 
             max-width: 430px; 
             background: rgba(255, 255, 255, 0.98); 
+            backdrop-filter: blur(8px);
             height: 85px; 
             display: flex; 
             justify-content: space-around; 
             align-items: center; 
             border-top: 1px solid #f1f5f9; 
             z-index: 1000;
-            padding-bottom: 15px;
+            padding-bottom: 12px;
         }
         .nav-item { text-decoration: none; color: #94a3b8; font-size: 0.65rem; font-weight: 800; text-align: center; }
         .nav-item.active { color: var(--brand); }
-        .nav-item i { display: block; font-size: 1.4rem; margin-bottom: 4px; font-style: normal; }
+        .nav-item i { display: block; font-size: 1.35rem; margin-bottom: 4px; font-style: normal; }
 
         .center-fab { 
-            width: 60px; 
-            height: 60px; 
+            width: 58px; 
+            height: 58px; 
             background: var(--brand); 
-            border-radius: 22px; 
+            border-radius: 20px; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
             color: white; 
-            font-size: 2rem; 
-            transform: translateY(-25px); 
+            font-size: 1.8rem; 
+            transform: translateY(-22px); 
             border: 5px solid white; 
             box-shadow: 0 10px 20px rgba(0, 98, 255, 0.3);
             text-decoration: none;
+        }
+        .center-fab.locked-fab {
+            background: #94a3b8;
+            box-shadow: none;
+            opacity: 0.7;
+            cursor: not-allowed;
         }
         
         .dot { height: 8px; width: 8px; background: #ef4444; border-radius: 50%; position: absolute; top: 0; right: 0; border: 2px solid white; }
@@ -168,6 +200,13 @@
 
     <div class="app-shell">
         <header class="header-main">
+            <div class="header-top">
+                <div class="brand-logo">Prepium<span>.</span></div>
+                <% if (!user.has_paid) { %>
+                    <button id="pay-btn-top" onclick="payWithPaystack()" class="top-upgrade-btn">Upgrade — ₦500</button>
+                <% } %>
+            </div>
+
             <div class="user-profile">
                 <div class="avatar-circle">
                     <%= user.fullname ? user.fullname.charAt(0).toUpperCase() : 'U' %>
@@ -182,13 +221,14 @@
         </header>
 
         <div class="menu-grid">
-<a href="<%= user.has_paid ? '/subjects' : '#' %>" class="menu-card <%= !user.has_paid ? 'locked-card' : '' %>">
+            
+            <a href="<%= user.has_paid ? '/subjects' : '#' %>" class="menu-card <%= !user.has_paid ? 'locked-card' : '' %>">
                 <i>📚</i>
                 <b>Study Library</b>
-                <p>Browse Courses</p>
+                <p>Course Books</p>
             </a>
             
-            <a href="/history" class="menu-card">
+            <a href="<%= user.has_paid ? '/history' : '#' %>" class="menu-card <%= !user.has_paid ? 'locked-card' : '' %>">
                 <i>📜</i>
                 <b>Performance</b>
                 <p>Past Results</p>
@@ -197,31 +237,60 @@
             <a href="<%= user.has_paid ? '/competition' : '#' %>" class="menu-card <%= !user.has_paid ? 'locked-card' : '' %>">
                 <i>🏆</i>
                 <b>Live Arena</b>
-                <p>Global Rank</p>
+                <p>Rank Tracker</p>
+            </a>
+
+            <a href="<%= user.has_paid ? '/deadlines' : '#' %>" class="menu-card <%= !user.has_paid ? 'locked-card' : '' %>">
+                <i>⏳</i>
+                <b>Deadlines</b>
+                <p>Countdown</p>
+            </a>
+
+            <a href="<%= user.has_paid ? '/pomodoro' : '#' %>" class="menu-card <%= !user.has_paid ? 'locked-card' : '' %>">
+                <i>⏱️</i>
+                <b>Pomodoro</b>
+                <p>Study Timer</p>
+            </a>
+
+            <a href="<%= user.has_paid ? '/timetable' : '#' %>" class="menu-card <%= !user.has_paid ? 'locked-card' : '' %>">
+                <i>📅</i>
+                <b>Timetable</b>
+                <p>Day Planner</p>
+            </a>
+
+            <a href="https://alitedigitals.vercel.app/projects" target="_blank" class="menu-card">
+                <i>🏪</i>
+                <b>Alite Store</b>
+                <p>Tech Projects</p>
+            </a>
+
+            <a href="/suggestions" class="menu-card">
+                <i>✍️</i>
+                <b>Feedback</b>
+                <p>Send Review</p>
+            </a>
+
+            <a href="/how-it-works" class="menu-card">
+                <i>❓</i>
+                <b>How it Works</b>
+                <p>User Guide</p>
             </a>
 
             <a href="/profile" class="menu-card">
-                <i>⚙️</i>
-                <b>Settings</b>
-                <p>Account Prefs</p>
+                <i>👤</i>
+                <b>Profile</b>
+                <p>Account Settings</p>
             </a>
-        </div>
 
-        <% if (!user.has_paid) { %>
-        <div class="paywall-container">
-            <h2 style="margin: 0; font-size: 1.2rem;">Ready for 2026?</h2>
-            <p style="font-size: 0.8rem; opacity: 0.8; margin: 10px 0;">Unlock full analytics, custom mock exams, and premium subjects.</p>
-            <button id="pay-btn" onclick="payWithPaystack()" class="upgrade-btn">Get Premium — ₦500</button>
         </div>
-        <% } %>
 
         <nav class="nav-bar">
             <a href="/dashboard" class="nav-item active"><i>🏠</i>Home</a>
-            <a href="/history" class="nav-item"><i>📊</i>Stats</a>
+            <a href="<%= user.has_paid ? '/history' : '#' %>" class="nav-item <%= !user.has_paid ? 'locked-card' : '' %>"><i>📊</i>Stats</a>
             
-            <a href="<%= user.has_paid ? '/setup-test' : '#' %>" class="center-fab">+</a>
+            <a href="<%= user.has_paid ? '/setup-test' : '#' %>" class="center-fab <%= !user.has_paid ? 'locked-fab' : '' %>">+</a>
             
-            <a href="/notifications" class="nav-item" style="position: relative;">
+            <a href="<%= user.has_paid ? '/notifications' : '#' %>" class="nav-item <%= !user.has_paid ? 'locked-card' : '' %>" style="position: relative;">
                 <i>🔔</i>Alerts
                 <% if (locals.hasNewNotifs) { %><span class="dot"></span><% } %>
             </a>
@@ -231,8 +300,10 @@
 
     <script>
         function payWithPaystack() {
-            const btn = document.getElementById('pay-btn');
-            btn.innerHTML = "Opening Secure Pay...";
+            const btn = document.getElementById('pay-btn-top');
+            if (!btn) return;
+            
+            btn.innerHTML = "Opening Pay...";
             btn.disabled = true;
 
             let handler = PaystackPop.setup({
@@ -244,7 +315,7 @@
                     window.location.href = "/verify-payment?reference=" + response.reference;
                 },
                 onClose: function() {
-                    btn.innerHTML = "Get Premium — ₦500";
+                    btn.innerHTML = "Upgrade — ₦500";
                     btn.disabled = false;
                 }
             });

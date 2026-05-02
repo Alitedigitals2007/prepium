@@ -2,41 +2,294 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Prepium | Profile</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root { --brand: #0062ff; --bg: #f8fafc; --text: #1e293b; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; padding-bottom: 100px; color: var(--text); display: flex; justify-content: center; }
-        .app-shell { width: 100%; max-width: 430px; background: white; min-height: 100vh; position: relative; box-shadow: 0 0 40px rgba(0,0,0,0.03); }
+        :root { 
+            --brand: #0062ff; 
+            --brand-light: #e6efff;
+            --bg: #f8fafc; 
+            --text: #0f172a; 
+            --sub: #64748b;
+            --border: #edf2f7;
+            --white: #ffffff;
+            --danger: #ef4444;
+        }
 
-        .header-bg { background: linear-gradient(to bottom, #eef4ff, white); padding: 4rem 1.2rem 2rem; text-align: center; }
-        .avatar-circle { width: 90px; height: 90px; background: var(--brand); color: white; border-radius: 32px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: 800; margin: 0 auto 1.2rem; box-shadow: 0 12px 24px rgba(0,98,255,0.2); }
-        .name { font-size: 1.5rem; font-weight: 800; margin: 0; }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 0 1.5rem; margin-top: 10px; }
-        .stat-card { background: #ffffff; border: 1.5px solid #f1f5f9; padding: 1.5rem 1rem; border-radius: 28px; text-align: center; }
-        .stat-val { display: block; font-size: 1.6rem; font-weight: 800; color: var(--brand); }
-        .stat-lab { font-size: 0.65rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-top: 6px; }
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            display: flex; 
+            justify-content: center;
+            min-height: 100vh;
+        }
 
-        .menu-list { padding: 1.5rem; }
-        .menu-item { display: flex; align-items: center; justify-content: space-between; padding: 1.2rem; background: #f8fafc; border-radius: 22px; margin-bottom: 12px; text-decoration: none; color: inherit; }
-        .logout { color: #ef4444; background: #fef2f2; }
+        .app-shell { 
+            width: 100%; 
+            max-width: 430px; 
+            background: var(--white); 
+            min-height: 100vh; 
+            position: relative; 
+            box-shadow: 0 0 40px rgba(0,0,0,0.02);
+            display: flex;
+            flex-direction: column;
+            padding-bottom: 100px;
+        }
 
-        .bottom-nav { position: fixed; bottom: 0; width: 100%; max-width: 430px; background: white; height: 85px; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #f1f5f9; }
-        .nav-link { text-decoration: none; color: #94a3b8; font-size: 0.65rem; font-weight: 800; text-align: center; }
-        .nav-link.active { color: var(--brand); }
-        .fab { width: 62px; height: 62px; background: var(--brand); border-radius: 22px; display: flex; align-items: center; justify-content: center; color: white; font-size: 2rem; transform: translateY(-25px); border: 5px solid white; box-shadow: 0 10px 20px rgba(0,98,255,0.25); text-decoration: none; }
+        /* Profile Header */
+        .header-bg { 
+            background: linear-gradient(180deg, #f0f6ff 0%, #ffffff 100%); 
+            padding: 3.5rem 1.5rem 2rem; 
+            text-align: center; 
+            border-bottom: 1px solid var(--border);
+        }
+
+        .avatar-wrapper {
+            position: relative;
+            width: 96px;
+            height: 96px;
+            margin: 0 auto 1.2rem;
+        }
+
+        .avatar-circle { 
+            width: 100%;
+            height: 100%;
+            background: var(--brand); 
+            color: white; 
+            border-radius: 32px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 2.5rem; 
+            font-weight: 800; 
+            box-shadow: 0 12px 28px rgba(0, 98, 255, 0.22);
+            border: 4px solid white;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .avatar-wrapper:hover .avatar-circle {
+            transform: scale(1.04);
+        }
+        
+        .name { 
+            font-size: 1.45rem; 
+            font-weight: 800; 
+            margin-bottom: 4px; 
+            letter-spacing: -0.5px;
+            color: var(--text);
+        }
+
+        .email {
+            color: var(--sub);
+            font-size: 0.88rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .badge { 
+            background: var(--brand-light); 
+            color: var(--brand); 
+            padding: 8px 16px; 
+            border-radius: 12px; 
+            font-size: 0.72rem; 
+            font-weight: 800; 
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+
+        .badge-premium {
+            background: linear-gradient(135deg, #0062ff, #004ecc);
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 98, 255, 0.15);
+        }
+
+        /* Statistics Area */
+        .stats-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 16px; 
+            padding: 1.5rem; 
+            margin-top: -10px;
+        }
+
+        .stat-card { 
+            background: var(--white); 
+            border: 1px solid var(--border); 
+            padding: 1.25rem 1rem; 
+            border-radius: 24px; 
+            text-align: center; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.01);
+            transition: all 0.2s ease;
+        }
+        
+        .stat-card:hover {
+            border-color: var(--brand-light);
+            background: #fafcfe;
+            transform: translateY(-2px);
+        }
+
+        .stat-val { 
+            display: block; 
+            font-size: 1.6rem; 
+            font-weight: 800; 
+            color: var(--text);
+            letter-spacing: -0.5px;
+        }
+
+        .stat-lab { 
+            font-size: 0.68rem; 
+            font-weight: 700; 
+            color: var(--sub); 
+            text-transform: uppercase; 
+            margin-top: 4px; 
+            letter-spacing: 0.3px;
+        }
+
+        /* Menu Actions Area */
+        .menu-list { padding: 0 1.5rem 1.5rem; }
+
+        .menu-item { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            padding: 1.1rem 1.4rem; 
+            background: #f8fafc; 
+            border: 1px solid transparent;
+            border-radius: 20px; 
+            margin-bottom: 12px; 
+            text-decoration: none; 
+            color: var(--text);
+            transition: all 0.2s ease;
+        }
+
+        .menu-item:hover { 
+            background: white;
+            border-color: #e2e8f0;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+        }
+
+        .menu-item-content {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            font-size: 0.92rem;
+            font-weight: 700;
+        }
+
+        .menu-item-content i {
+            font-size: 1.1rem;
+            width: 24px;
+        }
+
+        .menu-item span { 
+            font-size: 0.8rem; 
+            color: var(--sub); 
+            transition: transform 0.2s ease;
+        }
+        
+        .menu-item:hover span {
+            transform: translateX(2px);
+            color: var(--brand);
+        }
+
+        .logout { 
+            color: var(--danger); 
+            background: #fff5f5; 
+        }
+
+        .logout:hover { 
+            background: #fff5f5;
+            border-color: #fed7d7; 
+        }
+
+        .logout i, .logout span { color: var(--danger) !important; }
+
+        /* Modern Bottom Navigation */
+        .bottom-nav { 
+            position: fixed; 
+            bottom: 0; 
+            width: 100%; 
+            max-width: 430px; 
+            background: white; 
+            height: 84px; 
+            display: flex; 
+            justify-content: space-around; 
+            align-items: center; 
+            border-top: 1px solid var(--border); 
+            padding: 0 12px;
+            z-index: 100;
+        }
+
+        .nav-link { 
+            text-decoration: none; 
+            color: var(--sub); 
+            font-size: 0.65rem; 
+            font-weight: 700; 
+            text-align: center; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.25s ease;
+            width: 60px;
+        }
+
+        .nav-link i {
+            font-size: 1.25rem;
+            transition: transform 0.2s;
+        }
+
+        .nav-link:hover i {
+            transform: translateY(-2px);
+        }
+
+        .nav-link.active { 
+            color: var(--brand); 
+        }
+
+        .fab { 
+            width: 58px; 
+            height: 58px; 
+            background: var(--brand); 
+            border-radius: 20px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            color: white; 
+            font-size: 1.2rem; 
+            transform: translateY(-22px); 
+            border: 4px solid white; 
+            box-shadow: 0 10px 24px rgba(0, 98, 255, 0.28); 
+            text-decoration: none; 
+            transition: all 0.25s ease;
+        }
+
+        .fab:hover {
+            transform: translateY(-24px);
+            background: #0056e0;
+            box-shadow: 0 12px 28px rgba(0, 98, 255, 0.35);
+        }
     </style>
 </head>
 <body>
     <div class="app-shell">
         <div class="header-bg">
-            <div class="avatar-circle"><%= user.fullname.charAt(0).toUpperCase() %></div>
+            <div class="avatar-wrapper">
+                <div class="avatar-circle">
+                    <%= user.fullname.charAt(0).toUpperCase() %>
+                </div>
+            </div>
             <h1 class="name"><%= user.fullname %></h1>
-            <p style="color: #64748b;"><%= user.email %></p>
-            <span style="background: #eff6ff; color: var(--brand); padding: 6px 12px; border-radius: 10px; font-size: 0.7rem; font-weight: 800;">
-                <%= user.has_paid ? 'PREMIUM ACCESS' : 'BASIC ACCOUNT' %>
+            <p class="email"><%= user.email %></p>
+            <span class="badge <%= user.has_paid ? 'badge-premium' : '' %>">
+                <%= user.has_paid ? 'Premium Access' : 'Basic Account' %>
             </span>
         </div>
 
@@ -53,21 +306,41 @@
 
         <div class="menu-list">
             <a href="/history" class="menu-item">
-                <div style="font-weight: 700;">📊 Performance History</div>
-                <span>❯</span>
+                <div class="menu-item-content">
+                    <i class="fas fa-chart-line" style="color: var(--brand);"></i>
+                    <span>Performance History</span>
+                </div>
+                <span><i class="fas fa-chevron-right"></i></span>
             </a>
             <a href="/logout" class="menu-item logout">
-                <div style="font-weight: 700;">🚪 Sign Out</div>
-                <span>❯</span>
+                <div class="menu-item-content">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Sign Out</span>
+                </div>
+                <span><i class="fas fa-chevron-right"></i></span>
             </a>
         </div>
 
         <nav class="bottom-nav">
-            <a href="/dashboard" class="nav-link"><i>🏠</i><br>Home</a>
-            <a href="/history" class="nav-link"><i>📊</i><br>Stats</a>
-            <a href="/setup-test" class="fab">+</a>
-            <a href="/notifications" class="nav-link"><i>🔔</i><br>Alerts</a>
-            <a href="/profile" class="nav-link active"><i>👤</i><br>Me</a>
+            <a href="/dashboard" class="nav-link">
+                <i class="fas fa-home"></i>
+                Home
+            </a>
+            <a href="/history" class="nav-link">
+                <i class="fas fa-history"></i>
+                History
+            </a>
+            <a href="/setup-test" class="fab">
+                <i class="fas fa-plus"></i>
+            </a>
+            <a href="/notifications" class="nav-link">
+                <i class="fas fa-bell"></i>
+                Alerts
+            </a>
+            <a href="/profile" class="nav-link active">
+                <i class="fas fa-user"></i>
+                Me
+            </a>
         </nav>
     </div>
 </body>

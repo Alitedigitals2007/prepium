@@ -91,23 +91,91 @@ app.get('/', (req, res) => {
 app.get('/signup', (req, res) => res.render('signup'));
 app.get('/login', (req, res) => res.render('login'));
 
-// Sign Up Page
-app.get('/signup', (req, res) => {
-    res.render('signup');
-});
-
-// Process Sign Up
 app.post('/auth/signup', async (req, res) => {
-    const { fullname, email, password } = req.body;
+    const { fullname, email, password, referred_by } = req.body; 
+    
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
+        
+        // Clean up the referral code before saving it
+        const cleanReferralCode = referred_by ? referred_by.trim().toLowerCase() : null;
+
+        // Using unique_code to match your updated schema exactly
         await pool.query(
-            'INSERT INTO users (fullname, email, password) VALUES ($1, $2, $3)',
-            [fullname, email, hashedPassword]
+            'INSERT INTO users (fullname, email, password, unique_code, has_paid) VALUES ($1, $2, $3, $4, $5)',
+            [fullname, email.toLowerCase(), hashedPassword, cleanReferralCode, false]
         );
+
         res.redirect('/login?msg=Account created! Please login.');
+        
     } catch (err) {
-        res.send("Error: Email might already exist.");
+        console.error("Signup Error:", err);
+        res.send("Error creating account.");
+    }
+});
+
+app.post('/dashboard/verify-payment', async (req, res) => {
+    if (!req.session.user) return res.redirect('/login');
+    const userEmail = req.session.user.email;
+
+    try {
+        // 1. Fetch user status and their ambassador code
+        const userQuery = await pool.query(
+            'SELECT unique_code, has_paid FROM users WHERE email = $1', 
+            [userEmail]
+        );
+
+        if (userQuery.rows.length === 0) {
+            return res.send("User profile not found.");
+        }
+
+        const user = userQuery.rows[0];
+
+        // Exit if user has already activated to prevent double charging/crediting
+        if (user.has_paid === true) {
+            return res.send("Your account has already been activated.");
+        }
+
+        // 2. Activate the user's account status
+        await pool.query('UPDATE users SET has_paid = true WHERE email = $1', [userEmail]);
+        console.log(`[Database] Success: User ${userEmail} marked as paid.`);
+
+        // 3. Process Ambassador credit if a code exists
+        if (user.unique_code) {
+            const codeClean = user.unique_code.trim().toLowerCase();
+            console.log(`[Lookup] Attempting to match code: "${codeClean}"`);
+
+            const ambCheck = await pool.query(
+                'SELECT id, name FROM ambassadors WHERE LOWER(TRIM(unique_code)) = $1',
+                [codeClean]
+            );
+
+            if (ambCheck.rows.length > 0) {
+                const ambassador = ambCheck.rows[0];
+                console.log(`[Match Found] Adding ₦150 to Ambassador: ${ambassador.name}`);
+
+                // Force casting inside the SQL math operation
+                const updateResult = await pool.query(
+                    `UPDATE ambassadors 
+                     SET total_earned = CAST(COALESCE(total_earned, 0) AS INTEGER) + 150, 
+                         total_referrals = CAST(COALESCE(total_referrals, 0) AS INTEGER) + 1 
+                     WHERE id = $1 
+                     RETURNING total_earned, total_referrals`,
+                    [ambassador.id]
+                );
+
+                console.log('[System Output] New Dashboard Stats:', updateResult.rows[0]);
+            } else {
+                console.log(`[No Ambassador Found] The code "${codeClean}" did not match any unique_code.`);
+            }
+        }
+
+        req.session.user.has_paid = true;
+        res.redirect('/dashboard?msg=Account activated successfully!');
+
+    } catch (err) {
+        console.error("Payment Processing Error:", err);
+        res.status(500).send("Database error occurred.");
     }
 });
 
@@ -184,22 +252,74 @@ app.post('/auth/login', async (req, res) => {
 app.get('/verify-payment', async (req, res) => {
     const { reference } = req.query;
 
+    if (!req.session.user) {
+        return res.redirect('/login');
+    }
+
+    const userId = req.session.user.id;
+
     try {
-        // 1. Verify with Paystack (Optional but recommended for security)
-        // 2. Update the Database
-        await pool.query(
-            'UPDATE users SET has_paid = true WHERE id = $1', 
-            [req.session.user.id]
+        // 1. Fetch user data to see their unique code and current status before updating
+        const userQuery = await pool.query(
+            'SELECT unique_code, has_paid FROM users WHERE id = $1', 
+            [userId]
         );
 
-        // 3. CRITICAL: Update the session data so the UI changes immediately
+        if (userQuery.rows.length === 0) {
+            return res.redirect('/dashboard?payment=failed&reason=user_not_found');
+        }
+
+        const user = userQuery.rows[0];
+
+        // 2. Prevent double-crediting if they are already activated
+        if (user.has_paid === true) {
+            req.session.user.has_paid = true;
+            return res.redirect('/dashboard?payment=success');
+        }
+
+        // 3. Mark the user as activated (Paid)
+        await pool.query('UPDATE users SET has_paid = true WHERE id = $1', [userId]);
+        console.log(`[Paystack] Success: User ID ${userId} marked as paid.`);
+
+        // 4. Update the logged-in session right away
         req.session.user.has_paid = true;
 
-        // 4. Send them back to the dashboard
+        // 5. Credit the Ambassador if a referral code was used
+        if (user.unique_code) {
+            const codeClean = user.unique_code.trim().toLowerCase();
+            console.log(`[Referral Process] Looking for ambassador matching code: "${codeClean}"`);
+
+            // Fetch to get the exact ambassador ID
+            const ambCheck = await pool.query(
+                'SELECT id, name FROM ambassadors WHERE LOWER(TRIM(unique_code)) = $1',
+                [codeClean]
+            );
+
+            if (ambCheck.rows.length > 0) {
+                const ambassador = ambCheck.rows[0];
+                console.log(`[Referral Match] Adding ₦150 to Ambassador: ${ambassador.name}`);
+
+                // Direct mathematical calculation targeting the ambassador ID
+                await pool.query(
+                    `UPDATE ambassadors 
+                     SET total_earned = CAST(COALESCE(total_earned, 0) AS INTEGER) + 150, 
+                         total_referrals = CAST(COALESCE(total_referrals, 0) AS INTEGER) + 1 
+                     WHERE id = $1`,
+                    [ambassador.id]
+                );
+                console.log(`[Success] ₦150 credited to Ambassador ID ${ambassador.id}.`);
+            } else {
+                console.log(`[Warning] No matching ambassador found for code: "${codeClean}"`);
+            }
+        } else {
+            console.log(`[Referral Process] User ID ${userId} did not use a referral code.`);
+        }
+
+        // 6. Send them back to the dashboard with success parameter
         res.redirect('/dashboard?payment=success');
 
     } catch (err) {
-        console.error(err);
+        console.error("Paystack Verification Callback Error:", err);
         res.redirect('/dashboard?payment=failed');
     }
 });
@@ -737,6 +857,566 @@ app.get('/history', isStudent, async (req, res) => {
     } catch (err) {
         console.error("History Page Error:", err);
         res.render('history', { user: req.session.user, history: [] });
+    }
+});
+
+// GET: Show Ambassador Login Page
+app.get('/ambassador/login', (req, res) => {
+    res.render('ambassador-login');
+});
+
+// POST: Process Ambassador Login (Their unique code is both user & password)
+app.post('/ambassador/login', async (req, res) => {
+    const { unique_code } = req.body;
+    try {
+        const result = await pool.query('SELECT * FROM ambassadors WHERE unique_code = $1', [unique_code]);
+        
+        if (result.rows.length > 0) {
+            // Save the ambassador to session
+            req.session.ambassador = result.rows[0];
+            res.redirect('/ambassador/dashboard');
+        } else {
+            res.send("Invalid Ambassador ID. <a href='/ambassador/login'>Try again</a>");
+        }
+    } catch (err) {
+        res.status(500).send("Login error.");
+    }
+});
+
+app.get('/ambassador/dashboard', async (req, res) => {
+    if (!req.session.ambassador) return res.redirect('/ambassador/login');
+
+    try {
+        const code = req.session.ambassador.unique_code;
+        
+        // 1. Fetch latest stats with a fallback of 0 for any missing/null columns
+        const ambData = await pool.query(
+            `SELECT 
+                id, 
+                name, 
+                unique_code, 
+                bank_details, 
+                COALESCE(total_referrals, 0) AS total_referrals, 
+                COALESCE(total_earned, 0) AS total_earned, 
+                COALESCE(total_withdrawn, 0) AS total_withdrawn 
+             FROM ambassadors 
+             WHERE unique_code = $1`, 
+            [code]
+        );
+
+        if (ambData.rows.length === 0) {
+            return res.redirect('/ambassador/login?error=Invalid session');
+        }
+
+        const ambassador = ambData.rows[0];
+
+        // Ensure these are treated as numbers and calculate available balance
+        const earned = Number(ambassador.total_earned) || 0;
+        const withdrawn = Number(ambassador.total_withdrawn) || 0;
+        
+        ambassador.current_balance = earned - withdrawn;
+        ambassador.total_earned = earned;
+        ambassador.total_withdrawn = withdrawn;
+
+        // 2. Fetch all referred users matching the unique_code exactly
+        const referrals = await pool.query(
+            `SELECT fullname, email, has_paid 
+             FROM users 
+             WHERE LOWER(TRIM(unique_code)) = LOWER(TRIM($1)) 
+             ORDER BY created_at DESC`, 
+            [code]
+        );
+
+        res.render('ambassador-dashboard', {
+            ambassador: ambassador,
+            referrals: referrals.rows
+        });
+    } catch (err) {
+        console.error("Dashboard route error:", err);
+        res.status(500).send("Error loading ambassador dashboard.");
+    }
+});
+
+// POST: Update Ambassador Payout details
+app.post('/ambassador/update-bank', async (req, res) => {
+    if (!req.session.ambassador) return res.status(403).send("Unauthorized");
+    const { bank_details } = req.body;
+    try {
+        await pool.query(
+            'UPDATE ambassadors SET bank_details = $1 WHERE unique_code = $2', 
+            [bank_details, req.session.ambassador.unique_code]
+        );
+        res.redirect('/ambassador/dashboard?msg=Account details updated');
+    } catch (err) {
+        res.status(500).send("Update failed.");
+    }
+});
+
+// GET: Admin View - Manage Ambassadors
+app.get('/admin/ambassadors', async (req, res) => {
+    if (!req.session.admin) return res.redirect('/admin/login'); // Ensure admin is logged in
+
+    try {
+        const result = await pool.query(`
+            SELECT 
+                id, 
+                name, 
+                unique_code, 
+                bank_details, 
+                COALESCE(total_referrals, 0) AS total_referrals, 
+                COALESCE(total_earned, 0) AS total_earned, 
+                COALESCE(total_withdrawn, 0) AS total_withdrawn,
+                created_at 
+            FROM ambassadors 
+            ORDER BY created_at DESC
+        `);
+
+        // Calculate outstanding balance for each ambassador
+        const ambassadors = result.rows.map(amb => {
+            const earned = Number(amb.total_earned) || 0;
+            const withdrawn = Number(amb.total_withdrawn) || 0;
+            
+            return {
+                ...amb,
+                total_earned: earned,
+                total_withdrawn: withdrawn,
+                outstanding: earned - withdrawn
+            };
+        });
+
+        res.render('admin-ambassadors', { ambassadors });
+    } catch (err) {
+        console.error("Admin ambassadors view error:", err);
+        res.status(500).send("Admin Error loading ambassadors.");
+    }
+});
+
+// POST: Add a new ambassador manually
+app.post('/admin/add-ambassador', async (req, res) => {
+    if (!req.session.admin) return res.redirect('/admin/login');
+
+    const { name, unique_code } = req.body;
+    try {
+        // Force clean, lowercase codes before adding to database
+        const cleanCode = unique_code.trim().toLowerCase();
+
+        await pool.query(
+            'INSERT INTO ambassadors (name, unique_code, total_referrals, total_earned, total_withdrawn) VALUES ($1, $2, 0, 0, 0)', 
+            [name, cleanCode]
+        );
+        res.redirect('/admin/ambassadors?msg=Ambassador added successfully');
+    } catch (err) {
+        console.error(err);
+        res.redirect('/admin/ambassadors?error=Code already in use');
+    }
+});
+
+// POST: Admin marks payout as complete
+app.post('/admin/payout-complete/:id', async (req, res) => {
+    try {
+        // Fetch existing total_earned to move it to total_withdrawn
+        const ambCheck = await pool.query('SELECT total_earned FROM ambassadors WHERE id = $1', [req.params.id]);
+        
+        if (ambCheck.rows.length > 0) {
+            const earned = ambCheck.rows[0].total_earned;
+
+            // Set total_withdrawn to match total_earned (clearing current balance to 0)
+            await pool.query(
+                'UPDATE ambassadors SET total_withdrawn = $1 WHERE id = $2', 
+                [earned, req.params.id]
+            );
+        }
+        res.redirect('/admin/ambassadors?msg=Payout recorded successfully');
+    } catch (err) {
+        console.error("Payout error:", err);
+        res.status(500).send("Payout reset failed.");
+    }
+});
+
+// GET: Render the Admin Login Page
+app.get('/admin/login', (req, res) => {
+    // If admin is already logged in, redirect directly to the ambassadors list
+    if (req.session.admin) {
+        return res.redirect('/admin/ambassadors');
+    }
+    res.render('admin-login', { error: null });
+});
+
+// POST: Process Admin Login Credentials
+app.post('/admin/login', async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+        const adminEmail = process.env.ADMIN_EMAIL || "admin@gmail.com";
+        const adminPassword = process.env.ADMIN_PASSWORD || "ayomide2007";
+
+        if (email === adminEmail && password === adminPassword) {
+            // Set session variable
+            req.session.admin = { email: adminEmail };
+            
+            // Save session explicitly and redirect to the ambassador page
+            req.session.save((err) => {
+                if (err) {
+                    console.error("Session Save Error:", err);
+                    return res.render('admin-login', { error: "Session failed. Try again." });
+                }
+                res.redirect('/admin/ambassadors');
+            });
+        } else {
+            res.render('admin-login', { error: "Invalid admin credentials." });
+        }
+    } catch (err) {
+        console.error("Admin Login Error:", err);
+        res.render('admin-login', { error: "An error occurred during login." });
+    }
+});
+
+// GET: Admin Sign Out
+app.get('/admin/logout', (req, res) => {
+    req.session.admin = null;
+    req.session.save(() => {
+        res.redirect('/admin/login?msg=Logged out successfully');
+    });
+});
+
+app.get('/competition', (req, res) => {
+    // If you want to check if the user is logged in first:
+    const user = req.session.user || null;
+    res.render('competition', { user });
+});
+
+// GET: View student deadlines
+app.get('/deadlines', async (req, res) => {
+    if (!req.session.user) return res.redirect('/login');
+    
+    // Safety check: Lock feature if basic user hasn't paid
+    if (!req.session.user.has_paid) {
+        return res.redirect('/dashboard?msg=Upgrade to use deadlines');
+    }
+
+    try {
+        const query = `
+            SELECT id, title, 
+                   TO_CHAR(due_date, 'YYYY-MM-DD') as date_str, 
+                   TO_CHAR(due_time, 'HH24:MI') as time_str 
+            FROM deadlines 
+            WHERE user_id = $1 
+            ORDER BY due_date ASC, due_time ASC
+        `;
+        const result = await pool.query(query, [req.session.user.id]);
+        
+        res.render('deadlines', { 
+            user: req.session.user, 
+            deadlines: result.rows 
+        });
+    } catch (err) {
+        console.error("Error fetching deadlines:", err);
+        res.status(500).send("Database failure loading deadlines.");
+    }
+});
+
+// POST: Save a new deadline
+app.post('/deadlines/add', async (req, res) => {
+    if (!req.session.user || !req.session.user.has_paid) {
+        return res.redirect('/dashboard');
+    }
+
+    const { title, due_date, due_time } = req.body;
+    if (!title || !due_date || !due_time) {
+        return res.redirect('/deadlines?error=All fields are required');
+    }
+
+    try {
+        await pool.query(
+            'INSERT INTO deadlines (user_id, title, due_date, due_time) VALUES ($1, $2, $3, $4)',
+            [req.session.user.id, title.trim(), due_date, due_time]
+        );
+        res.redirect('/deadlines');
+    } catch (err) {
+        console.error("Error creating deadline:", err);
+        res.redirect('/deadlines?error=Failed to add deadline');
+    }
+});
+
+// POST: Delete an individual deadline
+app.post('/deadlines/delete/:id', async (req, res) => {
+    if (!req.session.user) return res.redirect('/login');
+
+    try {
+        await pool.query(
+            'DELETE FROM deadlines WHERE id = $1 AND user_id = $2', 
+            [req.params.id, req.session.user.id]
+        );
+        res.redirect('/deadlines');
+    } catch (err) {
+        console.error("Error deleting deadline:", err);
+        res.redirect('/deadlines?error=Failed to delete deadline');
+    }
+});
+
+// GET: Render the Pomodoro Timer page
+app.get('/pomodoro', (req, res) => {
+    if (!req.session.user) return res.redirect('/login');
+    
+    // Check if the student has paid for premium access
+    if (!req.session.user.has_paid) {
+        return res.redirect('/dashboard?msg=Upgrade to access the Pomodoro Timer');
+    }
+
+    res.render('pomodoro', { 
+        user: req.session.user,
+        hasNewNotifs: req.session.hasNewNotifs || false 
+    });
+});
+
+// GET: Render the Timetable page with stored data
+app.get('/timetable', async (req, res) => {
+    if (!req.session.user) return res.redirect('/login');
+    if (!req.session.user.has_paid) {
+        return res.redirect('/dashboard?msg=Upgrade to access the Day Planner');
+    }
+
+    try {
+        // Fetch saved timetable slots for this specific user from your PostgreSQL database
+        const result = await pool.query(
+            'SELECT * FROM timetables WHERE user_id = $1 ORDER BY day, start_time ASC',
+            [req.session.user.id]
+        );
+        
+        res.render('timetable', { 
+            user: req.session.user,
+            slots: result.rows || [],
+            hasNewNotifs: req.session.hasNewNotifs || false 
+        });
+    } catch (err) {
+        console.error(err);
+        res.render('timetable', { user: req.session.user, slots: [], hasNewNotifs: false });
+    }
+});
+
+// POST: Save a new course slot to the user's timetable
+app.post('/timetable/add', async (req, res) => {
+    if (!req.session.user) return res.status(401).json({ error: 'Unauthorized' });
+    
+    const { course, day, start_time, end_time, venue } = req.body;
+    
+    try {
+        await pool.query(
+            'INSERT INTO timetables (user_id, course, day, start_time, end_time, venue) VALUES ($1, $2, $3, $4, $5, $6)',
+            [req.session.user.id, course, day, start_time, end_time, venue]
+        );
+        res.redirect('/timetable');
+    } catch (err) {
+        console.error(err);
+        res.redirect('/timetable?error=Failed to add slot');
+    }
+});
+
+// GET: Render the How It Works Guide
+app.get('/how-it-works', (req, res) => {
+    if (!req.session.user) return res.redirect('/login');
+    
+    res.render('how-it-works', { 
+        user: req.session.user,
+        hasNewNotifs: req.session.hasNewNotifs || false 
+    });
+});
+
+// ==========================================
+// USER CHAT ROUTES
+// ==========================================
+
+// GET: View all threads & chat interface
+app.get('/suggestions', async (req, res) => {
+    if (!req.session.user) return res.redirect('/login');
+    const activeThreadId = req.query.threadId;
+
+    try {
+        // Fetch threads along with an unread indicator for admin replies
+        const threadsQuery = `
+            SELECT t.*, 
+                CASE 
+                    WHEN EXISTS (
+                        SELECT 1 FROM suggestion_messages m 
+                        WHERE m.thread_id = t.id 
+                        AND m.sender_role = 'Admin' 
+                        AND m.is_read = FALSE
+                    ) THEN TRUE 
+                    ELSE FALSE 
+                END as has_unread
+            FROM suggestion_threads t
+            WHERE t.user_id = $1
+            ORDER BY t.created_at DESC
+        `;
+        const threadsResult = await pool.query(threadsQuery, [req.session.user.id]);
+
+        let activeMessages = [];
+        let currentThread = null;
+
+        // If user selects a thread, load messages and mark admin replies as read
+        if (activeThreadId) {
+            const threadCheck = await pool.query(
+                'SELECT * FROM suggestion_threads WHERE id = $1 AND user_id = $2',
+                [activeThreadId, req.session.user.id]
+            );
+
+            if (threadCheck.rows.length > 0) {
+                currentThread = threadCheck.rows[0];
+
+                // Mark admin messages in this thread as read
+                await pool.query(
+                    "UPDATE suggestion_messages SET is_read = TRUE WHERE thread_id = $1 AND sender_role = 'Admin'",
+                    [activeThreadId]
+                );
+
+                // Fetch updated chat history
+                const msgResult = await pool.query(
+                    'SELECT * FROM suggestion_messages WHERE thread_id = $1 ORDER BY created_at ASC',
+                    [activeThreadId]
+                );
+                activeMessages = msgResult.rows;
+            }
+        }
+
+        res.render('suggestions', {
+            user: req.session.user,
+            threads: threadsResult.rows,
+            activeMessages,
+            currentThread
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Error loading message center.");
+    }
+});
+
+// POST: Create a new thread (Starting the conversation)
+app.post('/suggestions/new', async (req, res) => {
+    if (!req.session.user) return res.redirect('/login');
+    const { title, message } = req.body;
+    try {
+        const newThread = await pool.query(
+            'INSERT INTO suggestion_threads (user_id, title, status) VALUES ($1, $2, \'Open\') RETURNING id',
+            [req.session.user.id, title]
+        );
+        
+        await pool.query(
+            'INSERT INTO suggestion_messages (thread_id, sender_id, sender_role, message) VALUES ($1, $2, \'User\', $3)',
+            [newThread.rows[0].id, req.session.user.id, message]
+        );
+
+        res.redirect(`/suggestions?threadId=${newThread.rows[0].id}`);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Error starting conversation");
+    }
+});
+
+// POST: Send message inside an existing thread
+app.post('/suggestions/reply', async (req, res) => {
+    if (!req.session.user) return res.redirect('/login');
+    const { thread_id, message } = req.body;
+    try {
+        // Verify thread is Open and owned by the user
+        const threadCheck = await pool.query(
+            'SELECT * FROM suggestion_threads WHERE id = $1 AND user_id = $2 AND status = \'Open\'',
+            [thread_id, req.session.user.id]
+        );
+
+        if (threadCheck.rows.length === 0) return res.status(403).send("Chat is closed or unauthorized.");
+
+        await pool.query(
+            'INSERT INTO suggestion_messages (thread_id, sender_id, sender_role, message) VALUES ($1, $2, \'User\', $3)',
+            [thread_id, req.session.user.id, message]
+        );
+
+        res.redirect(`/suggestions?threadId=${thread_id}`);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Error sending message");
+    }
+});
+
+
+// ==========================================
+// ADMIN CHAT ROUTES
+// ==========================================
+
+// GET: View all active student threads
+app.get('/admin/suggestions', async (req, res) => {
+    if (!req.session.user || !req.session.user.is_admin) return res.redirect('/login');
+    const activeThreadId = req.query.threadId;
+
+    try {
+        const threadsQuery = `
+            SELECT t.*, u.fullname, u.email 
+            FROM suggestion_threads t 
+            JOIN users u ON t.user_id = u.id 
+            ORDER BY t.created_at DESC
+        `;
+        const threadsResult = await pool.query(threadsQuery);
+
+        let activeMessages = [];
+        let currentThread = null;
+
+        if (activeThreadId) {
+            const threadCheck = await pool.query(
+                `SELECT t.*, u.fullname, u.email 
+                 FROM suggestion_threads t 
+                 JOIN users u ON t.user_id = u.id 
+                 WHERE t.id = $1`, [activeThreadId]
+            );
+            if (threadCheck.rows.length > 0) {
+                currentThread = threadCheck.rows[0];
+                const msgResult = await pool.query(
+                    'SELECT * FROM suggestion_messages WHERE thread_id = $1 ORDER BY created_at ASC',
+                    [activeThreadId]
+                );
+                activeMessages = msgResult.rows;
+            }
+        }
+
+        res.render('admin/suggestions', {
+            user: req.session.user,
+            threads: threadsResult.rows,
+            activeMessages,
+            currentThread
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Error loading admin messages");
+    }
+});
+
+// POST: Admin sends a reply
+app.post('/admin/suggestions/reply', async (req, res) => {
+    if (!req.session.user || !req.session.user.is_admin) return res.redirect('/login');
+    const { thread_id, message } = req.body;
+    try {
+        await pool.query(
+            'INSERT INTO suggestion_messages (thread_id, sender_id, sender_role, message) VALUES ($1, $2, \'Admin\', $3)',
+            [thread_id, req.session.user.id, message]
+        );
+        res.redirect(`/admin/suggestions?threadId=${thread_id}`);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Error adding admin message");
+    }
+});
+
+// POST: Admin updates the status (Close/Reopen Chat)
+app.post('/admin/suggestions/status', async (req, res) => {
+    if (!req.session.user || !req.session.user.is_admin) return res.redirect('/login');
+    const { thread_id, status } = req.body;
+    try {
+        await pool.query(
+            'UPDATE suggestion_threads SET status = $1 WHERE id = $2',
+            [status, thread_id]
+        );
+        res.redirect(`/admin/suggestions?threadId=${thread_id}`);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Error changing chat status");
     }
 });
 

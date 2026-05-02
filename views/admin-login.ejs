@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login | Prepium</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --brand: #0062ff; 
+            --bg: #f8fafc; 
+            --text: #1e293b; 
+        }
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0; 
+            padding: 1rem; 
+        }
+        .login-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 24px;
+            border: 1px solid #f1f5f9;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03);
+            width: 100%;
+            max-width: 400px;
+        }
+        .logo { color: var(--brand); font-weight: 800; font-size: 1.5rem; text-decoration: none; display: block; margin-bottom: 1.5rem; }
+        .title { font-size: 1.3rem; font-weight: 800; margin-bottom: 0.5rem; }
+        .subtitle { color: #64748b; font-size: 0.9rem; margin-bottom: 2rem; }
+        
+        .form-group { margin-bottom: 1.2rem; }
+        label { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; display: block; margin-bottom: 6px; }
+        input { width: 100%; padding: 1rem; border-radius: 12px; border: 2px solid #e2e8f0; background: #f8fafc; font-size: 0.95rem; outline: none; }
+        input:focus { border-color: var(--brand); background: white; }
+        
+        .btn-login { width: 100%; background: var(--text); color: white; border: none; padding: 1.1rem; border-radius: 14px; font-weight: 700; font-size: 1rem; cursor: pointer; transition: 0.2s; margin-top: 1rem; }
+        .btn-login:hover { transform: translateY(-2px); background: var(--brand); }
+        .error-msg { color: #ef4444; font-size: 0.85rem; font-weight: 600; margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <a href="/" class="logo">Prepium.</a>
+        <div class="title">System Login</div>
+        <div class="subtitle">Enter administrative credentials to proceed.</div>
+
+        <% if (error) { %>
+            <div class="error-msg"><%= error %></div>
+        <% } %>
+
+        <form action="/admin/login" method="POST">
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" name="email" required placeholder="admin@prepium.com">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" name="password" required placeholder="••••••••">
+            </div>
+            <button type="submit" class="btn-login">Access Control Panel</button>
+        </form>
+    </div>
+
+</body>
+</html>

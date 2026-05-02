@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Prepium | How It Works</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --brand: #0062ff; 
+            --bg: #f8fafc; 
+            --text: #0f172a; 
+            --sub: #64748b; 
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); 
+            margin: 0; 
+            padding: 0;
+            color: var(--text); 
+            display: flex; 
+            justify-content: center; 
+            overflow-x: hidden;
+        }
+
+        .app-shell { 
+            width: 100%; 
+            max-width: 430px; 
+            background: white; 
+            min-height: 100vh; 
+            position: relative; 
+            box-shadow: 0 0 60px rgba(0,0,0,0.05);
+            padding-bottom: 110px;
+        }
+
+        /* Animated Header */
+        .header-main { 
+            padding: 2rem 1.5rem 1.2rem;
+            background: linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%);
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.8rem;
+        }
+        .brand-logo {
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: -0.8px;
+            color: var(--text);
+        }
+        .brand-logo span { color: var(--brand); }
+
+        .welcome-msg h1 { margin: 0; font-size: 1.35rem; font-weight: 800; letter-spacing: -0.5px; }
+        .brand-subtitle { font-size: 0.72rem; font-weight: 700; color: var(--brand); text-transform: uppercase; margin-top: 3px; display: block; }
+
+        .guide-intro {
+            padding: 0 1.5rem 1rem;
+            font-size: 0.82rem;
+            color: var(--sub);
+            font-weight: 600;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        /* Horizontal Tab Navigator */
+        .tab-slider {
+            display: flex;
+            gap: 10px;
+            padding: 0 1.5rem 1rem;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .tab-slider::-webkit-scrollbar { display: none; }
+
+        .slider-btn {
+            background: #f1f5f9;
+            color: var(--sub);
+            border: none;
+            padding: 10px 16px;
+            border-radius: 14px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .slider-btn.active {
+            background: var(--brand);
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 62, 255, 0.25);
+        }
+
+        /* Presentation Style Container */
+        .deck-container {
+            padding: 0 1.5rem 1.5rem;
+        }
+
+        .motion-card {
+            background: #ffffff;
+            border: 1px solid #f1f5f9;
+            border-radius: 28px;
+            padding: 1.6rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.01);
+            opacity: 0;
+            transform: translateY(25px);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            display: none;
+        }
+        .motion-card.active-card {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .card-header-icon {
+            font-size: 2.2rem;
+            display: inline-block;
+            margin-bottom: 12px;
+            font-style: normal;
+            background: #f0f7ff;
+            color: var(--brand);
+            width: 58px; height: 58px;
+            text-align: center;
+            line-height: 58px;
+            border-radius: 18px;
+        }
+
+        .motion-card h3 {
+            margin: 0 0 6px 0;
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: var(--text);
+        }
+
+        .motion-card p {
+            font-size: 0.85rem;
+            color: var(--sub);
+            line-height: 1.6;
+            margin: 0 0 16px 0;
+            font-weight: 600;
+        }
+
+        /* Workflow Steps */
+        .workflow-box {
+            background: #f8fafc;
+            border: 1px solid #f1f5f9;
+            border-radius: 18px;
+            padding: 1.2rem;
+            margin-bottom: 1.2rem;
+        }
+        .workflow-box h4 {
+            margin: 0 0 12px 0;
+            font-size: 0.82rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            color: var(--text);
+        }
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .step-item:last-child { margin-bottom: 0; }
+        .step-num {
+            background: var(--brand);
+            color: white;
+            font-size: 0.72rem;
+            font-weight: 800;
+            min-width: 22px;
+            height: 22px;
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 1px;
+        }
+        .step-desc {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text);
+            line-height: 1.4;
+        }
+
+        .cta-action-btn {
+            display: flex;
+            width: 100%;
+            background: var(--brand);
+            color: white;
+            text-decoration: none;
+            padding: 14px;
+            border-radius: 16px;
+            font-size: 0.85rem;
+            font-weight: 800;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(0, 62, 255, 0.2);
+            border: none;
+            cursor: pointer;
+        }
+
+        .cta-action-btn.fab-color {
+            background: #0f172a;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+        }
+
+        /* Fixed Navigation */
+        .nav-bar { 
+            position: fixed; bottom: 0; width: 100%; max-width: 430px; 
+            background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(8px);
+            height: 85px; display: flex; justify-content: space-around; align-items: center; 
+            border-top: 1px solid #f1f5f9; z-index: 1000; padding-bottom: 12px;
+        }
+        .nav-item { text-decoration: none; color: #94a3b8; font-size: 0.65rem; font-weight: 800; text-align: center; }
+        .nav-item.active { color: var(--brand); }
+        .nav-item i { display: block; font-size: 1.35rem; margin-bottom: 4px; font-style: normal; }
+
+        .center-fab { 
+            width: 58px; height: 58px; background: var(--brand); border-radius: 20px; display: flex; 
+            align-items: center; justify-content: center; color: white; font-size: 1.8rem; 
+            transform: translateY(-22px); border: 5px solid white; box-shadow: 0 10px 20px rgba(0, 98, 255, 0.3);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-shell">
+        <header class="header-main">
+            <div class="header-top">
+                <div class="brand-logo">Prepium<span>.</span></div>
+            </div>
+            <div class="welcome-msg">
+                <h1>Platform Guide</h1>
+                <span class="brand-subtitle">App Workflow Guide</span>
+            </div>
+        </header>
+
+        <p class="guide-intro">Tap on any feature below to view its purpose and step-by-step workflow.</p>
+
+        <div class="tab-slider">
+            <button class="slider-btn active" onclick="showSlide(0)">✨ The Center FAB (+)</button>
+            <button class="slider-btn" onclick="showSlide(1)">📚 Library</button>
+            <button class="slider-btn" onclick="showSlide(2)">📊 Stats</button>
+            <button class="slider-btn" onclick="showSlide(3)">🏆 Arena</button>
+            <button class="slider-btn" onclick="showSlide(4)">⏳ Deadlines</button>
+            <button class="slider-btn" onclick="showSlide(5)">⏱️ Pomodoro</button>
+            <button class="slider-btn" onclick="showSlide(6)">📅 Planner</button>
+        </div>
+
+        <div class="deck-container">
+            <div class="motion-card active-card" id="slide-0">
+                <i class="card-header-icon" style="background: #0f172a; color: white;">➕</i>
+                <h3>Center FAB (+) Setup</h3>
+                <p>The core engine of Prepium. Instantly configure and start custom timed CBT practice sessions.</p>
+                <div class="workflow-box">
+                    <h4>Workflow:</h4>
+                    <div class="step-item">
+                        <span class="step-num">1</span>
+                        <span class="step-desc">Tap the <b>(+) FAB Button</b> centered in your bottom navigation.</span>
+                    </div>
+                    <div class="step-item">
+                        <span class="step-num">2</span>
+                        <span class="step-desc">Select courses, pick question categories, and set your timer limit.</span>
+                    </div>
+                    <div class="step-item">
+                        <span class="step-num">3</span>
+                        <span class="step-desc">Launch the CBT test directly to start active test mode.</span>
+                    </div>
+                </div>
+                <a href="<%= user.has_paid ? '/setup-test' : '/dashboard' %>" class="cta-action-btn fab-color">Launch New Test Now ➔</a>
+            </div>
+
+            <div class="motion-card" id="slide-1">
+                <i class="card-header-icon">📚</i>
+                <h3>Study Library</h3>
+                <p>Access and read registered course textbooks directly inside the platform.</p>
+                <div class="workflow-box">
+                    <h4>Workflow:</h4>
+                    <div class="step-item">
+                        <span class="step-num">1</span>
+                        <span class="step-desc">Go to <b>Study Library</b> to see all available course materials.</span>
+                    </div>
+                    <div class="step-item">
+                        <span class="step-num">2</span>
+                        <span class="step-desc">Select a specific module or past question pack.</span>
+                    </div>
+                    <div class="step-item">
+                        <span class="step-num">3</span>
+                        <span class="step-desc">Track and read through course materials step-by-step.</span>
+                    </div>
+                </div>
+                <a href="<%= user.has_paid ? '/subjects' : '/dashboard' %>" class="cta-action-btn">Visit Study Library ➔</a>
+            </div>
+
+            <div class="motion-card" id="slide-2">
+                <i class="card-header-icon">📊</i>
+                <h3>Performance Stats</h3>
+                <p>Review completed tests to monitor your accuracy and overall speed.</p>
+                <div class="workflow-box">
+                    <h4>Workflow:</h4>
+                    <div class="step-item">
+                        <span class="step-num">1</span>
+                        <span class="step-desc">Navigate to <b>Stats</b> from the navbar or grid.</span>
+                    </div>
+                    <div class="step-item">
+                        <span class="step-num">2</span>
+                        <span class="step-desc">Click any past test entry to analyze incorrect questions.</span>
+                    </div>
+                    <div class="step-item">
+                        <span class="step-num">3</span>
+                        <span class="step-desc">Use generated scores to evaluate overall exam readiness.</span>
+                    </div>
+                </div>
+                <a href="<%= user.has_paid ? '/history' : '/dashboard' %>" class="cta-action-btn">View My Stats ➔</a>
+            </div>
+
+            <div class="motion-card" id="slide-3">
+                <i class="card-header-icon">🏆</i>
+                <h3>Live Arena</h3>
+                <p>Compete in timed mock challenges and track your global rank standings.</p>
+                <div class="workflow-box">
+                    <h4>Workflow:</h4>
+                    <div class="step-item">
+                        <span class="step-num">1</span>
+                        <span class="step-desc">Go to the <b>Live Arena</b> to check your active ranking.</span>
+                    </div>
+                    <div class="step-item">
+                        <span class="step-num">2</span>
+                        <span class="step-desc">Launch any timed competitive tests to record scores.</span>
+                    </div>
+                    <div class="step-item">
+                        <span class="step-num">3</span>
+                        <span class="step-desc">Climb higher up the rank leaderboard with every correct answer.</span>
+                    </div>
+                </div>
+                <a href="<%= user.has_paid ? '/competition' : '/dashboard' %>" class="cta-action-btn">Enter the Arena ➔</a>
+            </div>
+
+            <div class="motion-card" id="slide-4">
+                <i class="card-header-icon">⏳</i>
+                <h3>Deadlines</h3>
+                <p>Track test countdowns, CAs, and exams using real-time timers.</p>
+                <div class="workflow-box">
+                    <h4>Workflow:</h4>
+                    <div class="step-item">
+                        <span class="step-num">1</span>
+                        <span class="step-desc">Access <b>Deadlines</b> to review all scheduled reminders.</span>
+                    </div>
+                    <div class="step-item">
+                        <span class="step-num">2</span>
+                        <span class="step-desc">View countdown metrics for registered exams and tests.</span>
+                    </div>
+                    <div class="step-item">
+                        <span class="step-num">3</span>
+                        <span class="step-desc">Stay organized by prioritizing study tasks for high-priority tests.</span>
+                    </div>
+                </div>
+                <a href="<%= user.has_paid ? '/deadlines' : '/dashboard' %>" class="cta-action-btn">Check Deadlines ➔</a>
+            </div>
+
+            <div class="motion-card" id="slide-5">
+                <i class="card-header-icon">⏱️</i>
+                <h3>Pomodoro Timer</h3>
+                <p>Optimize your reading and study sprints using custom focus intervals.</p>
+                <div class="workflow-box">
+                    <h4>Workflow:</h4>
+                    <div class="step-item">
+                        <span class="step-num">1</span>
+                        <span class="step-desc">Open the <b>Pomodoro</b> section before your reading session.</span>
+                    </div>
+                    <div class="step-item">
+                        <span class="step-num">2</span>
+                        <span class="step-desc">Set study cycles (e.g., 25 mins reading, 5 mins rest).</span>
+                    </div>
+                    <div class="step-item">
+                        <span class="step-num">3</span>
+                        <span class="step-desc">Follow focus alarms to complete intervals without distractions.</span>
+                    </div>
+                </div>
+                <a href="<%= user.has_paid ? '/pomodoro' : '/dashboard' %>" class="cta-action-btn">Launch Timer ➔</a>
+            </div>
+
+            <div class="motion-card" id="slide-6">
+                <i class="card-header-icon">📅</i>
+                <h3>Timetable</h3>
+                <p>Organize custom study and lecture schedules with high-quality PDF downloads.</p>
+                <div class="workflow-box">
+                    <h4>Workflow:</h4>
+                    <div class="step-item">
+                        <span class="step-num">1</span>
+                        <span class="step-desc">Open the <b>Timetable Planner</b>.</span>
+                    </div>
+                    <div class="step-item">
+                        <span class="step-num">2</span>
+                        <span class="step-desc">Use the dialog button (+) to save courses, times, and venues.</span>
+                    </div>
+                    <div class="step-item">
+                        <span class="step-num">3</span>
+                        <span class="step-desc">Download your timetable as a PDF featuring Prepium branding.</span>
+                    </div>
+                </div>
+                <a href="<%= user.has_paid ? '/timetable' : '/dashboard' %>" class="cta-action-btn">Open Timetable ➔</a>
+            </div>
+        </div>
+
+        <nav class="nav-bar">
+            <a href="/dashboard" class="nav-item"><i>🏠</i>Home</a>
+            <a href="/history" class="nav-item"><i>📊</i>Stats</a>
+            <a href="/setup-test" class="center-fab">+</a>
+            <a href="/notifications" class="nav-item"><i>🔔</i>Alerts</a>
+            <a href="/profile" class="nav-item"><i>👤</i>Profile</a>
+        </nav>
+    </div>
+
+    <script>
+        function showSlide(index) {
+            const btns = document.querySelectorAll('.slider-btn');
+            btns.forEach((btn, i) => {
+                if (i === index) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            const slides = document.querySelectorAll('.motion-card');
+            slides.forEach((slide, i) => {
+                if (i === index) {
+                    slide.classList.add('active-card');
+                } else {
+                    slide.classList.remove('active-card');
+                }
+            });
+
+            btns[index].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
+    </script>
+</body>
+</html>
