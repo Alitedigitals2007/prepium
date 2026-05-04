@@ -222,6 +222,24 @@
 
         <div class="menu-grid">
             
+            <% if (!user.has_paid) { %>
+                <% if (user.quiz_attempts < 2) { %>
+                    <a href="/setup-test" class="menu-card" style="border: 2px solid var(--brand); background: #f0f7ff;">
+                        <i>⚡</i>
+                        <b style="color: var(--brand);">Try Free Quiz</b>
+                        <p style="color: var(--brand); font-weight: 700;">
+                            <%= 2 - user.quiz_attempts %> of 2 attempts left
+                        </p>
+                    </a>
+                <% } else { %>
+                    <a href="#" onclick="payWithPaystack()" class="menu-card" style="border: 1px dashed #cbd5e1; background: #f8fafc;">
+                        <i>🔒</i>
+                        <b style="color: var(--sub);">Free Quizzes Used</b>
+                        <p style="color: var(--brand); font-weight: 700;">Tap to Upgrade</p>
+                    </a>
+                <% } %>
+            <% } %>
+
             <a href="<%= user.has_paid ? '/subjects' : '#' %>" class="menu-card <%= !user.has_paid ? 'locked-card' : '' %>">
                 <i>📚</i>
                 <b>Study Library</b>
@@ -288,7 +306,11 @@
             <a href="/dashboard" class="nav-item active"><i>🏠</i>Home</a>
             <a href="<%= user.has_paid ? '/history' : '#' %>" class="nav-item <%= !user.has_paid ? 'locked-card' : '' %>"><i>📊</i>Stats</a>
             
-            <a href="<%= user.has_paid ? '/setup-test' : '#' %>" class="center-fab <%= !user.has_paid ? 'locked-fab' : '' %>">+</a>
+            <% if (user.has_paid || (!user.has_paid && user.quiz_attempts < 2)) { %>
+                <a href="/setup-test" class="center-fab">+</a>
+            <% } else { %>
+                <a href="#" onclick="payWithPaystack()" class="center-fab locked-fab">+</a>
+            <% } %>
             
             <a href="<%= user.has_paid ? '/notifications' : '#' %>" class="nav-item <%= !user.has_paid ? 'locked-card' : '' %>" style="position: relative;">
                 <i>🔔</i>Alerts
@@ -301,10 +323,12 @@
     <script>
         function payWithPaystack() {
             const btn = document.getElementById('pay-btn-top');
-            if (!btn) return;
             
-            btn.innerHTML = "Opening Pay...";
-            btn.disabled = true;
+            // Temporary loader state for UI feedback
+            if (btn) {
+                btn.innerHTML = "Opening Pay...";
+                btn.disabled = true;
+            }
 
             let handler = PaystackPop.setup({
                 key: '<%= paystack_key %>',
@@ -315,8 +339,10 @@
                     window.location.href = "/verify-payment?reference=" + response.reference;
                 },
                 onClose: function() {
-                    btn.innerHTML = "Upgrade — ₦500";
-                    btn.disabled = false;
+                    if (btn) {
+                        btn.innerHTML = "Upgrade — ₦500";
+                        btn.disabled = false;
+                    }
                 }
             });
             handler.openIframe();

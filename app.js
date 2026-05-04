@@ -596,9 +596,9 @@ app.get('/dashboard', isStudent, async (req, res) => {
     try {
         const userId = req.session.user.id;
 
-        // 1. Fetch Fresh User Data (Payment, Streak)
+        // 1. Fetch Fresh User Data (Payment, Streak, and Quiz Attempts)
         const userRes = await pool.query(
-            'SELECT has_paid, current_streak FROM users WHERE id = $1', 
+            'SELECT has_paid, current_streak, quiz_attempts FROM users WHERE id = $1', 
             [userId]
         );
         const userData = userRes.rows[0];
@@ -620,7 +620,7 @@ app.get('/dashboard', isStudent, async (req, res) => {
         const subjectsRes = await pool.query('SELECT * FROM subjects ORDER BY name ASC');
 
         res.render('dashboard', { 
-            // Combines session info with database status
+            // Combines session info with database status including quiz_attempts
             user: { ...req.session.user, ...userData }, 
             competition: compRes.rows[0],
             subjects: subjectsRes.rows,
@@ -677,9 +677,31 @@ app.get('/subjects', isStudent, async (req, res) => {
     }
 });
 
-// 2. Setup Test Page
+// 2. Setup Test Page & Quiz Creation
 app.get('/setup-test', isStudent, async (req, res) => {
     try {
+        const userId = req.session.user.id;
+
+        // 1. Fetch the user's latest payment status and attempts
+        const userQuery = await pool.query(
+            'SELECT has_paid, quiz_attempts FROM users WHERE id = $1',
+            [userId]
+        );
+        const userStatus = userQuery.rows[0];
+
+        if (!userStatus) {
+            return res.redirect('/login');
+        }
+
+        // 2. Gatekeeper: Check if unpaid users have exhausted their 2 free attempts
+        if (!userStatus.has_paid && userStatus.quiz_attempts >= 2) {
+            return res.render('quiz-locked', {
+                user: { ...req.session.user, ...userStatus },
+                message: "You've used up your 2 free quiz attempts. Upgrade to Prepium Pro for unlimited practice tests!"
+            });
+        }
+
+        // 3. Pull the subjects and the total questions available per subject
         const result = await pool.query(`
             SELECT s.id, s.name, COUNT(q.id) as total_questions 
             FROM subjects s
@@ -689,9 +711,10 @@ app.get('/setup-test', isStudent, async (req, res) => {
         `);
         
         res.render('setup-test', {
-            user: req.session.user,
+            user: { ...req.session.user, ...userStatus },
             subjects: result.rows
         });
+
     } catch (err) {
         console.error("Setup Error:", err.message);
         res.redirect('/dashboard');
@@ -700,6 +723,28 @@ app.get('/setup-test', isStudent, async (req, res) => {
 
 app.post('/start-quiz', isStudent, async (req, res) => {
     try {
+        const userId = req.session.user.id;
+
+        // 1. Fetch user status to prevent forged route submissions
+        const userQuery = await pool.query(
+            'SELECT has_paid, quiz_attempts FROM users WHERE id = $1',
+            [userId]
+        );
+        const userStatus = userQuery.rows[0];
+
+        if (!userStatus) {
+            return res.redirect('/login');
+        }
+
+        // 2. Gatekeeper: Final server-side check
+        if (!userStatus.has_paid && userStatus.quiz_attempts >= 2) {
+            return res.render('quiz-locked', {
+                user: { ...req.session.user, ...userStatus },
+                message: "You've used up your 2 free quiz attempts. Upgrade to Prepium Pro for unlimited practice tests!"
+            });
+        }
+
+        // 3. Process the submitted test parameters
         const { subject_ids, duration } = req.body;
         const selectedIds = Array.isArray(subject_ids) ? subject_ids : [subject_ids];
         let summary = [];
@@ -714,7 +759,7 @@ app.post('/start-quiz', isStudent, async (req, res) => {
             }
         }
 
-        // Store temp setup in session (but don't fetch all questions yet to save memory)
+        // 4. Store temporary setup in the session
         req.session.tempQuiz = {
             summary,
             duration,
@@ -722,10 +767,12 @@ app.post('/start-quiz', isStudent, async (req, res) => {
         };
 
         res.render('quiz-lobby', {
-            user: req.session.user,
+            user: { ...req.session.user, ...userStatus },
             setup: req.session.tempQuiz
         });
+
     } catch (err) {
+        console.error("Start Quiz Error:", err.message);
         res.redirect('/setup-test');
     }
 });
@@ -808,17 +855,25 @@ app.post('/submit-exam', isStudent, async (req, res) => {
         const totalQuestions = quizData.length;
         const percentage = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
 
-        // --- NEW: SAVE TO DATABASE ---
-        // This ensures the record exists when you visit /history
+        // --- SAVE TO DATABASE & INCREMENT TRIAL ATTEMPT COUNTER ---
         try {
+            // 1. Insert the exam history record
             await pool.query(
                 `INSERT INTO quiz_results (user_id, subject_id, score, total_questions, percentage, time_taken, created_at) 
                  VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
                 [userId, subjectId, score, totalQuestions, percentage, timeUsed]
             );
+
+            // 2. Increment quiz_attempts ONLY for users who have not paid
+            await pool.query(
+                `UPDATE users 
+                 SET quiz_attempts = quiz_attempts + 1 
+                 WHERE id = $1 AND has_paid = false`,
+                [userId]
+            );
+
         } catch (dbErr) {
             console.error("Database Save Error:", dbErr);
-            // We continue to render results even if saving fails, so the user sees their score
         }
 
         res.render('quiz-result', {
