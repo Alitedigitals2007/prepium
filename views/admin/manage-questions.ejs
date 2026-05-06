@@ -2,258 +2,298 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Prepium | Manage <%= subject.name %></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prepium Admin | Subjects</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-    
-    <script>
-        window.MathJax = {
-            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
-            svg: { fontCache: 'global' }
-        };
-    </script>
-    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-
     <style>
         :root { 
             --brand: #0062ff; 
-            --brand-light: #e6f0ff;
+            --brand-light: #eef4ff;
             --bg: #f4f7fe; 
-            --text: #1b2559; 
-            --sidebar-width: 260px;
+            --sidebar: #0b1437; 
+            --danger: #ff4d4f; 
+            --success: #05cd99;
+            --text-main: #1b2559;
+            --text-muted: #a3aed0;
+            --border: #e0e5f2;
         }
 
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif; 
             background: var(--bg); 
-            color: var(--text); 
             margin: 0; 
-            display: flex;
+            display: flex; 
+            color: var(--text-main);
         }
 
-        /* SIDEBAR NAVIGATION */
-        .sidebar {
-            width: var(--sidebar-width);
-            height: 100vh;
-            background: white;
-            border-right: 1px solid #e0e5f2;
+        /* Sidebar */
+        .sidebar { 
+            width: 280px; 
+            background: var(--sidebar); 
+            height: 100vh; 
+            color: white; 
+            padding: 2.5rem 1.5rem; 
             position: fixed;
-            padding: 40px 20px;
+        }
+
+        .logo { 
+            font-size: 1.6rem; 
+            font-weight: 800; 
+            margin-bottom: 3.5rem; 
+            color: white; 
+            text-decoration: none; 
+            display: flex;
+            letter-spacing: -1px;
+        }
+
+        .nav-item { 
+            display: flex;
+            align-items: center;
+            color: #a3aed0; 
+            text-decoration: none; 
+            padding: 16px 20px; 
+            border-radius: 16px; 
+            margin-bottom: 8px; 
+            font-weight: 700; 
+            transition: 0.3s;
+        }
+
+        .nav-item:hover, .nav-item.active { 
+            background: rgba(255, 255, 255, 0.1); 
+            color: white; 
+        }
+
+        /* Main Area */
+        .main { 
+            margin-left: 280px; 
+            padding: 2.5rem 4rem; 
+            width: 100%; 
+            box-sizing: border-box; 
+        }
+
+        .header-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .header-flex h1 { font-size: 1.8rem; font-weight: 800; margin: 0; }
+
+        /* Floating Add Box */
+        .add-card { 
+            background: white; 
+            padding: 2rem; 
+            border-radius: 24px; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.03); 
+            margin-bottom: 3rem;
+            border: 1px solid #fff;
+        }
+
+        /* Updated Add Grid to accommodate Drive Link */
+        .add-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1.2fr 0.8fr 1.5fr auto; 
+            gap: 15px; 
+            align-items: end; 
+        }
+
+        .form-group label { 
+            font-size: 0.75rem; 
+            font-weight: 800; 
+            color: var(--text-muted); 
+            text-transform: uppercase; 
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        input, select { 
+            width: 100%;
+            background: #f4f7fe;
+            border: 1px solid var(--border);
+            padding: 16px; 
+            border-radius: 16px; 
+            font-family: inherit;
+            font-weight: 600;
+            color: var(--text-main);
             box-sizing: border-box;
+            transition: 0.2s;
+        }
+
+        input:focus, select:focus { outline: none; border-color: var(--brand); background: white; }
+
+        .btn-primary { 
+            background: var(--brand); 
+            color: white; 
+            padding: 16px 25px; 
+            border: none; 
+            border-radius: 16px; 
+            font-weight: 800; 
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0, 98, 255, 0.2);
+            transition: 0.3s;
+        }
+
+        .btn-primary:hover { transform: translateY(-2px); }
+
+        /* Subject Grid */
+        .subjects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 25px;
+        }
+
+        .subject-card {
+            background: white;
+            padding: 24px;
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            transition: 0.3s;
+            position: relative;
             display: flex;
             flex-direction: column;
         }
 
-        .logo {
-            font-size: 1.5rem;
+        .uni-badge {
+            background: #0b1437;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.65rem;
             font-weight: 800;
-            color: var(--brand);
-            text-decoration: none;
-            margin-bottom: 50px;
-            display: block;
+            position: absolute;
+            top: 24px;
+            right: 24px;
         }
 
-        .nav-link {
-            text-decoration: none;
-            color: #a3aed0;
-            font-weight: 700;
-            padding: 15px 20px;
-            border-radius: 12px;
-            margin-bottom: 10px;
-            transition: 0.3s;
-            display: flex;
-            align-items: center;
-        }
-
-        .nav-link:hover, .nav-link.active {
+        .category-tag {
             background: var(--brand-light);
             color: var(--brand);
+            padding: 6px 12px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            align-self: flex-start;
         }
 
-        /* MAIN CONTENT AREA */
-        .main-content {
-            margin-left: var(--sidebar-width);
-            width: calc(100% - var(--sidebar-width));
-            min-height: 100vh;
+        .subject-name {
+            font-size: 1.25rem;
+            font-weight: 800;
+            margin: 15px 0 5px;
+            display: block;
+            line-height: 1.3;
         }
 
-        /* TOP HEADER */
-        .header {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(10px);
-            padding: 20px 40px;
-            border-bottom: 1px solid #e0e5f2;
+        .drive-status {
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 20px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
+            gap: 5px;
         }
 
-        .breadcrumb { font-size: 0.85rem; color: #a3aed0; font-weight: 600; }
-        .user-pill {
-            background: white;
-            padding: 8px 16px;
-            border-radius: 50px;
-            border: 1px solid #e0e5f2;
+        .card-actions {
+            display: flex;
+            gap: 8px;
+            border-top: 1px solid #f4f7fe;
+            padding-top: 20px;
+            margin-top: auto;
+        }
+
+        .action-btn {
+            flex: 1;
+            text-align: center;
+            text-decoration: none;
             font-weight: 700;
-            font-size: 0.9rem;
+            font-size: 0.75rem;
+            padding: 10px 5px;
+            border-radius: 12px;
+            transition: 0.2s;
         }
 
-        .container { padding: 40px; max-width: 1200px; margin: auto; }
+        .btn-q { background: var(--brand); color: white; }
+        .btn-edit { background: #f4f7fe; color: var(--text-main); }
+        .btn-del { background: #fff1f0; color: var(--danger); }
         
-        .card { background: white; padding: 25px; border-radius: 24px; border: 1px solid #e0e5f2; box-shadow: 0 4px 20px rgba(0,0,0,0.02); margin-bottom: 30px; }
-        .bulk-card { border: 2px dashed var(--brand); background: #f0f7ff; }
-        
-        input, textarea, select { 
-            width: 100%; padding: 14px; border: 1px solid #e0e5f2; border-radius: 14px; 
-            font-family: inherit; font-weight: 600; box-sizing: border-box; background: #fcfdfe; margin-bottom: 10px;
-        }
-
-        .btn { padding: 16px; border: none; border-radius: 16px; font-weight: 800; cursor: pointer; transition: 0.3s; width: 100%; }
-        .btn-primary { background: var(--brand); color: white; }
-        .btn-bulk { background: #1b2559; color: white; }
-
-        .options-display { 
-            display: grid; grid-template-columns: 1fr 1fr; gap: 15px; 
-            background: #f8fafc; padding: 15px; border-radius: 12px; margin: 10px 0;
-        }
-        .opt-item { font-size: 0.9rem; color: #475569; }
-
-        .preview-box { background: #fff; border-left: 5px solid var(--brand); padding: 20px; border-radius: 16px; margin-top: 10px; min-height: 100px; }
-        .question-item { padding: 25px; border-bottom: 1px solid #f1f5f9; }
-        .badge { padding: 5px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 800; margin-right: 8px; }
-        .badge-ans { background: #dcfce7; color: #15803d; }
-        .badge-hint { background: #fff7ed; color: #c2410c; }
+        .action-btn:hover { opacity: 0.85; }
     </style>
 </head>
 <body>
 
     <div class="sidebar">
         <a href="/admin/dashboard" class="logo">PREPIUM</a>
-        <nav>
-            <a href="/admin/dashboard" class="nav-link">📊 Dashboard</a>
-            <a href="/admin/subjects" class="nav-link active">📚 Subjects</a>
-            <a href="/admin/users" class="nav-link">👥 Students</a>
-            <a href="/admin/settings" class="nav-link">⚙️ Settings</a>
-        </nav>
-        <div style="margin-top: auto;">
-            <a href="/logout" class="nav-link" style="color: #ee5d50;" onclick="return confirm('Logout of session?')">🚪 Logout</a>
-        </div>
+        <a href="/admin/dashboard" class="nav-item">🏠 Dashboard</a>
+        <a href="/admin/universities" class="nav-item">🏛️ Universities</a>
+        <a href="/admin/subjects" class="nav-item active">📚 Subjects</a>
+        <a href="/admin/notifications" class="nav-item">🔔 Notifications</a>
     </div>
 
-    <div class="main-content">
-        <header class="header">
+    <main class="main">
+        <div class="header-flex">
             <div>
-                <div class="breadcrumb">Pages / Subjects / Question Manager</div>
-                <h2 style="margin:0;"><%= subject.name %></h2>
-            </div>
-            <div class="user-pill">
-                Admin: Atilola Israel
-            </div>
-        </header>
-
-        <div class="container">
-            <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 30px;">
-                
-                <div>
-                    <div class="card">
-                        <h3>Single Question Entry</h3>
-                        <form action="/admin/questions/add" method="POST">
-                            <input type="hidden" name="subject_id" value="<%= subject.id %>">
-                            <textarea id="singleQ" name="question_text" rows="2" placeholder="Question Text (e.g. Find $H_2SO_4$ mass)" required></textarea>
-                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                                <input type="text" name="option_a" placeholder="Option A" required>
-                                <input type="text" name="option_b" placeholder="Option B" required>
-                                <input type="text" name="option_c" placeholder="Option C" required>
-                                <input type="text" name="option_d" placeholder="Option D" required>
-                            </div>
-                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                                <select name="correct_option"><option value="A">Answer: A</option><option value="B">Answer: B</option><option value="C">Answer: C</option><option value="D">Answer: D</option></select>
-                                <input type="text" name="hint" placeholder="Explanation/Hint">
-                            </div>
-                            <button type="submit" class="btn btn-primary">Save to Database</button>
-                        </form>
-                    </div>
-
-                    <div class="card bulk-card">
-                        <h3>Bulk JSON Import</h3>
-                        <form action="/admin/questions/bulk-import" method="POST">
-                            <input type="hidden" name="subject_id" value="<%= subject.id %>">
-                            <textarea id="bulkJSON" name="json_data" rows="8" placeholder='Paste JSON array here...' required></textarea>
-                            <button type="submit" class="btn btn-bulk">Import All Questions</button>
-                        </form>
-                    </div>
-                </div>
-
-                <div style="position: sticky; top: 100px; height: fit-content;">
-                    <div class="card" style="border-top: 8px solid var(--brand);">
-                        <h3 style="margin:0 0 10px;">Scientific Preview</h3>
-                        <div id="previewArea" class="preview-box">
-                            Start typing to see formula rendering...
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                    <h3 style="margin:0;">Stored Questions (<%= questions.length %>)</h3>
-                </div>
-                <% questions.forEach(q => { %>
-                    <div class="question-item">
-                        <div style="font-weight:700; font-size:1.1rem; margin-bottom:15px;"><%= q.question_text %></div>
-                        
-                        <div class="options-display">
-                            <div class="opt-item"><strong>A:</strong> <%= q.option_a %></div>
-                            <div class="opt-item"><strong>B:</strong> <%= q.option_b %></div>
-                            <div class="opt-item"><strong>C:</strong> <%= q.option_c %></div>
-                            <div class="opt-item"><strong>D:</strong> <%= q.option_d %></div>
-                        </div>
-
-                        <span class="badge badge-ans">CORRECT: <%= q.correct_option %></span>
-                        <% if(q.hint) { %><span class="badge badge-hint">HINT: <%= q.hint %></span><% } %>
-                        
-                        <div style="float:right;">
-                            <a href="/admin/questions/edit/<%= q.id %>" style="color:var(--brand); font-weight:800; text-decoration:none; margin-right: 20px; font-size:0.85rem;">EDIT</a>
-                            <a href="/admin/questions/delete/<%= q.id %>/<%= subject.id %>" style="color:#ef4444; font-weight:800; text-decoration:none; font-size:0.85rem;">DELETE</a>
-                        </div>
-                    </div>
-                <% }) %>
+                <h1>Subject Curriculum</h1>
+                <p style="color: var(--text-muted); margin-top: 5px;">Manage academic courses and external resource links.</p>
             </div>
         </div>
-    </div>
+        
+        <!-- ADD SUBJECT FORM (Integrated Drive Link) -->
+        <div class="add-card">
+            <form action="/admin/subjects/add" method="POST" class="add-grid">
+                <div class="form-group">
+                    <label>University</label>
+                    <select name="university_id" required>
+                        <option value="" disabled selected>Select School</option>
+                        <% universities.forEach(uni => { %>
+                            <option value="<%= uni.id %>"><%= uni.name %></option>
+                        <% }) %>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Course Title</label>
+                    <input type="text" name="name" placeholder="e.g. PHY 301" required>
+                </div>
+                <div class="form-group">
+                    <label>Level</label>
+                    <input type="text" name="category" placeholder="e.g. 300L" required>
+                </div>
+                <div class="form-group">
+                    <label>Resource (Drive Link)</label>
+                    <input type="url" name="drive_link" placeholder="https://drive.google.com/...">
+                </div>
+                <button type="submit" class="btn-primary">Create</button>
+            </form>
+        </div>
 
-    <script>
-        const singleInput = document.getElementById('singleQ');
-        const bulkInput = document.getElementById('bulkJSON');
-        const previewArea = document.getElementById('previewArea');
+        <!-- SUBJECT LISTING -->
+        <div class="subjects-grid">
+            <% subjects.forEach(sub => { %>
+            <div class="subject-card">
+                <span class="uni-badge"><%= sub.university_name || 'General' %></span>
+                
+                <span class="category-tag"><%= sub.category %></span>
+                <span class="subject-name"><%= sub.name %></span>
 
-        function updatePreview() {
-            if (singleInput.value) {
-                previewArea.innerHTML = `<div style="font-weight:700">${singleInput.value}</div>`;
-            } else if (bulkInput.value) {
-                try {
-                    const data = JSON.parse(bulkInput.value);
-                    const q = data[0]; 
-                    previewArea.innerHTML = `
-                        <div style="font-weight:800; margin-bottom:10px;">1. ${q.question}</div>
-                        <div style="font-size:0.9rem;">
-                            A: ${q.a} <br> B: ${q.b} <br> C: ${q.c} <br> D: ${q.d}
-                        </div>
-                    `;
-                } catch (e) {
-                    previewArea.innerHTML = `<span style="color:red">JSON Error.</span>`;
-                }
-            }
-            if (window.MathJax && window.MathJax.typeset) {
-                MathJax.typeset();
-            }
-        }
+                <!-- Drive Link Status Display -->
+                <div class="drive-status">
+                    <% if (sub.drive_link) { %>
+                        <span style="color: var(--success)">●</span> 
+                        <a href="<%= sub.drive_link %>" target="_blank" style="color: var(--text-muted); text-decoration: none;">Drive Linked</a>
+                    <% } else { %>
+                        <span style="color: var(--danger)">○</span> 
+                        <span style="color: var(--text-muted)">No Resource Link</span>
+                    <% } %>
+                </div>
+                
+                <div class="card-actions">
+                    <a href="/admin/questions/manage/<%= sub.id %>" class="action-btn btn-q">Questions</a>
+                    <a href="/admin/subjects/edit/<%= sub.id %>" class="action-btn btn-edit">Edit</a>
+                    <a href="/admin/subjects/delete/<%= sub.id %>" class="action-btn btn-del" onclick="return confirm('Delete this subject?')">Delete</a>
+                </div>
+            </div>
+            <% }) %>
+        </div>
+    </main>
 
-        singleInput.addEventListener('input', updatePreview);
-        bulkInput.addEventListener('input', updatePreview);
-    </script>
 </body>
 </html>

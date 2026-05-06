@@ -72,10 +72,6 @@
             transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        .avatar-wrapper:hover .avatar-circle {
-            transform: scale(1.04);
-        }
-        
         .name { 
             font-size: 1.45rem; 
             font-weight: 800; 
@@ -88,7 +84,19 @@
             color: var(--sub);
             font-size: 0.88rem;
             font-weight: 600;
-            margin-bottom: 1rem;
+            margin-bottom: 0.4rem;
+        }
+
+        /* New University Styling */
+        .university-tag {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            color: var(--brand);
+            font-size: 0.82rem;
+            font-weight: 700;
+            margin-bottom: 1.2rem;
         }
 
         .badge { 
@@ -128,12 +136,6 @@
             transition: all 0.2s ease;
         }
         
-        .stat-card:hover {
-            border-color: var(--brand-light);
-            background: #fafcfe;
-            transform: translateY(-2px);
-        }
-
         .stat-val { 
             display: block; 
             font-size: 1.6rem; 
@@ -168,13 +170,6 @@
             transition: all 0.2s ease;
         }
 
-        .menu-item:hover { 
-            background: white;
-            border-color: #e2e8f0;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
-        }
-
         .menu-item-content {
             display: flex;
             align-items: center;
@@ -191,22 +186,11 @@
         .menu-item span { 
             font-size: 0.8rem; 
             color: var(--sub); 
-            transition: transform 0.2s ease;
-        }
-        
-        .menu-item:hover span {
-            transform: translateX(2px);
-            color: var(--brand);
         }
 
         .logout { 
             color: var(--danger); 
             background: #fff5f5; 
-        }
-
-        .logout:hover { 
-            background: #fff5f5;
-            border-color: #fed7d7; 
         }
 
         .logout i, .logout span { color: var(--danger) !important; }
@@ -243,11 +227,6 @@
 
         .nav-link i {
             font-size: 1.25rem;
-            transition: transform 0.2s;
-        }
-
-        .nav-link:hover i {
-            transform: translateY(-2px);
         }
 
         .nav-link.active { 
@@ -270,12 +249,6 @@
             text-decoration: none; 
             transition: all 0.25s ease;
         }
-
-        .fab:hover {
-            transform: translateY(-24px);
-            background: #0056e0;
-            box-shadow: 0 12px 28px rgba(0, 98, 255, 0.35);
-        }
     </style>
 </head>
 <body>
@@ -288,6 +261,13 @@
             </div>
             <h1 class="name"><%= user.fullname %></h1>
             <p class="email"><%= user.email %></p>
+            
+            <!-- University Display -->
+            <div class="university-tag">
+                <i class="fas fa-university"></i>
+                <%= user.university_name || 'Institution not set' %>
+            </div>
+
             <span class="badge <%= user.has_paid ? 'badge-premium' : '' %>">
                 <%= user.has_paid ? 'Premium Access' : 'Basic Account' %>
             </span>

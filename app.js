@@ -89,31 +89,51 @@ app.get('/', (req, res) => {
 });
 
 // Auth Routes
-app.get('/signup', (req, res) => res.render('signup'));
+app.get('/signup', async (req, res) => {
+    try {
+        // Fetch the list of schools from the database
+        const result = await pool.query('SELECT * FROM universities ORDER BY name ASC');
+        
+        // Pass the results to the EJS template
+        res.render('signup', { universities: result.rows });
+    } catch (err) {
+        console.error("Error loading schools:", err);
+        // Fallback to empty array so the page doesn't crash
+        res.render('signup', { universities: [] }); 
+    }
+});
 app.get('/login', (req, res) => res.render('login'));
 
+
 app.post('/auth/signup', async (req, res) => {
-    const { fullname, email, password, referred_by } = req.body; 
+    const { fullname, email, password, university_id, referred_by } = req.body; 
     
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
-        
-        // Clean up the referral code before saving it
         const cleanReferralCode = referred_by ? referred_by.trim().toLowerCase() : null;
 
-        // Using unique_code to match your updated schema exactly
+        // Ensure the array [fullname, email, ..., university_id, ...] 
+        // matches the $1, $2, $3, $4 order
         await pool.query(
-            'INSERT INTO users (fullname, email, password, unique_code, has_paid) VALUES ($1, $2, $3, $4, $5)',
-            [fullname, email.toLowerCase(), hashedPassword, cleanReferralCode, false]
+            'INSERT INTO users (fullname, email, password, university_id, unique_code, has_paid) VALUES ($1, $2, $3, $4, $5, $6)',
+            [
+                fullname, 
+                email.toLowerCase(), 
+                hashedPassword, 
+                university_id, // FIXED: removed the 's'
+                cleanReferralCode, 
+                false
+            ]
         );
 
         res.redirect('/login?msg=Account created! Please login.');
         
     } catch (err) {
         console.error("Signup Error:", err);
-        res.send("Error creating account.");
+        res.redirect('/signup?error=Error creating account.');
     }
 });
+
 
 app.post('/dashboard/verify-payment', async (req, res) => {
     if (!req.session.user) return res.redirect('/login');
@@ -329,14 +349,17 @@ app.get('/profile', isAuth, async (req, res) => {
     try {
         const userId = req.session.user.id;
         
-        // 1. Get user info
+        // 1. Updated: Get user info JOINED with university data
         const userRes = await pool.query(
-            'SELECT fullname, email, has_paid FROM users WHERE id = $1', 
+            `SELECT u.fullname, u.email, u.has_paid, uni.name as university_name 
+             FROM users u 
+             LEFT JOIN universities uni ON u.university_id = uni.id 
+             WHERE u.id = $1`, 
             [userId]
         );
         const user = userRes.rows[0];
 
-        // 2. Get Stats from quiz_results (using percentage for average)
+        // 2. Get Stats from quiz_results
         const statsRes = await pool.query(
             'SELECT COUNT(*) as total_tests, AVG(percentage) as avg_score FROM quiz_results WHERE user_id = $1',
             [userId]
@@ -386,22 +409,66 @@ app.get('/admin/dashboard', isAdmin, async (req, res) => {
     }
 });
 
-// 1. VIEW ALL SUBJECTS
+// ==========================================
+// 1. UNIVERSITY MANAGEMENT (NEW)
+// ==========================================
+
+// View all universities
+app.get('/admin/universities', isAdmin, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM universities ORDER BY name ASC');
+        res.render('admin/universities', { universities: result.rows });
+    } catch (err) {
+        res.status(500).send("Error loading universities");
+    }
+});
+
+// Add a university
+app.post('/admin/universities/add', isAdmin, async (req, res) => {
+    const { name, slug } = req.body;
+    try {
+        await pool.query('INSERT INTO universities (name, slug) VALUES ($1, $2)', [name, slug.toLowerCase()]);
+        res.redirect('/admin/universities');
+    } catch (err) {
+        res.status(500).send("Error adding university");
+    }
+});
+
+// ==========================================
+// 2. SUBJECT MANAGEMENT (UPDATED)
+// ==========================================
+
+// VIEW ALL SUBJECTS (Now shows school name and drive link)
 app.get('/admin/subjects', isAdmin, async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM subjects ORDER BY id DESC');
-        res.render('admin/subjects', { subjects: result.rows });
+        // Ensure drive_link is included in the SELECT statement
+        const result = await pool.query(`
+            SELECT subjects.*, universities.name as university_name 
+            FROM subjects 
+            LEFT JOIN universities ON subjects.university_id = universities.id 
+            ORDER BY subjects.id DESC`);
+        
+        const universities = await pool.query('SELECT * FROM universities ORDER BY name ASC');
+        
+        res.render('admin/subjects', { 
+            subjects: result.rows, 
+            universities: universities.rows 
+        });
     } catch (err) {
         console.error(err);
         res.status(500).send("Error loading subjects");
     }
 });
 
-// 2. ADD NEW SUBJECT
+// ADD NEW SUBJECT (Added drive_link)
 app.post('/admin/subjects/add', isAdmin, async (req, res) => {
-    const { name, category } = req.body;
+    // Added drive_link to the destructuring
+    const { name, category, university_id, drive_link } = req.body; 
     try {
-        await pool.query('INSERT INTO subjects (name, category) VALUES ($1, $2)', [name, category]);
+        await pool.query(
+            'INSERT INTO subjects (name, category, university_id, drive_link) VALUES ($1, $2, $3, $4)', 
+            [name, category, university_id, drive_link]
+        );
         res.redirect('/admin/subjects');
     } catch (err) {
         console.error(err);
@@ -409,37 +476,49 @@ app.post('/admin/subjects/add', isAdmin, async (req, res) => {
     }
 });
 
-// 3. EDIT SUBJECT (GET THE DATA)
+// EDIT SUBJECT (GET THE DATA)
 app.get('/admin/subjects/edit/:id', isAdmin, async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM subjects WHERE id = $1', [req.params.id]);
-        res.render('admin/edit-subject', { subject: result.rows[0] });
+        const universities = await pool.query('SELECT * FROM universities ORDER BY name ASC');
+        res.render('admin/edit-subject', { 
+            subject: result.rows[0], 
+            universities: universities.rows 
+        });
     } catch (err) {
         res.redirect('/admin/subjects');
     }
 });
 
-// 4. UPDATE SUBJECT (SAVE CHANGES)
+// UPDATE SUBJECT (SAVE CHANGES - Added drive_link)
 app.post('/admin/subjects/update/:id', isAdmin, async (req, res) => {
-    const { name, category } = req.body;
+    // Added drive_link to the destructuring
+    const { name, category, university_id, drive_link } = req.body; 
     try {
-        await pool.query('UPDATE subjects SET name = $1, category = $2 WHERE id = $3', [name, category, req.params.id]);
+        await pool.query(
+            'UPDATE subjects SET name = $1, category = $2, university_id = $3, drive_link = $4 WHERE id = $5', 
+            [name, category, university_id, drive_link, req.params.id]
+        );
         res.redirect('/admin/subjects');
     } catch (err) {
+        console.error(err);
         res.status(500).send("Update failed");
     }
 });
 
-// 5. DELETE SUBJECT
+// DELETE SUBJECT
 app.get('/admin/subjects/delete/:id', isAdmin, async (req, res) => {
     try {
-        // This will also delete questions if you set up ON DELETE CASCADE in SQL
         await pool.query('DELETE FROM subjects WHERE id = $1', [req.params.id]);
         res.redirect('/admin/subjects');
     } catch (err) {
         res.status(500).send("Delete failed");
     }
 });
+
+// ==========================================
+// 3. QUESTION MANAGEMENT (RETAINED & LINKED)
+// ==========================================
 
 // Add a Question with a Hint
 app.post('/admin/questions/add', isAdmin, async (req, res) => {
@@ -457,21 +536,16 @@ app.post('/admin/questions/add', isAdmin, async (req, res) => {
     }
 });
 
-// JSON API for the App (To get questions for a subject)
-app.get('/api/questions/:subject_id', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM questions WHERE subject_id = $1', [req.params.subject_id]);
-        res.json(result.rows); // This sends the data as JSON for your frontend
-    } catch (err) {
-        res.status(500).json({ error: "Failed to fetch questions" });
-    }
-});
-
-// 1. VIEW QUESTIONS PAGE
+// VIEW QUESTIONS PAGE (Now identifies the school in the header)
 app.get('/admin/questions/manage/:subject_id', isAdmin, async (req, res) => {
     const { subject_id } = req.params;
     try {
-        const subject = await pool.query('SELECT * FROM subjects WHERE id = $1', [subject_id]);
+        const subject = await pool.query(`
+            SELECT subjects.*, universities.name as university_name 
+            FROM subjects 
+            JOIN universities ON subjects.university_id = universities.id 
+            WHERE subjects.id = $1`, [subject_id]);
+            
         const questions = await pool.query('SELECT * FROM questions WHERE subject_id = $1 ORDER BY id DESC', [subject_id]);
         res.render('admin/manage-questions', { subject: subject.rows[0], questions: questions.rows });
     } catch (err) {
@@ -479,12 +553,11 @@ app.get('/admin/questions/manage/:subject_id', isAdmin, async (req, res) => {
     }
 });
 
-// 2. BULK IMPORT (JSON)
+// BULK IMPORT (JSON)
 app.post('/admin/questions/bulk-import', isAdmin, async (req, res) => {
     const { subject_id, json_data } = req.body;
     try {
         const data = JSON.parse(json_data); 
-        // We use a loop to insert all questions from the array
         for (let q of data) {
             await pool.query(
                 `INSERT INTO questions (subject_id, question_text, option_a, option_b, option_c, option_d, correct_option, hint) 
@@ -495,11 +568,11 @@ app.post('/admin/questions/bulk-import', isAdmin, async (req, res) => {
         res.redirect(`/admin/questions/manage/${subject_id}`);
     } catch (err) {
         console.error(err);
-        res.status(400).send("Invalid JSON Format. Ensure it matches the required template.");
+        res.status(400).send("Invalid JSON Format.");
     }
 });
 
-// 3. DELETE QUESTION
+// DELETE QUESTION
 app.get('/admin/questions/delete/:id/:subject_id', isAdmin, async (req, res) => {
     await pool.query('DELETE FROM questions WHERE id = $1', [req.params.id]);
     res.redirect(`/admin/questions/manage/${req.params.subject_id}`);
@@ -529,6 +602,32 @@ app.post('/admin/questions/update', isAdmin, async (req, res) => {
         res.redirect(`/admin/questions/manage/${subject_id}`);
     } catch (err) {
         res.status(500).send("Error updating question");
+    }
+});
+
+// ==========================================
+// 4. API FOR THE STUDENT APP
+// ==========================================
+
+// JSON API for getting subjects based on student's university
+app.get('/api/subjects', async (req, res) => {
+    try {
+        // Assume user object has university_id from signup
+        const userUni = req.user.university_id; 
+        const result = await pool.query('SELECT * FROM subjects WHERE university_id = $1', [userUni]);
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch subjects" });
+    }
+});
+
+// JSON API (To get questions for a subject)
+app.get('/api/questions/:subject_id', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM questions WHERE subject_id = $1', [req.params.subject_id]);
+        res.json(result.rows); 
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch questions" });
     }
 });
 
@@ -655,45 +754,57 @@ app.get('/notifications', isStudent, async (req, res) => {
     }
 });
 
-// 1. View Subjects & Question counts
 app.get('/subjects', isStudent, async (req, res) => {
     try {
-        // We JOIN the questions table with the subjects table to get the name
+        const universityId = req.session.user.university_id;
+
+        // Fetch subjects, question counts, and the drive link
         const result = await pool.query(`
-            SELECT s.name AS subject, COUNT(q.id) as question_count 
-            FROM questions q
-            JOIN subjects s ON q.subject_id = s.id
-            GROUP BY s.name
+            SELECT 
+                s.id, 
+                s.name AS subject, 
+                s.drive_link, 
+                COUNT(q.id) as question_count 
+            FROM subjects s
+            LEFT JOIN questions q ON s.id = q.subject_id AND q.university_id = $1
+            GROUP BY s.id, s.name, s.drive_link
             ORDER BY s.name ASC
-        `);
+        `, [universityId]);
 
         res.render('subjects-library', {
             user: req.session.user,
             subjects: result.rows
         });
     } catch (err) {
-        console.error("Database Error details:", err.message);
-        res.status(500).send("Database Error: Check your table relationships.");
+        console.error("Subjects Library Error:", err.message);
+        res.status(500).send("Error loading study library.");
     }
 });
 
-// 2. Setup Test Page & Quiz Creation
 app.get('/setup-test', isStudent, async (req, res) => {
     try {
         const userId = req.session.user.id;
 
-        // 1. Fetch the user's latest payment status and attempts
+        // 1. Fetch user status and university_id
         const userQuery = await pool.query(
-            'SELECT has_paid, quiz_attempts FROM users WHERE id = $1',
+            'SELECT has_paid, quiz_attempts, university_id FROM users WHERE id = $1',
             [userId]
         );
         const userStatus = userQuery.rows[0];
 
-        if (!userStatus) {
-            return res.redirect('/login');
+        if (!userStatus) return res.redirect('/login');
+
+        // 2. Check if the university_id is missing for this user
+        if (!userStatus.university_id) {
+            console.error(`User ${userId} has no university_id set.`);
+            return res.render('setup-test', {
+                user: { ...req.session.user, ...userStatus },
+                subjects: [],
+                error: "Please update your profile with your institution to see available tests."
+            });
         }
 
-        // 2. Gatekeeper: Check if unpaid users have exhausted their 2 free attempts
+        // 3. Gatekeeper for free attempts
         if (!userStatus.has_paid && userStatus.quiz_attempts >= 2) {
             return res.render('quiz-locked', {
                 user: { ...req.session.user, ...userStatus },
@@ -701,14 +812,15 @@ app.get('/setup-test', isStudent, async (req, res) => {
             });
         }
 
-        // 3. Pull the subjects and the total questions available per subject
+        // 4. Fetch subjects specifically for this student's university
         const result = await pool.query(`
             SELECT s.id, s.name, COUNT(q.id) as total_questions 
             FROM subjects s
-            LEFT JOIN questions q ON s.id = q.subject_id
+            INNER JOIN questions q ON s.id = q.subject_id 
+            WHERE q.university_id = $1
             GROUP BY s.id, s.name
             ORDER BY s.name ASC
-        `);
+        `, [userStatus.university_id]);
         
         res.render('setup-test', {
             user: { ...req.session.user, ...userStatus },
@@ -1523,6 +1635,70 @@ app.post('/ambassador/register', async (req, res) => {
     } catch (err) {
         console.error('Database Registration Error:', err);
         res.status(500).json({ error: 'Failed to complete registration.' });
+    }
+});
+
+app.get('/admin/students', isAdmin, async (req, res) => {
+    try {
+        const { search, school } = req.query;
+        
+        // 1. Fetch Stats
+        const statsQuery = `
+            SELECT 
+                COUNT(*) as total,
+                COUNT(*) FILTER (WHERE has_paid = true) as premium,
+                COUNT(*) FILTER (WHERE has_paid = false) as basic
+            FROM users`;
+        const stats = await pool.query(statsQuery);
+
+        // 2. Fetch Universities for dropdown
+        const universities = await pool.query('SELECT * FROM universities ORDER BY name ASC');
+
+        // 3. Build Main Student Query
+        let studentQuery = `
+            SELECT users.*, universities.name as school_name 
+            FROM users 
+            LEFT JOIN universities ON users.university_id = universities.id 
+            WHERE 1=1`;
+        const params = [];
+
+        if (search) {
+            params.push(`%${search}%`);
+            studentQuery += ` AND (users.name ILIKE $${params.length} OR users.email ILIKE $${params.length})`;
+        }
+        if (school) {
+            params.push(school);
+            studentQuery += ` AND users.university_id = $${params.length}`;
+        }
+        studentQuery += ` ORDER BY users.created_at DESC`;
+        
+        const students = await pool.query(studentQuery, params);
+
+        res.render('admin/students', { 
+            students: students.rows, 
+            universities: universities.rows,
+            stats: stats.rows[0], // { total: X, premium: Y, basic: Z }
+            filters: { search, school }
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Server Error");
+    }
+});
+
+app.post('/admin/students/toggle-status/:id', isAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { has_paid } = req.body; 
+        
+        // has_paid comes as a string "true" or "false" from the form, 
+        // Postgres handles this conversion or use: has_paid === 'true'
+        await pool.query('UPDATE users SET has_paid = $1 WHERE id = $2', [has_paid === 'true', id]);
+        
+        res.redirect('/admin/students');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Error updating payment status");
     }
 });
 

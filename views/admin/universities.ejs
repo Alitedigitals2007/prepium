@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prepium Admin | Universities</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --brand: #0062ff; 
+            --brand-light: #eef4ff;
+            --bg: #f4f7fe; 
+            --sidebar: #0b1437; 
+            --danger: #ff4d4f; 
+            --text-main: #1b2559;
+            --text-muted: #a3aed0;
+            --border: #e0e5f2;
+        }
+
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); 
+            margin: 0; 
+            display: flex; 
+            color: var(--text-main);
+        }
+
+        /* Sidebar - Consistent with Subjects Page */
+        .sidebar { 
+            width: 280px; 
+            background: var(--sidebar); 
+            height: 100vh; 
+            color: white; 
+            padding: 2.5rem 1.5rem; 
+            position: fixed;
+        }
+
+        .logo { 
+            font-size: 1.6rem; 
+            font-weight: 800; 
+            margin-bottom: 3.5rem; 
+            color: white; 
+            text-decoration: none; 
+            display: flex;
+            letter-spacing: -1px;
+        }
+
+        .nav-item { 
+            display: flex;
+            align-items: center;
+            color: #a3aed0; 
+            text-decoration: none; 
+            padding: 16px 20px; 
+            border-radius: 16px; 
+            margin-bottom: 8px; 
+            font-weight: 700; 
+            transition: 0.3s;
+        }
+
+        .nav-item:hover, .nav-item.active { 
+            background: rgba(255, 255, 255, 0.1); 
+            color: white; 
+        }
+
+        /* Main Content */
+        .main { 
+            margin-left: 280px; 
+            padding: 2.5rem 4rem; 
+            width: 100%; 
+            box-sizing: border-box; 
+        }
+
+        .header-flex {
+            margin-bottom: 2.5rem;
+        }
+
+        .header-flex h1 { font-size: 1.8rem; font-weight: 800; margin: 0; }
+
+        /* Add University Card */
+        .add-card { 
+            background: white; 
+            padding: 2rem; 
+            border-radius: 24px; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.03); 
+            margin-bottom: 3rem;
+            border: 1px solid #fff;
+        }
+
+        .add-grid { 
+            display: grid; 
+            grid-template-columns: 1.5fr 1fr auto; 
+            gap: 20px; 
+            align-items: end; 
+        }
+
+        .form-group label { 
+            font-size: 0.75rem; 
+            font-weight: 800; 
+            color: var(--text-muted); 
+            text-transform: uppercase; 
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        input { 
+            width: 100%;
+            background: #f4f7fe;
+            border: 1px solid var(--border);
+            padding: 16px; 
+            border-radius: 16px; 
+            font-family: inherit;
+            font-weight: 600;
+            color: var(--text-main);
+            box-sizing: border-box;
+        }
+
+        input:focus { outline: none; border-color: var(--brand); background: white; }
+
+        .btn-primary { 
+            background: var(--brand); 
+            color: white; 
+            padding: 16px 30px; 
+            border: none; 
+            border-radius: 16px; 
+            font-weight: 800; 
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-primary:hover { transform: translateY(-2px); }
+
+        /* University List */
+        .uni-list {
+            background: white;
+            border-radius: 24px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .uni-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 30px;
+            border-bottom: 1px solid #f4f7fe;
+        }
+
+        .uni-item:last-child { border-bottom: none; }
+
+        .uni-info h3 { margin: 0; font-size: 1.1rem; font-weight: 800; }
+        .uni-info span { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; }
+
+        .badge-count {
+            background: var(--brand-light);
+            color: var(--brand);
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-weight: 800;
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <a href="/admin/dashboard" class="logo">PREPIUM</a>
+        <a href="/admin/dashboard" class="nav-item">🏠 Dashboard</a>
+        <a href="/admin/universities" class="nav-item active">🏛️ Universities</a>
+        <a href="/admin/subjects" class="nav-item">📚 Subjects</a>
+        <a href="/admin/notifications" class="nav-item">🔔 Notifications</a>
+    </div>
+
+    <main class="main">
+        <div class="header-flex">
+            <h1>Institution Management</h1>
+            <p style="color: var(--text-muted); margin-top: 5px;">Add and manage universities currently supported by Prepium.</p>
+        </div>
+        
+        <div class="add-card">
+            <!-- Form to Add University -->
+            <form action="/admin/universities/add" method="POST" class="add-grid">
+                <div class="form-group">
+                    <label>University Name</label>
+                    <input type="text" name="name" placeholder="e.g. University of Ibadan" required>
+                </div>
+                <div class="form-group">
+                    <label>Slug (Shortcode)</label>
+                    <input type="text" name="slug" placeholder="e.g. ui" required>
+                </div>
+                <button type="submit" class="btn-primary">Add Institution</button>
+            </form>
+        </div>
+
+        <div class="uni-list">
+            <% if (universities && universities.length > 0) { %>
+                <% universities.forEach(uni => { %>
+                    <div class="uni-item">
+                        <div class="uni-info">
+                            <h3><%= uni.name %></h3>
+                            <span>Code: <%= uni.slug.toUpperCase() %></span>
+                        </div>
+                        <!-- You can later pass the subject count from your SQL query -->
+                        <div class="badge-count">ID: <%= uni.id %></div>
+                    </div>
+                <% }) %>
+            <% } else { %>
+                <div style="padding: 40px; text-align: center; color: var(--text-muted);">
+                    No universities added yet.
+                </div>
+            <% } %>
+        </div>
+    </main>
+
+</body>
+</html>
