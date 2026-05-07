@@ -921,33 +921,42 @@ app.post('/live-exam', isStudent, async (req, res) => {
     }
 });
 
-
 app.post('/submit-exam', isStudent, async (req, res) => {
     try {
+        // Guard Clause: Ensure session exists
         if (!req.session.activeQuiz || !req.session.activeQuiz.questions) {
             console.error("Submission Error: No active quiz found in session.");
             return res.redirect('/dashboard');
         }
 
-        const userAnswers = JSON.parse(req.body.answers || "[]");
+        // 1. Parse answers safely
+        let userAnswers = [];
+        try {
+            userAnswers = JSON.parse(req.body.answers || "[]");
+        } catch (e) {
+            userAnswers = [];
+        }
+
         const quizData = req.session.activeQuiz.questions;
         const timeUsed = req.body.timeUsed || "00:00"; 
-        
-        // We need the subject_id from the first question to categorize the result
         const subjectId = quizData[0]?.subject_id || null;
         const userId = req.session.user.id;
 
         let score = 0;
         let subjectStats = {}; 
 
+        // 2. Grade the exam
         const results = quizData.map((q, index) => {
             const dbAnswer = q.correct_option || ""; 
-            const userChoice = userAnswers[index] || "";
-            const isCorrect = userChoice.toString().toLowerCase() === dbAnswer.toString().toLowerCase();
+            const userChoice = userAnswers[index] || ""; // Handle unanswered
+            
+            // Case-insensitive comparison
+            const isCorrect = userChoice && userChoice.toString().toLowerCase() === dbAnswer.toString().toLowerCase();
             
             if (isCorrect) score++;
 
-            const sName = q.subject_name || `Subject ${q.subject_id}`;
+            // Grouping results by subject name
+            const sName = q.subject_name || "General";
             if (!subjectStats[sName]) {
                 subjectStats[sName] = { correct: 0, total: 0 };
             }
@@ -956,10 +965,8 @@ app.post('/submit-exam', isStudent, async (req, res) => {
 
             return {
                 ...q,
-                userChoice: userChoice,
-                isCorrect: isCorrect,
-                hint: q.hint,
-                explanation: q.explanation,
+                userChoice,
+                isCorrect,
                 correctAnswer: dbAnswer 
             };
         });
@@ -967,27 +974,28 @@ app.post('/submit-exam', isStudent, async (req, res) => {
         const totalQuestions = quizData.length;
         const percentage = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
 
-        // --- SAVE TO DATABASE & INCREMENT TRIAL ATTEMPT COUNTER ---
+        // 3. Database Operations
         try {
-            // 1. Insert the exam history record
+            // Save attempt
             await pool.query(
                 `INSERT INTO quiz_results (user_id, subject_id, score, total_questions, percentage, time_taken, created_at) 
                  VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
                 [userId, subjectId, score, totalQuestions, percentage, timeUsed]
             );
 
-            // 2. Increment quiz_attempts ONLY for users who have not paid
+            // Increment trial for free users
             await pool.query(
                 `UPDATE users 
                  SET quiz_attempts = quiz_attempts + 1 
                  WHERE id = $1 AND has_paid = false`,
                 [userId]
             );
-
         } catch (dbErr) {
             console.error("Database Save Error:", dbErr);
+            // We continue anyway to show the user their result screen
         }
 
+        // 4. Render Result Screen
         res.render('quiz-result', {
             user: req.session.user,
             score,
@@ -998,7 +1006,7 @@ app.post('/submit-exam', isStudent, async (req, res) => {
             timeUsed 
         });
 
-        // Clean up the session so they can't refresh and re-submit
+        // 5. CRITICAL: Clean up session AFTER successful render
         delete req.session.activeQuiz;
 
     } catch (err) {
