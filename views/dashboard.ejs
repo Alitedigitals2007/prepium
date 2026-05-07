@@ -35,7 +35,7 @@
             padding-bottom: 110px;
         }
 
-        /* Modernized Responsive Header */
+        /* Header */
         .header-main { 
             padding: 2rem 1.5rem 1.5rem;
             background: linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%);
@@ -49,21 +49,14 @@
             margin-bottom: 1.5rem;
         }
 
-        /* Prepium App Logo */
         .brand-logo {
             font-size: 1.25rem;
             font-weight: 800;
             letter-spacing: -0.8px;
             color: var(--text);
-            display: flex;
-            align-items: center;
-            gap: 4px;
         }
-        .brand-logo span {
-            color: var(--brand);
-        }
+        .brand-logo span { color: var(--brand); }
 
-        /* Fast Top-Right CTA Button */
         .top-upgrade-btn {
             background: var(--brand);
             color: white;
@@ -75,96 +68,65 @@
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(0, 62, 255, 0.25);
             animation: pulse-glow 2s infinite;
-            text-wrap: nowrap;
         }
         @keyframes pulse-glow {
-            0% { transform: scale(1); box-shadow: 0 4px 12px rgba(0, 62, 255, 0.25); }
-            50% { transform: scale(1.03); box-shadow: 0 4px 16px rgba(0, 62, 255, 0.45); }
-            100% { transform: scale(1); box-shadow: 0 4px 12px rgba(0, 62, 255, 0.25); }
+            0% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+            100% { transform: scale(1); }
         }
 
         .user-profile { display: flex; align-items: center; gap: 14px; }
         .avatar-circle { 
-            width: 54px; 
-            height: 54px; 
-            background: #f1f5f9; 
-            color: var(--brand);
-            border: 2px solid #e2e8f0;
-            border-radius: 20px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-weight: 800; 
-            font-size: 1.35rem;
+            width: 54px; height: 54px; 
+            background: #f1f5f9; color: var(--brand);
+            border: 2px solid #e2e8f0; border-radius: 20px; 
+            display: flex; align-items: center; justify-content: center; 
+            font-weight: 800; font-size: 1.35rem;
         }
         
-        .welcome-msg h1 { margin: 0; font-size: 1.35rem; font-weight: 800; letter-spacing: -0.5px; }
+        .welcome-msg h1 { margin: 0; font-size: 1.35rem; font-weight: 800; }
         .tier-pill { 
-            font-size: 0.65rem; 
-            font-weight: 800; 
-            padding: 4px 10px; 
-            border-radius: 8px; 
-            text-transform: uppercase; 
-            margin-top: 5px; 
+            font-size: 0.65rem; font-weight: 800; 
+            padding: 4px 10px; border-radius: 8px; 
+            text-transform: uppercase; margin-top: 5px; 
             display: inline-block;
-            letter-spacing: 0.3px;
         }
         .paid { background: #e0f2fe; color: var(--brand); }
         .unpaid { background: #f1f5f9; color: var(--sub); }
 
-        /* Mobile Action Grid */
+        /* Hero Banner */
+        .hero-banner {
+            margin: 20px 15px; padding: 24px; 
+            background: linear-gradient(135deg, #be123c 0%, #ef4444 100%); 
+            border-radius: 28px; color: white; text-align: center; 
+            box-shadow: 0 15px 30px rgba(239, 68, 68, 0.25); 
+            position: relative; overflow: hidden;
+        }
+
+        /* Action Grid */
         .menu-grid { 
-            display: grid; 
-            grid-template-columns: repeat(2, 1fr); 
-            gap: 14px; 
-            padding: 1.2rem 1.5rem; 
+            display: grid; grid-template-columns: repeat(2, 1fr); 
+            gap: 14px; padding: 1.2rem 1.5rem; 
         }
         .menu-card { 
-            background: #ffffff; 
-            border: 1px solid #f1f5f9; 
-            padding: 1.5rem 1rem; 
-            border-radius: 24px; 
-            text-align: center; 
-            text-decoration: none; 
-            transition: 0.2s;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.01);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
+            background: #ffffff; border: 1px solid #f1f5f9; 
+            padding: 1.5rem 1rem; border-radius: 24px; 
+            text-align: center; text-decoration: none; transition: 0.2s;
+            display: flex; flex-direction: column; align-items: center;
         }
         .menu-card:active { transform: translateY(2px); background: #f8fafc; }
-        .menu-card i { 
-            font-size: 1.8rem; 
-            display: block; 
-            margin-bottom: 8px; 
-            font-style: normal;
-        }
+        .menu-card i { font-size: 1.8rem; display: block; margin-bottom: 8px; font-style: normal; }
         .menu-card b { font-size: 0.88rem; font-weight: 800; color: var(--text); display: block; }
         .menu-card p { font-size: 0.68rem; color: var(--sub); margin: 4px 0 0; font-weight: 600; }
         
-        /* Premium lock state */
-        .locked-card { 
-            opacity: 0.55; 
-            filter: grayscale(1); 
-            cursor: not-allowed;
-            background: #fafafa;
-        }
+        .locked-card { opacity: 0.55; filter: grayscale(1); cursor: not-allowed; background: #fafafa; }
 
-        /* App Sticky Bottom Navigation Bar */
+        /* Bottom Nav */
         .nav-bar { 
-            position: fixed; 
-            bottom: 0; 
-            width: 100%; 
-            max-width: 430px; 
-            background: rgba(255, 255, 255, 0.98); 
-            backdrop-filter: blur(8px);
-            height: 85px; 
-            display: flex; 
-            justify-content: space-around; 
-            align-items: center; 
-            border-top: 1px solid #f1f5f9; 
-            z-index: 1000;
+            position: fixed; bottom: 0; width: 100%; max-width: 430px; 
+            background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(8px);
+            height: 85px; display: flex; justify-content: space-around; 
+            align-items: center; border-top: 1px solid #f1f5f9; z-index: 1000;
             padding-bottom: 12px;
         }
         .nav-item { text-decoration: none; color: #94a3b8; font-size: 0.65rem; font-weight: 800; text-align: center; }
@@ -172,27 +134,12 @@
         .nav-item i { display: block; font-size: 1.35rem; margin-bottom: 4px; font-style: normal; }
 
         .center-fab { 
-            width: 58px; 
-            height: 58px; 
-            background: var(--brand); 
-            border-radius: 20px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            color: white; 
-            font-size: 1.8rem; 
-            transform: translateY(-22px); 
-            border: 5px solid white; 
-            box-shadow: 0 10px 20px rgba(0, 98, 255, 0.3);
-            text-decoration: none;
+            width: 58px; height: 58px; background: var(--brand); 
+            border-radius: 20px; display: flex; align-items: center; 
+            justify-content: center; color: white; font-size: 1.8rem; 
+            transform: translateY(-22px); border: 5px solid white; 
+            box-shadow: 0 10px 20px rgba(0, 98, 255, 0.3); text-decoration: none;
         }
-        .center-fab.locked-fab {
-            background: #94a3b8;
-            box-shadow: none;
-            opacity: 0.7;
-            cursor: not-allowed;
-        }
-        
         .dot { height: 8px; width: 8px; background: #ef4444; border-radius: 50%; position: absolute; top: 0; right: 0; border: 2px solid white; }
     </style>
 </head>
@@ -220,86 +167,70 @@
             </div>
         </header>
 
+        <% if (!user.has_paid) { %>
+            <div id="promo-banner" class="hero-banner">
+                <div style="position: absolute; top: -10px; right: -10px; font-size: 5rem; opacity: 0.1; transform: rotate(15deg);">⌛</div>
+                <div style="text-transform: uppercase; font-size: 0.7rem; font-weight: 800; letter-spacing: 1.5px; opacity: 0.9; margin-bottom: 8px;">Limited Time Offer</div>
+                <h2 style="margin: 0; font-size: 1.6rem; font-weight: 800; line-height: 1.2;">Save 50% Today</h2>
+                <p style="font-size: 0.85rem; font-weight: 600; margin: 8px 0 20px; opacity: 0.9;">Price jumps from <b>₦500</b> to <b>₦1,000</b> on May 8th.</p>
+                
+                <div style="background: rgba(0,0,0,0.15); padding: 12px; border-radius: 18px; display: inline-block; min-width: 200px;">
+                    <div style="font-size: 0.6rem; font-weight: 800; text-transform: uppercase; margin-bottom: 4px; opacity: 0.8;">Price Increase In:</div>
+                    <div id="countdown-timer" style="font-family: monospace; font-size: 1.8rem; font-weight: 800; letter-spacing: 2px;">--:--:--</div>
+                </div>
+
+                <button onclick="payWithPaystack()" style="display: block; width: 100%; margin-top: 20px; padding: 16px; border-radius: 16px; border: none; background: white; color: #be123c; font-weight: 800; font-size: 1rem; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                    Get Premium Now
+                </button>
+            </div>
+        <% } %>
+
         <div class="menu-grid">
-            
             <% if (!user.has_paid) { %>
                 <% if (user.quiz_attempts < 2) { %>
                     <a href="/setup-test" class="menu-card" style="border: 2px solid var(--brand); background: #f0f7ff;">
-                        <i>⚡</i>
-                        <b style="color: var(--brand);">Try Free Quiz</b>
-                        <p style="color: var(--brand); font-weight: 700;">
-                            <%= 2 - user.quiz_attempts %> of 2 attempts left
-                        </p>
+                        <i>⚡</i><b style="color: var(--brand);">Try Free Quiz</b>
+                        <p style="color: var(--brand); font-weight: 700;"><%= 2 - user.quiz_attempts %> attempts left</p>
                     </a>
                 <% } else { %>
                     <a href="#" onclick="payWithPaystack()" class="menu-card" style="border: 1px dashed #cbd5e1; background: #f8fafc;">
-                        <i>🔒</i>
-                        <b style="color: var(--sub);">Free Quizzes Used</b>
+                        <i>🔒</i><b style="color: var(--sub);">Free Quizzes Used</b>
                         <p style="color: var(--brand); font-weight: 700;">Tap to Upgrade</p>
                     </a>
                 <% } %>
             <% } %>
 
             <a href="<%= user.has_paid ? '/subjects' : '#' %>" class="menu-card <%= !user.has_paid ? 'locked-card' : '' %>">
-                <i>📚</i>
-                <b>Study Library</b>
-                <p>Course Books</p>
+                <i>📚</i><b>Study Library</b><p>Course Books</p>
             </a>
             
             <a href="<%= user.has_paid ? '/history' : '#' %>" class="menu-card <%= !user.has_paid ? 'locked-card' : '' %>">
-                <i>📜</i>
-                <b>Performance</b>
-                <p>Past Results</p>
+                <i>📜</i><b>Performance</b><p>Past Results</p>
             </a>
 
             <a href="<%= user.has_paid ? '/competition' : '#' %>" class="menu-card <%= !user.has_paid ? 'locked-card' : '' %>">
-                <i>🏆</i>
-                <b>Live Arena</b>
-                <p>Rank Tracker</p>
+                <i>🏆</i><b>Live Arena</b><p>Rank Tracker</p>
             </a>
 
             <a href="<%= user.has_paid ? '/deadlines' : '#' %>" class="menu-card <%= !user.has_paid ? 'locked-card' : '' %>">
-                <i>⏳</i>
-                <b>Deadlines</b>
-                <p>Countdown</p>
+                <i>⏳</i><b>Deadlines</b><p>Countdown</p>
             </a>
 
             <a href="<%= user.has_paid ? '/pomodoro' : '#' %>" class="menu-card <%= !user.has_paid ? 'locked-card' : '' %>">
-                <i>⏱️</i>
-                <b>Pomodoro</b>
-                <p>Study Timer</p>
+                <i>⏱️</i><b>Pomodoro</b><p>Study Timer</p>
             </a>
 
             <a href="<%= user.has_paid ? '/timetable' : '#' %>" class="menu-card <%= !user.has_paid ? 'locked-card' : '' %>">
-                <i>📅</i>
-                <b>Timetable</b>
-                <p>Day Planner</p>
+                <i>📅</i><b>Timetable</b><p>Day Planner</p>
             </a>
 
             <a href="https://alitedigitals.vercel.app/projects" target="_blank" class="menu-card">
-                <i>🏪</i>
-                <b>Alite Store</b>
-                <p>Tech Projects</p>
+                <i>🏪</i><b>Alite Store</b><p>Tech Projects</p>
             </a>
 
-            <a href="/suggestions" class="menu-card">
-                <i>✍️</i>
-                <b>Feedback</b>
-                <p>Send Review</p>
-            </a>
-
-            <a href="/how-it-works" class="menu-card">
-                <i>❓</i>
-                <b>How it Works</b>
-                <p>User Guide</p>
-            </a>
-
-            <a href="/profile" class="menu-card">
-                <i>👤</i>
-                <b>Profile</b>
-                <p>Account Settings</p>
-            </a>
-
+            <a href="/suggestions" class="menu-card"><i>✍️</i><b>Feedback</b><p>Send Review</p></a>
+            <a href="/how-it-works" class="menu-card"><i>❓</i><b>How it Works</b><p>User Guide</p></a>
+            <a href="/profile" class="menu-card"><i>👤</i><b>Profile</b><p>Account</p></a>
         </div>
 
         <nav class="nav-bar">
@@ -309,7 +240,7 @@
             <% if (user.has_paid || (!user.has_paid && user.quiz_attempts < 2)) { %>
                 <a href="/setup-test" class="center-fab">+</a>
             <% } else { %>
-                <a href="#" onclick="payWithPaystack()" class="center-fab locked-fab">+</a>
+                <a href="#" onclick="payWithPaystack()" class="center-fab" style="background: #94a3b8;">+</a>
             <% } %>
             
             <a href="<%= user.has_paid ? '/notifications' : '#' %>" class="nav-item <%= !user.has_paid ? 'locked-card' : '' %>" style="position: relative;">
@@ -323,12 +254,7 @@
     <script>
         function payWithPaystack() {
             const btn = document.getElementById('pay-btn-top');
-            
-            // Temporary loader state for UI feedback
-            if (btn) {
-                btn.innerHTML = "Opening Pay...";
-                btn.disabled = true;
-            }
+            if (btn) { btn.innerHTML = "Opening..."; btn.disabled = true; }
 
             let handler = PaystackPop.setup({
                 key: '<%= paystack_key %>',
@@ -339,14 +265,41 @@
                     window.location.href = "/verify-payment?reference=" + response.reference;
                 },
                 onClose: function() {
-                    if (btn) {
-                        btn.innerHTML = "Upgrade — ₦500";
-                        btn.disabled = false;
-                    }
+                    if (btn) { btn.innerHTML = "Upgrade — ₦500"; btn.disabled = false; }
                 }
             });
             handler.openIframe();
         }
+
+        function startPromoCountdown() {
+            const targetDate = new Date("May 8, 2026 00:00:00").getTime();
+            const timerDisplay = document.getElementById('countdown-timer');
+            const banner = document.getElementById('promo-banner');
+
+            if (!timerDisplay) return;
+
+            const interval = setInterval(() => {
+                const now = new Date().getTime();
+                const distance = targetDate - now;
+
+                if (distance < 0) {
+                    clearInterval(interval);
+                    if (banner) banner.style.display = 'none';
+                    return;
+                }
+
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                timerDisplay.innerHTML = 
+                    (hours < 10 ? "0" + hours : hours) + ":" + 
+                    (minutes < 10 ? "0" + minutes : minutes) + ":" + 
+                    (seconds < 10 ? "0" + seconds : seconds);
+            }, 1000);
+        }
+
+        document.addEventListener('DOMContentLoaded', startPromoCountdown);
     </script>
 </body>
 </html>
