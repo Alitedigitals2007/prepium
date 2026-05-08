@@ -3,297 +3,916 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prepium Admin | Subjects</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <title>Curriculum Manager | Prepium</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath:     [['\\(', '\\)']],
+                displayMath:    [['\\[', '\\]']],
+                processEscapes: true,
+                tags:           'none'
+            },
+            options: {
+                skipHtmlTags:    ['script','noscript','style','textarea','pre','code'],
+                ignoreHtmlClass: 'no-mathjax'
+            },
+            startup: {
+                typeset: false   /* we call typesetPromise() manually after normalisation */
+            },
+            chtml: {
+                scale: 1,
+                minScale: 0.5,
+                matchFontHeight: true
+            }
+        };
+    </script>
+    <script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
+    </script>
+
     <style>
-        :root { 
-            --brand: #0062ff; 
-            --brand-light: #eef4ff;
-            --bg: #f4f7fe; 
-            --sidebar: #0b1437; 
-            --danger: #ff4d4f; 
-            --success: #05cd99;
-            --text-main: #1b2559;
-            --text-muted: #a3aed0;
-            --border: #e0e5f2;
+        /* =============================================
+           RESET
+        ============================================= */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        /* =============================================
+           DESIGN TOKENS
+        ============================================= */
+        :root {
+            --primary:        #0062ff;
+            --primary-bg:     #eef4ff;
+            --primary-dark:   #0047c8;
+            --dark-navy:      #0b1437;
+            --app-bg:         #f4f7fe;
+            --card-white:     #ffffff;
+            --text-heading:   #1b2559;
+            --text-body:      #475467;
+            --text-muted:     #a3aed0;
+            --border:         #e0e5f2;
+            --success:        #05cd99;
+            --success-bg:     #effdf6;
+            --success-text:   #065f46;
+            --success-ring:   #bbf7de;
+            --danger:         #ee5d50;
+            --danger-bg:      #fff1f0;
+            --warning:        #f59e0b;
+            --warning-bg:     #fffbeb;
+            --warning-text:   #92400e;
+            --info-bg:        #eff6ff;
+            --radius-xl:      20px;
+            --radius-lg:      16px;
+            --radius-md:      12px;
+            --radius-sm:      8px;
+            --sidebar-w:      260px;
+            --sidebar-mini:   72px;
+            --ease:           0.2s ease;
         }
 
-        body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: var(--bg); 
-            margin: 0; 
-            display: flex; 
-            color: var(--text-main);
+        /* =============================================
+           BASE
+        ============================================= */
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--app-bg);
+            color: var(--text-body);
+            line-height: 1.7;
+            min-height: 100vh;
         }
 
-        /* Sidebar */
-        .sidebar { 
-            width: 280px; 
-            background: var(--sidebar); 
-            height: 100vh; 
-            color: white; 
-            padding: 2.5rem 1.5rem; 
+        /* =============================================
+           SIDEBAR
+        ============================================= */
+        .sidebar {
+            width: var(--sidebar-w);
+            background: var(--dark-navy);
+            height: 100vh;
             position: fixed;
-        }
-
-        .logo { 
-            font-size: 1.6rem; 
-            font-weight: 800; 
-            margin-bottom: 3.5rem; 
-            color: white; 
-            text-decoration: none; 
+            top: 0; left: 0;
+            padding: 2rem 1.25rem;
             display: flex;
-            letter-spacing: -1px;
+            flex-direction: column;
+            gap: 2.5rem;
+            z-index: 1000;
+            overflow: hidden;
+            transition: width var(--ease);
         }
-
-        .nav-item { 
+        .sidebar-logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: -0.5px;
+            white-space: nowrap;
+        }
+        .sidebar-logo span { color: var(--primary); }
+        .sidebar nav { display: flex; flex-direction: column; gap: 4px; }
+        .nav-link {
             display: flex;
             align-items: center;
-            color: #a3aed0; 
-            text-decoration: none; 
-            padding: 16px 20px; 
-            border-radius: 16px; 
-            margin-bottom: 8px; 
-            font-weight: 700; 
-            transition: 0.3s;
+            gap: 12px;
+            color: #a3aed0;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.88rem;
+            padding: 11px 14px;
+            border-radius: var(--radius-md);
+            white-space: nowrap;
+            transition: background var(--ease), color var(--ease);
+        }
+        .nav-link:hover  { background: rgba(255,255,255,0.07); color: #fff; }
+        .nav-link.active { background: var(--primary); color: #fff; }
+        .nav-link i      { font-size: 1rem; min-width: 18px; text-align: center; flex-shrink: 0; }
+        .nav-text        { transition: opacity var(--ease); }
+
+        /* =============================================
+           MAIN CONTENT
+        ============================================= */
+        .main-content {
+            margin-left: var(--sidebar-w);
+            padding: 2.5rem 3rem;
+            min-height: 100vh;
+            transition: margin-left var(--ease);
         }
 
-        .nav-item:hover, .nav-item.active { 
-            background: rgba(255, 255, 255, 0.1); 
-            color: white; 
+        /* =============================================
+           RESPONSIVE BREAKPOINTS
+        ============================================= */
+        @media (max-width: 1200px) {
+            .sidebar { width: var(--sidebar-mini); padding: 2rem 0.75rem; }
+            .nav-text, .sidebar-logo { opacity: 0; pointer-events: none; }
+            .main-content { margin-left: var(--sidebar-mini); padding: 2rem; }
+        }
+        @media (max-width: 992px) {
+            .sidebar { display: none; }
+            .main-content { margin-left: 0; padding: 1.25rem; }
+            .content-grid { grid-template-columns: 1fr !important; }
+            .sticky-panel { position: static !important; }
+        }
+        @media (max-width: 640px) {
+            .main-content    { padding: 1rem; }
+            .hero-section    { padding: 1.5rem; }
+            .hero-section h1 { font-size: 1.6rem; }
+            .hero-meta       { flex-wrap: wrap; gap: 10px; }
+            .q-card          { padding: 18px 20px; }
+            .options-wrapper { grid-template-columns: 1fr; gap: 10px; }
+            .import-area     { height: 300px; }
         }
 
-        /* Main Area */
-        .main { 
-            margin-left: 280px; 
-            padding: 2.5rem 4rem; 
-            width: 100%; 
-            box-sizing: border-box; 
+        /* =============================================
+           HERO BANNER
+        ============================================= */
+        .hero-section {
+            background: linear-gradient(130deg, #0b1437 0%, #1a2a6c 100%);
+            border-radius: var(--radius-xl);
+            padding: 2.5rem;
+            color: #fff;
+            margin-bottom: 2rem;
+        }
+        .hero-badge {
+            display: inline-block;
+            background: var(--primary);
+            padding: 4px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 0.68rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            margin-bottom: 10px;
+        }
+        .hero-section h1 {
+            font-size: 2.1rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            line-height: 1.2;
+            margin: 8px 0 16px;
+        }
+        .hero-meta {
+            display: flex;
+            gap: 20px;
+            opacity: 0.8;
+            font-weight: 600;
+            font-size: 0.88rem;
+        }
+        .hero-meta span { display: flex; align-items: center; gap: 7px; }
+
+        /* =============================================
+           CONTENT GRID
+        ============================================= */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            gap: 28px;
+            align-items: start;
         }
 
-        .header-flex {
+        /* =============================================
+           FEED HEADER
+        ============================================= */
+        .feed-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 2.5rem;
-        }
-
-        .header-flex h1 { font-size: 1.8rem; font-weight: 800; margin: 0; }
-
-        /* Floating Add Box */
-        .add-card { 
-            background: white; 
-            padding: 2rem; 
-            border-radius: 24px; 
-            box-shadow: 0 10px 40px rgba(0,0,0,0.03); 
-            margin-bottom: 3rem;
-            border: 1px solid #fff;
-        }
-
-        /* Updated Add Grid to accommodate Drive Link */
-        .add-grid { 
-            display: grid; 
-            grid-template-columns: 1fr 1.2fr 0.8fr 1.5fr auto; 
-            gap: 15px; 
-            align-items: end; 
-        }
-
-        .form-group label { 
-            font-size: 0.75rem; 
-            font-weight: 800; 
-            color: var(--text-muted); 
-            text-transform: uppercase; 
-            margin-bottom: 10px;
-            display: block;
-        }
-
-        input, select { 
-            width: 100%;
-            background: #f4f7fe;
-            border: 1px solid var(--border);
-            padding: 16px; 
-            border-radius: 16px; 
-            font-family: inherit;
-            font-weight: 600;
-            color: var(--text-main);
-            box-sizing: border-box;
-            transition: 0.2s;
-        }
-
-        input:focus, select:focus { outline: none; border-color: var(--brand); background: white; }
-
-        .btn-primary { 
-            background: var(--brand); 
-            color: white; 
-            padding: 16px 25px; 
-            border: none; 
-            border-radius: 16px; 
-            font-weight: 800; 
-            cursor: pointer;
-            box-shadow: 0 10px 20px rgba(0, 98, 255, 0.2);
-            transition: 0.3s;
-        }
-
-        .btn-primary:hover { transform: translateY(-2px); }
-
-        /* Subject Grid */
-        .subjects-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-            gap: 25px;
-        }
-
-        .subject-card {
-            background: white;
-            padding: 24px;
-            border-radius: 24px;
-            border: 1px solid var(--border);
-            transition: 0.3s;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .uni-badge {
-            background: #0b1437;
-            color: white;
-            padding: 4px 10px;
-            border-radius: 8px;
-            font-size: 0.65rem;
-            font-weight: 800;
-            position: absolute;
-            top: 24px;
-            right: 24px;
-        }
-
-        .category-tag {
-            background: var(--brand-light);
-            color: var(--brand);
-            padding: 6px 12px;
-            border-radius: 10px;
-            font-size: 0.7rem;
-            font-weight: 800;
-            align-self: flex-start;
-        }
-
-        .subject-name {
-            font-size: 1.25rem;
-            font-weight: 800;
-            margin: 15px 0 5px;
-            display: block;
-            line-height: 1.3;
-        }
-
-        .drive-status {
-            font-size: 0.75rem;
-            font-weight: 600;
+            flex-wrap: wrap;
+            gap: 10px;
             margin-bottom: 20px;
+        }
+        .feed-header h2 {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: var(--text-heading);
+        }
+        .q-count-badge {
+            font-size: 0.73rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            background: var(--card-white);
+            border: 1px solid var(--border);
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+
+        /* =============================================
+           QUESTION CARD
+        ============================================= */
+        .q-card {
+            background: var(--card-white);
+            border-radius: var(--radius-xl);
+            padding: 26px 30px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+        .q-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+        .q-id-tag {
+            font-size: 0.68rem;
+            font-weight: 800;
+            color: var(--primary);
+            background: var(--primary-bg);
+            padding: 4px 12px;
+            border-radius: var(--radius-sm);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+        .q-actions { display: flex; gap: 10px; align-items: center; }
+        .q-actions a {
+            font-weight: 800;
+            font-size: 0.7rem;
+            text-decoration: none;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            padding: 5px 12px;
+            border-radius: var(--radius-sm);
+            transition: background var(--ease), opacity var(--ease);
+        }
+        .btn-edit   { color: var(--primary); background: var(--primary-bg); }
+        .btn-edit:hover   { background: #d6e8ff; }
+        .btn-delete { color: var(--danger); background: var(--danger-bg); }
+        .btn-delete:hover { background: #ffdbd8; }
+
+        /* =============================================
+           QUESTION TEXT — LaTeX lives here
+        ============================================= */
+        .q-text {
+            font-size: 1.08rem;
+            font-weight: 700;
+            color: var(--text-heading);
+            line-height: 1.85;
+            margin: 0 0 22px 0;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+
+        /* =============================================
+           MathJax container fixes
+           — inline math stays inline, vertically centred
+           — display math gets its own block with scroll
+        ============================================= */
+
+        /* Inline math: sit on the baseline */
+        mjx-container[jax="CHTML"] {
+            vertical-align: middle;
+            line-height: 1 !important;
+        }
+
+        /* Display math: own block, centred, scrollable if wide */
+        mjx-container[jax="CHTML"][display="true"] {
+            display: block !important;
+            text-align: center !important;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 14px 0;
+            margin: 6px 0;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Never let a math expression blow out the card */
+        .q-text    mjx-container,
+        .opt-text  mjx-container,
+        .info-body mjx-container { max-width: 100%; }
+
+        /* =============================================
+           OPTIONS GRID
+        ============================================= */
+        .options-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 22px;
+        }
+        .opt-box {
+            display: flex;
+            align-items: flex-start;
+            gap: 11px;
+            padding: 13px 15px;
+            border-radius: var(--radius-md);
+            border: 1.5px solid var(--border);
+            background: #fcfdff;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-body);
+            line-height: 1.65;
+            min-height: 52px;
+            transition: border-color var(--ease), background var(--ease);
+        }
+        .opt-box.is-correct {
+            border-color: var(--success);
+            background: var(--success-bg);
+            color: var(--success-text);
+        }
+
+        /* letter badge — pinned top-left, never shrinks */
+        .opt-letter {
             display: flex;
             align-items: center;
-            gap: 5px;
+            justify-content: center;
+            min-width: 27px;
+            height: 27px;
+            border-radius: 7px;
+            background: var(--primary-bg);
+            color: var(--primary);
+            font-weight: 800;
+            font-size: 0.75rem;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .opt-box.is-correct .opt-letter {
+            background: var(--success-ring);
+            color: var(--success-text);
         }
 
-        .card-actions {
+        /* text fills remaining width; math can scroll if needed */
+        .opt-text {
+            flex: 1;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            overflow-x: auto;
+        }
+
+        /* green tick */
+        .correct-tick {
+            flex-shrink: 0;
+            color: var(--success);
+            font-size: 0.82rem;
+            margin-top: 5px;
+            padding-left: 6px;
+        }
+
+        /* =============================================
+           HINT & EXPLANATION ZONES
+        ============================================= */
+        .info-zone {
+            margin-top: 14px;
+            padding: 15px 18px;
+            border-radius: 0 var(--radius-md) var(--radius-md) 0;
+            border-left: 4px solid var(--warning);
+            background: var(--warning-bg);
+        }
+        .info-zone.is-explanation {
+            border-left-color: var(--primary);
+            background: var(--info-bg);
+            margin-top: 10px;
+        }
+        .info-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.66rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--warning-text);
+            margin-bottom: 8px;
+        }
+        .info-zone.is-explanation .info-label { color: var(--primary); }
+        .info-body {
+            font-size: 0.88rem;
+            font-weight: 500;
+            color: var(--text-body);
+            line-height: 1.8;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+        /* display math inside info zones */
+        .info-body mjx-container[display="true"] {
+            margin: 8px 0;
+            overflow-x: auto;
+        }
+
+        /* =============================================
+           EMPTY STATE
+        ============================================= */
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: var(--text-muted);
+        }
+        .empty-state i { font-size: 3rem; margin-bottom: 18px; display: block; }
+        .empty-state p { font-weight: 700; font-size: 0.9rem; line-height: 1.8; }
+
+        /* =============================================
+           STICKY IMPORT PANEL
+        ============================================= */
+        .sticky-panel { position: sticky; top: 24px; }
+        .panel-card {
+            background: var(--card-white);
+            border-radius: var(--radius-xl);
+            padding: 26px;
+            border: 1px solid var(--border);
+        }
+        .panel-card h3 {
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--text-heading);
+            margin-bottom: 5px;
+        }
+        .panel-subtitle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+        .import-area {
+            display: block;
+            width: 100%;
+            height: 400px;
+            background: #0b1437;
+            color: #05cd99;
+            border: none;
+            border-radius: var(--radius-md);
+            padding: 18px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            margin: 14px 0;
+            line-height: 1.6;
+            resize: vertical;
+            outline: none;
+            tab-size: 2;
+        }
+        .import-area:focus { box-shadow: 0 0 0 3px rgba(0,98,255,0.2); }
+        .import-area::placeholder { color: #2a5c42; opacity: 1; }
+        .btn-import {
+            width: 100%;
+            padding: 15px;
+            border-radius: var(--radius-md);
+            border: none;
+            background: var(--primary);
+            color: #fff;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 800;
+            font-size: 0.92rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            transition: transform var(--ease), box-shadow var(--ease);
+        }
+        .btn-import:hover  { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(0,98,255,0.25); }
+        .btn-import:active { transform: translateY(0); box-shadow: none; }
+
+        /* =============================================
+           SCHEMA BOX & LATEX TIP
+        ============================================= */
+        .schema-box {
+            margin-top: 18px;
+            padding: 14px 16px;
+            background: var(--app-bg);
+            border-radius: var(--radius-md);
+            border: 1px dashed var(--border);
+        }
+        .schema-title {
+            display: block;
+            color: var(--text-heading);
+            font-weight: 800;
+            font-size: 0.67rem;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            margin-bottom: 10px;
+        }
+        .schema-list { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+        .schema-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            font-size: 0.75rem;
+            color: var(--text-body);
+            line-height: 1.45;
+        }
+        .schema-list li::before {
+            content: '';
+            width: 5px; height: 5px;
+            border-radius: 50%;
+            background: var(--primary);
+            flex-shrink: 0;
+            margin-top: 6px;
+        }
+        .schema-list code {
+            background: var(--primary-bg);
+            color: var(--primary);
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 0.73rem;
+            font-family: 'Courier New', monospace;
+        }
+        .badge-opt {
+            font-size: 0.62rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            background: var(--border);
+            padding: 1px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .latex-tip {
+            margin-top: 12px;
+            padding: 11px 14px;
+            border-radius: var(--radius-sm);
+            background: var(--success-bg);
+            border: 1px solid var(--success-ring);
+            font-size: 0.73rem;
+            color: var(--success-text);
             display: flex;
             gap: 8px;
-            border-top: 1px solid #f4f7fe;
-            padding-top: 20px;
-            margin-top: auto;
+            align-items: flex-start;
+            line-height: 1.65;
         }
-
-        .action-btn {
-            flex: 1;
-            text-align: center;
-            text-decoration: none;
-            font-weight: 700;
-            font-size: 0.75rem;
-            padding: 10px 5px;
-            border-radius: 12px;
-            transition: 0.2s;
+        .latex-tip i { flex-shrink: 0; margin-top: 2px; }
+        .latex-tip code {
+            background: #d1fae5;
+            color: var(--success-text);
+            padding: 0 4px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
         }
-
-        .btn-q { background: var(--brand); color: white; }
-        .btn-edit { background: #f4f7fe; color: var(--text-main); }
-        .btn-del { background: #fff1f0; color: var(--danger); }
-        
-        .action-btn:hover { opacity: 0.85; }
     </style>
 </head>
 <body>
 
-    <div class="sidebar">
-        <a href="/admin/dashboard" class="logo">PREPIUM</a>
-        <a href="/admin/dashboard" class="nav-item">🏠 Dashboard</a>
-        <a href="/admin/universities" class="nav-item">🏛️ Universities</a>
-        <a href="/admin/subjects" class="nav-item active">📚 Subjects</a>
-        <a href="/admin/notifications" class="nav-item">🔔 Notifications</a>
+<!-- =============================================
+     SIDEBAR
+============================================= -->
+<aside class="sidebar">
+    <div class="sidebar-logo">PREP<span>IUM</span></div>
+    <nav>
+        <a href="/admin/dashboard" class="nav-link">
+            <i class="fas fa-chart-pie"></i>
+            <span class="nav-text">Dashboard</span>
+        </a>
+        <a href="/admin/subjects" class="nav-link active">
+            <i class="fas fa-book"></i>
+            <span class="nav-text">Subjects</span>
+        </a>
+        <a href="/admin/universities" class="nav-link">
+            <i class="fas fa-university"></i>
+            <span class="nav-text">Universities</span>
+        </a>
+        <a href="/admin/settings" class="nav-link">
+            <i class="fas fa-cog"></i>
+            <span class="nav-text">Settings</span>
+        </a>
+    </nav>
+</aside>
+
+<!-- =============================================
+     MAIN
+============================================= -->
+<main class="main-content">
+
+    <% subjects.forEach(sub => { %>
+
+    <!-- HERO -->
+    <div class="hero-section">
+        <span class="hero-badge"><%= sub.university_name %></span>
+        <h1><%= sub.name %></h1>
+        <div class="hero-meta">
+            <span><i class="fas fa-layer-group"></i> <%= sub.category %> Level</span>
+            <span><i class="fas fa-database"></i> <%= questions.length %> Questions</span>
+        </div>
     </div>
 
-    <main class="main">
-        <div class="header-flex">
-            <div>
-                <h1>Subject Curriculum</h1>
-                <p style="color: var(--text-muted); margin-top: 5px;">Manage academic courses and external resource links.</p>
+    <!-- TWO-COLUMN GRID -->
+    <div class="content-grid">
+
+        <!-- ===== LEFT: QUESTION FEED ===== -->
+        <div class="feed">
+            <div class="feed-header">
+                <h2>Question Bank</h2>
+                <span class="q-count-badge"><%= questions.length %> entries</span>
             </div>
-        </div>
-        
-        <!-- ADD SUBJECT FORM (Integrated Drive Link) -->
-        <div class="add-card">
-            <form action="/admin/subjects/add" method="POST" class="add-grid">
-                <div class="form-group">
-                    <label>University</label>
-                    <select name="university_id" required>
-                        <option value="" disabled selected>Select School</option>
-                        <% universities.forEach(uni => { %>
-                            <option value="<%= uni.id %>"><%= uni.name %></option>
+
+            <% if (questions && questions.length > 0) { %>
+                <% questions.forEach((q, i) => { %>
+
+                <div class="q-card">
+
+                    <!-- id tag + action buttons -->
+                    <div class="q-meta">
+                        <span class="q-id-tag">Entry #<%= questions.length - i %></span>
+                        <div class="q-actions">
+                            <a href="/admin/questions/edit/<%= q.id %>" class="btn-edit">
+                                <i class="fas fa-pen"></i> Edit
+                            </a>
+                            <a
+                                href="/admin/questions/delete/<%= q.id %>"
+                                class="btn-delete"
+                                onclick="return confirm('Permanently delete this question?')"
+                            >
+                                <i class="fas fa-trash"></i> Delete
+                            </a>
+                        </div>
+                    </div>
+
+                
+
+                    <!-- Question text -->
+                    <p class="q-text math-content"><%- q.question_text %></p>
+
+                    <!-- A / B / C / D options -->
+                    <div class="options-wrapper">
+                        <% ['A','B','C','D'].forEach(letter => {
+                               const isCorrect = q.correct_option === letter;
+                               const optKey    = 'option_' + letter.toLowerCase();
+                        %>
+                        <div class="opt-box <%= isCorrect ? 'is-correct' : '' %>">
+                            <span class="opt-letter"><%= letter %></span>
+                            <span class="opt-text math-content"><%- q[optKey] %></span>
+                            <% if (isCorrect) { %>
+                                <i class="fas fa-check correct-tick" aria-label="Correct answer"></i>
+                            <% } %>
+                        </div>
                         <% }) %>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Course Title</label>
-                    <input type="text" name="name" placeholder="e.g. PHY 301" required>
-                </div>
-                <div class="form-group">
-                    <label>Level</label>
-                    <input type="text" name="category" placeholder="e.g. 300L" required>
-                </div>
-                <div class="form-group">
-                    <label>Resource (Drive Link)</label>
-                    <input type="url" name="drive_link" placeholder="https://drive.google.com/...">
-                </div>
-                <button type="submit" class="btn-primary">Create</button>
-            </form>
-        </div>
+                    </div>
 
-        <!-- SUBJECT LISTING -->
-        <div class="subjects-grid">
-            <% subjects.forEach(sub => { %>
-            <div class="subject-card">
-                <span class="uni-badge"><%= sub.university_name || 'General' %></span>
-                
-                <span class="category-tag"><%= sub.category %></span>
-                <span class="subject-name"><%= sub.name %></span>
-
-                <!-- Drive Link Status Display -->
-                <div class="drive-status">
-                    <% if (sub.drive_link) { %>
-                        <span style="color: var(--success)">●</span> 
-                        <a href="<%= sub.drive_link %>" target="_blank" style="color: var(--text-muted); text-decoration: none;">Drive Linked</a>
-                    <% } else { %>
-                        <span style="color: var(--danger)">○</span> 
-                        <span style="color: var(--text-muted)">No Resource Link</span>
+                    <!-- Study Hint -->
+                    <% if (q.hint && q.hint.trim() !== '') { %>
+                    <div class="info-zone">
+                        <div class="info-label">
+                            <i class="fas fa-lightbulb"></i> Study Hint
+                        </div>
+                        <p class="info-body math-content"><%- q.hint %></p>
+                    </div>
                     <% } %>
+
+                    <!-- Detailed Explanation -->
+                    <% if (q.explanation && q.explanation.trim() !== '') { %>
+                    <div class="info-zone is-explanation">
+                        <div class="info-label">
+                            <i class="fas fa-check-circle"></i> Detailed Explanation
+                        </div>
+                        <p class="info-body math-content"><%- q.explanation %></p>
+                    </div>
+                    <% } %>
+
                 </div>
-                
-                <div class="card-actions">
-                    <a href="/admin/questions/manage/<%= sub.id %>" class="action-btn btn-q">Questions</a>
-                    <a href="/admin/subjects/edit/<%= sub.id %>" class="action-btn btn-edit">Edit</a>
-                    <a href="/admin/subjects/delete/<%= sub.id %>" class="action-btn btn-del" onclick="return confirm('Delete this subject?')">Delete</a>
+
+                <% }) %>
+
+            <% } else { %>
+            <div class="q-card">
+                <div class="empty-state">
+                    <i class="fas fa-ghost"></i>
+                    <p>The question bank is currently empty.<br>Use the import panel to add questions.</p>
                 </div>
             </div>
-            <% }) %>
-        </div>
-    </main>
+            <% } %>
+        </div><!-- /feed -->
+
+        <!-- ===== RIGHT: IMPORT PANEL ===== -->
+        <div class="sticky-panel">
+            <div class="panel-card">
+                <h3>Bulk Import</h3>
+                <p class="panel-subtitle">Paste a JSON array. Each object becomes one question.</p>
+
+                <form action="/admin/questions/bulk-import" method="POST">
+                    <input type="hidden" name="subject_id"    value="<%= sub.id %>">
+                    <input type="hidden" name="university_id" value="<%= sub.university_id %>">
+
+                    <textarea
+                        name="json_data"
+                        class="import-area"
+                        spellcheck="false"
+                        autocomplete="off"
+                        placeholder='[
+  {
+    "question_text": "Solve \\( 2x + 3 = 7 \\) for \\( x \\).",
+    "option_a": "\\( x = 1 \\)",
+    "option_b": "\\( x = 2 \\)",
+    "option_c": "\\( x = 3 \\)",
+    "option_d": "\\( x = 4 \\)",
+    "correct_option": "B",
+    "hint": "Subtract 3 from both sides first.",
+    "explanation": "\\( 2x = 4 \\Rightarrow x = 2 \\)"
+  }
+]'
+                    ></textarea>
+
+                    <button type="submit" class="btn-import">
+                        <i class="fas fa-upload"></i> Execute Import
+                    </button>
+                </form>
+
+                <!-- Schema reference -->
+                <div class="schema-box">
+                    <span class="schema-title">Schema Reference</span>
+                    <ul class="schema-list">
+                        <li><div><code>question_text</code> — LaTeX supported</div></li>
+                        <li>
+                            <div>
+                                <code>option_a</code>&nbsp;<code>option_b</code>&nbsp;<code>option_c</code>&nbsp;<code>option_d</code>
+                            </div>
+                        </li>
+                        <li>
+                            <div>
+                                <code>correct_option</code> — one of
+                                <code>A</code>&nbsp;<code>B</code>&nbsp;<code>C</code>&nbsp;<code>D</code>
+                            </div>
+                        </li>
+                        <li><div><code>hint</code> <span class="badge-opt">optional</span></div></li>
+                        <li><div><code>explanation</code> <span class="badge-opt">optional</span></div></li>
+                    </ul>
+                </div>
+
+                <!-- LaTeX formats tip -->
+                <div class="latex-tip">
+                    <i class="fas fa-atom"></i>
+                    <span>
+                        <strong>LaTeX formats accepted:</strong><br>
+                        Inline &nbsp;→ <code>\( x^2 \)</code> or <code>$x^2$</code><br>
+                        Display → <code>\[ \frac{a}{b} \]</code> or <code>$$\frac{a}{b}$$</code><br>
+                        All formats are auto-normalised before rendering.
+                    </span>
+                </div>
+            </div>
+        </div><!-- /sticky-panel -->
+
+    </div><!-- /content-grid -->
+
+    <% }) %>
+
+</main>
+
+<!-- =============================================
+     LaTeX NORMALISATION  +  MathJax TRIGGER
+     -----------------------------------------------
+     Runs after the DOM is ready, before MathJax
+     typesets anything.
+
+     Converts ANY of these stored formats to the
+     MathJax-safe \(...\) / \[...\] equivalents:
+
+       $$...$$   →   \[...\]   (display block)
+       $...$     →   \(...\)   (inline)
+       \[...\]   → unchanged
+       \(...\)   → unchanged
+
+     Only touches nodes with class="math-content".
+     Skips <script>, <style>, <code>, <pre>,
+     <textarea> to avoid mangling code snippets.
+============================================= -->
+<script>
+(function () {
+    'use strict';
+
+    /* --------------------------------------------------
+       normalizeMath(str)
+       Safe single-pass conversion using placeholders so
+       we never accidentally process the same delimiter
+       twice, and so \( already in the string is left alone.
+    -------------------------------------------------- */
+    function normalizeMath(str) {
+        if (!str) return str;
+
+        /* 1. Protect already-correct escaped delimiters */
+        str = str
+            .replace(/\\\(/g,  '\u0001A\u0001')
+            .replace(/\\\)/g,  '\u0001B\u0001')
+            .replace(/\\\[/g,  '\u0001C\u0001')
+            .replace(/\\\]/g,  '\u0001D\u0001');
+
+        /* 2. $$ ... $$ → display block  (MUST come before single $) */
+        str = str.replace(/\$\$([\s\S]+?)\$\$/g, function (_, inner) {
+            return '\u0001C\u0001' + inner + '\u0001D\u0001';
+        });
+
+        /* 3. $ ... $ → inline  (skip lone numbers like "$5" or "$1,200") */
+        str = str.replace(/\$([^\$\r\n]+?)\$/g, function (full, inner) {
+            if (/^\s*[\d,\.]+\s*$/.test(inner)) return full; // currency — leave alone
+            return '\u0001A\u0001' + inner + '\u0001B\u0001';
+        });
+
+        /* 4. Restore placeholders to real MathJax delimiters */
+        str = str
+            .replace(/\u0001A\u0001/g, '\\(')
+            .replace(/\u0001B\u0001/g, '\\)')
+            .replace(/\u0001C\u0001/g, '\\[')
+            .replace(/\u0001D\u0001/g, '\\]');
+
+        return str;
+    }
+
+    /* --------------------------------------------------
+       processElement(el)
+       Walks all TEXT nodes inside el.
+       If any text changes after normalisation, the text
+       node is replaced with a <span> containing the
+       updated HTML (needed because \ is multi-char).
+    -------------------------------------------------- */
+    var SKIP_TAGS = { SCRIPT:1, STYLE:1, CODE:1, PRE:1, TEXTAREA:1 };
+
+    function processElement(el) {
+        var walker = document.createTreeWalker(
+            el,
+            NodeFilter.SHOW_TEXT,
+            {
+                acceptNode: function (node) {
+                    var parent = node.parentElement;
+                    if (parent && SKIP_TAGS[parent.tagName]) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                    return NodeFilter.FILTER_ACCEPT;
+                }
+            },
+            false
+        );
+
+        var nodes = [];
+        while (walker.nextNode()) nodes.push(walker.currentNode);
+
+        nodes.forEach(function (node) {
+            var original   = node.nodeValue;
+            var normalised = normalizeMath(original);
+            if (normalised !== original) {
+                var span = document.createElement('span');
+                span.className   = 'math-normalised';
+                span.innerHTML   = normalised;
+                node.parentNode.replaceChild(span, node);
+            }
+        });
+    }
+
+    /* --------------------------------------------------
+       boot()
+       1. Normalise all .math-content elements.
+       2. Ask MathJax to typeset them.
+    -------------------------------------------------- */
+    function boot() {
+        var mathEls = Array.from(document.querySelectorAll('.math-content'));
+
+        mathEls.forEach(processElement);
+
+        /* Wait for MathJax to be ready if it hasn't loaded yet */
+        function runTypeset() {
+            if (window.MathJax && typeof MathJax.typesetPromise === 'function') {
+                MathJax.typesetPromise(mathEls).catch(function (err) {
+                    console.warn('[Prepium] MathJax typeset error:', err);
+                });
+            } else {
+                /* Retry in 100 ms — MathJax async script may not be ready yet */
+                setTimeout(runTypeset, 100);
+            }
+        }
+
+        runTypeset();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', boot);
+    } else {
+        boot();
+    }
+
+})();
+</script>
 
 </body>
 </html>

@@ -200,12 +200,7 @@ app.post('/dashboard/verify-payment', async (req, res) => {
     }
 });
 
-// Login Page GET route
-app.get('/login', (req, res) => {
-    res.render('login', { error: null });
-});
-
-// GET Login Page
+// --- GET Login Page ---
 app.get('/login', (req, res) => {
     // Check if already logged in
     if (req.session.user) {
@@ -214,7 +209,7 @@ app.get('/login', (req, res) => {
     res.render('login', { error: null });
 });
 
-// POST Login Handler
+// --- POST Login Handler (Updated for AJAX) ---
 app.post('/auth/login', async (req, res) => {
     const { email, password } = req.body;
 
@@ -225,12 +220,11 @@ app.post('/auth/login', async (req, res) => {
         if (result.rows.length > 0) {
             const user = result.rows[0];
             
-            // 2. Compare hashed password (ayomide2007)
+            // 2. Compare hashed password
             const isMatch = await bcrypt.compare(password, user.password);
 
             if (isMatch) {
                 // 3. Define Admin Status
-                // Logic: Admin if DB says so OR if it's your specific email
                 const isAdminAccount = (user.email === 'michaelbrainny842@gmail.com');
 
                 // 4. Construct Session Object
@@ -238,34 +232,31 @@ app.post('/auth/login', async (req, res) => {
                     id: user.id, 
                     fullname: user.fullname, 
                     email: user.email,
-                    is_admin: user.is_admin || isAdminAccount, // Forced admin override
+                    is_admin: user.is_admin || isAdminAccount, 
                     has_paid: user.has_paid,
                     current_streak: user.current_streak || 0
                 };
 
-                // 5. Explicitly save session before redirecting
+                // 5. Explicitly save session before responding
                 return req.session.save((err) => {
                     if (err) {
                         console.error("Session Save Error:", err);
-                        return res.status(500).send("Login failed during session setup");
+                        return res.status(500).json({ success: false, message: "Session setup failed" });
                     }
 
-                    // 6. Direct to correct dashboard
-                    if (req.session.user.is_admin) {
-                        return res.redirect('/admin/dashboard');
-                    } else {
-                        return res.redirect('/dashboard');
-                    }
+                    // 6. Return JSON success with the redirect URL
+                    const redirectUrl = req.session.user.is_admin ? '/admin/dashboard' : '/dashboard';
+                    return res.status(200).json({ success: true, redirect: redirectUrl });
                 });
             }
         }
 
-        // If credentials don't match
-        return res.render('login', { error: "Invalid email or password" });
+        // If credentials don't match, return JSON error
+        return res.status(401).json({ success: false, message: "Invalid email or password" });
         
     } catch (err) {
         console.error("Critical Login Error:", err);
-        res.status(500).send("A server error occurred. Please try again.");
+        res.status(500).json({ success: false, message: "A server error occurred. Please try again." });
     }
 });
 
@@ -536,39 +527,55 @@ app.post('/admin/questions/add', isAdmin, async (req, res) => {
     }
 });
 
-// VIEW QUESTIONS PAGE (Now identifies the school in the header)
-app.get('/admin/questions/manage/:subject_id', isAdmin, async (req, res) => {
-    const { subject_id } = req.params;
+// This route MUST exist to handle the page request
+app.get('/admin/questions/manage/:id', isAdmin, async (req, res) => {
+    const subjectId = req.params.id;
     try {
-        const subject = await pool.query(`
-            SELECT subjects.*, universities.name as university_name 
-            FROM subjects 
-            JOIN universities ON subjects.university_id = universities.id 
-            WHERE subjects.id = $1`, [subject_id]);
-            
-        const questions = await pool.query('SELECT * FROM questions WHERE subject_id = $1 ORDER BY id DESC', [subject_id]);
-        res.render('admin/manage-questions', { subject: subject.rows[0], questions: questions.rows });
+        // Fetch the subject details
+        const subjectRes = await pool.query('SELECT * FROM subjects WHERE id = $1', [subjectId]);
+        
+        // Fetch all questions for this subject
+        const questionsRes = await pool.query('SELECT * FROM questions WHERE subject_id = $1 ORDER BY id DESC', [subjectId]);
+
+        res.render('admin/manage-questions', {
+            subjects: subjectRes.rows, // The EJS expects an array based on your code
+            questions: questionsRes.rows
+        });
     } catch (err) {
-        res.redirect('/admin/subjects');
+        console.error(err);
+        res.status(500).send("Server Error");
     }
 });
 
-// BULK IMPORT (JSON)
+// BULK IMPORT (TEXTAREA JSON)
 app.post('/admin/questions/bulk-import', isAdmin, async (req, res) => {
-    const { subject_id, json_data } = req.body;
+    const { subject_id, university_id, json_data } = req.body;
     try {
-        const data = JSON.parse(json_data); 
-        for (let q of data) {
+        const questions = JSON.parse(json_data); 
+        
+        for (let q of questions) {
             await pool.query(
-                `INSERT INTO questions (subject_id, question_text, option_a, option_b, option_c, option_d, correct_option, hint) 
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-                [subject_id, q.question, q.a, q.b, q.c, q.d, q.answer, q.hint || null]
+                `INSERT INTO questions 
+                (subject_id, university_id, question_text, option_a, option_b, option_c, option_d, correct_option, explanation, hint) 
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+                [
+                    subject_id, 
+                    university_id || 1, // Defaulting to 1 if not provided
+                    q.question_text, 
+                    q.option_a, 
+                    q.option_b, 
+                    q.option_c, 
+                    q.option_d, 
+                    q.correct_option, 
+                    q.explanation || null,
+                    q.hint || null
+                ]
             );
         }
         res.redirect(`/admin/questions/manage/${subject_id}`);
     } catch (err) {
-        console.error(err);
-        res.status(400).send("Invalid JSON Format.");
+        console.error("JSON Import Error:", err);
+        res.status(400).send("Invalid JSON Format. Please check the structure.");
     }
 });
 
