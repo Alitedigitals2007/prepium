@@ -1,9 +1,11 @@
 const express = require('express');
-
+const nodemailer = require('nodemailer');
 const bcrypt = require('bcryptjs');
 const session = require('express-session');
 require('dotenv').config();
 const app = express();
+
+const crypto = require('crypto');
 const { Pool } = require('pg');
 require('dotenv').config();
 
@@ -13,6 +15,14 @@ const pool = new Pool({
   ssl: {
     rejectUnauthorized: false
   }
+});
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
 });
 
 // Export it if your routes are in a different file, 
@@ -1962,4 +1972,141 @@ app.get('/admin/analytics', isAdmin, async (req, res) => {
     }
 });
 
+app.post('/forgot-password', async (req, res) => {
+    const { email } = req.body;
+    
+    try {
+        // 1. Generate a secure random token
+        const token = crypto.randomBytes(20).toString('hex');
+        const expires = new Date(Date.now() + 3600000); // 1 hour from now
+
+        // 2. Save token to Neon DB
+        const result = await pool.query(
+            'UPDATE users SET reset_password_token = $1, reset_password_expires = $2 WHERE email = $3 RETURNING *',
+            [token, expires, email]
+        );
+
+        if (result.rowCount === 0) {
+            return res.send("If an account exists with that email, a link has been sent.");
+        }
+
+        // 3. Setup Mailer
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+        });
+
+        const mailOptions = {
+            from: '"Prepium Support" <no-reply@prepium.com>',
+            to: email,
+            subject: 'Password Reset Request',
+            html: `
+                <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                    <h2 style="color: #0062ff;">Prepium</h2>
+                    <p>You requested a password reset. Click the button below to continue:</p>
+                    <a href="http://localhost:3000/reset/${token}" 
+                       style="background: #0062ff; color: white; padding: 12px 20px; text-decoration: none; border-radius: 8px; display: inline-block;">
+                       Reset My Password
+                    </a>
+                    <p style="margin-top: 20px; font-size: 12px; color: #777;">This link expires in 1 hour.</p>
+                </div>`
+        };
+
+        await transporter.sendMail(mailOptions);
+        res.send("Check your email for the recovery link.");
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Server Error");
+    }
+});
+// This route Renders the page when the user clicks the email link
+app.get('/reset/:token', async (req, res) => {
+    const { token } = req.params;
+
+    try {
+        // 1. Verify if the token is valid and not expired in Neon
+        const userCheck = await pool.query(
+            'SELECT * FROM users WHERE reset_password_token = $1 AND reset_password_expires > NOW()',
+            [token]
+        );
+
+        if (userCheck.rowCount === 0) {
+            return res.send(`
+                <div style="text-align:center; padding:50px; font-family:sans-serif;">
+                    <h2>Link Expired or Invalid</h2>
+                    <p>This password reset link is no longer valid. Please request a new one.</p>
+                    <a href="/forgot-password" style="color:#0062ff;">Try again</a>
+                </div>
+            `);
+        }
+
+        // 2. If valid, show the reset password EJS and pass the token to it
+        res.render('reset-password', { token });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Internal Server Error");
+    }
+});
+
+app.post('/reset/:token', async (req, res) => {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    try {
+        // 1. Check if token is still valid
+        const userCheck = await pool.query(
+            'SELECT * FROM users WHERE reset_password_token = $1 AND reset_password_expires > NOW()',
+            [token]
+        );
+
+        if (userCheck.rowCount === 0) {
+            return res.status(400).send("Link expired or invalid.");
+        }
+
+        // 2. CRYPT the new password (Salting & Hashing)
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+        // 3. Update the database with the HASHED password
+        await pool.query(
+            'UPDATE users SET password = $1, reset_password_token = NULL, reset_password_expires = NULL WHERE reset_password_token = $2',
+            [hashedPassword, token] 
+        );
+
+        // Success! Redirect to login with a success message
+        res.send(`
+            <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+            <script>
+                window.onload = function() {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Password Updated',
+                        text: 'Your account is now secure. Please login.',
+                        confirmButtonColor: '#0062ff'
+                    }).then(() => {
+                        window.location.href = '/login';
+                    });
+                };
+            </script>
+        `);
+
+    } catch (err) {
+        console.error("Reset Error:", err);
+        res.status(500).send("Could not update password.");
+    }
+});
+
+// This tells the server: "When someone visits /forgot-password, show the page"
+app.get('/forgot-password', (req, res) => {
+    res.render('forgot-password'); 
+});
+
+// This handles the form submission when the user clicks the button
+app.post('/auth/forgot-password', async (req, res) => {
+    const { email } = req.body;
+    // ... your logic to check DB and send email goes here
+    res.json({ success: true, message: "Check your inbox" });
+});
 app.listen(3000, () => console.log('Prepium running on http://localhost:3000'));

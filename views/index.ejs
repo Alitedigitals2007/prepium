@@ -17,7 +17,7 @@
             --border: #edf2f7;
         }
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
 
         body {
             background-color: var(--bg-light);
@@ -28,7 +28,6 @@
             justify-content: center;
         }
 
-        /* Fixed Mobile-App Shell Frame */
         .app-container {
             width: 100%;
             max-width: 430px;
@@ -38,15 +37,15 @@
             flex-direction: column;
             position: relative;
             box-shadow: 0 0 40px rgba(0,0,0,0.03);
-            overflow-y: auto;
-            padding-bottom: 135px; /* Spacing for the fixed action tray */
+            overflow-x: hidden;
+            padding-bottom: 140px; 
         }
 
         /* Nav Bar */
         .nav-bar {
             position: sticky;
             top: 0;
-            background: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             z-index: 1000;
@@ -55,7 +54,6 @@
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid var(--border);
-            animation: slideDown 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
         }
 
         .nav-logo {
@@ -66,7 +64,6 @@
             color: var(--text-dark);
             font-weight: 800;
             font-size: 1.15rem;
-            letter-spacing: -0.5px;
         }
 
         .nav-logo-box {
@@ -78,13 +75,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.05rem;
             font-weight: 800;
-            transition: transform 0.3s ease;
-        }
-
-        .nav-logo:hover .nav-logo-box {
-            transform: scale(1.06) rotate(-5deg);
         }
 
         .nav-menu-btn {
@@ -98,14 +89,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: background 0.2s, transform 0.2s;
-        }
-        
-        .nav-menu-btn:active {
-            transform: scale(0.92);
         }
 
-        /* Floating Slide Overlay Menu */
+        /* Floating Menu */
         .mobile-menu {
             display: none;
             flex-direction: column;
@@ -113,10 +99,8 @@
             border-bottom: 1px solid var(--border);
             padding: 0.8rem 1.5rem;
             gap: 6px;
-            animation: fadeInTop 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
         }
-
-        .mobile-menu.open { display: flex; }
+        .mobile-menu.open { display: flex; animation: fadeInTop 0.3s ease forwards; }
 
         .menu-link {
             text-decoration: none;
@@ -125,27 +109,19 @@
             font-size: 0.9rem;
             padding: 12px 14px;
             border-radius: 14px;
-            transition: 0.2s;
         }
 
-        .menu-link:active {
-            background: var(--brand-soft);
-            color: var(--brand);
-        }
-
-        /* Hero Layout with Visual Entrance */
+        /* Hero */
         .hero {
             padding: 3rem 1.5rem 2.2rem;
             background: linear-gradient(180deg, var(--brand-soft) 0%, #ffffff 100%);
             text-align: center;
             border-bottom-left-radius: 40px;
             border-bottom-right-radius: 40px;
-            animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
         }
 
         .hero-badge {
             display: inline-flex;
-            align-items: center;
             background: white;
             padding: 6px 14px;
             border-radius: 30px;
@@ -155,44 +131,12 @@
             box-shadow: 0 4px 14px rgba(0,0,0,0.03);
             margin-bottom: 1.2rem;
             text-transform: uppercase;
-            letter-spacing: 0.6px;
             border: 1px solid rgba(0, 98, 255, 0.1);
-            animation: pulseIn 2s infinite alternate;
         }
 
-        h1 {
-            font-size: 2.3rem;
-            font-weight: 800;
-            margin: 0;
-            letter-spacing: -1.2px;
-            color: var(--brand);
-            line-height: 1.1;
-            animation: scaleEntrance 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
-        }
+        h1 { font-size: 2.5rem; font-weight: 800; margin: 0; letter-spacing: -1.2px; color: var(--brand); }
+        .tagline { color: var(--text-muted); font-size: 0.98rem; margin-top: 12px; font-weight: 600; }
 
-        .tagline {
-            color: var(--text-muted);
-            font-size: 0.98rem;
-            margin-top: 12px;
-            line-height: 1.5;
-            font-weight: 600;
-            animation: fadeIn 0.8s ease 0.3s both;
-        }
-
-        .stats-bar {
-            display: flex;
-            justify-content: center;
-            gap: 16px;
-            padding: 0.6rem 1rem;
-            font-size: 0.72rem;
-            font-weight: 700;
-            color: var(--success);
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            animation: fadeIn 1s ease 0.4s both;
-        }
-
-        /* Section Reveal Titles */
         .section-title {
             padding: 2.2rem 1.5rem 0.6rem;
             font-size: 0.82rem;
@@ -202,13 +146,7 @@
             font-weight: 800;
         }
 
-        /* Features List & Interactivity */
-        .features-grid {
-            padding: 0.4rem 1.5rem 1rem;
-            display: grid;
-            gap: 0.85rem;
-        }
-
+        .features-grid { padding: 0.4rem 1.5rem; display: grid; gap: 0.85rem; }
         .card {
             background: var(--surface);
             padding: 1.15rem;
@@ -217,180 +155,60 @@
             display: flex;
             align-items: center;
             gap: 16px;
-            transition: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            cursor: pointer;
         }
 
-        .card:active {
-            transform: scale(0.96);
-            border-color: var(--brand);
-            background: #fafcff;
-        }
-
-        .card-icon {
-            font-size: 1.4rem;
-            height: 48px;
-            width: 48px;
-            background: var(--bg-light);
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: 0.3s ease;
-        }
-
-        .card:hover .card-icon {
-            background: var(--brand-soft);
-            transform: rotate(-3deg);
-        }
-
-        .card-info h3 {
-            margin: 0;
-            font-size: 0.95rem;
-            font-weight: 800;
-            color: var(--text-dark);
-        }
-
-        .card-info p {
-            margin: 3px 0 0;
-            font-size: 0.82rem;
-            color: var(--text-muted);
-            font-weight: 600;
-        }
-
-        /* Integrated Animated Step Mechanism */
-        .steps-list {
-            padding: 0.4rem 1.5rem 1rem;
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-        }
-
-        .step-item {
+        /* Testimonials */
+        .testimonials-container { padding: 0.5rem 0 1rem; overflow: hidden; }
+        .testimonial-track {
             display: flex;
             gap: 16px;
-            align-items: flex-start;
+            padding: 0 1.5rem;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            scrollbar-width: none;
         }
-
-        .step-number {
-            background: var(--brand-soft);
-            color: var(--brand);
-            width: 34px;
-            height: 34px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 800;
-            font-size: 0.9rem;
-            flex-shrink: 0;
-            transition: 0.3s ease;
+        .testimonial-track::-webkit-scrollbar { display: none; }
+        .t-card {
+            min-width: 280px;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            scroll-snap-align: center;
         }
+        .t-user { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .t-avatar { width: 36px; height: 36px; background: var(--brand-soft); color: var(--brand); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; }
+        .t-name { font-size: 0.85rem; font-weight: 800; }
+        .t-text { font-size: 0.85rem; color: var(--text-dark); line-height: 1.5; font-style: italic; }
 
-        .step-item:hover .step-number {
-            background: var(--brand);
-            color: white;
-            transform: scale(1.08);
-        }
+        /* FAQ */
+        .faq-list { padding: 0.4rem 1.5rem; display: flex; flex-direction: column; gap: 10px; }
+        .faq-item { border: 1px solid var(--border); border-radius: 18px; background: var(--surface); }
+        .faq-question { padding: 1.2rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: 700; font-size: 0.88rem; }
+        .faq-answer { max-height: 0; overflow: hidden; padding: 0 1.2rem; color: var(--text-muted); font-size: 0.82rem; transition: 0.3s ease; }
+        .faq-item.active .faq-answer { padding-bottom: 1.2rem; max-height: 150px; }
 
-        .step-body h4 {
-            margin: 0 0 4px;
-            font-size: 0.95rem;
-            font-weight: 800;
-            color: var(--text-dark);
-        }
-
-        .step-body p {
-            margin: 0;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            line-height: 1.48;
-            font-weight: 600;
-        }
-
-        /* Bottom Fixed Dynamic Panel */
         .actions {
             padding: 1.25rem 1.5rem;
-            background: rgba(255, 255, 255, 0.85);
+            background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
             position: fixed;
             bottom: 0;
             width: 100%;
             max-width: 430px;
             border-top: 1px solid var(--border);
             z-index: 1000;
-            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
         }
-
         .btn {
-            display: block;
-            width: 100%;
-            padding: 1.15rem;
-            border-radius: 20px;
-            text-decoration: none;
-            font-weight: 800;
-            text-align: center;
-            font-size: 0.95rem;
-            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            display: block; width: 100%; padding: 1.15rem; border-radius: 20px;
+            text-decoration: none; font-weight: 800; text-align: center; font-size: 0.95rem;
         }
+        .btn-primary { background: var(--brand); color: white; margin-bottom: 10px; box-shadow: 0 8px 24px rgba(0, 98, 255, 0.2); }
+        .btn-outline { color: var(--brand); background: var(--brand-soft); }
 
-        .btn-primary {
-            background: var(--brand);
-            color: white;
-            margin-bottom: 10px;
-            box-shadow: 0 8px 24px rgba(0, 98, 255, 0.25);
-        }
-
-        .btn-primary:active { transform: scale(0.965); }
-
-        .btn-outline {
-            color: var(--brand);
-            background: var(--brand-soft);
-            font-weight: 700;
-        }
-        .btn-outline:active { background: #e2edff; }
-
-        /* Animation System Classes */
-        .reveal {
-            opacity: 0;
-            transform: translateY(24px);
-            transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .reveal.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes fadeInTop {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes slideDown {
-            from { transform: translateY(-100%); }
-            to { transform: translateY(0); }
-        }
-
-        @keyframes slideUp {
-            from { transform: translateY(100%); }
-            to { transform: translateY(0); }
-        }
-
-        @keyframes scaleEntrance {
-            from { opacity: 0; transform: scale(0.93); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        @keyframes pulseIn {
-            0% { transform: scale(1); border-color: rgba(0, 98, 255, 0.1); }
-            100% { transform: scale(1.03); border-color: rgba(0, 98, 255, 0.25); }
-        }
+        .reveal { opacity: 0; transform: translateY(20px); transition: 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+        @keyframes fadeInTop { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -401,12 +219,17 @@
                 <div class="nav-logo-box">P</div>
                 <span>Prepium</span>
             </a>
-            <button type="button" class="nav-menu-btn" onclick="toggleMenu()">☰</button>
+            <button class="nav-menu-btn" onclick="toggleMenu()">☰</button>
         </nav>
 
         <div class="mobile-menu" id="mobileMenu">
             <a href="#features" class="menu-link" onclick="toggleMenu()">🛡️ Core Features</a>
-            <a href="#how-it-works" class="menu-link" onclick="toggleMenu()">ℹ️ How It Works</a>
+            <a href="#testimonials" class="menu-link" onclick="toggleMenu()">💬 Testimonials</a>
+            
+            <% if (locals.user && user.role === 'admin') { %>
+                <a href="/admin/analytics" class="menu-link" style="color: var(--brand)">📊 Strategic Intel</a>
+            <% } %>
+
             <a href="/login" class="menu-link">🔐 Sign In</a>
         </div>
 
@@ -416,62 +239,53 @@
             <p class="tagline">The ultimate CBT practice engine for ambitious students.</p>
         </header>
 
-        <div class="stats-bar">
-            <span>● Live Questions</span>
-            <span>● Instant Feedback</span>
-        </div>
-
-        <div class="section-title reveal" id="features">Key Features</div>
+        <div class="section-title reveal" id="features">Why Prepium?</div>
         <section class="features-grid">
             <div class="card reveal">
-                <div class="card-icon">⚡</div>
-                <div class="card-info">
-                    <h3>Fast-Track Mastery</h3>
-                    <p>Experience clean, distraction-free test environments.</p>
+                <div style="font-size: 1.5rem;">⚡</div>
+                <div>
+                    <h3 style="margin:0; font-size:0.95rem;">Fast-Track Mastery</h3>
+                    <p style="margin:3px 0 0; font-size:0.8rem; color:var(--text-muted);">Clean, distraction-free test environments.</p>
                 </div>
             </div>
-
             <div class="card reveal">
-                <div class="card-icon">🎯</div>
-                <div class="card-info">
-                    <h3>Mixed Topics</h3>
-                    <p>Combine multiple topics into a single exam attempt.</p>
-                </div>
-            </div>
-
-            <div class="card reveal">
-                <div class="card-icon">⏱️</div>
-                <div class="card-info">
-                    <h3>Real Conditions</h3>
-                    <p>Simulate exam parameters with customizable timers.</p>
+                <div style="font-size: 1.5rem;">🎯</div>
+                <div>
+                    <h3 style="margin:0; font-size:0.95rem;">Mixed Topics</h3>
+                    <p style="margin:3px 0 0; font-size:0.8rem; color:var(--text-muted);">Combine subjects into one custom attempt.</p>
                 </div>
             </div>
         </section>
 
-        <div class="section-title reveal" id="how-it-works">How It Works</div>
-        <section class="steps-list">
-            <div class="step-item reveal">
-                <div class="step-number">1</div>
-                <div class="step-body">
-                    <h4>Create an Account</h4>
-                    <p>Sign up in seconds to start building custom test sessions matching your curriculum.</p>
+        <div class="section-title reveal" id="testimonials">Success Stories</div>
+        <section class="testimonials-container reveal">
+            <div class="testimonial-track">
+                <div class="t-card">
+                    <div class="t-user">
+                        <div class="t-avatar">AA</div>
+                        <div><div class="t-name">Stephanie A.</div><div style="font-size:0.7rem; color:var(--text-muted)">Physics Dept.</div></div>
+                    </div>
+                    <p class="t-text">"The LaTeX support for physics formulas is perfect. Finally, a platform that understands my curriculum!"</p>
+                </div>
+                <div class="t-card">
+                    <div class="t-user">
+                        <div class="t-avatar">DO</div>
+                        <div><div class="t-name">Daniel O.</div><div style="font-size:0.7rem; color:var(--text-muted)">Pharmacy</div></div>
+                    </div>
+                    <p class="t-text">"Strategic analytics helped me see exactly where I was failing. My scores jumped by 30%."</p>
                 </div>
             </div>
+        </section>
 
-            <div class="step-item reveal">
-                <div class="step-number">2</div>
-                <div class="step-body">
-                    <h4>Customize Practice</h4>
-                    <p>Choose your subjects, set the number of questions, and select a timing format.</p>
-                </div>
+        <div class="section-title reveal">Common Questions</div>
+        <section class="faq-list reveal">
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">Is my payment renewable? <span>+</span></div>
+                <div class="faq-answer">No, its a one-time payment.</div>
             </div>
-
-            <div class="step-item reveal">
-                <div class="step-number">3</div>
-                <div class="step-body">
-                    <h4>Review Analytics</h4>
-                    <p>Analyze in-depth performance stats and breakdown highlights immediately after testing.</p>
-                </div>
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">Can I use it on mobile? <span>+</span></div>
+                <div class="faq-answer">Prepium is fully optimized for mobile browsers with an app-like experience.</div>
             </div>
         </section>
 
@@ -482,21 +296,16 @@
     </div>
 
     <script>
-        function toggleMenu() {
-            const menu = document.getElementById('mobileMenu');
-            menu.classList.toggle('open');
+        function toggleMenu() { document.getElementById('mobileMenu').classList.toggle('open'); }
+        function toggleFaq(el) {
+            const item = el.parentElement;
+            item.classList.toggle('active');
+            el.querySelector('span').innerText = item.classList.contains('active') ? '−' : '+';
         }
-
-        // Apply progressive, scroll-driven staggered reveal
         const reveals = document.querySelectorAll('.reveal');
         const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                }
-            });
+            entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
         }, { threshold: 0.1 });
-
         reveals.forEach(el => observer.observe(el));
     </script>
 </body>
