@@ -4,153 +4,200 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Prepium | Study Library</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
-        :root { --brand: #0062ff; --bg: #f8fafc; --text: #1e293b; --accent: #00d2ff; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        :root { 
+            --brand: #0062ff; 
+            --brand-gradient: linear-gradient(135deg, #0062ff 0%, #0045b5 100%);
+            --bg: #f8fafc; 
+            --text-dark: #0b1437; 
+            --text-sub: #a3aed0;
+            --border: #eef2f6;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; transition: all 0.2s ease; }
         
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; color: var(--text); display: flex; justify-content: center; }
-        .app-shell { width: 100%; max-width: 430px; background: white; min-height: 100vh; position: relative; padding-bottom: 100px; }
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); margin: 0; color: var(--text-dark); 
+            display: flex; justify-content: center; 
+        }
+
+        .app-shell { 
+            width: 100%; max-width: 430px; 
+            background: #ffffff; min-height: 100vh; 
+            position: relative; padding-bottom: 120px;
+            box-shadow: 0 0 40px rgba(0,0,0,0.02);
+        }
 
         /* Header */
-        .top-bar { padding: 1.5rem 1.2rem; display: flex; justify-content: space-between; align-items: center; background: white; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #f1f5f9; }
-        .profile-info { display: flex; align-items: center; gap: 12px; }
-        .avatar { width: 40px; height: 40px; background: linear-gradient(135deg, var(--brand), var(--accent)); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; }
+        header { 
+            padding: 2.5rem 1.5rem 1rem; 
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .avatar-sm { 
+            width: 38px; height: 38px; background: var(--brand-gradient); 
+            border-radius: 12px; color: white; display: flex; 
+            align-items: center; justify-content: center; font-weight: 800; font-size: 0.9rem;
+        }
+        .header-title h1 { font-size: 1.3rem; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
 
         /* Search Bar */
-        .search-container { padding: 1.2rem; }
-        .search-box { 
-            width: 100%; 
-            padding: 1.1rem 1.4rem; 
-            border-radius: 20px; 
-            border: 1px solid #f1f5f9; 
-            background: #f8fafc; 
-            font-family: inherit; 
-            font-size: 0.95rem; 
-            font-weight: 600;
-            transition: all 0.3s;
+        .search-area { padding: 1rem 1.5rem; position: sticky; top: 0; background: white; z-index: 10; }
+        .search-wrapper { position: relative; }
+        .search-wrapper i { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--text-sub); }
+        .search-input {
+            width: 100%; padding: 16px 16px 16px 48px; border-radius: 18px;
+            border: 1px solid var(--border); background: #f8fafc;
+            font-family: inherit; font-weight: 600; font-size: 0.95rem;
         }
-        .search-box:focus { border-color: var(--brand); background: white; box-shadow: 0 10px 25px rgba(0,98,255,0.1); }
+        .search-input:focus { background: white; border-color: var(--brand); box-shadow: 0 10px 25px rgba(0,98,255,0.08); outline: none; }
 
         /* Section Label */
-        .section-label { padding: 0.5rem 1.2rem 0.8rem; font-size: 0.75rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; }
-        .library-container { padding: 0 1.2rem; }
-        
-        /* Subject Card */
-        .subject-card { 
-            background: #ffffff; 
-            border: 1px solid #f1f5f9; 
-            border-radius: 24px; 
-            padding: 1.5rem; 
-            margin-bottom: 16px; 
-            transition: transform 0.2s, box-shadow 0.2s;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        }
-        .subject-card:active { transform: scale(0.98); }
-        
-        .subject-info h3 { margin: 0; font-size: 1.15rem; font-weight: 800; text-transform: capitalize; color: var(--text); }
-        .subject-info p { margin: 4px 0 0; font-size: 0.8rem; color: #64748b; font-weight: 600; }
+        .section-label { padding: 1.5rem 1.5rem 0.8rem; font-size: 0.7rem; font-weight: 800; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; }
 
-        /* Action Buttons */
-        .card-actions { display: flex; gap: 10px; margin-top: 1.2rem; }
-        .btn-action { 
-            flex: 1; 
-            padding: 0.9rem; 
-            border-radius: 16px; 
-            text-align: center; 
-            text-decoration: none; 
-            font-size: 0.8rem; 
-            font-weight: 800; 
-            transition: 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
+        /* Grid */
+        .library-grid { padding: 0 1.5rem; }
+        
+        .subject-card {
+            background: white; border: 1px solid var(--border);
+            border-radius: 24px; padding: 20px; margin-bottom: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.01);
         }
-        .btn-test { background: var(--brand); color: white; }
-        .btn-drive { background: #f1f5f9; color: var(--text); border: 1px solid #e2e8f0; }
 
-        /* Bottom Nav */
-        .bottom-nav { position: fixed; bottom: 0; width: 100%; max-width: 430px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); height: 85px; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #f1f5f9; z-index: 101; }
-        .nav-link { text-decoration: none; color: #94a3b8; font-size: 0.65rem; font-weight: 800; text-align: center; }
-        .nav-link.active { color: var(--brand); }
-        .nav-link i { display: block; font-size: 1.4rem; margin-bottom: 4px; font-style: normal; }
-        .fab { width: 60px; height: 60px; background: var(--brand); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 2rem; transform: translateY(-25px); border: 6px solid white; text-decoration: none; box-shadow: 0 10px 20px rgba(0,98,255,0.3); }
+        .subject-meta { display: flex; align-items: flex-start; gap: 15px; margin-bottom: 1.2rem; }
+        .folder-icon { 
+            width: 48px; height: 48px; background: #f0f7ff; border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--brand); font-size: 1.2rem;
+        }
+
+        .subject-info h3 { margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--text-dark); text-transform: capitalize; }
+        .subject-info p { margin: 4px 0 0; font-size: 0.8rem; color: var(--text-sub); font-weight: 600; }
+
+        /* Actions */
+        .action-row { display: flex; gap: 10px; }
+        .btn-act { 
+            flex: 1; padding: 12px; border-radius: 14px; font-size: 0.8rem; 
+            font-weight: 700; text-decoration: none; text-align: center;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-primary { background: var(--brand); color: white; }
+        .btn-outline { background: white; border: 1.5px solid var(--border); color: var(--text-dark); }
+
+        /* Bottom Floating Navbar */
+        .bottom-nav {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: calc(100% - 40px); max-width: 390px;
+            background: #0b1437; height: 75px; border-radius: 24px;
+            display: flex; justify-content: space-around; align-items: center;
+            box-shadow: 0 12px 30px rgba(11, 20, 55, 0.3); z-index: 1000;
+        }
+        .nav-link { text-decoration: none; color: #a3aed0; text-align: center; }
+        .nav-link.active { color: white; }
+        .nav-link i { font-size: 1.25rem; display: block; margin-bottom: 3px; }
+        .nav-link span { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
+        
+        .nav-center-btn {
+            width: 60px; height: 60px; background: var(--brand); border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 1.6rem; transform: translateY(-28px);
+            border: 5px solid #ffffff; box-shadow: 0 8px 15px rgba(0, 98, 255, 0.4);
+            text-decoration: none;
+        }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-sub); }
+        .empty-state i { font-size: 3rem; margin-bottom: 15px; display: block; }
     </style>
 </head>
 <body>
 
     <div class="app-shell">
-        <header class="top-bar">
-            <div class="profile-info">
-                <div class="avatar"><%= user.fullname ? user.fullname[0].toUpperCase() : 'U' %></div>
-                <div style="font-weight: 800; font-size: 1rem;">Study Library</div>
+        <header>
+            <div class="header-left">
+                <div class="avatar-sm"><%= user.fullname ? user.fullname[0].toUpperCase() : 'U' %></div>
+                <div class="header-title"><h1>Study Library</h1></div>
             </div>
-            <a href="/dashboard" style="text-decoration: none; font-size: 1.2rem;">🏠</a>
+            <a href="/dashboard" style="color: var(--text-dark);"><i class="fas fa-cog"></i></a>
         </header>
 
-        <div class="search-container">
-            <input type="text" id="subjectSearch" class="search-box" placeholder="Search resources..." onkeyup="filterSubjects()">
+        <div class="search-area">
+            <div class="search-wrapper">
+                <i class="fas fa-search"></i>
+                <input type="text" id="subjectSearch" class="search-input" placeholder="Search your courses..." onkeyup="filterSubjects()">
+            </div>
         </div>
 
-        <div class="section-label">Academic Folders</div>
+        <div class="section-label">Academic Resources</div>
         
-        <div class="library-container" id="libraryGrid">
+        <div class="library-grid" id="libraryGrid">
             <% if (subjects && subjects.length > 0) { %>
                 <% subjects.forEach(sub => { %>
                     <div class="subject-card">
-                        <div class="subject-info">
-                            <h3><%= sub.subject %></h3>
-                            <p>Official Material & Practice</p>
+                        <div class="subject-meta">
+                            <div class="folder-icon"><i class="fas fa-folder-open"></i></div>
+                            <div class="subject-info">
+                                <h3><%= sub.subject %></h3>
+                                <p>Practice & Official Guide</p>
+                            </div>
                         </div>
 
-                        <div class="card-actions">
-                            <a href="/setup-test" class="btn-action btn-test">Practice Quiz</a>
-                            
-                            <!-- Check Drive Logic: Uses drive_link or defaults to Google Drive home -->
+                        <div class="action-row">
+                            <a href="/setup-test" class="btn-act btn-primary">
+                                <i class="fas fa-bolt"></i> Practice
+                            </a>
                             <a href="<%= (sub.drive_link && sub.drive_link.trim() !== '') ? sub.drive_link : 'https://drive.google.com/' %>" 
-                               target="_blank" 
-                               class="btn-action btn-drive">
-                                Check Drive 📁
+                               target="_blank" class="btn-act btn-outline">
+                                <i class="fab fa-google-drive"></i> Drive
                             </a>
                         </div>
                     </div>
                 <% }) %>
             <% } else { %>
-                <div style="text-align: center; padding: 4rem 1rem;">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">📚</div>
-                    <p style="color: #94a3b8; font-weight: 600;">No folders available for your institution yet.</p>
+                <div class="empty-state">
+                    <i class="fas fa-books"></i>
+                    <p>No study folders found for your institution.</p>
                 </div>
             <% } %>
         </div>
 
         <nav class="bottom-nav">
-            <a href="/dashboard" class="nav-link"><i>🏠</i>Home</a>
-            <a href="/history" class="nav-link"><i>📜</i>History</a>
-            <a href="/setup-test" class="fab">+</a>
-            <a href="/subjects" class="nav-link active"><i>📚</i>Library</a>
-            <a href="/profile" class="nav-link"><i>👤</i>Profile</a>
+            <a href="/dashboard" class="nav-link">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </a>
+            <a href="/history" class="nav-link">
+                <i class="fas fa-chart-bar"></i>
+                <span>Stats</span>
+            </a>
+            
+            <a href="/setup-test" class="nav-center-btn"><i class="fas fa-plus"></i></a>
+            
+            <a href="/subjects" class="nav-link active">
+                <i class="fas fa-book-open"></i>
+                <span>Library</span>
+            </a>
+            <a href="/profile" class="nav-link">
+                <i class="fas fa-user-circle"></i>
+                <span>Profile</span>
+            </a>
         </nav>
     </div>
 
     <script>
         function filterSubjects() {
-            const input = document.getElementById('subjectSearch');
-            const filter = input.value.toLowerCase();
-            const grid = document.getElementById('libraryGrid');
-            const cards = grid.getElementsByClassName('subject-card');
+            const filter = document.getElementById('subjectSearch').value.toLowerCase();
+            const cards = document.querySelectorAll('.subject-card');
 
-            for (let i = 0; i < cards.length; i++) {
-                let title = cards[i].getElementsByTagName('h3')[0];
-                if (title) {
-                    let textValue = title.textContent || title.innerText;
-                    if (textValue.toLowerCase().indexOf(filter) > -1) {
-                        cards[i].style.display = "";
-                    } else {
-                        cards[i].style.display = "none";
-                    }
-                }
-            }
+            cards.forEach(card => {
+                const title = card.querySelector('h3').textContent.toLowerCase();
+                card.style.display = title.includes(filter) ? "block" : "none";
+            });
         }
     </script>
 </body>

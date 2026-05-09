@@ -372,31 +372,31 @@ app.get('/profile', isAuth, async (req, res) => {
 
 app.get('/admin/dashboard', isAdmin, async (req, res) => {
     try {
-        // 1. Run all counts in parallel for speed
-        const [userCount, premiumCount, subjectCount, questionCount] = await Promise.all([
-            pool.query('SELECT COUNT(*) FROM users'),
-            pool.query('SELECT COUNT(*) FROM users WHERE has_paid = true'),
-            pool.query('SELECT COUNT(*) FROM subjects'),
-            pool.query('SELECT COUNT(*) FROM questions')
+        // 1. Fetch all counts in parallel
+        const [statsResult, recentUsers] = await Promise.all([
+            pool.query(`SELECT 
+                (SELECT COUNT(*) FROM universities) as universities,
+                (SELECT COUNT(*) FROM users) as students,
+                (SELECT COUNT(*) FROM users WHERE has_paid = true) as premium,
+                (SELECT COUNT(*) FROM subjects) as subjects,
+                (SELECT COUNT(*) FROM questions) as questions`),
+            
+            // 2. Fetch 5 most recent signups with their university names
+            pool.query(`
+                SELECT u.fullname, u.email, u.has_paid, u.created_at, univ.name as university_name 
+                FROM users u 
+                LEFT JOIN universities univ ON u.university_id = univ.id 
+                ORDER BY u.id DESC LIMIT 5`)
         ]);
 
-        // 2. Get the 5 most recently registered students
-        const recentUsers = await pool.query(
-            'SELECT fullname, email, has_paid, created_at FROM users ORDER BY id DESC LIMIT 5'
-        );
-
         res.render('admin/dashboard', {
-            stats: {
-                students: userCount.rows[0].count,
-                premium: premiumCount.rows[0].count,
-                subjects: subjectCount.rows[0].count,
-                questions: questionCount.rows[0].count
-            },
+            stats: statsResult.rows[0],
             recentUsers: recentUsers.rows
         });
+
     } catch (err) {
         console.error("Admin Dashboard Error:", err);
-        res.status(500).send("Could not load Admin Dashboard. Check your database tables.");
+        res.status(500).send("Database Error: Verify your table structures (users, universities, subjects, questions).");
     }
 });
 
@@ -1714,6 +1714,251 @@ app.post('/admin/students/toggle-status/:id', isAdmin, async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).send("Error updating payment status");
+    }
+});
+// --- ADMIN DAILY CHALLENGE ROUTES ---
+
+app.get('/admin/daily', async (req, res) => {
+    try {
+        // Use 'pool' instead of 'db'
+        const leaderboard = await pool.query(
+            'SELECT * FROM daily_leaderboard ORDER BY monthly_score DESC LIMIT 30'
+        );
+        
+        // Count total upcoming questions
+        const counts = await pool.query(
+            'SELECT COUNT(*) as total FROM daily_questions WHERE date_scheduled >= CURRENT_DATE'
+        );
+        
+        // Convert string count to number
+        const totalCount = parseInt(counts.rows[0].total) || 0;
+        const daysLeft = Math.floor(totalCount / 10);
+
+        res.render('admin/daily-manage', { 
+            leaderboard: leaderboard.rows, 
+            daysLeft: daysLeft 
+        });
+    } catch (err) {
+        console.error("ARENA_ERROR:", err);
+        res.status(500).send("Error loading admin daily: " + err.message);
+    }
+});
+
+app.post('/admin/add-daily-batch', async (req, res) => {
+    const questions = req.body.questions;
+
+    try {
+        // Find the furthest date currently scheduled
+        const lastDateRes = await pool.query('SELECT MAX(date_scheduled) as max_date FROM daily_questions');
+        
+        let nextDate;
+        if (lastDateRes.rows[0].max_date) {
+            nextDate = new Date(lastDateRes.rows[0].max_date);
+            nextDate.setDate(nextDate.getDate() + 1);
+        } else {
+            // Start from today if no questions exist
+            nextDate = new Date();
+        }
+        
+        const dateStr = nextDate.toISOString().split('T')[0];
+
+        // Insert 10 questions
+        for (let q of questions) {
+            await pool.query(
+                `INSERT INTO daily_questions 
+                (question_text, option_a, option_b, option_c, option_d, correct_option, explanation, date_scheduled) 
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                [q.text, q.a, q.b, q.c, q.d, q.correct, q.explanation || '', dateStr]
+            );
+        }
+
+        res.redirect('/admin/daily?success=true');
+    } catch (err) {
+        console.error("BATCH_INSERT_ERROR:", err);
+        res.status(500).send("Database Error: " + err.message);
+    }
+});
+
+app.post('/admin/bulk-daily', async (req, res) => {
+    try {
+        const rawData = JSON.parse(req.body.jsonData); // Parse the pasted JSON
+        if (!Array.isArray(rawData)) throw new Error("Data must be an array");
+
+        // 1. Find the last scheduled date to start from
+        const lastDateRes = await pool.query('SELECT MAX(date_scheduled) as max_date FROM daily_questions');
+        let nextDate = lastDateRes.rows[0].max_date ? new Date(lastDateRes.rows[0].max_date) : new Date();
+        
+        // Find how many questions are already on that last date to see if it's "full" (10 questions)
+        const lastDateCount = await pool.query('SELECT COUNT(*) FROM daily_questions WHERE date_scheduled = $1', [nextDate]);
+        let currentDayCount = parseInt(lastDateCount.rows[0].count) || 0;
+
+        // If the last day is already full or in the past, move to the next day
+        if (currentDayCount >= 10 || nextDate < new Date().setHours(0,0,0,0)) {
+            nextDate.setDate(nextDate.getDate() + 1);
+            currentDayCount = 0;
+        }
+
+        // 2. Loop through all questions and batch them
+        for (let i = 0; i < rawData.length; i++) {
+            const q = rawData[i];
+            const dateStr = nextDate.toISOString().split('T')[0];
+
+            await pool.query(
+                `INSERT INTO daily_questions 
+                (question_text, option_a, option_b, option_c, option_d, correct_option, explanation, date_scheduled) 
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                [q.text, q.a, q.b, q.c, q.d, q.correct, q.explanation || '', dateStr]
+            );
+
+            currentDayCount++;
+
+            // Every 10 questions, move the date forward
+            if (currentDayCount >= 10) {
+                nextDate.setDate(nextDate.getDate() + 1);
+                currentDayCount = 0;
+            }
+        }
+
+        res.redirect('/admin/daily?bulkSuccess=true');
+    } catch (err) {
+        console.error("BULK_ERROR:", err);
+        res.status(500).send("Invalid JSON format or Database Error: " + err.message);
+    }
+});
+
+app.get('/daily-challenge', async (req, res) => {
+    const sessionUser = req.session.user;
+
+    if (!sessionUser) return res.redirect('/login'); 
+
+    const userId = sessionUser.id; 
+    try {
+        const questionsRes = await pool.query(
+            'SELECT * FROM daily_questions WHERE date_scheduled = CURRENT_DATE ORDER BY id ASC LIMIT 10'
+        );
+
+        const statusRes = await pool.query(
+            'SELECT last_played FROM daily_leaderboard WHERE user_id = $1',
+            [userId]
+        );
+
+        let hasPlayed = false;
+        if (statusRes.rows.length > 0 && statusRes.rows[0].last_played) {
+            const lastPlayed = new Date(statusRes.rows[0].last_played).toDateString();
+            const today = new Date().toDateString();
+            if (lastPlayed === today) hasPlayed = true;
+        }
+
+        // --- UPDATED LEADERBOARD QUERY ---
+        const leaderboardRes = await pool.query(`
+            SELECT 
+                dl.username, 
+                dl.monthly_score, 
+                univ.slug AS university_slug
+            FROM daily_leaderboard dl
+            INNER JOIN users u ON dl.user_id = u.id
+            INNER JOIN universities univ ON u.university_id = univ.id
+            ORDER BY dl.monthly_score DESC 
+            LIMIT 10
+        `);
+
+        res.render('daily-challenge', {
+            questions: questionsRes.rows,
+            hasPlayed,
+            leaderboard: leaderboardRes.rows,
+            user: sessionUser
+        });
+    } catch (err) {
+        console.error("ARENA_GET_ERROR:", err);
+        res.status(500).send("Arena maintenance.");
+    }
+});
+app.post('/api/submit-arena', async (req, res) => {
+    const sessionUser = req.session.user;
+
+    if (!sessionUser) return res.status(401).json({ error: "Please log in" });
+
+    const { score } = req.body;
+    const userId = sessionUser.id;
+    const username = sessionUser.fullname; // matches 'fullname' in your users.json
+
+    try {
+        const check = await pool.query('SELECT last_played FROM daily_leaderboard WHERE user_id = $1', [userId]);
+        if (check.rows.length > 0) {
+            const lastPlayed = new Date(check.rows[0].last_played).toDateString();
+            if (lastPlayed === new Date().toDateString()) {
+                return res.status(403).json({ error: "Already played today" });
+            }
+        }
+
+        await pool.query(
+            `INSERT INTO daily_leaderboard (user_id, username, monthly_score, last_played)
+             VALUES ($1, $2, $3, CURRENT_DATE)
+             ON CONFLICT (user_id) 
+             DO UPDATE SET 
+                monthly_score = daily_leaderboard.monthly_score + EXCLUDED.monthly_score,
+                last_played = CURRENT_DATE,
+                username = EXCLUDED.username`,
+            [userId, username, score]
+        );
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error("ARENA_SUBMIT_ERROR:", err);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+app.get('/admin/analytics', isAdmin, async (req, res) => {
+    try {
+        const [totals, signupTrend, popularPages] = await Promise.all([
+            // 1. Core Metrics for the top cards
+            pool.query(`SELECT 
+                (SELECT COUNT(*) FROM users) as total_users,
+                (SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL '24 hours') as daily_signups,
+                (SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL '7 days') as weekly_signups,
+                (SELECT COUNT(*) FROM users WHERE has_paid = true) as premium_users,
+                (SELECT SUM(quiz_attempts) FROM users) as total_quizzes,
+                (SELECT COUNT(*) FROM daily_leaderboard) as active_battlers`),
+
+            // 2. Signup Trend for the Line Chart
+            pool.query(`SELECT TO_CHAR(created_at, 'DD Mon') as date, COUNT(*) as count 
+                        FROM users 
+                        WHERE created_at > NOW() - INTERVAL '14 days'
+                        GROUP BY date ORDER BY MIN(created_at) ASC`),
+
+            // 3. Most Visited Pages for the Bar Chart/List
+            pool.query(`SELECT page_path, COUNT(*) as views 
+                        FROM page_views 
+                        GROUP BY page_path ORDER BY views DESC LIMIT 6`).catch(() => ({ rows: [] }))
+        ]);
+
+        const statsData = totals.rows[0];
+
+        res.render('admin/analytics', {
+            // Fixes the "signups is not defined" error
+            signups: {
+                daily: statsData.daily_signups || 0,
+                weekly: statsData.weekly_signups || 0
+            },
+            // Fixes the "stats is not defined" error
+            stats: {
+                total_users: statsData.total_users || 0,
+                premium_users: statsData.premium_users || 0,
+                total_quizzes: statsData.total_quizzes || 0,
+                active_battlers: statsData.active_battlers || 0
+            },
+            // Data for the Graphics
+            chartData: {
+                labels: signupTrend.rows.map(r => r.date),
+                values: signupTrend.rows.map(r => r.count)
+            },
+            pages: popularPages.rows,
+            user: req.session.user
+        });
+    } catch (err) {
+        console.error("Analytics Route Error:", err);
+        res.status(500).send("Error loading full analytics suite.");
     }
 });
 

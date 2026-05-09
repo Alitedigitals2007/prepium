@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>The Arena | Prepium</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root { 
+            --brand: #0062ff; 
+            --brand-gradient: linear-gradient(135deg, #0062ff 0%, #0045b5 100%);
+            --accent: #7c3aed;
+            --bg: #f8fafc; 
+            --text-dark: #0b1437; 
+            --text-sub: #a3aed0;
+            --border: #eef2f6;
+            --success: #10b981;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; transition: all 0.2s ease; outline: none; }
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); margin: 0; color: var(--text-dark); 
+            display: flex; justify-content: center; overflow: hidden;
+        }
+
+        .app-shell { 
+            width: 100%; max-width: 430px; 
+            background: #ffffff; height: 100vh; 
+            position: relative; display: flex; flex-direction: column;
+            box-shadow: 0 0 40px rgba(0,0,0,0.02);
+        }
+
+        /* Fixed Header */
+        .header-nav { padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; background: white; z-index: 10; }
+        .logo { font-weight: 800; font-size: 1.2rem; letter-spacing: -1px; color: var(--text-dark); text-decoration: none; }
+        .logo span { color: var(--brand); }
+
+        /* Slide Tabs */
+        .tab-switcher {
+            margin: 0 1.5rem 1rem; background: #f1f5f9; padding: 6px; 
+            border-radius: 16px; display: flex; gap: 5px;
+        }
+        .tab-btn {
+            flex: 1; padding: 10px; border-radius: 12px; border: none;
+            font-weight: 700; font-size: 0.85rem; cursor: pointer;
+            background: transparent; color: var(--text-sub);
+        }
+        .tab-btn.active { background: white; color: var(--brand); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+
+        /* Slider Engine */
+        .slider-viewport { flex: 1; overflow: hidden; width: 100%; }
+        .slider-container { display: flex; width: 200%; height: 100%; transition: transform 0.5s cubic-bezier(0.85, 0, 0.15, 1); }
+        .page { width: 50%; height: 100%; overflow-y: auto; padding: 0 1.5rem 120px; box-sizing: border-box; }
+
+        /* Arena UI */
+        .arena-card {
+            background: white; border-radius: 28px; padding: 24px;
+            border: 1px solid var(--border); text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+        }
+
+        /* Point Bar UI */
+        .point-display { margin-bottom: 20px; text-align: left; }
+        .point-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; }
+        .point-count { font-weight: 800; font-size: 1.2rem; color: var(--brand); }
+        .point-bar-bg { width: 100%; height: 8px; background: #f1f5f9; border-radius: 10px; overflow: hidden; }
+        .point-bar-fill { width: 0%; height: 100%; background: var(--brand-gradient); transition: width 0.4s ease; }
+
+        .timer-wrap {
+            width: 65px; height: 65px; border: 4px solid var(--brand);
+            border-radius: 50%; margin: 0 auto 20px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 1.3rem; color: var(--brand);
+        }
+
+        .option-btn {
+            display: block; width: 100%; padding: 16px; margin: 10px 0;
+            background: #f8fafc; border: 1.5px solid var(--border);
+            border-radius: 16px; font-weight: 600; cursor: pointer; text-align: left;
+            font-family: inherit; font-size: 0.95rem;
+        }
+        .option-btn:active { background: var(--brand); color: white; border-color: var(--brand); }
+
+        /* Leaderboard UI */
+        .lb-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px; background: white; border-radius: 18px;
+            border: 1px solid var(--border); margin-bottom: 10px;
+        }
+        .rank-badge {
+            width: 30px; height: 30px; background: #f1f5f9; border-radius: 8px;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 0.75rem; margin-right: 10px;
+        }
+
+        /* Global Elements */
+        .q-hidden { display: none; }
+        .btn-main {
+            width: 100%; padding: 16px; background: var(--brand-gradient);
+            color: white; border: none; border-radius: 16px;
+            font-weight: 800; font-size: 1rem; cursor: pointer;
+            box-shadow: 0 8px 20px rgba(0, 98, 255, 0.2);
+        }
+
+        /* Floating Nav */
+        .bottom-nav {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: calc(100% - 40px); background: #0b1437; height: 70px; 
+            border-radius: 24px; display: flex; justify-content: space-around; 
+            align-items: center; z-index: 1000;
+        }
+        .nav-link { text-decoration: none; color: #a3aed0; text-align: center; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
+        .nav-link i { font-size: 1.2rem; display: block; margin-bottom: 4px; }
+    </style>
+</head>
+<body>
+
+    <div class="app-shell">
+        <header class="header-nav">
+            <a href="/dashboard" class="logo">The<span>Arena</span></a>
+            <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-sub);">DAILY DEPLOYMENT</div>
+        </header>
+
+        <div class="tab-switcher">
+            <button class="tab-btn active" onclick="switchPage(0, this)">Battleground</button>
+            <button class="tab-btn" onclick="switchPage(1, this)">Rankings</button>
+        </div>
+
+        <div class="slider-viewport">
+            <div class="slider-container" id="mainSlider">
+                
+                <section class="page">
+                    <div class="arena-card">
+                        <% if (hasPlayed) { %>
+                            <div style="padding: 20px 0;">
+                                <i class="fas fa-check-circle" style="font-size: 3.5rem; color: var(--success); margin-bottom: 15px;"></i>
+                                <h2 style="font-weight: 800; margin: 0;">Daily Mission Complete</h2>
+                                <p style="color: var(--text-sub); font-size: 0.9rem; margin: 10px 0 20px;">You've already fought today. Your score is locked in.</p>
+                                
+                                <div style="background: var(--text-dark); padding: 20px; border-radius: 20px;">
+                                    <small style="font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 1px;">New Questions In</small>
+                                    <div id="reset-timer" style="font-size: 1.6rem; font-weight: 800; color: white; margin-top: 5px;">00:00:00</div>
+                                </div>
+                            </div>
+                        <% } else if (questions.length === 0) { %>
+                            <div style="padding: 40px 0;">
+                                <i class="fas fa-hourglass-half" style="font-size: 3rem; color: var(--text-sub); margin-bottom: 15px;"></i>
+                                <h3>Standby...</h3>
+                                <p>Intelligence is preparing today's challenge.</p>
+                            </div>
+                        <% } else { %>
+                            <div id="instructions">
+                                <div style="width: 60px; height: 60px; background: #eff6ff; color: var(--brand); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 1.5rem;">
+                                    <i class="fas fa-bolt"></i>
+                                </div>
+                                <h2 style="font-weight: 800; margin-bottom: 10px;">Combat Protocol</h2>
+                                <div style="text-align: left; margin: 25px 0; color: #475569; font-size: 0.9rem; line-height: 1.8;">
+                                    <div style="display: flex; gap: 12px; margin-bottom: 12px;"><i class="fas fa-stopwatch" style="color: var(--brand); margin-top: 4px;"></i> <b>10 Seconds</b> per question.</div>
+                                    <div style="display: flex; gap: 12px; margin-bottom: 12px;"><i class="fas fa-award" style="color: var(--brand); margin-top: 4px;"></i> <b>Accuracy + Speed</b> determines points.</div>
+                                    <div style="display: flex; gap: 12px;"><i class="fas fa-shield-alt" style="color: var(--brand); margin-top: 4px;"></i> No retakes allowed today.</div>
+                                </div>
+                                <button class="btn-main" onclick="startQuiz()">START CHALLENGE</button>
+                            </div>
+
+                            <div id="quiz-area" class="q-hidden">
+                                <div class="point-display">
+                                    <div class="point-header">
+                                        <span style="font-size: 0.7rem; font-weight: 800; color: var(--text-sub); text-transform: uppercase;">Current Score</span>
+                                        <span class="point-count"><span id="current-score">0</span> pts</span>
+                                    </div>
+                                    <div class="point-bar-bg">
+                                        <div class="point-bar-fill" id="score-bar"></div>
+                                    </div>
+                                </div>
+
+                                <div class="timer-wrap" id="timer">10</div>
+                                <h3 id="q-text" style="font-weight: 800; font-size: 1.1rem; line-height: 1.4; margin-bottom: 25px; min-height: 60px;">Loading...</h3>
+                                <div id="options-container"></div>
+                                
+                                <div style="margin-top: 30px; display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 0.75rem; font-weight: 800; color: var(--text-sub);">MISSION PROGRESS</span>
+                                    <span style="font-size: 0.8rem; font-weight: 800; color: var(--brand);"><span id="q-num">1</span> / 10</span>
+                                </div>
+                            </div>
+                        <% } %>
+                    </div>
+                </section>
+
+                <section class="page">
+                    <div style="background: var(--brand-gradient); color: white; padding: 24px; border-radius: 24px; margin-bottom: 25px; box-shadow: 0 10px 20px rgba(0, 98, 255, 0.15);">
+                        <small style="opacity: 0.8; font-weight: 700; text-transform: uppercase; font-size: 0.65rem; letter-spacing: 1px;">Season Reset In</small>
+                        <div id="monthly-timer" style="font-size: 1.5rem; font-weight: 800; margin-top: 5px;">00d 00h 00m</div>
+                    </div>
+
+                    <h4 style="font-weight: 800; margin: 0 0 15px; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-fire" style="color: #ff4d4d;"></i> Live Rankings
+                    </h4>
+
+                    <% leaderboard.forEach((entry, i) => { %>
+                        <div class="lb-row">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <span class="rank-badge"><%= i+1 %></span>
+                                <div>
+                                    <span style="font-weight: 700; font-size: 0.9rem; display: block; line-height: 1.1;">
+                                        <%= entry.username %>
+                                    </span>
+                                    <span style="font-size: 0.65rem; color: var(--brand); font-weight: 800; text-transform: uppercase;">
+                                        <%= entry.university_slug || 'PREPIUM' %>
+                                    </span>
+                                </div>
+                            </div>
+                            <span style="font-weight: 800; font-size: 0.9rem;"><%= entry.monthly_score %> pts</span>
+                        </div>
+                    <% }) %>
+                </section>
+            </div>
+        </div>
+
+        <nav class="bottom-nav">
+            <a href="/dashboard" class="nav-link"><i class="fas fa-home"></i><span>Home</span></a>
+            <a href="/history" class="nav-link"><i class="fas fa-chart-bar"></i><span>Stats</span></a>
+            <a href="/daily-challenge" class="nav-link" style="color:white;"><i class="fas fa-fire"></i><span>Arena</span></a>
+            <a href="/profile" class="nav-link"><i class="fas fa-user-circle"></i><span>Profile</span></a>
+        </nav>
+    </div>
+
+    <script>
+        function switchPage(index, btn) {
+            const slider = document.getElementById('mainSlider');
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            slider.style.transform = index === 1 ? 'translateX(-50%)' : 'translateX(0)';
+        }
+
+        const questions = <%- JSON.stringify(questions) %>;
+        let currentIdx = 0;
+        let timeLeft = 10;
+        let timerInterval;
+        let score = 0;
+        const maxPossibleScore = 200; // 10 questions * 20 max pts
+
+        function startQuiz() {
+            document.getElementById('instructions').classList.add('q-hidden');
+            document.getElementById('quiz-area').classList.remove('q-hidden');
+            showQuestion();
+        }
+
+        function showQuestion() {
+            if (currentIdx >= questions.length) return submitQuiz();
+            
+            const q = questions[currentIdx];
+            document.getElementById('q-text').innerText = q.question_text;
+            document.getElementById('q-num').innerText = currentIdx + 1;
+            
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+            ['a','b','c','d'].forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = q[`option_${opt}`];
+                btn.onclick = () => selectOption(opt.toUpperCase());
+                container.appendChild(btn);
+            });
+
+            startTimer();
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            timeLeft = 10;
+            const timerEl = document.getElementById('timer');
+            timerEl.innerText = timeLeft;
+            timerEl.style.borderColor = 'var(--brand)';
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerEl.innerText = timeLeft;
+                if(timeLeft <= 3) timerEl.style.borderColor = '#ef4444';
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    selectOption(null); 
+                }
+            }, 1000);
+        }
+
+        function selectOption(choice) {
+            // Accuracy Points (10) + Speed Points (Remaining time)
+            if (choice === questions[currentIdx].correct_option) {
+                const pointsEarned = 10 + timeLeft;
+                score += pointsEarned;
+                updatePointBar();
+            }
+            
+            currentIdx++;
+            showQuestion();
+        }
+
+        function updatePointBar() {
+            document.getElementById('current-score').innerText = score;
+            const percent = (score / maxPossibleScore) * 100;
+            document.getElementById('score-bar').style.width = percent + '%';
+        }
+
+        async function submitQuiz() {
+            clearInterval(timerInterval);
+            document.getElementById('quiz-area').innerHTML = `
+                <div style="padding: 40px 0;">
+                    <i class="fas fa-sync fa-spin" style="font-size: 2.5rem; color: var(--brand); margin-bottom: 20px;"></i>
+                    <h3 style="font-weight:800;">Syncing with Command...</h3>
+                </div>`;
+            
+            try {
+                await fetch('/api/submit-arena', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ score })
+                });
+                location.reload(); 
+            } catch (e) {
+                location.reload();
+            }
+        }
+
+        function updateCountdowns() {
+            const now = new Date();
+            const tomorrow = new Date();
+            tomorrow.setHours(24, 0, 0, 0);
+            const diff = tomorrow - now;
+            const h = Math.floor(diff / 3600000);
+            const m = Math.floor((diff % 3600000) / 60000);
+            const s = Math.floor((diff % 60000) / 1000);
+            const resEl = document.getElementById('reset-timer');
+            if (resEl) resEl.innerText = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+
+            const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+            const mDiff = nextMonth - now;
+            const mD = Math.floor(mDiff / (1000 * 60 * 60 * 24));
+            const mH = Math.floor((mDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const mM = Math.floor((mDiff % (1000 * 60 * 60)) / (1000 * 60));
+            const monEl = document.getElementById('monthly-timer');
+            if (monEl) monEl.innerText = `${mD}d ${mH}h ${mM}m`;
+        }
+        setInterval(updateCountdowns, 1000);
+        updateCountdowns();
+    </script>
+</body>
+</html>

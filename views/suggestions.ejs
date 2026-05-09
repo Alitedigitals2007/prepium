@@ -3,163 +3,214 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Prepium | Support Chat</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <title>Prepium | Support</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
-        :root { --brand: #0062ff; --bg: #f8fafc; --text: #0f172a; --sub: #64748b; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; padding: 0; color: var(--text); display: flex; justify-content: center; }
-        .app-shell { width: 100%; max-width: 430px; background: white; min-height: 100vh; position: relative; box-shadow: 0 0 60px rgba(0,0,0,0.05); padding-bottom: 95px; display: flex; flex-direction: column; }
-        
-        .header-main { padding: 1.8rem 1.5rem 1.2rem; background: linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%); border-bottom: 1px solid #f1f5f9; }
-        .welcome-msg h1 { margin: 0; font-size: 1.35rem; font-weight: 800; letter-spacing: -0.5px; }
-        .brand-subtitle { font-size: 0.72rem; font-weight: 700; color: var(--brand); text-transform: uppercase; margin-top: 3px; display: block; }
-        
-        .chat-shell { flex: 1; padding: 1.2rem; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
-        
-        /* Thread item styling with notification dot integration */
-        .thread-item { 
-            background: #fafafa; 
-            border: 1px solid #f1f5f9; 
-            border-radius: 18px; 
-            padding: 1.1rem; 
-            margin-bottom: 10px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            text-decoration: none; 
-            color: inherit; 
-            position: relative;
-            transition: all 0.2s ease;
+        :root { 
+            --brand: #0062ff; 
+            --brand-gradient: linear-gradient(135deg, #0062ff 0%, #0045b5 100%);
+            --bg: #f8fafc; 
+            --text-dark: #0b1437; 
+            --text-sub: #a3aed0;
+            --border: #eef2f6;
+            --danger: #ff4d4f;
+            --success: #05cd99;
         }
-        .thread-item:hover { border-color: #e2e8f0; background: #f8fafc; }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; transition: all 0.2s ease; }
         
-        .thread-left { display: flex; align-items: center; gap: 12px; }
-        .thread-title { font-size: 0.88rem; font-weight: 800; color: var(--text); margin: 0; }
-        .thread-meta { font-size: 0.72rem; color: var(--sub); display: block; margin-top: 2px; }
-        
-        /* Dot indicating new admin reply */
-        .unread-indicator { 
-            width: 8px; 
-            height: 8px; 
-            background-color: var(--brand); 
-            border-radius: 50%; 
-            display: inline-block; 
-            box-shadow: 0 0 8px rgba(0, 98, 255, 0.6);
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); margin: 0; color: var(--text-dark); 
+            display: flex; justify-content: center; 
         }
+
+        .app-shell { 
+            width: 100%; max-width: 430px; 
+            background: #ffffff; min-height: 100vh; 
+            position: relative; padding-bottom: 110px;
+            box-shadow: 0 0 40px rgba(0,0,0,0.02);
+            display: flex; flex-direction: column;
+        }
+
+        /* Header */
+        .chat-header {
+            padding: 2.5rem 1.5rem 1.2rem;
+            background: white;
+            border-bottom: 1px solid var(--border);
+        }
+        .chat-header h1 { font-size: 1.4rem; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
+        .chat-header p { font-size: 0.75rem; font-weight: 700; color: var(--brand); text-transform: uppercase; margin: 4px 0 0; }
+
+        .content-scroll { flex: 1; padding: 1.5rem; overflow-y: auto; }
+
+        /* Thread List Styling */
+        .thread-card {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 18px; background: #f8fafc; border-radius: 22px;
+            margin-bottom: 12px; text-decoration: none; border: 1px solid transparent;
+        }
+        .thread-card:active { transform: scale(0.98); background: #f1f5f9; }
         
-        .badge { font-size: 0.6rem; font-weight: 800; padding: 4px 10px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.2px; }
-        .Open { background: #d1fae5; color: #065f46; }
-        .Closed { background: #f1f5f9; color: #64748b; }
-
-        /* Inline Message Bubble Interface */
-        .chat-wrapper { flex: 1; display: flex; flex-direction: column; height: 100%; }
-        .chat-area { flex: 1; padding: 1.2rem; background: #fcfcfc; border-radius: 20px; border: 1px solid #f1f5f9; display: flex; flex-direction: column; gap: 10px; margin-bottom: 1rem; max-height: 420px; overflow-y: auto; }
+        .thread-info-box { display: flex; align-items: center; gap: 12px; }
+        .unread-dot { width: 10px; height: 10px; background: var(--brand); border-radius: 50%; box-shadow: 0 0 10px rgba(0,98,255,0.5); }
         
-        .bubble { max-width: 80%; padding: 12px 16px; border-radius: 16px; font-size: 0.85rem; line-height: 1.45; font-weight: 600; }
-        .bubble.user { background: var(--brand); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
-        .bubble.admin { background: #f1f5f9; color: var(--text); align-self: flex-start; border-bottom-left-radius: 4px; }
-        .timestamp { font-size: 0.6rem; display: block; margin-top: 5px; opacity: 0.75; text-align: right; }
-        .bubble.admin .timestamp { color: var(--sub); text-align: left; }
+        .thread-title { font-size: 0.9rem; font-weight: 700; color: var(--text-dark); margin: 0; }
+        .thread-date { font-size: 0.7rem; color: var(--text-sub); font-weight: 600; }
 
-        .chat-input-form { display: flex; gap: 8px; background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 6px; align-items: center; }
-        .chat-input { flex: 1; border: none; font-size: 0.85rem; padding: 10px 12px; font-family: inherit; font-weight: 600; color: var(--text); background: transparent; }
-        .send-btn { background: var(--brand); border: none; color: white; border-radius: 12px; font-size: 0.8rem; font-weight: 800; padding: 10px 16px; cursor: pointer; }
+        .status-pill { font-size: 0.6rem; font-weight: 800; padding: 5px 10px; border-radius: 8px; text-transform: uppercase; }
+        .status-pill.Open { background: #e6fff1; color: var(--success); }
+        .status-pill.Closed { background: #f1f5f9; color: var(--text-sub); }
 
-        /* Compose Thread Form */
-        .form-card { background: white; border: 1px solid #e2e8f0; border-radius: 24px; padding: 1.2rem; margin-bottom: 1.5rem; }
-        .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; font-size: 0.75rem; font-weight: 800; color: var(--text); margin-bottom: 6px; text-transform: uppercase; }
-        .form-control { width: 100%; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; font-family: inherit; font-size: 0.85rem; font-weight: 600; background: #f8fafc; transition: border 0.2s; }
-        .form-control:focus { border-color: var(--brand); background: white; }
+        /* Active Chat View */
+        .chat-container { display: flex; flex-direction: column; height: 100%; }
+        .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--brand); text-decoration: none; font-size: 0.85rem; font-weight: 700; margin-bottom: 1.5rem; }
 
-        .nav-bar { position: fixed; bottom: 0; width: 100%; max-width: 430px; background: rgba(255,255,255,0.98); backdrop-filter: blur(8px); height: 85px; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #f1f5f9; z-index: 1000; padding-bottom: 12px; }
-        .nav-item { text-decoration: none; color: #94a3b8; font-size: 0.65rem; font-weight: 800; text-align: center; }
-        .nav-item.active { color: var(--brand); }
-        .nav-item i { display: block; font-size: 1.35rem; margin-bottom: 4px; font-style: normal; }
-        .center-fab { width: 58px; height: 58px; background: var(--brand); border-radius: 20px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.8rem; transform: translateY(-22px); border: 5px solid white; box-shadow: 0 10px 20px rgba(0,98,255,0.3); text-decoration: none; }
+        .messages-window { 
+            background: #fcfdfe; border: 1px solid var(--border); 
+            border-radius: 28px; padding: 20px; display: flex; 
+            flex-direction: column; gap: 12px; max-height: 400px; overflow-y: auto;
+            margin-bottom: 1.5rem;
+        }
+
+        .bubble { max-width: 85%; padding: 14px 18px; border-radius: 20px; font-size: 0.88rem; font-weight: 600; line-height: 1.5; }
+        .bubble.user { align-self: flex-end; background: var(--brand-gradient); color: white; border-bottom-right-radius: 4px; box-shadow: 0 4px 12px rgba(0,98,255,0.15); }
+        .bubble.admin { align-self: flex-start; background: white; border: 1px solid var(--border); color: var(--text-dark); border-bottom-left-radius: 4px; }
+        
+        .time { font-size: 0.6rem; display: block; margin-top: 6px; opacity: 0.7; }
+
+        /* Input Form */
+        .input-bar { display: flex; gap: 10px; background: #f8fafc; border: 1px solid var(--border); padding: 8px; border-radius: 20px; align-items: center; }
+        .input-bar input { flex: 1; border: none; background: transparent; padding: 10px; font-family: inherit; font-weight: 600; font-size: 0.9rem; }
+        .input-bar input:focus { outline: none; }
+        .send-pill { background: var(--brand); color: white; border: none; padding: 10px 20px; border-radius: 14px; font-weight: 800; font-size: 0.8rem; cursor: pointer; }
+
+        /* New Thread Form */
+        .composer-card { background: white; border: 1px solid var(--border); border-radius: 28px; padding: 20px; margin-bottom: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.02); }
+        .form-label { display: block; font-size: 0.7rem; font-weight: 800; color: var(--text-sub); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+        .input-field { width: 100%; background: #f8fafc; border: 1px solid var(--border); border-radius: 16px; padding: 14px; font-family: inherit; font-weight: 600; margin-bottom: 15px; }
+        .input-field:focus { border-color: var(--brand); outline: none; background: white; }
+
+        /* Bottom Floating Navbar */
+        .bottom-nav {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: calc(100% - 40px); max-width: 390px;
+            background: #0b1437; height: 75px; border-radius: 24px;
+            display: flex; justify-content: space-around; align-items: center;
+            box-shadow: 0 12px 30px rgba(11, 20, 55, 0.3); z-index: 1000;
+        }
+        .nav-link { text-decoration: none; color: #a3aed0; text-align: center; }
+        .nav-link.active { color: white; }
+        .nav-link i { font-size: 1.25rem; display: block; margin-bottom: 3px; }
+        .nav-link span { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
+        
+        .nav-center-btn {
+            width: 60px; height: 60px; background: var(--brand); border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 1.6rem; transform: translateY(-28px);
+            border: 5px solid #ffffff; box-shadow: 0 8px 15px rgba(0, 98, 255, 0.4);
+            text-decoration: none;
+        }
     </style>
 </head>
 <body>
+
     <div class="app-shell">
-        <header class="header-main">
-            <div class="welcome-msg">
-                <h1><%= currentThread ? 'Discussion' : 'Support Chat' %></h1>
-                <span class="brand-subtitle"><%= currentThread ? currentThread.title : 'Direct Messaging' %></span>
-            </div>
+        <header class="chat-header">
+            <h1><%= currentThread ? 'Discussion' : 'Support Chat' %></h1>
+            <p><%= currentThread ? currentThread.title : 'Direct Messaging' %></p>
         </header>
 
-        <div class="chat-shell">
+        <div class="content-scroll">
             <% if (currentThread) { %>
-                <div class="chat-wrapper">
-                    <a href="/suggestions" style="color: var(--brand); font-size: 0.78rem; text-decoration: none; font-weight: 800; margin-bottom: 10px; display: block;">➔ View All Topics</a>
+                <div class="chat-container">
+                    <a href="/suggestions" class="back-link">
+                        <i class="fas fa-arrow-left"></i> All Topics
+                    </a>
                     
-                    <div class="chat-area">
+                    <div class="messages-window">
                         <% activeMessages.forEach(msg => { %>
                             <div class="bubble <%= msg.sender_role.toLowerCase() %>">
                                 <%= msg.message %>
-                                <span class="timestamp"><%= new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) %></span>
+                                <span class="time"><%= new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) %></span>
                             </div>
                         <% }) %>
                     </div>
 
                     <% if (currentThread.status === 'Open') { %>
-                        <form action="/suggestions/reply" method="POST" class="chat-input-form">
+                        <form action="/suggestions/reply" method="POST" class="input-bar">
                             <input type="hidden" name="thread_id" value="<%= currentThread.id %>">
-                            <input type="text" name="message" class="chat-input" placeholder="Type a message reply text here..." autocomplete="off" required>
-                            <button type="submit" class="send-btn">Send</button>
+                            <input type="text" name="message" placeholder="Type your reply..." autocomplete="off" required>
+                            <button type="submit" class="send-pill">Send</button>
                         </form>
                     <% } else { %>
-                        <div style="background: #f1f5f9; padding: 12px; border-radius: 12px; font-size: 0.75rem; text-align: center; color: #64748b; font-weight: 700;">
-                            🔒 This discussion topic has been closed by an admin.
+                        <div style="text-align: center; color: var(--text-sub); font-size: 0.8rem; font-weight: 700; padding: 10px;">
+                            <i class="fas fa-lock"></i> Topic closed by administrator
                         </div>
                     <% } %>
                 </div>
 
             <% } else { %>
-                <div class="form-card">
+                <div class="composer-card">
                     <form action="/suggestions/new" method="POST">
-                        <div class="form-group">
-                            <label>Topic Title</label>
-                            <input type="text" name="title" class="form-control" required placeholder="E.g., Problem loading PHY 302 solutions">
-                        </div>
-                        <div class="form-group">
-                            <label>Describe issue</label>
-                            <textarea name="message" class="form-control" rows="3" required placeholder="Explain your feedback or question..."></textarea>
-                        </div>
-                        <button type="submit" class="send-btn" style="width: 100%; padding: 14px; border-radius: 14px;">Launch Discussion Thread ➔</button>
+                        <label class="form-label">Issue Topic</label>
+                        <input type="text" name="title" class="input-field" placeholder="E.g. Error in Chemistry Module" required>
+                        
+                        <label class="form-label">Details</label>
+                        <textarea name="message" class="input-field" rows="3" placeholder="Tell us more..." required></textarea>
+                        
+                        <button type="submit" class="send-pill" style="width:100%; padding: 16px;">Start Conversation</button>
                     </form>
                 </div>
 
-                <h3 style="font-size: 0.95rem; font-weight: 800; margin: 0 0 10px 0;">All Discussion Threads</h3>
+                <label class="form-label" style="margin-bottom: 15px; display: block;">Past Discussions</label>
+                
                 <% if (threads && threads.length > 0) { %>
                     <% threads.forEach(t => { %>
-                        <a href="/suggestions?threadId=<%= t.id %>" class="thread-item">
-                            <div class="thread-left">
-                                <% if (t.has_unread) { %>
-                                    <span class="unread-indicator" title="New admin message"></span>
-                                <% } %>
+                        <a href="/suggestions?threadId=<%= t.id %>" class="thread-card">
+                            <div class="thread-info-box">
+                                <% if (t.has_unread) { %> <div class="unread-dot"></div> <% } %>
                                 <div>
                                     <h4 class="thread-title"><%= t.title %></h4>
-                                    <span class="thread-meta">Started on <%= new Date(t.created_at).toLocaleDateString() %></span>
+                                    <span class="thread-date"><%= new Date(t.created_at).toLocaleDateString() %></span>
                                 </div>
                             </div>
-                            <span class="badge <%= t.status %>"><%= t.status %></span>
+                            <span class="status-pill <%= t.status %>"><%= t.status %></span>
                         </a>
                     <% }) %>
                 <% } else { %>
-                    <p style="text-align: center; color: var(--sub); font-size: 0.82rem; margin-top: 15px;">No active discussion threads yet.</p>
+                    <div style="text-align: center; padding: 40px 0; color: var(--text-sub);">
+                        <p style="font-weight: 700;">No support threads found.</p>
+                    </div>
                 <% } %>
             <% } %>
         </div>
 
-        <nav class="nav-bar">
-            <a href="/dashboard" class="nav-item"><i>🏠</i>Home</a>
-            <a href="/history" class="nav-item"><i>📊</i>Stats</a>
-            <a href="/setup-test" class="center-fab">+</a>
-            <a href="/notifications" class="nav-item"><i>🔔</i>Alerts</a>
-            <a href="/profile" class="nav-item"><i>👤</i>Profile</a>
+        <nav class="bottom-nav">
+            <a href="/dashboard" class="nav-link">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </a>
+            <a href="/history" class="nav-link">
+                <i class="fas fa-chart-bar"></i>
+                <span>Stats</span>
+            </a>
+            
+            <a href="/setup-test" class="nav-center-btn"><i class="fas fa-plus"></i></a>
+            
+            <a href="/notifications" class="nav-link active">
+                <i class="fas fa-bell"></i>
+                <span>Alerts</span>
+            </a>
+            <a href="/profile" class="nav-link">
+                <i class="fas fa-user-circle"></i>
+                <span>Profile</span>
+            </a>
         </nav>
     </div>
+
 </body>
 </html>

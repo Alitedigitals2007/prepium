@@ -4,324 +4,199 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Prepium | Profile</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
         :root { 
             --brand: #0062ff; 
-            --brand-light: #e6efff;
+            --brand-gradient: linear-gradient(135deg, #0062ff 0%, #0045b5 100%);
             --bg: #f8fafc; 
-            --text: #0f172a; 
-            --sub: #64748b;
-            --border: #edf2f7;
-            --white: #ffffff;
-            --danger: #ef4444;
+            --text-dark: #0b1437; 
+            --text-sub: #a3aed0;
+            --border: #eef2f6;
+            --danger: #ff4d4f;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; transition: all 0.2s ease; }
         
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: var(--bg); 
-            color: var(--text); 
-            display: flex; 
-            justify-content: center;
-            min-height: 100vh;
+            background: var(--bg); margin: 0; color: var(--text-dark); 
+            display: flex; justify-content: center; 
         }
 
         .app-shell { 
-            width: 100%; 
-            max-width: 430px; 
-            background: var(--white); 
-            min-height: 100vh; 
-            position: relative; 
+            width: 100%; max-width: 430px; 
+            background: #ffffff; min-height: 100vh; 
+            position: relative; padding-bottom: 120px;
             box-shadow: 0 0 40px rgba(0,0,0,0.02);
-            display: flex;
-            flex-direction: column;
-            padding-bottom: 100px;
         }
 
-        /* Profile Header */
-        .header-bg { 
-            background: linear-gradient(180deg, #f0f6ff 0%, #ffffff 100%); 
-            padding: 3.5rem 1.5rem 2rem; 
-            text-align: center; 
-            border-bottom: 1px solid var(--border);
+        /* Profile Top Section */
+        .profile-header {
+            background: linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%);
+            padding: 3rem 1.5rem 2rem;
+            text-align: center;
         }
 
-        .avatar-wrapper {
+        .avatar-container {
             position: relative;
-            width: 96px;
-            height: 96px;
+            width: 100px; height: 100px;
             margin: 0 auto 1.2rem;
         }
 
-        .avatar-circle { 
-            width: 100%;
-            height: 100%;
-            background: var(--brand); 
-            color: white; 
-            border-radius: 32px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-size: 2.5rem; 
-            font-weight: 800; 
-            box-shadow: 0 12px 28px rgba(0, 98, 255, 0.22);
+        .avatar-main {
+            width: 100%; height: 100%;
+            background: var(--brand-gradient);
+            color: white; border-radius: 32px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2.2rem; font-weight: 800;
+            box-shadow: 0 15px 35px rgba(0, 98, 255, 0.25);
             border: 4px solid white;
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        .name { 
-            font-size: 1.45rem; 
-            font-weight: 800; 
-            margin-bottom: 4px; 
-            letter-spacing: -0.5px;
-            color: var(--text);
+        .user-name { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.5px; margin: 0; }
+        .user-email { color: var(--text-sub); font-size: 0.9rem; font-weight: 600; margin: 4px 0 15px; }
+
+        .uni-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: white; border: 1px solid var(--border);
+            padding: 8px 16px; border-radius: 100px;
+            font-size: 0.8rem; font-weight: 700; color: var(--text-dark);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+        }
+        .uni-badge i { color: var(--brand); }
+
+        /* Stats Section */
+        .stats-row {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 15px; padding: 0 1.5rem 2rem;
         }
 
-        .email {
-            color: var(--sub);
-            font-size: 0.88rem;
-            font-weight: 600;
-            margin-bottom: 0.4rem;
+        .stat-box {
+            background: white; border: 1px solid var(--border);
+            padding: 20px; border-radius: 24px; text-align: center;
         }
+        .stat-value { font-size: 1.5rem; font-weight: 800; color: var(--text-dark); display: block; }
+        .stat-label { font-size: 0.65rem; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; display: block; }
 
-        /* New University Styling */
-        .university-tag {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            color: var(--brand);
-            font-size: 0.82rem;
-            font-weight: 700;
-            margin-bottom: 1.2rem;
-        }
-
-        .badge { 
-            background: var(--brand-light); 
-            color: var(--brand); 
-            padding: 8px 16px; 
-            border-radius: 12px; 
-            font-size: 0.72rem; 
-            font-weight: 800; 
-            letter-spacing: 0.6px;
-            text-transform: uppercase;
-            display: inline-block;
-        }
-
-        .badge-premium {
-            background: linear-gradient(135deg, #0062ff, #004ecc);
-            color: white;
-            box-shadow: 0 4px 12px rgba(0, 98, 255, 0.15);
-        }
-
-        /* Statistics Area */
-        .stats-grid { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 16px; 
-            padding: 1.5rem; 
-            margin-top: -10px;
-        }
-
-        .stat-card { 
-            background: var(--white); 
-            border: 1px solid var(--border); 
-            padding: 1.25rem 1rem; 
-            border-radius: 24px; 
-            text-align: center; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.01);
-            transition: all 0.2s ease;
-        }
+        /* Menu Section */
+        .menu-group { padding: 0 1.5rem; }
         
-        .stat-val { 
-            display: block; 
-            font-size: 1.6rem; 
-            font-weight: 800; 
-            color: var(--text);
-            letter-spacing: -0.5px;
-        }
-
-        .stat-lab { 
-            font-size: 0.68rem; 
-            font-weight: 700; 
-            color: var(--sub); 
-            text-transform: uppercase; 
-            margin-top: 4px; 
-            letter-spacing: 0.3px;
-        }
-
-        /* Menu Actions Area */
-        .menu-list { padding: 0 1.5rem 1.5rem; }
-
-        .menu-item { 
-            display: flex; 
-            align-items: center; 
-            justify-content: space-between; 
-            padding: 1.1rem 1.4rem; 
-            background: #f8fafc; 
+        .menu-link {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 18px 20px; background: #f8fafc;
+            border-radius: 20px; margin-bottom: 12px;
+            text-decoration: none; color: var(--text-dark);
             border: 1px solid transparent;
-            border-radius: 20px; 
-            margin-bottom: 12px; 
-            text-decoration: none; 
-            color: var(--text);
-            transition: all 0.2s ease;
+        }
+        .menu-link:active { transform: scale(0.98); background: #f1f5f9; }
+
+        .menu-info { display: flex; align-items: center; gap: 15px; font-weight: 700; font-size: 0.95rem; }
+        .menu-icon { 
+            width: 38px; height: 38px; border-radius: 12px; 
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem;
         }
 
-        .menu-item-content {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            font-size: 0.92rem;
-            font-weight: 700;
+        .blue-icon { background: #eef2ff; color: var(--brand); }
+        .red-icon { background: #fff1f2; color: var(--danger); }
+
+        .chevron { color: #cbd5e1; font-size: 0.8rem; }
+
+        /* Bottom Floating Navbar */
+        .bottom-nav {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: calc(100% - 40px); max-width: 390px;
+            background: #0b1437; height: 75px; border-radius: 24px;
+            display: flex; justify-content: space-around; align-items: center;
+            box-shadow: 0 12px 30px rgba(11, 20, 55, 0.3); z-index: 1000;
         }
-
-        .menu-item-content i {
-            font-size: 1.1rem;
-            width: 24px;
-        }
-
-        .menu-item span { 
-            font-size: 0.8rem; 
-            color: var(--sub); 
-        }
-
-        .logout { 
-            color: var(--danger); 
-            background: #fff5f5; 
-        }
-
-        .logout i, .logout span { color: var(--danger) !important; }
-
-        /* Modern Bottom Navigation */
-        .bottom-nav { 
-            position: fixed; 
-            bottom: 0; 
-            width: 100%; 
-            max-width: 430px; 
-            background: white; 
-            height: 84px; 
-            display: flex; 
-            justify-content: space-around; 
-            align-items: center; 
-            border-top: 1px solid var(--border); 
-            padding: 0 12px;
-            z-index: 100;
-        }
-
-        .nav-link { 
-            text-decoration: none; 
-            color: var(--sub); 
-            font-size: 0.65rem; 
-            font-weight: 700; 
-            text-align: center; 
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            transition: all 0.25s ease;
-            width: 60px;
-        }
-
-        .nav-link i {
-            font-size: 1.25rem;
-        }
-
-        .nav-link.active { 
-            color: var(--brand); 
-        }
-
-        .fab { 
-            width: 58px; 
-            height: 58px; 
-            background: var(--brand); 
-            border-radius: 20px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            color: white; 
-            font-size: 1.2rem; 
-            transform: translateY(-22px); 
-            border: 4px solid white; 
-            box-shadow: 0 10px 24px rgba(0, 98, 255, 0.28); 
-            text-decoration: none; 
-            transition: all 0.25s ease;
+        .nav-link { text-decoration: none; color: #a3aed0; text-align: center; }
+        .nav-link.active { color: white; }
+        .nav-link i { font-size: 1.25rem; display: block; margin-bottom: 3px; }
+        .nav-link span { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
+        
+        .nav-center-btn {
+            width: 60px; height: 60px; background: var(--brand); border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 1.6rem; transform: translateY(-28px);
+            border: 5px solid #ffffff; box-shadow: 0 8px 15px rgba(0, 98, 255, 0.4);
+            text-decoration: none;
         }
     </style>
 </head>
 <body>
+
     <div class="app-shell">
-        <div class="header-bg">
-            <div class="avatar-wrapper">
-                <div class="avatar-circle">
+        <div class="profile-header">
+            <div class="avatar-container">
+                <div class="avatar-main">
                     <%= user.fullname.charAt(0).toUpperCase() %>
                 </div>
             </div>
-            <h1 class="name"><%= user.fullname %></h1>
-            <p class="email"><%= user.email %></p>
+            <h1 class="user-name"><%= user.fullname %></h1>
+            <p class="user-email"><%= user.email %></p>
             
-            <!-- University Display -->
-            <div class="university-tag">
+            <div class="uni-badge">
                 <i class="fas fa-university"></i>
-                <%= user.university_name || 'Institution not set' %>
-            </div>
-
-            <span class="badge <%= user.has_paid ? 'badge-premium' : '' %>">
-                <%= user.has_paid ? 'Premium Access' : 'Basic Account' %>
-            </span>
-        </div>
-
-        <div class="stats-grid">
-            <div class="stat-card">
-                <span class="stat-val"><%= stats.total %></span>
-                <span class="stat-lab">Tests Taken</span>
-            </div>
-            <div class="stat-card">
-                <span class="stat-val"><%= stats.average %>%</span>
-                <span class="stat-lab">Avg. Score</span>
+                <%= user.university_name || 'Institution' %>
             </div>
         </div>
 
-        <div class="menu-list">
-            <a href="/history" class="menu-item">
-                <div class="menu-item-content">
-                    <i class="fas fa-chart-line" style="color: var(--brand);"></i>
-                    <span>Performance History</span>
+        <div class="stats-row">
+            <div class="stat-box">
+                <span class="stat-value"><%= stats.total %></span>
+                <span class="stat-label">Total Tests</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-value"><%= stats.average %>%</span>
+                <span class="stat-label">Avg. Score</span>
+            </div>
+        </div>
+
+        <div class="menu-group">
+            <a href="/history" class="menu-link">
+                <div class="menu-info">
+                    <div class="menu-icon blue-icon"><i class="fas fa-chart-pie"></i></div>
+                    Detailed Analytics
                 </div>
-                <span><i class="fas fa-chevron-right"></i></span>
+                <i class="fas fa-chevron-right chevron"></i>
             </a>
-            <a href="/logout" class="menu-item logout">
-                <div class="menu-item-content">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Sign Out</span>
+
+            <a href="/logout" class="menu-link" style="margin-top: 20px;">
+                <div class="menu-info" style="color: var(--danger);">
+                    <div class="menu-icon red-icon"><i class="fas fa-power-off"></i></div>
+                    Sign Out
                 </div>
-                <span><i class="fas fa-chevron-right"></i></span>
+                <i class="fas fa-chevron-right chevron"></i>
             </a>
         </div>
 
         <nav class="bottom-nav">
             <a href="/dashboard" class="nav-link">
                 <i class="fas fa-home"></i>
-                Home
+                <span>Home</span>
             </a>
             <a href="/history" class="nav-link">
-                <i class="fas fa-history"></i>
-                History
+                <i class="fas fa-chart-bar"></i>
+                <span>Stats</span>
             </a>
-            <a href="/setup-test" class="fab">
-                <i class="fas fa-plus"></i>
-            </a>
+            
+            <a href="/setup-test" class="nav-center-btn"><i class="fas fa-plus"></i></a>
+            
             <a href="/notifications" class="nav-link">
                 <i class="fas fa-bell"></i>
-                Alerts
+                <span>Alerts</span>
             </a>
             <a href="/profile" class="nav-link active">
-                <i class="fas fa-user"></i>
-                Me
+                <i class="fas fa-user-circle"></i>
+                <span>Profile</span>
             </a>
         </nav>
     </div>
+
 </body>
 </html>

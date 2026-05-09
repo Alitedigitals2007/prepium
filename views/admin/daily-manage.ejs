@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Arena Manager | Prepium</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand: #0062ff;
+            --brand-soft: #eef4ff;
+            --text-dark: #0f172a;
+            --text-sub: #64748b;
+            --border: #e2e8f0;
+            --danger: #ef4444;
+            --success: #22c55e;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: #f8fafc;
+            color: var(--text-dark);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .admin-wrapper {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .status-pill {
+            padding: 8px 16px;
+            border-radius: 99px;
+            font-size: 0.8rem;
+            font-weight: 800;
+        }
+
+        .status-pill.success { background: #dcfce7; color: #166534; }
+        .status-pill.danger { background: #fee2e2; color: #991b1b; }
+
+        /* Section Cards */
+        .glass-card {
+            background: white;
+            padding: 30px;
+            border-radius: 24px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            border: 1px solid var(--border);
+            margin-bottom: 30px;
+        }
+
+        .q-card {
+            background: #fdfdff;
+            border: 1.5px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .q-card h4 {
+            margin-top: 0;
+            color: var(--brand);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            font-family: inherit;
+            font-weight: 600;
+            margin-bottom: 12px;
+            box-sizing: border-box;
+        }
+
+        input:focus, textarea:focus { border-color: var(--brand); outline: none; background: #fff; }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .btn-publish {
+            background: var(--brand);
+            color: white;
+            border: none;
+            padding: 16px 40px;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+            transition: opacity 0.2s;
+        }
+
+        .btn-publish:hover { opacity: 0.9; }
+        
+        .btn-bulk { background: #1e293b; margin-top: 15px; }
+
+        /* Leaderboard */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th { text-align: left; font-size: 0.75rem; color: var(--text-sub); text-transform: uppercase; padding: 12px; border-bottom: 2px solid #f1f5f9; }
+        td { padding: 15px 12px; font-weight: 700; border-bottom: 1px solid #f1f5f9; }
+        .rank-num { color: var(--brand); font-weight: 800; }
+
+        .alert-success {
+            background: #dcfce7;
+            color: #166534;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            font-weight: 700;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="admin-wrapper">
+        <header>
+            <div>
+                <h1 style="margin:0; font-weight:800;">Daily Arena Admin</h1>
+                <p style="color: var(--text-sub); margin: 5px 0 0;">Queue and manage the speed challenges</p>
+            </div>
+            <div class="status-pill <%= daysLeft < 2 ? 'danger' : 'success' %>">
+                <%= daysLeft %> Days of Content Ready
+            </div>
+        </header>
+
+        <% if (locals.success) { %>
+            <div class="alert-success">🚀 Questions processed and added to the queue!</div>
+        <% } %>
+
+        <section class="glass-card">
+            <h2 style="font-size: 1.2rem; margin-top: 0;">📦 Bulk JSON Import</h2>
+            <p style="color: var(--text-sub); font-size: 0.85rem; margin-bottom: 15px;">
+                Paste a JSON array. The system will auto-batch them (10 per day) starting from the next available date.
+            </p>
+            <form action="/admin/bulk-daily" method="POST">
+                <textarea name="jsonData" placeholder='[{"text": "Sample Q?", "a": "Opt1", "b": "Opt2", "c": "Opt3", "d": "Opt4", "correct": "A", "explanation": "Why"}]' 
+                          style="height: 150px; font-family: monospace; font-size: 0.8rem; background: #f1f5f9;"></textarea>
+                <button type="submit" class="btn-publish btn-bulk">Process & Auto-Schedule</button>
+            </form>
+        </section>
+
+        <form action="/admin/add-daily-batch" method="POST" class="glass-card">
+            <h2 style="font-size: 1.2rem; margin-top: 0;">✍️ Manual 10-Question Batch</h2>
+            <p style="color: var(--text-sub); font-size: 0.85rem; margin-bottom: 20px;">Manual upload for <strong>Day <%= daysLeft + 1 %></strong></p>
+            
+            <div id="q-container"></div>
+
+            <button type="submit" class="btn-publish">🚀 Publish Manual Batch</button>
+        </form>
+
+        <section class="leaderboard-container glass-card">
+            <h2 style="margin-top:0; font-size: 1.2rem;">🏆 Monthly Leaderboard (Top 30)</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Student Name</th>
+                        <th>Monthly Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (leaderboard.length > 0) { %>
+                        <% leaderboard.forEach((user, i) => { %>
+                            <tr>
+                                <td class="rank-num">#<%= i + 1 %></td>
+                                <td><%= user.username %></td>
+                                <td><%= user.monthly_score.toLocaleString() %> pts</td>
+                            </tr>
+                        <% }) %>
+                    <% } else { %>
+                        <tr>
+                            <td colspan="3" style="text-align:center; color:var(--text-sub);">No records for this month yet.</td>
+                        </tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </section>
+    </div>
+
+    <script>
+        // Inject 10 question blocks for manual form
+        const container = document.getElementById('q-container');
+        for (let i = 0; i < 10; i++) {
+            const card = document.createElement('div');
+            card.className = 'q-card';
+            card.innerHTML = `
+                <h4>Question ${i + 1}</h4>
+                <textarea name="questions[${i}][text]" placeholder="Enter the challenge question..." rows="2" required></textarea>
+                <div class="options-grid">
+                    <input type="text" name="questions[${i}][a]" placeholder="Option A" required>
+                    <input type="text" name="questions[${i}][b]" placeholder="Option B" required>
+                    <input type="text" name="questions[${i}][c]" placeholder="Option C" required>
+                    <input type="text" name="questions[${i}][d]" placeholder="Option D" required>
+                </div>
+                <div style="display: flex; gap: 20px; align-items: center;">
+                    <div style="flex: 1;">
+                        <label style="font-size: 0.7rem; font-weight: 800; color: var(--text-sub);">CORRECT OPTION</label>
+                        <select name="questions[${i}][correct]">
+                            <option value="A">Option A</option><option value="B">Option B</option>
+                            <option value="C">Option C</option><option value="D">Option D</option>
+                        </select>
+                    </div>
+                    <div style="flex: 2;">
+                        <label style="font-size: 0.7rem; font-weight: 800; color: var(--text-sub);">EXPLANATION</label>
+                        <input type="text" name="questions[${i}][explanation]" placeholder="Why is this correct?">
+                    </div>
+                </div>
+            `;
+            container.appendChild(card);
+        }
+    </script>
+</body>
+</html>

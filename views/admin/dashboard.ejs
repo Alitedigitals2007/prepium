@@ -97,7 +97,7 @@
         /* Stats Grid */
         .stats-grid { 
             display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); 
             gap: 20px; 
             margin-bottom: 2.5rem; 
         }
@@ -115,7 +115,7 @@
             letter-spacing: 0.5px; 
         }
         .stat-value { 
-            font-size: 2rem; 
+            font-size: 1.8rem; 
             font-weight: 800; 
             margin-top: 6px; 
             display: block; 
@@ -149,12 +149,13 @@
             
             <div class="nav-group">
                 <a href="/admin/dashboard" class="nav-item active">🏠 Dashboard</a>
-                <!-- New University Management Link -->
+                <a href="/admin/analytics" class="nav-item">📈 Analytics</a> 
                 <a href="/admin/universities" class="nav-item">🏛️ Universities</a>
                 <a href="/admin/subjects" class="nav-item">📚 Manage Subjects</a>
-                <a href="/admin/notifications" class="nav-item">🔔 Notifications</a>
+                <a href="/admin/daily" class="nav-item">🔥 Daily Arena</a> 
                 <a href="/admin/students" class="nav-item">👥 Students</a>
                 <a href="/admin/suggestions" class="nav-item">💡 Suggestions</a>
+                <a href="/admin/notifications" class="nav-item">🔔 Notifications</a>
             </div>
         </div>
 
@@ -163,7 +164,6 @@
 
     <main class="main">
         <div class="welcome">
-            <!-- Dynamic Personalization -->
             <h1>Alite's Command Center</h1>
             <p>Overview of Prepium performance and growth.</p>
         </div>
@@ -207,7 +207,6 @@
                             <% recentUsers.forEach(user => { %>
                             <tr>
                                 <td><b><%= user.fullname %></b><br><small style="color: #94a3b8;"><%= user.email %></small></td>
-                                <!-- Shows which school they attend -->
                                 <td><span style="font-weight: 600;"><%= user.university_name || 'Not Specified' %></span></td>
                                 <td>
                                     <span class="status <%= user.has_paid ? 'status-paid' : 'status-free' %>">
