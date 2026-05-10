@@ -1996,21 +1996,24 @@ app.post('/forgot-password', async (req, res) => {
             auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
         });
 
-        const mailOptions = {
-            from: '"Prepium Support" <no-reply@prepium.com>',
-            to: email,
-            subject: 'Password Reset Request',
-            html: `
-                <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-                    <h2 style="color: #0062ff;">Prepium</h2>
-                    <p>You requested a password reset. Click the button below to continue:</p>
-                    <a href="http://localhost:3000/reset/${token}" 
-                       style="background: #0062ff; color: white; padding: 12px 20px; text-decoration: none; border-radius: 8px; display: inline-block;">
-                       Reset My Password
-                    </a>
-                    <p style="margin-top: 20px; font-size: 12px; color: #777;">This link expires in 1 hour.</p>
-                </div>`
-        };
+       // Replace your old link with this dynamic one:
+const resetLink = `${req.protocol}://${req.get('host')}/reset/${token}`;
+
+const mailOptions = {
+    from: '"Prepium Support" <no-reply@prepium.com>',
+    to: email,
+    subject: 'Password Reset Request',
+    html: `
+        <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #0062ff;">Prepium</h2>
+            <p>You requested a password reset. Click the button below to continue:</p>
+            <a href="${resetLink}" 
+               style="background: #0062ff; color: white; padding: 12px 20px; text-decoration: none; border-radius: 8px; display: inline-block;">
+               Reset My Password
+            </a>
+            <p style="margin-top: 20px; font-size: 12px; color: #777;">This link expires in 1 hour.</p>
+        </div>`
+};
 
         await transporter.sendMail(mailOptions);
         res.send("Check your email for the recovery link.");
