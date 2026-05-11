@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Join Alite's Hub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --brand: #0062ff; --bg: #f8fafc; --text: #0f172a; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; display: flex; justify-content: center; min-height: 100vh; padding: 20px; color: var(--text); }
+        .shell { width: 100%; max-width: 420px; background: white; padding: 2.5rem 1.8rem; border-radius: 32px; box-shadow: 0 10px 40px rgba(0,0,0,0.04); height: fit-content; }
+        .logo { color: var(--brand); font-weight: 800; font-size: 1.3rem; margin-bottom: 10px; display: block; text-decoration: none; }
+        h1 { font-size: 1.5rem; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
+        .subtitle { color: #64748b; font-size: 0.85rem; margin: 8px 0 25px; font-weight: 600; line-height: 1.4; }
+        
+        .contact-card { background: #0f172a; color: white; padding: 20px; border-radius: 20px; margin-bottom: 15px; text-align: center; }
+        .contact-card span { display: block; font-size: 0.7rem; text-transform: uppercase; opacity: 0.7; margin-bottom: 5px; font-weight: 800; }
+        .contact-card h2 { margin: 0; font-size: 1.4rem; letter-spacing: 1px; }
+        
+        .step-box { background: #f1f5f9; padding: 15px; border-radius: 20px; margin-bottom: 15px; border: 1px solid #e2e8f0; }
+        .step-title { font-size: 0.7rem; font-weight: 800; color: var(--brand); text-transform: uppercase; margin-bottom: 8px; display: block; }
+        
+        .upload-area { border: 2px dashed #cbd5e1; padding: 20px; border-radius: 20px; text-align: center; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .hidden { display: none; }
+        .locked { opacity: 0.4; pointer-events: none; filter: blur(3px); }
+        
+        .vcard-btn { display: block; width: 100%; background: var(--brand); color: white; text-decoration: none; padding: 1.1rem; border-radius: 18px; font-size: 0.9rem; font-weight: 800; border: none; cursor: pointer; }
+        .form-group { margin-bottom: 1.2rem; }
+        label { display: block; font-size: 0.7rem; font-weight: 800; margin-bottom: 6px; text-transform: uppercase; color: #64748b; }
+        input, select { width: 100%; padding: 1.1rem; border-radius: 16px; border: 1.5px solid #e2e8f0; background: #f8fafc; font-size: 0.95rem; font-weight: 600; outline: none; }
+        .btn-primary { background: #0f172a; color: white; border: none; width: 100%; padding: 1.1rem; border-radius: 18px; font-size: 1rem; font-weight: 800; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <a href="/" class="logo">PREPIUM.</a>
+        <h1>Step 1: Save Contact 📱</h1>
+        <p class="subtitle">Please save the admin contact details below to your phone to unlock the form.</p>
+
+        <div class="contact-card">
+            <span>Name</span>
+            <h2 style="margin-bottom: 15px;">Alite Prepium</h2>
+            <span>WhatsApp Number</span>
+            <h2>09154681851</h2>
+        </div>
+
+        <button id="saveBtn" class="vcard-btn" onclick="showUpload()">
+            I have saved the contact ➔
+        </button>
+
+        <div id="uploadSection" class="step-box hidden" style="margin-top: 20px;">
+            <span class="step-title">Step 2: Verification</span>
+            <p style="font-size: 0.8rem; font-weight: 700; margin-bottom: 10px;">Upload a screenshot of the saved contact:</p>
+            <div class="upload-area" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                <p id="uploadText" style="font-size: 0.8rem; font-weight: 700; margin: 0;">📸 Tap to select screenshot</p>
+                <input type="file" id="fileInput" class="hidden" accept="image/*" onchange="unlockForm()">
+            </div>
+        </div>
+
+        <div id="registrationForm" class="locked">
+            <span class="step-title" style="margin-top: 20px;">Step 3: Registration</span>
+            <form action="/submit-community-lead" method="POST">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" name="fullName" placeholder="Enter your name" required>
+                </div>
+
+                <div class="form-group">
+                    <label>WhatsApp Number</label>
+                    <input type="tel" name="whatsappNumber" placeholder="08100000000" required>
+                </div>
+
+                <div class="form-group">
+                    <label>University</label>
+                    <select name="schoolId" id="schoolSelect" onchange="checkSchool()" required>
+                        <option value="">-- Select University --</option>
+                        <option value="0">General Community (All Schools)</option>
+                        <% schools.forEach(school => { %>
+                            <option value="<%= school.id %>"><%= school.school_name %></option>
+                        <% }) %>
+                        <option value="other">My school isn't listed</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="customSchoolGroup" style="display: none;">
+                    <label>Type School Name</label>
+                    <input type="text" name="otherSchool" placeholder="Enter school name">
+                </div>
+
+                <button type="submit" class="btn-primary">Get Access Link ➔</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function showUpload() {
+            document.getElementById('uploadSection').classList.remove('hidden');
+            document.getElementById('saveBtn').style.display = "none";
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+
+        function unlockForm() {
+            const uploadText = document.getElementById('uploadText');
+            uploadText.innerHTML = "⌛ Verifying screenshot...";
+            setTimeout(() => {
+                uploadText.innerHTML = "✅ Verified!";
+                document.getElementById('registrationForm').classList.remove('locked');
+            }, 1500);
+        }
+
+        function checkSchool() {
+            const select = document.getElementById('schoolSelect');
+            document.getElementById('customSchoolGroup').style.display = select.value === 'other' ? 'block' : 'none';
+        }
+    </script>
+</body>
+</html>

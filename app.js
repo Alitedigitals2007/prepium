@@ -2112,4 +2112,110 @@ app.post('/auth/forgot-password', async (req, res) => {
     // ... your logic to check DB and send email goes here
     res.json({ success: true, message: "Check your inbox" });
 });
+// GET: Show the Community Form
+app.get('/join', async (req, res) => {
+    try {
+        // Fetch schools to populate the dropdown
+        const schools = await pool.query('SELECT id, school_name FROM school_groups ORDER BY school_name ASC');
+        res.render('community-join', { schools: schools.rows });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Error loading page");
+    }
+});
+
+app.get('/admin/community', async (req, res) => {
+    try {
+        // Fetch all student leads and join with school names
+        const leadsResult = await pool.query(`
+            SELECT l.*, s.school_name as registered_school 
+            FROM student_leads l 
+            LEFT JOIN school_groups s ON l.school_id = s.id 
+            ORDER BY l.created_at DESC
+        `);
+
+        // Fetch all existing school groups for the stats and table
+        const schoolsResult = await pool.query('SELECT * FROM school_groups ORDER BY school_name ASC');
+        
+        // Render the admin page with the data
+        res.render('admin-community', { 
+            leads: leadsResult.rows, 
+            schools: schoolsResult.rows 
+        });
+    } catch (err) {
+        console.error("Admin Community Error:", err);
+        res.status(500).send("Error loading the admin dashboard.");
+    }
+});
+
+app.post('/admin/add-school', async (req, res) => {
+    const { schoolName, slug, groupLink } = req.body;
+    try {
+        await pool.query(
+            'INSERT INTO school_groups (school_name, slug, group_link) VALUES ($1, $2, $3)',
+            [schoolName, slug.toUpperCase(), groupLink]
+        );
+        res.redirect('/admin/community'); // Refresh the dashboard to see the new school
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Failed to add school. Ensure the name is unique.");
+    }
+});
+
+// POST: Admin add a new school link
+app.post('/admin/add-school', async (req, res) => {
+    const { schoolName, slug, groupLink } = req.body;
+    try {
+        await pool.query(
+            'INSERT INTO school_groups (school_name, slug, group_link) VALUES ($1, $2, $3)',
+            [schoolName, slug.toUpperCase(), groupLink]
+        );
+        res.redirect('/admin/community');
+    } catch (err) {
+        res.status(500).send("Error adding school");
+    }
+});
+
+// GET: Export Leads as CSV (Formatted for Alite's Contact List)
+app.get('/admin/export-leads', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT l.full_name, COALESCE(s.slug, 'GEN') as slug 
+            FROM student_leads l 
+            LEFT JOIN school_groups s ON l.school_id = s.id
+        `);
+
+        // CSV Header
+        let csvContent = "First Name,Last Name,Mobile Phone\n";
+
+        result.rows.forEach(row => {
+            // Format: Alite [SLUG] [Name]
+            // We put the whole thing in "First Name" for easy searching on WhatsApp
+            const contactName = `${row.slug} :${row.full_name}`;
+            csvContent += `"${contactName}",,""\n`;
+        });
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename=Alite_Leads_Export.csv');
+        res.status(200).send(csvContent);
+    } catch (err) {
+        res.status(500).send("Export failed");
+    }
+});
+
+app.get('/download-vcard', (req, res) => {
+    const vcardContent = `BEGIN:VCARD
+VERSION:3.0
+FN:Alite
+TEL;TYPE=CELL:+2349154681851
+END:VCARD`;
+
+    res.set({
+        'Content-Type': 'text/vcard',
+        'Content-Disposition': 'attachment; filename="Alite.vcf"',
+    });
+
+    res.send(vcardContent);
+});
+
 app.listen(3000, () => console.log('Prepium running on http://localhost:3000'));
