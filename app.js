@@ -12,11 +12,11 @@ const crypto = require('crypto');
 const { Pool } = require('pg');
 require('dotenv').config();
 
-// Import the correct class name from the SDK
-const { GoogleGenAI } = require('@google/generative-ai');
+// Import the correct class name: GoogleGenerativeAI (not GoogleGenAI)
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// Initialize it properly by passing your API key
-const ai = new GoogleGenAI(process.env.GEMINI_API_KEY);
+// Initialize it with the correct class constructor
+const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const pdfToText = require('pdf-to-text');
 // Configure Multer to save uploaded files temporarily on your disk
 
@@ -2295,8 +2295,7 @@ app.post('/generate-ai-quiz', isStudent, upload.single('lecture_note'), async (r
             ]
         `;
 
-        // Get the structural generative model instance safely
-        const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         const response = await model.generateContent([
             promptText,
