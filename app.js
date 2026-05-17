@@ -12,8 +12,11 @@ const crypto = require('crypto');
 const { Pool } = require('pg');
 require('dotenv').config();
 
+// Import the correct class name from the SDK
 const { GoogleGenAI } = require('@google/generative-ai');
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+// Initialize it properly by passing your API key
+const ai = new GoogleGenAI(process.env.GEMINI_API_KEY);
 const pdfToText = require('pdf-to-text');
 // Configure Multer to save uploaded files temporarily on your disk
 
