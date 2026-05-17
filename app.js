@@ -2356,7 +2356,18 @@ app.post('/save-ai-quiz-results', isStudent, async (req, res) => {
     }
 });
 // Add this configuration property export to boost execution parameters if supported
-export const config = {
-  maxDuration: 60, // Sets maximum execution window to 60 seconds
+const config = {
+  maxDuration: 60,
 };
-app.listen(3000, () => console.log('Prepium running on http://localhost:3000'));
+
+// Wrap your local listener so it doesn't try to bind a port on Vercel
+if (process.env.NODE_ENV !== 'production') {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+        console.log(`Server running locally on port ${PORT}`);
+    });
+}
+
+// THE CRITICAL FIX: Export the Express app so Vercel can run it as a serverless function
+module.exports = app;
+module.exports.config = config;
