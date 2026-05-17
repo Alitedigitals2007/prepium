@@ -7,11 +7,11 @@ const app = express();
 const multer = require('multer');
 
 const fs = require('fs');
-const { GoogleGenAI } = require('@google/genai');
+const { GoogleGenAI } = require('@google/generative-ai');
 const crypto = require('crypto');
 const { Pool } = require('pg');
 require('dotenv').config();
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const ai = new GoogleGenAI(process.env.GEMINI_API_KEY);
 const pdfToText = require('pdf-to-text');
 // Configure Multer to save uploaded files temporarily on your disk
 
@@ -2268,19 +2268,16 @@ app.post('/generate-ai-quiz', isStudent, upload.single('lecture_note'), async (r
             return res.status(400).json({ success: false, message: "No file uploaded." });
         }
 
-        // Capture user configuration choices from the form layout safely
         const numQuestions = parseInt(req.body.num_questions) || 5;
         const quizDuration = parseInt(req.body.quiz_duration) || 5; 
         const originalFileName = req.file.originalname;
 
-        console.log(`[AI ENGINE] Processing "${originalFileName}" | Config: ${numQuestions} Questions, ${quizDuration} Mins`);
+        console.log(`[AI ENGINE] Processing "${originalFileName}" via Stable SDK`);
 
-        // Convert the memory buffer directly to base64—no disk read/write required (Serverless safe)
         const pdfBase64 = req.file.buffer.toString("base64");
 
-        // Inject custom configurations directly into the engineering prompt guidelines
         const promptText = `
-            You are an expert school examiner. Analyze the attached PDF document. Even if it contains scanned images, read the content and generate EXACTLY ${numQuestions} unique multiple-choice questions (MCQs) for an interactive practice test based strictly on its contents.
+            You are an expert school examiner. Analyze the attached PDF document. Generate EXACTLY ${numQuestions} unique multiple-choice questions (MCQs) for an interactive practice test based strictly on its contents.
             
             Return the output ONLY as a raw, valid JSON array matching this structure exactly:
             [
@@ -2293,28 +2290,25 @@ app.post('/generate-ai-quiz', isStudent, upload.single('lecture_note'), async (r
             ]
         `;
 
-        console.log("Sending payload directly to Gemini Engine via structural buffers...");
-        
-       const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: [
-        promptText,
-        {
-            inlineData: {
-                data: pdfBase64,
-                mimeType: "application/pdf"
-            }
-        }
-    ],
-    config: { 
-        responseMimeType: "application/json",
-        // Lower temperature speeds up token generation by reducing creative randomness
-        temperature: 0.2, 
-    }
-});
-        const structuredQuiz = JSON.parse(response.text);
+        // Get the structural generative model instance safely
+        const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-        // Serve payloads downstream directly to the frontend simulator interface
+        const response = await model.generateContent([
+            promptText,
+            {
+                inlineData: {
+                    data: pdfBase64,
+                    mimeType: "application/pdf"
+                }
+            }
+        ]);
+
+        const responseText = response.response.text();
+        
+        // Strip out markdown formatting blocks if the model accidentally returns them
+        const cleanJsonText = responseText.replace(/```json|```/g, "").trim();
+        const structuredQuiz = JSON.parse(cleanJsonText);
+
         res.json({ 
             success: true, 
             questions: structuredQuiz,
