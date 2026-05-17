@@ -2295,22 +2295,23 @@ app.post('/generate-ai-quiz', isStudent, upload.single('lecture_note'), async (r
 
         console.log("Sending payload directly to Gemini Engine via structural buffers...");
         
-        // Using your structural model instantiation layout
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: [
-                promptText,
-                {
-                    inlineData: {
-                        data: pdfBase64,
-                        mimeType: "application/pdf"
-                    }
-                }
-            ],
-            // Forces Gemini to respond with clean JSON text objects without markdown wrappers
-            config: { responseMimeType: "application/json" }
-        });
-
+       const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash',
+    contents: [
+        promptText,
+        {
+            inlineData: {
+                data: pdfBase64,
+                mimeType: "application/pdf"
+            }
+        }
+    ],
+    config: { 
+        responseMimeType: "application/json",
+        // Lower temperature speeds up token generation by reducing creative randomness
+        temperature: 0.2, 
+    }
+});
         const structuredQuiz = JSON.parse(response.text);
 
         // Serve payloads downstream directly to the frontend simulator interface
@@ -2356,5 +2357,8 @@ app.post('/save-ai-quiz-results', isStudent, async (req, res) => {
         res.status(500).json({ success: false, message: "Internal server error persisting score profile." });
     }
 });
-
+// Add this configuration property export to boost execution parameters if supported
+export const config = {
+  maxDuration: 60, // Sets maximum execution window to 60 seconds
+};
 app.listen(3000, () => console.log('Prepium running on http://localhost:3000'));
