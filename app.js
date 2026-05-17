@@ -5,7 +5,7 @@ const session = require('express-session');
 require('dotenv').config();
 const app = express();
 const multer = require('multer');
-const pdfParse = require('pdf-parse');
+
 const fs = require('fs');
 const { GoogleGenAI } = require('@google/genai');
 const crypto = require('crypto');
