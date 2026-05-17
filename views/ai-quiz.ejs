@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Prepium | AI Quiz Engine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root { 
+            --brand: #0062ff; 
+            --brand-gradient: linear-gradient(135deg, #0062ff 0%, #0045b5 100%);
+            --accent: #7c3aed;
+            --bg: #f8fafc; 
+            --text-dark: #0b1437; 
+            --text-sub: #a3aed0;
+            --border: #eef2f6;
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+        * { box-sizing: border-box; transition: all 0.2s ease; font-family: 'Plus Jakarta Sans', sans-serif; outline: none; }
+        body { background: var(--bg); margin: 0; color: var(--text-dark); display: flex; justify-content: center; }
+        
+        .app-shell { width: 100%; max-width: 430px; background: #ffffff; min-height: 100vh; position: relative; padding: 2rem 1.5rem 120px; box-shadow: 0 0 40px rgba(0,0,0,0.02); display: flex; flex-direction: column; }
+        
+        /* Fixed Header Component */
+        .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; position: sticky; top: 0; background: #ffffff; padding: 10px 0; z-index: 100; border-bottom: 1px solid transparent; }
+        .header.scrolled { border-color: var(--border); }
+        .header-left { display: flex; align-items: center; gap: 15px; }
+        .back-btn { color: var(--text-dark); text-decoration: none; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px; background: var(--bg); }
+        .header h1 { font-size: 1.3rem; margin: 0; font-weight: 800; }
+        .history-shortcut { color: var(--brand); font-size: 1.1rem; text-decoration: none; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px; background: #f0f6ff; }
+
+        /* Configuration Form Fields */
+        .config-group { margin-top: 20px; text-align: left; }
+        .config-group label { font-size: 0.85rem; font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 8px; }
+        .select-wrapper { position: relative; display: flex; align-items: center; }
+        .select-wrapper i { position: absolute; left: 16px; color: var(--brand); font-size: 1rem; pointer-events: none; }
+        .select-field { width: 100%; padding: 14px 14px 14px 44px; border-radius: 14px; border: 1.5px solid var(--border); background: #f8fafc; font-weight: 600; font-size: 0.9rem; color: var(--text-dark); -webkit-appearance: none; appearance: none; cursor: pointer; }
+        .select-wrapper::after { content: '\f078'; font-family: 'Font Awesome 5 Free'; font-weight: 900; position: absolute; right: 16px; color: var(--text-sub); font-size: 0.8rem; pointer-events: none; }
+        
+        /* Upload Panel Box */
+        .upload-box { border: 2px dashed #cbd5e1; border-radius: 24px; padding: 35px 20px; text-align: center; cursor: pointer; background: #fafafa; position: relative; overflow: hidden; }
+        .upload-box:hover { border-color: var(--brand); background: #f0f6ff; }
+        .upload-box i { font-size: 2.8rem; color: var(--brand); margin-bottom: 12px; }
+        .file-input { display: none; }
+        .cta-btn { background: var(--brand-gradient); color: white; border: none; width: 100%; padding: 16px; border-radius: 16px; font-weight: 700; font-size: 1rem; margin-top: 24px; cursor: pointer; box-shadow: 0 8px 20px rgba(0, 98, 255, 0.2); display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .cta-btn:active { transform: scale(0.98); }
+        
+        /* Processing Monitor State */
+        .loading-screen { display: none; text-align: center; padding: 60px 20px; flex: 1; }
+        .spinner { width: 50px; height: 50px; border: 5px solid var(--border); border-top-color: var(--brand); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Active Testing Workspace */
+        .quiz-arena { display: none; }
+        .sticky-timer { position: sticky; top: 60px; background: white; padding: 12px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-weight: 800; z-index: 90; margin-bottom: 20px; }
+        .timer-badge { background: #fee2e2; color: var(--danger); padding: 6px 12px; border-radius: 10px; display: flex; align-items: center; gap: 6px; }
+        
+        .question-card { border: 1px solid var(--border); border-radius: 20px; padding: 20px; margin-bottom: 20px; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.01); }
+        .option-label { display: flex; align-items: center; padding: 14px; border: 1px solid var(--border); border-radius: 12px; margin-top: 10px; cursor: pointer; font-weight: 600; font-size: 0.9rem; }
+        .option-label input { margin-right: 12px; transform: scale(1.1); }
+        .option-label:has(input:checked) { border-color: var(--brand); background: #f0f6ff; }
+        
+        /* Scoreboard / Post Exam Result Dashboard View */
+        .result-view { display: none; text-align: center; padding: 10px 0; }
+        .score-radial { width: 130px; height: 130px; border-radius: 50%; background: #f0fdf4; border: 8px solid var(--success); display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0 auto 20px; }
+        .score-radial.failed { background: #fef2f2; border-color: var(--danger); }
+        
+        .explanation-panel { display: none; margin-top: 15px; padding: 14px; background: #f8fafc; border-left: 4px solid var(--brand); border-radius: 0 12px 12px 0; font-size: 0.85rem; line-height: 1.4; text-align: left; }
+        .correct-mark { border-color: var(--success) !important; background: #f0fdf4 !important; color: #15803d; }
+        .wrong-mark { border-color: var(--danger) !important; background: #fef2f2 !important; color: #b91c1c; }
+
+        /* Premium Bottom Navigation Mobility Bar */
+        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; background: #ffffff; border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 12px 0; z-index: 1000; box-shadow: 0 -4px 20px rgba(0,0,0,0.03); }
+        .nav-item { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: var(--text-sub); font-size: 0.75rem; font-weight: 600; gap: 4px; width: 60px; }
+        .nav-item i { font-size: 1.25rem; }
+        .nav-item.active { color: var(--brand); }
+    </style>
+</head>
+<body>
+
+    <div class="app-shell">
+        <div class="header" id="appHeader">
+            <div class="header-left">
+                <a href="/dashboard" class="back-btn"><i class="fas fa-chevron-left"></i></a>
+                <h1 id="engineHeaderTitle">AI CBT Generator</h1>
+            </div>
+            <a href="/history" class="history-shortcut" title="View Test History">
+                <i class="fas fa-history"></i>
+            </a>
+        </div>
+
+        <div id="uploadState">
+            <form id="pdfUploadForm">
+                <div class="upload-box" onclick="document.getElementById('fileField').click()">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <h3>Select Lecture Note PDF</h3>
+                    <p style="color: var(--text-sub); font-size: 0.82rem; margin: 4px 0 0;">Max file size limit 10MB</p>
+                    <input type="file" id="fileField" name="lecture_note" class="file-input" accept=".pdf" required onchange="updateFileLabel(this)">
+                    <b id="fileNameDisplay" style="color: var(--brand); display:block; margin-top:15px; font-size:0.85rem; word-break: break-all;"></b>
+                </div>
+
+                <div class="config-group">
+                    <label>Target Question Count</label>
+                    <div class="select-wrapper">
+                        <i class="fas fa-list-ol"></i>
+                        <select name="num_questions" class="select-field">
+                            <option value="5" selected>5 High-Yield Questions</option>
+                            <option value="10">10 Detailed Questions</option>
+                            <option value="15">15 Comprehensive Questions</option>
+                            <option value="20">20 Mock Exam Sheet Questions</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="config-group">
+                    <label>Countdown Session Timer</label>
+                    <div class="select-wrapper">
+                        <i class="fas fa-stopwatch"></i>
+                        <select name="quiz_duration" class="select-field">
+                            <option value="3">3 Minutes Sprint</option>
+                            <option value="5" selected>5 Minutes Standard Match</option>
+                            <option value="10">10 Minutes Relaxed Session</option>
+                            <option value="15">15 Minutes Extended Exam</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="cta-btn">
+                    <span>Initialize AI Quiz Loop</span>
+                    <i class="fas fa-bolt"></i>
+                </button>
+            </form>
+        </div>
+
+        <div id="loadingState" class="loading-screen">
+            <div class="spinner"></div>
+            <h3>Structuring AI Test Framework...</h3>
+            <p style="color: var(--text-sub); font-size: 0.85rem; line-height: 1.4;">Gemini Vision is running deep structural OCR to compile clear questions from your document files.</p>
+        </div>
+
+        <div id="quizArenaState" class="quiz-arena">
+            <div class="sticky-timer">
+                <span id="liveCbtLabelTitle" style="font-size:0.85rem; font-weight:700; max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Dynamic CBT Framework</span>
+                <span class="timer-badge"><i class="far fa-clock"></i> <span id="clock">05:00</span></span>
+            </div>
+            
+            <div id="questionsContainer"></div>
+            <button id="submitQuizBtn" class="cta-btn" style="background: var(--text-dark); box-shadow: none;">Submit Final Answers</button>
+        </div>
+
+        <div id="resultState" class="result-view">
+            <div id="radialScoreWrapper" class="score-radial">
+                <h2 id="finalScoreRatio" style="margin:0; font-size:1.8rem; font-weight:800; color:inherit;">0/5</h2>
+                <span id="scorePercentValue" style="font-size:0.75rem; font-weight:700; opacity:0.8;">0% Score</span>
+            </div>
+            <h2 id="feedbackVerdictMsg" style="margin:0 0 5px; font-weight:800;">Session Completed!</h2>
+            <p id="historySyncFeedback" style="color:var(--text-sub); font-size:0.85rem; margin:0 0 25px; font-weight:500;"><i class="fas fa-cloud-upload-alt"></i> Synced to study history...</p>
+            
+            <hr style="border:none; border-top:1px solid var(--border); margin-bottom:25px;">
+            <h3 style="text-align:left; font-weight:800; margin-bottom:15px;"><i class="fas fa-clipboard-check"></i> Script Evaluation</h3>
+            
+            <div id="gradedReviewScriptsContainer"></div>
+            <button onclick="window.location.reload()" class="cta-btn">Process Another File</button>
+        </div>
+
+        <nav class="bottom-nav">
+            <a href="/dashboard" class="nav-item">
+                <i class="fas fa-th-large"></i>
+                <span>Home</span>
+            </a>
+            <a href="/ai-quiz" class="nav-item active">
+                <i class="fas fa-robot"></i>
+                <span>AI Quiz</span>
+            </a>
+            <a href="/history" class="nav-item">
+                <i class="fas fa-history"></i>
+                <span>History</span>
+            </a>
+            <a href="/profile" class="nav-item">
+                <i class="fas fa-user"></i>
+                <span>Profile</span>
+            </a>
+        </nav>
+    </div>
+
+    <script>
+        let timerCountdown = null;
+        let quizQuestionsPayload = [];
+        let trackedQuizTitle = "AI-Test";
+
+        // Handle Header Shadow on Scroll
+        window.addEventListener('scroll', () => {
+            const header = document.getElementById('appHeader');
+            if (window.scrollY > 10) {
+                header.classList.add('scrolled');
+            } else {
+                header.classList.remove('scrolled');
+            }
+        });
+
+        function updateFileLabel(input) {
+            if(input.files.length > 0) {
+                document.getElementById('fileNameDisplay').innerHTML = `<i class="fas fa-check-circle"></i> ${input.files[0].name}`;
+            }
+        }
+
+        document.getElementById('pdfUploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            document.getElementById('uploadState').style.display = 'none';
+            document.getElementById('loadingState').style.display = 'block';
+            document.getElementById('engineHeaderTitle').innerText = 'Generating Test';
+
+            const formData = new FormData(e.target);
+
+            try {
+                const response = await fetch('/generate-ai-quiz', { method: 'POST', body: formData });
+                const data = await response.json();
+
+                if (data.success) {
+                    quizQuestionsPayload = data.questions;
+                    trackedQuizTitle = data.quizTitle;
+                    startQuizArena(data.questions, data.durationSeconds);
+                } else {
+                    alert(data.message || "Failed to parse document files accurately.");
+                    resetUiToUpload();
+                }
+            } catch (err) {
+                alert("Network communication failure window timeout.");
+                resetUiToUpload();
+            }
+        });
+
+        function resetUiToUpload() {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('uploadState').style.display = 'block';
+            document.getElementById('engineHeaderTitle').innerText = 'AI CBT Generator';
+        }
+
+        function startQuizArena(questions, totalSeconds) {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('quizArenaState').style.display = 'block';
+            document.getElementById('engineHeaderTitle').innerText = 'Live CBT Session';
+            document.getElementById('liveCbtLabelTitle').innerText = trackedQuizTitle;
+
+            const container = document.getElementById('questionsContainer');
+            container.innerHTML = '';
+
+            questions.forEach((q, qIndex) => {
+                const card = document.createElement('div');
+                card.className = 'question-card';
+                card.innerHTML = `
+                    <p style="font-weight:700; margin:0 0 15px 0; font-size:0.95rem; line-height:1.4;"><b>Q${qIndex + 1}:</b> ${q.question}</p>
+                    <div id="optionsGroup_${qIndex}">
+                        ${q.options.map(opt => `
+                            <label class="option-label">
+                                <input type="radio" name="answer_${qIndex}" value="${opt.replace(/"/g, '&quot;')}">
+                                <span>${opt}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            let duration = totalSeconds;
+            timerCountdown = setInterval(() => {
+                duration--;
+                let m = Math.floor(duration / 60);
+                let s = duration % 60;
+                document.getElementById('clock').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+
+                if(duration <= 0) {
+                    clearInterval(timerCountdown);
+                    evaluateAndDisplayQuizResults();
+                }
+            }, 1000);
+
+            document.getElementById('submitQuizBtn').onclick = () => {
+                clearInterval(timerCountdown);
+                evaluateAndDisplayQuizResults();
+            };
+        }
+
+        async function evaluateAndDisplayQuizResults() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            document.getElementById('quizArenaState').style.display = 'none';
+            document.getElementById('engineHeaderTitle').innerText = 'Performance Sheet';
+            document.getElementById('resultState').style.display = 'block';
+
+            let correctCount = 0;
+            const totalQuestions = quizQuestionsPayload.length;
+            const reviewContainer = document.getElementById('gradedReviewScriptsContainer');
+            reviewContainer.innerHTML = '';
+
+            quizQuestionsPayload.forEach((q, qIndex) => {
+                const checkedRadio = document.querySelector(`input[name="answer_${qIndex}"]:checked`);
+                const chosenAnswer = checkedRadio ? checkedRadio.value : null;
+                
+                if (chosenAnswer === q.correct) correctCount++;
+
+                const reviewCard = document.createElement('div');
+                reviewCard.className = 'question-card';
+                reviewCard.style.textAlign = 'left';
+                reviewCard.innerHTML = `
+                    <p style="font-weight:700; margin:0 0 15px 0; font-size:0.95rem;"><b>Q${qIndex + 1}:</b> ${q.question}</p>
+                    <div>
+                        ${q.options.map(opt => {
+                            let labelClass = 'option-label';
+                            if (opt === q.correct) labelClass = 'option-label correct-mark';
+                            else if (chosenAnswer === opt && chosenAnswer !== q.correct) labelClass = 'option-label wrong-mark';
+                            
+                            return `
+                                <div class="${labelClass}" style="cursor:default;">
+                                    <input type="radio" disabled ${chosenAnswer === opt ? 'checked' : ''}>
+                                    <span>${opt}</span>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    <div class="explanation-panel" style="display:block;">
+                        <b style="color:var(--brand); display:block; margin-bottom:4px;"><i class="fas fa-info-circle"></i> Rationale:</b>
+                        <span>${q.explanation}</span>
+                    </div>
+                `;
+                reviewContainer.appendChild(reviewCard);
+            });
+
+            const scorePercentage = Math.round((correctCount / totalQuestions) * 100);
+            document.getElementById('finalScoreRatio').innerText = `${correctCount}/${totalQuestions}`;
+            document.getElementById('scorePercentValue').innerText = `${scorePercentage}% Score`;
+
+            const radial = document.getElementById('radialScoreWrapper');
+            if(scorePercentage < 45) {
+                radial.className = 'score-radial failed';
+                radial.style.color = 'var(--danger)';
+                document.getElementById('feedbackVerdictMsg').innerText = "Keep Practicing! 📚";
+            } else {
+                radial.className = 'score-radial';
+                radial.style.color = 'var(--success)';
+                document.getElementById('feedbackVerdictMsg').innerText = "Excellent Work! 🎉";
+            }
+
+            // Sync score directly to backend database history handler
+            try {
+                const response = await fetch('/save-ai-quiz-results', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        quizTitle: trackedQuizTitle,
+                        totalQuestions: totalQuestions,
+                        correctAnswers: correctCount,
+                        scorePercentage: scorePercentage
+                    })
+                });
+                const syncData = await response.json();
+                if(syncData.success) {
+                    document.getElementById('historySyncFeedback').innerHTML = `<span style="color:var(--success)"><i class="fas fa-check-circle"></i> Performance history updated successfully!</span>`;
+                } else {
+                    throw new Error();
+                }
+            } catch (err) {
+                document.getElementById('historySyncFeedback').innerHTML = `<span style="color:var(--danger)"><i class="fas fa-exclamation-triangle"></i> Local-only session. Profile sync offline.</span>`;
+            }
+        }
+    </script>
+</body>
+</html>

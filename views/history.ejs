@@ -12,11 +12,14 @@
         :root { 
             --brand: #0062ff; 
             --brand-gradient: linear-gradient(135deg, #0062ff 0%, #0045b5 100%);
+            --ai-gradient: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
             --bg: #f8fafc; 
             --text-dark: #0b1437; 
             --text-sub: #a3aed0;
             --border: #eef2f6;
-            --success: #16a34a;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; transition: all 0.2s ease; outline: none; }
@@ -48,35 +51,50 @@
         .history-list { padding: 0 1.5rem; }
         
         .history-card {
-            background: white; border-radius: 24px; padding: 20px;
-            border: 1px solid var(--border); margin-bottom: 16px;
+            background: white; border-radius: 24px; padding: 18px;
+            border: 1px solid var(--border); margin-bottom: 14px;
             display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.01);
+            position: relative; overflow: hidden;
         }
+        .history-card:hover { border-color: #cbd5e1; transform: translateY(-1px); }
 
-        .subject-box { display: flex; align-items: center; gap: 14px; }
+        .subject-box { display: flex; align-items: center; gap: 14px; max-width: 70%; }
+        
         .icon-circle {
-            width: 45px; height: 45px; background: #f0f7ff; color: var(--brand);
+            width: 46px; height: 46px; background: #f0f7ff; color: var(--brand);
             border-radius: 14px; display: flex; align-items: center; justify-content: center;
-            font-size: 1.1rem;
+            font-size: 1.1rem; flex-shrink: 0;
         }
+        
+        /* Premium AI Badge Styling */
+        .history-card.ai-session { border-left: 4px solid #7c3aed; }
+        .history-card.ai-session .icon-circle { background: #f5f3ff; color: #7c3aed; }
 
-        .subj-name { font-weight: 800; font-size: 0.95rem; color: var(--text-dark); display: block; }
-        .quiz-date { font-size: 0.75rem; color: var(--text-sub); font-weight: 600; margin-top: 2px; }
+        .title-wrapper { display: flex; flex-direction: column; min-width: 0; }
+        .subj-name { font-weight: 800; font-size: 0.95rem; color: var(--text-dark); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        
+        .meta-row { display: flex; align-items: center; gap: 8px; margin-top: 3px; }
+        .quiz-date { font-size: 0.75rem; color: var(--text-sub); font-weight: 600; }
+        
+        .type-tag { font-size: 0.65rem; font-weight: 700; padding: 1px 6px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.3px; }
+        .type-tag.standard { background: #e0f2fe; color: #0369a1; }
+        .type-tag.ai { background: #f3e8ff; color: #6b21a8; }
 
-        .score-display { text-align: right; }
-        .score-text { font-size: 1rem; font-weight: 800; color: var(--brand); display: block; }
+        .score-display { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; }
+        .score-text { font-size: 1.05rem; font-weight: 800; color: var(--text-dark); display: block; }
+        
         .accuracy-tag { 
-            font-size: 0.65rem; font-weight: 700; color: var(--success); 
-            background: #f0fdf4; padding: 2px 8px; border-radius: 6px;
-            display: inline-block; margin-top: 4px;
+            font-size: 0.68rem; font-weight: 700; padding: 3px 8px; border-radius: 8px;
+            display: inline-block; margin-top: 5px;
         }
+        .accuracy-tag.high { background: #dcfce7; color: #15803d; }
+        .accuracy-tag.mid { background: #fef3c7; color: #b45309; }
+        .accuracy-tag.low { background: #fee2e2; color: #b91c1c; }
 
         /* Empty State */
-        .empty-state {
-            text-align: center; padding: 60px 20px;
-        }
-        .empty-state i { font-size: 3rem; color: #e2e8f0; margin-bottom: 15px; }
+        .empty-state { text-align: center; padding: 80px 20px; }
+        .empty-state i { font-size: 3.5rem; color: #e2e8f0; margin-bottom: 16px; }
         .empty-state h3 { font-weight: 800; color: var(--text-dark); margin: 0; }
         .empty-state p { color: var(--text-sub); font-size: 0.85rem; margin-top: 8px; }
 
@@ -117,19 +135,35 @@
         <div class="history-list">
             <% if (history && history.length > 0) { %>
                 <% history.forEach(item => { %>
-                    <div class="history-card">
+                    <div class="history-card <%= !item.subject_name ? 'ai-session' : '' %>">
                         <div class="subject-box">
-                            <div class="icon-circle"><i class="fas fa-file-invoice"></i></div>
-                            <div>
-                                <span class="subj-name"><%= item.subject_name %></span>
-                                <span class="quiz-date">
-                                    <%= new Date(item.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) %>
-                                </span>
+                            <div class="icon-circle">
+                                <i class="fas <%= !item.subject_name ? 'fa-robot' : 'fa-file-invoice' %>"></i>
+                            </div>
+                            <div class="title-wrapper">
+                                <span class="subj-name"><%= item.subject_name || item.title || 'AI Engine Test' %></span>
+                                <div class="meta-row">
+                                    <span class="quiz-date">
+                                        <%= new Date(item.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) %>
+                                    </span>
+                                    <% if (!item.subject_name) { %>
+                                        <span class="type-tag ai">AI Quiz</span>
+                                    <% } else { %>
+                                        <span class="type-tag standard">Standard</span>
+                                    <% } %>
+                                </div>
                             </div>
                         </div>
                         <div class="score-display">
                             <span class="score-text"><%= item.score %> / <%= item.total_questions %></span>
-                            <span class="accuracy-tag"><%= item.percentage %>% Accuracy</span>
+                            
+                            <% if (item.percentage >= 70) { %>
+                                <span class="accuracy-tag high"><%= item.percentage %>% Accuracy</span>
+                            <% } else if (item.percentage >= 45) { %>
+                                <span class="accuracy-tag mid"><%= item.percentage %>% Accuracy</span>
+                            <% } else { %>
+                                <span class="accuracy-tag low"><%= item.percentage %>% Accuracy</span>
+                            <% } %>
                         </div>
                     </div>
                 <% }) %>
@@ -152,7 +186,7 @@
                 <span>Stats</span>
             </a>
             
-            <a href="/setup-test" class="nav-center-btn"><i class="fas fa-plus"></i></a>
+            <a href="/ai-quiz" class="nav-center-btn"><i class="fas fa-plus"></i></a>
             
             <a href="/notifications" class="nav-link">
                 <i class="fas fa-bell"></i>

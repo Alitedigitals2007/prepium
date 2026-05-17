@@ -4,11 +4,25 @@ const bcrypt = require('bcryptjs');
 const session = require('express-session');
 require('dotenv').config();
 const app = express();
-
+const multer = require('multer');
+const pdfParse = require('pdf-parse');
+const fs = require('fs');
+const { GoogleGenAI } = require('@google/genai');
 const crypto = require('crypto');
 const { Pool } = require('pg');
 require('dotenv').config();
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
+// Configure Multer to save uploaded files temporarily on your disk
+const upload = multer({ 
+    dest: 'uploads/',
+    limits: { fileSize: 10 * 1024 * 1024 } // 10MB individual file limit
+});
+// Ensure temporary upload directory exists on the server
+const uploadDir = './uploads';
+if (!fs.existsSync(uploadDir)){
+    fs.mkdirSync(uploadDir);
+}
 // Initialize the connection pool
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -2216,6 +2230,116 @@ END:VCARD`;
     });
 
     res.send(vcardContent);
+});
+app.get('/ai-quiz', (req, res) => {
+    // Passes the logged-in user profile metrics and public gateway keys to the EJS template
+    res.render('ai-quiz', { 
+        user: req.user, 
+        paystack_key: process.env.PAYSTACK_PUBLIC_KEY 
+    });
+});
+
+app.post('/generate-ai-quiz', upload.single('lecture_note'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: "No file uploaded." });
+        }
+
+        // Capture user configuration choices from the form layout
+        const numQuestions = parseInt(req.body.num_questions) || 5;
+        const quizDuration = parseInt(req.body.quiz_duration) || 5; 
+        const originalFileName = req.file.originalname;
+
+        console.log(`Processing "${originalFileName}" | Config: ${numQuestions} Questions, ${quizDuration} Mins`);
+
+        let pdfBase64;
+        try {
+            pdfBase64 = fs.readFileSync(req.file.path).toString("base64");
+        } catch (fsErr) {
+            console.error("File System Error:", fsErr);
+            return res.status(500).json({ success: false, message: "Failed to read file from server storage." });
+        }
+
+        // Inject custom query requirements directly inside AI configuration guidelines
+        const promptText = `
+            You are an expert school examiner. Analyze the attached PDF document. Even if it contains scanned images, read the content and generate EXACTLY ${numQuestions} unique multiple-choice questions (MCQs) for an interactive practice test based strictly on its contents.
+            
+            Return the output ONLY as a raw, valid JSON array matching this structure exactly, with no markdown code blocks:
+            [
+              {
+                "question": "Write the question text here?",
+                "options": ["Option A", "Option B", "Option C", "Option D"],
+                "correct": "Option B",
+                "explanation": "Provide a detailed step-by-step reason why this option is correct based on the text."
+              }
+            ]
+        `;
+
+        console.log("Sending document payload to Gemini Vision...");
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: [
+                promptText,
+                {
+                    inlineData: {
+                        data: pdfBase64,
+                        mimeType: "application/pdf"
+                    }
+                }
+            ],
+            config: { responseMimeType: "application/json" }
+        });
+
+        // Disk cleanup
+        if (fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
+
+        const structuredQuiz = JSON.parse(response.text);
+
+        // Send backend parameter contexts down to the front end context space
+        res.json({ 
+            success: true, 
+            questions: structuredQuiz,
+            quizTitle: `AI-Test (${originalFileName})`,
+            durationSeconds: quizDuration * 60
+        });
+
+    } catch (error) {
+        console.error("AI Generation Failure:", error);
+        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        res.status(500).json({ success: false, message: "Internal server error parsing this document." });
+    }
+});
+
+app.post('/save-ai-quiz-results', isStudent, async (req, res) => {
+    try {
+        const { quizTitle, totalQuestions, correctAnswers, scorePercentage } = req.body;
+        const userId = req.session.user.id;
+
+        // SQL Injection-safe insertion matching your quiz_results pool schema configuration
+        // Note: 'subject_id' is passed as NULL since this is generated dynamically by the AI
+        const insertQuery = `
+            INSERT INTO quiz_results (user_id, subject_id, title, score, total_questions, percentage, created_at)
+            VALUES ($1, NULL, $2, $3, $4, $5, NOW())
+            RETURNING *
+        `;
+
+        await pool.query(insertQuery, [
+            userId,
+            quizTitle,          // Stores: "AI-Test (filename.pdf)"
+            correctAnswers,     // Points achieved
+            totalQuestions,     // Total exam limit
+            scorePercentage     // Calculated percentage index
+        ]);
+
+        console.log(`[DATABASE SYNC] AI CBT score logged for Student ID: ${userId}`);
+        res.json({ success: true, message: "Performance metrics logged to PostgreSQL core." });
+
+    } catch (err) {
+        console.error("Critical Database History Sync Error:", err);
+        res.status(500).json({ success: false, message: "Internal server error persisting score profile." });
+    }
 });
 
 app.listen(3000, () => console.log('Prepium running on http://localhost:3000'));
