@@ -2266,7 +2266,6 @@ app.post('/upload-pdf', async (req, res) => {
         res.status(500).json({ success: false, message: "Internal server error." });
     }
 });
-
 app.post('/generate-ai-quiz', isStudent, upload.single('lecture_note'), async (req, res) => {
     try {
         if (!req.file) {
@@ -2277,7 +2276,7 @@ app.post('/generate-ai-quiz', isStudent, upload.single('lecture_note'), async (r
         const quizDuration = parseInt(req.body.quiz_duration) || 5; 
         const originalFileName = req.file.originalname;
 
-        console.log(`[AI ENGINE] Processing "${originalFileName}" via Stable SDK`);
+        console.log(`[AI ENGINE] Processing "${originalFileName}" via Native Fetch REST API`);
 
         const pdfBase64 = req.file.buffer.toString("base64");
 
@@ -2295,21 +2294,44 @@ app.post('/generate-ai-quiz', isStudent, upload.single('lecture_note'), async (r
             ]
         `;
 
-      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-        const response = await model.generateContent([
-            promptText,
-            {
-                inlineData: {
-                    data: pdfBase64,
-                    mimeType: "application/pdf"
-                }
+        // Using proper camelCase properties recognized by the v1beta endpoint
+        const payload = {
+            contents: [{
+                parts: [
+                    { text: promptText },
+                    {
+                        inlineData: {
+                            mimeType: "application/pdf",
+                            data: pdfBase64
+                        }
+                    }
+                ]
+            }],
+            generationConfig: {
+                responseMimeType: "application/json",
+                temperature: 0.2
             }
-        ]);
+        };
 
-        const responseText = response.response.text();
+       const apiKey = process.env.GEMINI_API_KEY;
+
+// FIX: Swap the decommissioned 1.5 model identifier out for gemini-2.5-flash
+const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errorLog = await response.text();
+            throw new Error(`Gemini API responded with status ${response.status}: ${errorLog}`);
+        }
+
+        const data = await response.json();
         
-        // Strip out markdown formatting blocks if the model accidentally returns them
+        const responseText = data.candidates[0].content.parts[0].text;
         const cleanJsonText = responseText.replace(/```json|```/g, "").trim();
         const structuredQuiz = JSON.parse(cleanJsonText);
 
