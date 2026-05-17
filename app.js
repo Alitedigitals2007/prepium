@@ -14,15 +14,14 @@ require('dotenv').config();
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const pdfToText = require('pdf-to-text');
 // Configure Multer to save uploaded files temporarily on your disk
+
+// Optimized for serverless compliance (Vercel/Netlify friendly)
 const upload = multer({ 
-    dest: 'uploads/',
+    storage: multer.memoryStorage(),
     limits: { fileSize: 10 * 1024 * 1024 } // 10MB individual file limit
 });
-// Ensure temporary upload directory exists on the server
-const uploadDir = './uploads';
-if (!fs.existsSync(uploadDir)){
-    fs.mkdirSync(uploadDir);
-}
+
+
 // Initialize the connection pool
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
