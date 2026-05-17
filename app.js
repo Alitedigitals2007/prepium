@@ -12,7 +12,7 @@ const crypto = require('crypto');
 const { Pool } = require('pg');
 require('dotenv').config();
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
+const pdfToText = require('pdf-to-text');
 // Configure Multer to save uploaded files temporarily on your disk
 const upload = multer({ 
     dest: 'uploads/',
@@ -2239,32 +2239,51 @@ app.get('/ai-quiz', (req, res) => {
     });
 });
 
-app.post('/generate-ai-quiz', upload.single('lecture_note'), async (req, res) => {
+
+app.post('/upload-pdf', async (req, res) => {
+    try {
+        // Assuming you are using multer and req.file.path exists
+        const filePath = req.file.path; 
+
+        pdfToText.pdfToText(filePath, (err, text) => {
+            if (err) {
+                console.error("PDF Parsing Error:", err);
+                return res.status(500).json({ success: false, message: "Failed to parse PDF." });
+            }
+
+            // 'text' now holds the raw string data. Send it to your AI generator here.
+            console.log("Extracted text successfully.");
+            
+            // Your AI generation logic here...
+        });
+
+    } catch (err) {
+        console.error("Route Error:", err);
+        res.status(500).json({ success: false, message: "Internal server error." });
+    }
+});
+
+app.post('/generate-ai-quiz', isStudent, upload.single('lecture_note'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: "No file uploaded." });
         }
 
-        // Capture user configuration choices from the form layout
+        // Capture user configuration choices from the form layout safely
         const numQuestions = parseInt(req.body.num_questions) || 5;
         const quizDuration = parseInt(req.body.quiz_duration) || 5; 
         const originalFileName = req.file.originalname;
 
-        console.log(`Processing "${originalFileName}" | Config: ${numQuestions} Questions, ${quizDuration} Mins`);
+        console.log(`[AI ENGINE] Processing "${originalFileName}" | Config: ${numQuestions} Questions, ${quizDuration} Mins`);
 
-        let pdfBase64;
-        try {
-            pdfBase64 = fs.readFileSync(req.file.path).toString("base64");
-        } catch (fsErr) {
-            console.error("File System Error:", fsErr);
-            return res.status(500).json({ success: false, message: "Failed to read file from server storage." });
-        }
+        // Convert the memory buffer directly to base64—no disk read/write required (Serverless safe)
+        const pdfBase64 = req.file.buffer.toString("base64");
 
-        // Inject custom query requirements directly inside AI configuration guidelines
+        // Inject custom configurations directly into the engineering prompt guidelines
         const promptText = `
             You are an expert school examiner. Analyze the attached PDF document. Even if it contains scanned images, read the content and generate EXACTLY ${numQuestions} unique multiple-choice questions (MCQs) for an interactive practice test based strictly on its contents.
             
-            Return the output ONLY as a raw, valid JSON array matching this structure exactly, with no markdown code blocks:
+            Return the output ONLY as a raw, valid JSON array matching this structure exactly:
             [
               {
                 "question": "Write the question text here?",
@@ -2275,7 +2294,9 @@ app.post('/generate-ai-quiz', upload.single('lecture_note'), async (req, res) =>
             ]
         `;
 
-        console.log("Sending document payload to Gemini Vision...");
+        console.log("Sending payload directly to Gemini Engine via structural buffers...");
+        
+        // Using your structural model instantiation layout
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: [
@@ -2287,17 +2308,13 @@ app.post('/generate-ai-quiz', upload.single('lecture_note'), async (req, res) =>
                     }
                 }
             ],
+            // Forces Gemini to respond with clean JSON text objects without markdown wrappers
             config: { responseMimeType: "application/json" }
         });
 
-        // Disk cleanup
-        if (fs.existsSync(req.file.path)) {
-            fs.unlinkSync(req.file.path);
-        }
-
         const structuredQuiz = JSON.parse(response.text);
 
-        // Send backend parameter contexts down to the front end context space
+        // Serve payloads downstream directly to the frontend simulator interface
         res.json({ 
             success: true, 
             questions: structuredQuiz,
@@ -2307,8 +2324,7 @@ app.post('/generate-ai-quiz', upload.single('lecture_note'), async (req, res) =>
 
     } catch (error) {
         console.error("AI Generation Failure:", error);
-        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-        res.status(500).json({ success: false, message: "Internal server error parsing this document." });
+        res.status(500).json({ success: false, message: "Internal server error compiling dynamic exam profile." });
     }
 });
 
