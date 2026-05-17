@@ -7,11 +7,13 @@ const app = express();
 const multer = require('multer');
 
 const fs = require('fs');
-const { GoogleGenAI } = require('@google/generative-ai');
+
 const crypto = require('crypto');
 const { Pool } = require('pg');
 require('dotenv').config();
-const ai = new GoogleGenAI(process.env.GEMINI_API_KEY);
+
+const { GoogleGenAI } = require('@google/generative-ai');
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const pdfToText = require('pdf-to-text');
 // Configure Multer to save uploaded files temporarily on your disk
 
