@@ -15,129 +15,300 @@
             --brand-gradient: linear-gradient(135deg, #0062ff 0%, #0045b5 100%);
             --accent: #7c3aed;
             --bg: #f8fafc; 
+            --surface: #ffffff;
             --text-dark: #0b1437; 
-            --text-sub: #a3aed0;
-            --border: #eef2f6;
+            --text-sub: #64748b;
+            --border: #f1f5f9;
             --dark-surface: #0f172a;
+            --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.02);
+            --shadow-md: 0 12px 30px rgba(11, 20, 55, 0.06);
         }
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; transition: all 0.2s ease; outline: none; }
+        * { 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent; 
+            transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1); 
+            outline: none; 
+        }
         
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: var(--bg); margin: 0; color: var(--text-dark); 
-            display: flex; justify-content: center; 
+            background: #0f172a; 
+            margin: 0; 
+            color: var(--text-dark); 
+            display: flex; 
+            justify-content: center; 
         }
 
         .app-shell { 
-            width: 100%; max-width: 430px; 
-            background: #ffffff; min-height: 100vh; 
-            position: relative; padding-bottom: 110px;
-            box-shadow: 0 0 40px rgba(0,0,0,0.02);
+            width: 100%; 
+            max-width: 430px; 
+            background: var(--bg); 
+            min-height: 100vh; 
+            position: relative; 
+            padding-bottom: 120px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.3);
         }
 
-        /* Top Navigation Header */
-        .header-nav { padding: 2rem 1.5rem 1rem; display: flex; justify-content: space-between; align-items: center; }
-        .logo { font-weight: 800; font-size: 1.4rem; letter-spacing: -1px; color: var(--text-dark); text-decoration: none; }
+        /* Header Layout */
+        .header-nav { 
+            padding: 1.75rem 1.5rem 1rem; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            background: var(--bg);
+        }
+        .logo { 
+            font-weight: 800; 
+            font-size: 1.4rem; 
+            letter-spacing: -1px; 
+            color: var(--text-dark); 
+            text-decoration: none; 
+        }
         .logo span { color: var(--brand); }
 
         .profile-trigger {
-            width: 45px; height: 45px; background: #f1f5f9; border: 1.5px solid var(--border);
-            border-radius: 14px; display: flex; align-items: center; justify-content: center;
-            font-weight: 700; color: var(--brand); text-decoration: none;
+            width: 42px; 
+            height: 42px; 
+            background: var(--surface); 
+            border: 2px solid var(--surface);
+            border-radius: 14px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            font-weight: 700; 
+            color: var(--brand); 
+            text-decoration: none;
+            box-shadow: var(--shadow-sm);
         }
 
-        /* Hero Message */
-        .hero-section { padding: 0 1.5rem 1.5rem; }
-        .hero-section h1 { font-size: 1.7rem; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
-        .hero-section p { color: var(--text-sub); font-size: 0.9rem; margin: 5px 0 0; font-weight: 500; }
+        /* Hero Text */
+        .hero-section { padding: 0.5rem 1.5rem 1.25rem; }
+        .hero-section h1 { font-size: 1.65rem; font-weight: 800; margin: 0; letter-spacing: -0.5px; color: var(--text-dark); }
+        .hero-section p { color: var(--text-sub); font-size: 0.88rem; margin: 4px 0 0; font-weight: 500; }
 
-        /* Premium Upgrade Banner */
+        /* Paywall Card Banner */
         <% if (!user.has_paid) { %>
         .premium-card {
-            margin: 0 1.5rem 1.5rem; padding: 24px; background: var(--brand-gradient);
-            border-radius: 28px; color: white; position: relative; overflow: hidden;
-            box-shadow: 0 12px 25px rgba(0, 98, 255, 0.2);
+            margin: 0 1.5rem 1.5rem; 
+            padding: 24px; 
+            background: var(--brand-gradient);
+            border-radius: 24px; 
+            color: white; 
+            position: relative; 
+            overflow: hidden;
+            box-shadow: 0 12px 25px rgba(0, 98, 255, 0.25);
         }
-        .premium-card h3 { font-size: 1.2rem; margin: 0; font-weight: 800; }
-        .premium-card p { font-size: 0.85rem; opacity: 0.9; margin: 8px 0 16px; line-height: 1.4; }
+        .premium-card h3 { font-size: 1.15rem; margin: 0; font-weight: 800; letter-spacing: -0.2px; }
+        .premium-card p { font-size: 0.85rem; opacity: 0.9; margin: 6px 0 16px; line-height: 1.45; font-weight: 500; }
         .upgrade-btn {
-            background: white; color: var(--brand); border: none; padding: 12px 24px; 
-            border-radius: 14px; font-weight: 800; font-size: 0.85rem; cursor: pointer;
+            background: white; 
+            color: var(--brand); 
+            border: none; 
+            padding: 12px 22px; 
+            border-radius: 14px; 
+            font-weight: 800; 
+            font-size: 0.85rem; 
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
+        .premium-card::after {
+            content: '\f521';
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            position: absolute;
+            right: -10px;
+            bottom: -15px;
+            font-size: 6rem;
+            opacity: 0.08;
+            transform: rotate(-15deg);
         }
         <% } %>
 
-        /* Simuverse Card (Coming Soon) */
-        .simuverse-banner {
-            margin: 0 1.5rem 1.5rem; padding: 22px;
-            background: var(--dark-surface);
-            border-radius: 24px; display: flex; align-items: center;
-            justify-content: space-between; color: white;
-            position: relative; overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.1);
-            cursor: not-allowed;
-        }
-        .simuverse-banner .icon-box {
-            width: 48px; height: 48px; background: rgba(255,255,255,0.1);
-            border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem;
-        }
-        .coming-soon {
-            background: #facc15; color: #000; font-size: 0.65rem; font-weight: 900;
-            padding: 4px 12px; border-radius: 8px; text-transform: uppercase;
-        }
-
-        /* Daily Challenge - ACCESSIBLE TO ALL */
+        /* Standalone High-Priority Daily Challenge Hub */
         .challenge-hub {
-            margin: 0 1.5rem 1.5rem; padding: 22px;
+            margin: 0 1.5rem 1.5rem; 
+            padding: 22px;
             background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
-            border-radius: 24px; display: flex; align-items: center;
-            justify-content: space-between; color: white; text-decoration: none;
-            box-shadow: 0 10px 20px rgba(124, 58, 237, 0.15);
+            border-radius: 24px; 
+            display: flex; 
+            align-items: center;
+            justify-content: space-between; 
+            color: white; 
+            text-decoration: none;
+            box-shadow: 0 12px 24px rgba(124, 58, 237, 0.25);
+            position: relative;
+            overflow: hidden;
+        }
+        .challenge-hub:active { transform: scale(0.97); }
+        .challenge-icon-box {
+            width: 46px; 
+            height: 46px; 
+            background: rgba(255, 255, 255, 0.2); 
+            backdrop-filter: blur(8px);
+            border-radius: 14px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 1.25rem;
+            animation: pulse-glow 2s infinite ease-in-out;
         }
 
-        /* Action Grid */
-        .menu-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; padding: 0 1.5rem; }
+        @keyframes pulse-glow {
+            0% { transform: scale(1); background: rgba(255, 255, 255, 0.2); }
+            50% { transform: scale(1.06); background: rgba(255, 255, 255, 0.3); }
+            100% { transform: scale(1); background: rgba(255, 255, 255, 0.2); }
+        }
+
+        /* Improved Expandable Group Folders */
+        .category-folder {
+            margin: 0 1.5rem 16px;
+            background: var(--surface);
+            border: 1px solid rgba(226, 232, 240, 0.7);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        /* Interactive State Management Appearance Updates */
+        .category-folder.open {
+            box-shadow: var(--shadow-md);
+            border-color: rgba(0, 98, 255, 0.15);
+        }
+        
+        .category-header {
+            padding: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+        }
+        .category-header:active { background: #f8fafc; }
+        
+        .category-title-info { display: flex; align-items: center; gap: 14px; }
+        .category-folder-icon {
+            width: 44px; height: 44px; border-radius: 14px;
+            display: flex; align-items: center; justify-content: center; font-size: 1.15rem;
+        }
+        .category-title-info h3 { margin: 0; font-size: 1.02rem; font-weight: 800; color: var(--text-dark); letter-spacing: -0.3px; }
+        .category-title-info p { margin: 4px 0 0; font-size: 0.78rem; color: var(--text-sub); font-weight: 500; }
+        
+        .category-chevron { font-size: 0.85rem; color: #94a3b8; transition: transform 0.3s ease; }
+        
+        /* Smooth Content Container View */
+        .category-content {
+            max-height: 0;
+            overflow: hidden;
+            padding: 0 20px;
+            opacity: 0;
+            transform: translateY(-8px);
+            transition: max-height 0.35s ease, padding 0.35s ease, opacity 0.3s ease, transform 0.3s ease;
+        }
+        
+        .category-folder.open .category-content {
+            max-height: 1000px; 
+            padding: 4px 20px 24px;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .category-folder.open .category-chevron { transform: rotate(180deg); color: var(--text-dark); }
+
+        /* Redesigned Minimal Grid & Modular Menu Cards */
+        .menu-grid { 
+            display: grid; 
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 12px; 
+            padding-top: 10px;
+        }
         .menu-item {
-            background: white; padding: 22px 16px; border-radius: 24px;
-            border: 1px solid var(--border); text-decoration: none;
-            display: flex; flex-direction: column; position: relative;
+            background: #f8fafc; 
+            padding: 20px 16px; 
+            border-radius: 20px;
+            border: 1px solid #f1f5f9; 
+            text-decoration: none;
+            display: flex; 
+            flex-direction: column; 
+            position: relative;
         }
-        .menu-item:active { transform: scale(0.96); }
+        .menu-item:not(.locked):active { transform: scale(0.95); background: #f1f5f9; }
+        
         .item-icon {
-            width: 44px; height: 44px; border-radius: 13px;
-            display: flex; align-items: center; justify-content: center;
-            margin-bottom: 12px; font-size: 1.15rem;
+            width: 40px; 
+            height: 40px; 
+            border-radius: 12px;
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            margin-bottom: 12px; 
+            font-size: 1.05rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.02);
         }
-        .menu-item b { font-size: 0.9rem; font-weight: 800; color: var(--text-dark); display: block; }
-        .menu-item span { font-size: 0.7rem; color: var(--text-sub); font-weight: 600; margin-top: 4px; }
+        .menu-item b { font-size: 0.9rem; font-weight: 800; color: var(--text-dark); display: block; letter-spacing: -0.1px; }
+        .menu-item span { font-size: 0.72rem; color: var(--text-sub); font-weight: 600; margin-top: 4px; line-height: 1.2; }
 
-        /* Lock Styling for Free Users */
-        .locked { opacity: 0.6; filter: grayscale(0.5); }
+        /* Lock Security Infrastructure Overlays */
+        .locked { cursor: pointer; }
         .locked::after {
-            content: '\f023'; font-family: "Font Awesome 6 Free"; font-weight: 900;
-            position: absolute; top: 15px; right: 15px; color: var(--text-sub); font-size: 0.75rem;
+            content: '\f023'; 
+            font-family: "Font Awesome 6 Free"; 
+            font-weight: 900;
+            position: absolute; 
+            top: 16px; 
+            right: 16px; 
+            color: #94a3b8; 
+            font-size: 0.7rem;
+            background: #ffffff;
+            width: 22px;
+            height: 22px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e2e8f0;
+            box-shadow: var(--shadow-sm);
         }
+        .locked .item-icon { background: #e2e8f0 !important; color: #94a3b8 !important; box-shadow: none !important; }
 
-        /* Bottom Floating Navbar */
+        /* Bottom Menu Shell Navigation */
         .bottom-nav {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            width: calc(100% - 40px); max-width: 390px;
-            background: #0b1437; height: 75px; border-radius: 24px;
-            display: flex; justify-content: space-around; align-items: center;
-            box-shadow: 0 12px 30px rgba(11, 20, 55, 0.3); z-index: 1000;
+            position: fixed; 
+            bottom: 20px; 
+            left: 50%; 
+            transform: translateX(-50%);
+            width: calc(100% - 32px); 
+            max-width: 398px;
+            background: #0b1437; 
+            height: 74px; 
+            border-radius: 24px;
+            display: flex; 
+            justify-space: around; 
+            align-items: center;
+            box-shadow: 0 16px 35px rgba(11, 20, 55, 0.35); 
+            z-index: 1000;
+            padding: 0 10px;
         }
-        .nav-link { text-decoration: none; color: #a3aed0; text-align: center; }
-        .nav-link.active { color: white; }
-        .nav-link i { font-size: 1.25rem; display: block; margin-bottom: 3px; }
-        .nav-link span { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
+        .nav-link { text-decoration: none; color: #64748b; text-align: center; padding: 4px 12px; flex: 1; }
+        .nav-link.active { color: #ffffff; }
+        .nav-link i { font-size: 1.2rem; display: block; margin-bottom: 4px; }
+        .nav-link span { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
         
         .nav-center-btn {
-            width: 60px; height: 60px; background: var(--brand); border-radius: 20px;
-            display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 1.6rem; transform: translateY(-28px);
-            border: 5px solid #ffffff; box-shadow: 0 8px 15px rgba(0, 98, 255, 0.4);
+            width: 56px; 
+            height: 56px; 
+            background: var(--brand); 
+            border-radius: 18px;
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            color: white; 
+            font-size: 1.4rem; 
+            transform: translateY(-24px);
+            border: 5px solid var(--bg); 
+            box-shadow: 0 8px 20px rgba(0, 98, 255, 0.4);
             text-decoration: none;
         }
+        .nav-center-btn:active { transform: translateY(-24px) scale(0.92); }
     </style>
 </head>
 <body>
@@ -163,85 +334,131 @@
             </div>
         <% } %>
 
-        <div class="simuverse-banner">
-            <div style="display: flex; align-items: center; gap: 15px;">
-                <div class="icon-box"><i class="fas fa-vr-cardboard"></i></div>
-                <div>
-                    <h4 style="margin:0; font-weight:800; font-size: 1rem;">Simuverse</h4>
-                    <p style="margin:2px 0 0; font-size:0.75rem; opacity:0.6;">Interactive 3D Learning</p>
-                </div>
-            </div>
-            <span class="coming-soon">Coming Soon</span>
-        </div>
-
         <a href="/daily-challenge" class="challenge-hub">
-            <div style="display: flex; align-items: center; gap: 15px;">
-                <div class="icon-box" style="width:48px; height:48px; background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+            <div style="display: flex; align-items: center; gap: 14px;">
+                <div class="challenge-icon-box">
                     <i class="fas fa-fire-alt"></i>
                 </div>
                 <div>
-                    <h4 style="margin:0; font-weight:800; font-size: 1rem;">Daily Challenge</h4>
-                    <p style="margin:2px 0 0; font-size:0.75rem; opacity:0.9;">Compete with students live</p>
+                    <h4 style="margin:0; font-weight:800; font-size: 0.98rem; letter-spacing: -0.1px;">Daily Challenge</h4>
+                    <p style="margin:3px 0 0; font-size:0.78rem; opacity:0.9; font-weight: 500;">Compete with students live</p>
                 </div>
             </div>
-            <i class="fas fa-arrow-right" style="opacity: 0.8;"></i>
+            <i class="fas fa-chevron-right" style="opacity: 0.8; font-size: 0.85rem;"></i>
         </a>
 
-        <div class="menu-grid">
-            
-            <a href="/setup-test" class="menu-item" style="background: #f0f7ff; border-color: #dbeafe;">
-                <div class="item-icon" style="background: var(--brand); color: white;"><i class="fas fa-bolt"></i></div>
-                <b>Practice Quiz</b>
-                <span><%= user.has_paid ? 'Unlimited Access' : (2 - user.quiz_attempts) + ' Free Remaining' %></span>
-            </a>
+        <div class="category-folder open" id="cat-exams">
+            <div class="category-header" onclick="toggleCategory('cat-exams')">
+                <div class="category-title-info">
+                    <div class="category-folder-icon" style="background: #e0f7ff; color: var(--brand);"><i class="fas fa-laptop-code"></i></div>
+                    <div>
+                        <h3>Academic Tools</h3>
+                        <p>Practice engines, AI Bots, and Analyzers</p>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-down category-chevron"></i>
+            </div>
+            <div class="category-content">
+                <div class="menu-grid">
+                    <a href="/setup-test" class="menu-item" style="background: #ffffff; border-color: #e0f2fe;">
+                        <div class="item-icon" style="background: var(--brand); color: white;"><i class="fas fa-bolt"></i></div>
+                        <b>Practice Quiz</b>
+                        <span><%= user.has_paid ? 'Unlimited Access' : (2 - user.quiz_attempts) + ' Free Remaining' %></span>
+                    </a>
 
-            <a href="<%= user.has_paid ? '/ai-quiz' : '#' %>" class="menu-item <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>" style="<%= user.has_paid ? 'background: #faf5ff; border-color: #f3e8ff;' : '' %>">
-                <div class="item-icon" style="background: #f5f3ff; color: var(--accent);"><i class="fas fa-robot"></i></div>
-                <b>AI Quiz Bot</b>
-                <span>PDF to CBT Exam</span>
-            </a>
+                    <a href="<%= user.has_paid ? '/ai-quiz' : '#' %>" class="menu-item <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>" style="<%= user.has_paid ? 'background: #ffffff; border-color: #f3e8ff;' : '' %>">
+                        <div class="item-icon" style="background: #f3e8ff; color: var(--accent);"><i class="fas fa-robot"></i></div>
+                        <b>AI Quiz Bot</b>
+                        <span>PDF to CBT Exam</span>
+                    </a>
 
-            <a href="<%= user.has_paid ? '/subjects' : '#' %>" class="menu-item <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>">
-                <div class="item-icon" style="background: #eef2ff; color: #4f46e5;"><i class="fas fa-book-open"></i></div>
-                <b>Study Library</b>
-                <span>Course Manuals</span>
-            </a>
+                    <a href="<%= user.has_paid ? '/cgpa' : '#' %>" class="menu-item <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>" style="<%= user.has_paid ? 'background: #ffffff; border-color: #dcfce7;' : '' %>">
+                        <div class="item-icon" style="background: #dcfce7; color: #16a34a;"><i class="fas fa-chart-line"></i></div>
+                        <b>CGPA Tracker</b>
+                        <span>Grade Calculator</span>
+                    </a>
 
-            <a href="<%= user.has_paid ? '/pomodoro' : '#' %>" class="menu-item <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>">
-                <div class="item-icon" style="background: #fff1f2; color: #e11d48;"><i class="fas fa-stopwatch"></i></div>
-                <b>Pomodoro</b>
-                <span>Focus Sessions</span>
-            </a>
+                    <a href="<%= user.has_paid ? '/competition' : '#' %>" class="menu-item <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>" style="<%= user.has_paid ? 'background: #ffffff; border-color: #fef3c7;' : '' %>">
+                        <div class="item-icon" style="background: #fef3c7; color: #d97706;"><i class="fas fa-trophy"></i></div>
+                        <b>Live Arena</b>
+                        <span>Global Rankings</span>
+                    </a>
+                </div>
+            </div>
+        </div>
 
-            <a href="<%= user.has_paid ? '/deadlines' : '#' %>" class="menu-item <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>">
-                <div class="item-icon" style="background: #fdf2f8; color: #db2777;"><i class="fas fa-hourglass-start"></i></div>
-                <b>Deadlines</b>
-                <span>Exam Tracker</span>
-            </a>
+        <div class="category-folder" id="cat-studykit">
+            <div class="category-header" onclick="toggleCategory('cat-studykit')">
+                <div class="category-title-info">
+                    <div class="category-folder-icon" style="background: #f3e8ff; color: var(--accent);"><i class="fas fa-briefcase"></i></div>
+                    <div>
+                        <h3>Study Kit</h3>
+                        <p>Timetables, Guides, and Tracking</p>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-down category-chevron"></i>
+            </div>
+            <div class="category-content">
+                <div class="menu-grid">
+                    <a href="<%= user.has_paid ? '/subjects' : '#' %>" class="menu-item <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>" style="background: #ffffff;">
+                        <div class="item-icon" style="background: #e0e7ff; color: #4f46e5;"><i class="fas fa-book-open"></i></div>
+                        <b>Study Library</b>
+                        <span>Course Manuals</span>
+                    </a>
 
-            <a href="<%= user.has_paid ? '/timetable' : '#' %>" class="menu-item <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>">
-                <div class="item-icon" style="background: #f0fdf4; color: #16a34a;"><i class="fas fa-calendar-day"></i></div>
-                <b>Timetable</b>
-                <span>Study Planner</span>
-            </a>
+                    <a href="<%= user.has_paid ? '/pomodoro' : '#' %>" class="menu-item <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>" style="background: #ffffff;">
+                        <div class="item-icon" style="background: #ffe4e6; color: #e11d48;"><i class="fas fa-stopwatch"></i></div>
+                        <b>Pomodoro</b>
+                        <span>Focus Sessions</span>
+                    </a>
 
-            <a href="<%= user.has_paid ? '/competition' : '#' %>" class="menu-item <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>">
-                <div class="item-icon" style="background: #fffbeb; color: #d97706;"><i class="fas fa-trophy"></i></div>
-                <b>Live Arena</b>
-                <span>Global Rankings</span>
-            </a>
+                    <a href="<%= user.has_paid ? '/deadlines' : '#' %>" class="menu-item <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>" style="background: #ffffff;">
+                        <div class="item-icon" style="background: #fce7f3; color: #db2777;"><i class="fas fa-hourglass-start"></i></div>
+                        <b>Deadlines</b>
+                        <span>Exam Tracker</span>
+                    </a>
 
-            <a href="/suggestions" class="menu-item">
-                <div class="item-icon" style="background: #f5f3ff; color: #7c3aed;"><i class="fas fa-pen-fancy"></i></div>
-                <b>Feedback</b>
-                <span>Tell us more</span>
-            </a>
+                    <a href="<%= user.has_paid ? '/timetable' : '#' %>" class="menu-item <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>" style="background: #ffffff;">
+                        <div class="item-icon" style="background: #dcfce7; color: #16a34a;"><i class="fas fa-calendar-day"></i></div>
+                        <b>Timetable</b>
+                        <span>Study Planner</span>
+                    </a>
+                </div>
+            </div>
+        </div>
 
-            <a href="https://alitedigitals.vercel.app/projects" target="_blank" class="menu-item">
-                <div class="item-icon" style="background: #f8fafc; color: var(--text-dark); border: 1px solid var(--border);"><i class="fas fa-shopping-cart"></i></div>
-                <b>Alite Store</b>
-                <span>Tech Shop</span>
-            </a>
+        <div class="category-folder" id="cat-extras">
+            <div class="category-header" onclick="toggleCategory('cat-extras')">
+                <div class="category-title-info">
+                    <div class="category-folder-icon" style="background: #f1f5f9; color: var(--text-dark);"><i class="fas fa-folder-plus"></i></div>
+                    <div>
+                        <h3>More Resources</h3>
+                        <p>Developer store, labs, and updates</p>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-down category-chevron"></i>
+            </div>
+            <div class="category-content">
+                <div class="menu-grid">
+                    <a href="https://alitedigitals.vercel.app/projects" target="_blank" class="menu-item" style="background: #ffffff;">
+                        <div class="item-icon" style="background: #f8fafc; color: var(--text-dark); border: 1px solid var(--border);"><i class="fas fa-shopping-cart"></i></div>
+                        <b>Alite Store</b>
+                        <span>Tech Shop</span>
+                    </a>
+
+                    <a href="/suggestions" class="menu-item" style="background: #ffffff;">
+                        <div class="item-icon" style="background: #f3e8ff; color: #7c3aed;"><i class="fas fa-pen-fancy"></i></div>
+                        <b>Feedback</b>
+                        <span>Tell us more</span>
+                    </a>
+
+                    <a href="#" class="menu-item locked" style="background: #ffffff; grid-column: span 2;">
+                        <div class="item-icon" style="background: var(--dark-surface); color: white;"><i class="fas fa-vr-cardboard"></i></div>
+                        <b>Simuverse Reality Laboratory</b>
+                        <span>Interactive 3D Learning Modules Coming Soon</span>
+                    </a>
+                </div>
+            </div>
         </div>
 
         <nav class="bottom-nav">
@@ -268,6 +485,19 @@
     </div>
 
     <script>
+        function toggleCategory(id) {
+            const targetFolder = document.getElementById(id);
+            const isOpen = targetFolder.classList.contains('open');
+            
+            document.querySelectorAll('.category-folder').forEach(folder => {
+                folder.classList.remove('open');
+            });
+            
+            if (!isOpen) {
+                targetFolder.classList.add('open');
+            }
+        }
+
         function payWithPaystack() {
             const btn = document.getElementById('pay-btn');
             if (btn) { btn.innerHTML = "Opening Gateway..."; btn.disabled = true; }

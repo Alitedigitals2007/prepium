@@ -16,7 +16,11 @@ require('dotenv').config();
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // Initialize it with the correct class constructor
-const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// This is correct:
+const apiKeys = [process.env.GEMINI_API_KEY, process.env.GEMINI_API_KEY_PRIMARY];
+
+// Then inside your function, you pick one:
+const ai = new GoogleGenerativeAI(apiKeys[0]);
 const pdfToText = require('pdf-to-text');
 // Configure Multer to save uploaded files temporarily on your disk
 
@@ -42,9 +46,6 @@ const transporter = nodemailer.createTransport({
         pass: process.env.EMAIL_PASS
     }
 });
-
-// Export it if your routes are in a different file, 
-// or just use it directly if they are in app.js
 
 app.set('view engine', 'ejs');
 app.use(express.json());
@@ -2266,6 +2267,8 @@ app.post('/upload-pdf', async (req, res) => {
         res.status(500).json({ success: false, message: "Internal server error." });
     }
 });
+
+// POST: Process and Generate Contextual Quizzes from PDFs
 app.post('/generate-ai-quiz', isStudent, upload.single('lecture_note'), async (req, res) => {
     try {
         if (!req.file) {
@@ -2274,27 +2277,24 @@ app.post('/generate-ai-quiz', isStudent, upload.single('lecture_note'), async (r
 
         const numQuestions = parseInt(req.body.num_questions) || 5;
         const quizDuration = parseInt(req.body.quiz_duration) || 5; 
+        const questionType = req.body.question_type || 'obj'; // 'obj', 'german', 'theory', 'mixed'
         const originalFileName = req.file.originalname;
 
-        console.log(`[AI ENGINE] Processing "${originalFileName}" via Native Fetch REST API`);
+        console.log(`[AI ENGINE] Compiling exactly ${numQuestions} [Format: ${questionType.toUpperCase()}] questions for "${originalFileName}"`);
 
         const pdfBase64 = req.file.buffer.toString("base64");
 
-        const promptText = `
-            You are an expert school examiner. Analyze the attached PDF document. Generate EXACTLY ${numQuestions} unique multiple-choice questions (MCQs) for an interactive practice test based strictly on its contents.
-            
-            Return the output ONLY as a raw, valid JSON array matching this structure exactly:
-            [
-              {
-                "question": "Write the question text here?",
-                "options": ["Option A", "Option B", "Option C", "Option D"],
-                "correct": "Option B",
-                "explanation": "Provide a detailed step-by-step reason why this option is correct based on the text."
-              }
-            ]
-        `;
+        // System prompt context designed to accelerate parsing speed and maintain structured structural fidelity
+        const promptText = `You are an expert academic examiner. Analyze the attached PDF document carefully.
+        Generate exactly ${numQuestions} unique, highly relevant academic questions based strictly on its contents.
+        
+        Adapt your generation style to the requested format profile:
+        - Format type 'obj': Standard 4-choice Multiple Choice Question.
+        - Format type 'german': Fill-in-the-gap testing style where 'correct' contains precise missing word.
+        - Format type 'theory': Deep conceptual open-ended essay questions requiring benchmark criteria and matching verification keywords.
 
-        // Using proper camelCase properties recognized by the v1beta endpoint
+        Ensure all items evaluate core definitions, calculations, laws, formulas, or concepts from the text.`;
+
         const payload = {
             contents: [{
                 parts: [
@@ -2309,14 +2309,55 @@ app.post('/generate-ai-quiz', isStudent, upload.single('lecture_note'), async (r
             }],
             generationConfig: {
                 responseMimeType: "application/json",
-                temperature: 0.2
+                responseSchema: {
+                    type: "ARRAY",
+                    description: `A list of exactly ${numQuestions} questions matching the configuration formats specified.`,
+                    items: {
+                        type: "OBJECT",
+                        properties: {
+                            type: { 
+                                type: "STRING", 
+                                enum: ["obj", "german", "theory"],
+                                description: "The single specific category format this precise question belongs to." 
+                            },
+                            question: { 
+                                type: "STRING",
+                                description: "For 'german' formats, make sure to explicitly include a blank space or clear dashes (____) inside the string block."
+                            },
+                            options: {
+                                type: "ARRAY",
+                                items: { type: "STRING" },
+                                description: "Exactly 4 options if type is 'obj'. Leave completely empty [] for 'german' or 'theory' formats."
+                            },
+                            correct: { 
+                                type: "STRING", 
+                                description: "For 'obj', match an option element string exactly. For 'german', the specific string answer. For 'theory', provide comprehensive model grading criteria answers." 
+                            },
+                            keywords: {
+                                type: "ARRAY",
+                                items: { type: "STRING" },
+                                description: "A list of 3-6 critical technical words or phrases mandatory for full point acquisition. Required for 'theory' questions, leave empty [] for others."
+                            },
+                            explanation: { 
+                                type: "STRING",
+                                description: "The logical deep structural academic context rationale behind the solution." 
+                            }
+                        },
+                        required: ["type", "question", "options", "correct", "keywords", "explanation"]
+                    }
+                },
+                // Lower temperature speeds up synthesis execution loops and forces strict contextual compliance
+                temperature: 0.15, 
+                maxOutputTokens: 8192 
             }
         };
 
-       const apiKey = process.env.GEMINI_API_KEY;
-
-// FIX: Swap the decommissioned 1.5 model identifier out for gemini-2.5-flash
-const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        const apiKeys = [
+    process.env.GEMINI_API_KEY,           // Default
+    process.env.GEMINI_API_KEY_PRIMARY,   // Primary
+    process.env.GEMINI_API_KEY_SECONDARY  // Add more as needed
+].filter(Boolean);
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKeys[0]}`;
 
         const response = await fetch(url, {
             method: 'POST',
@@ -2330,31 +2371,43 @@ const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-
         }
 
         const data = await response.json();
-        
-        const responseText = data.candidates[0].content.parts[0].text;
-        const cleanJsonText = responseText.replace(/```json|```/g, "").trim();
-        const structuredQuiz = JSON.parse(cleanJsonText);
+        const responseText = data.candidates[0].content.parts[0].text.trim();
+        let structuredQuiz = JSON.parse(responseText);
+
+        // Fail-safe programmatic mapping normalization for strict type enforcement during mixed evaluations
+        structuredQuiz = structuredQuiz.map(q => {
+            if (questionType !== 'mixed') q.type = questionType;
+            if (!q.options) q.options = [];
+            if (!q.keywords) q.keywords = [];
+            return q;
+        });
 
         res.json({ 
             success: true, 
             questions: structuredQuiz,
-            quizTitle: `AI-Test (${originalFileName})`,
+            quizTitle: `AI-Test (${originalFileName.replace(/\.[^/.]+$/, "")})`,
             durationSeconds: quizDuration * 60
         });
 
-    } catch (error) {
-        console.error("AI Generation Failure:", error);
-        res.status(500).json({ success: false, message: "Internal server error compiling dynamic exam profile." });
+  } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: "Something went wrong" });
     }
 });
 
+// POST: Save and Persist Graded Flexible Score Results
 app.post('/save-ai-quiz-results', isStudent, async (req, res) => {
     try {
         const { quizTitle, totalQuestions, correctAnswers, scorePercentage } = req.body;
-        const userId = req.session.user.id;
+        
+        // Safety validation fallback check handling session tracking formats stably
+        const userId = req.user ? req.user.id : (req.session.user ? req.session.user.id : null);
+        
+        if (!userId) {
+            return res.status(401).json({ success: false, message: "Unauthorized account context profile tracking session." });
+        }
 
-        // SQL Injection-safe insertion matching your quiz_results pool schema configuration
-        // Note: 'subject_id' is passed as NULL since this is generated dynamically by the AI
+        // Stores numeric evaluation scores as floating-point metrics (e.g., 3.5 out of 5 for partial theoretical credit)
         const insertQuery = `
             INSERT INTO quiz_results (user_id, subject_id, title, score, total_questions, percentage, created_at)
             VALUES ($1, NULL, $2, $3, $4, $5, NOW())
@@ -2363,13 +2416,13 @@ app.post('/save-ai-quiz-results', isStudent, async (req, res) => {
 
         await pool.query(insertQuery, [
             userId,
-            quizTitle,          // Stores: "AI-Test (filename.pdf)"
-            correctAnswers,     // Points achieved
-            totalQuestions,     // Total exam limit
-            scorePercentage     // Calculated percentage index
+            quizTitle,          
+            parseFloat(correctAnswers), 
+            parseInt(totalQuestions),    
+            parseInt(scorePercentage)   
         ]);
 
-        console.log(`[DATABASE SYNC] AI CBT score logged for Student ID: ${userId}`);
+        console.log(`[DATABASE SYNC] AI CBT score logged for Student ID: ${userId} (${correctAnswers}/${totalQuestions})`);
         res.json({ success: true, message: "Performance metrics logged to PostgreSQL core." });
 
     } catch (err) {
@@ -2377,12 +2430,250 @@ app.post('/save-ai-quiz-results', isStudent, async (req, res) => {
         res.status(500).json({ success: false, message: "Internal server error persisting score profile." });
     }
 });
-// Add this configuration property export to boost execution parameters if supported
+
+// 1. MAIN SYSTEM DASHBOARD OVERLOOK (Fixed to dynamically compute counters and grade stats)
+app.get('/cgpa', async (req, res) => {
+    try {
+        // Dynamically pull from session token profile, or fallback to test profile safely
+        const userId = req.user && req.user.id ? req.user.id : 'user-001'; 
+
+        // Fetch User Profile
+        const profileResult = await pool.query(
+            'SELECT * FROM public.cgpa_profiles WHERE user_id = $1', 
+            [userId]
+        );
+        const profile = profileResult.rows[0];
+
+        // Fetch Courses - Falling back gracefully without hitting a missing column failure
+        const coursesResult = await pool.query(
+            'SELECT id, id AS _id, course_code AS code, credit_units, grade, level_scope, semester, is_hidden, deleted FROM public.cgpa_courses WHERE user_id = $1 AND deleted = false ORDER BY level_scope ASC, semester ASC', 
+            [userId]
+        );
+        
+        // Map elements while safely handling title fallbacks instead of erasing real context
+        const courses = coursesResult.rows.map(row => ({
+            ...row,
+            title: row.title || 'Course Module'
+        }));
+
+        // Dynamically build Grade Counters and Distributions for the UI Dashboard parameters
+        const clientGradeCounts = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
+        courses.forEach(course => {
+            if (!course.is_hidden && clientGradeCounts[course.grade] !== undefined) {
+                clientGradeCounts[course.grade]++;
+            }
+        });
+
+        const user = req.user || { department: profile ? profile.department : '' }; 
+
+        // Render matching variable structural keys cleanly to the template Engine
+        res.render('cgpa', { 
+            profile: profile || null, 
+            courses: courses || [], 
+            hasProfile: !!profile,
+            clientGradeCounts, // Sent safely to replace missing front-end JS logic
+            user 
+        });
+    } catch (err) {
+        console.error("Dashboard error:", err);
+        res.status(500).send('Error loading CGPA dashboard');
+    }
+});
+
+// 2. ENTRY SETTINGS WIZARD STREAM
+app.post('/cgpa/setup', async (req, res) => {
+    try {
+        const userId = req.user && req.user.id ? req.user.id : 'user-001'; 
+        const { department, current_level, grading_scale, start_type, prev_units, prev_cgpa } = req.body;
+
+        let units = 0;
+        let gp = 0.00;
+
+        if (start_type === 'balance') {
+            units = parseInt(prev_units) || 0;
+            const cgpa = parseFloat(prev_cgpa) || 0.00;
+            gp = parseFloat((cgpa * units).toFixed(2));
+        }
+
+        await pool.query(
+            `INSERT INTO public.cgpa_profiles 
+             (user_id, department, current_level, grading_scale, prev_units, prev_gp) 
+             VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT (user_id) DO UPDATE 
+             SET department = $2, current_level = $3, grading_scale = $4, prev_units = $5, prev_gp = $6`,
+            [userId, department, parseInt(current_level), parseInt(grading_scale), units, gp]
+        );
+
+        res.redirect('/cgpa');
+    } catch (err) {
+        console.error('Error processing setup profiles:', err);
+        res.status(500).send('Error compiling initialization metrics.');
+    }
+});
+
+// 3. EDIT EXISTING REGISTERED COURSE PARAMETERS
+app.post('/cgpa/course/edit', async (req, res) => {
+    try {
+        const userId = req.user && req.user.id ? req.user.id : 'user-001'; 
+        const { id, code, title, units, grade } = req.body;
+
+        await pool.query(
+            `UPDATE public.cgpa_courses 
+             SET course_code = $1, title = $2, credit_units = $3, grade = $4 
+             WHERE id = $5 AND user_id = $6`,
+            [code.toUpperCase(), title || 'Course Module', parseInt(units), grade, id, userId]
+        );
+
+        res.redirect('/cgpa');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error updating course parameters');
+    }
+});
+
+// 4. APPEND NEW MATRIX COURSE ROUTE
+app.post('/cgpa/course/add', async (req, res) => {
+    try {
+        const userId = req.user && req.user.id ? req.user.id : 'user-001';
+        const { code, title, level_scope, semester, credit_units, grade } = req.body;
+
+        await pool.query(
+            `INSERT INTO public.cgpa_courses 
+             (user_id, course_code, title, level_scope, semester, credit_units, grade, is_hidden, deleted) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, false, false)`,
+            [
+                userId, 
+                code.toUpperCase(), 
+                title || 'Course Module',
+                parseInt(level_scope), 
+                parseInt(semester), 
+                parseInt(credit_units), 
+                grade
+            ]
+        );
+
+        res.redirect('/cgpa');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error adding course to registry matrix');
+    }
+});
+
+// 5. ATOMIC TOGGLE PIPELINE VISIBILITY
+app.post('/cgpa/course/toggle-visible/:id', async (req, res) => {
+    try {
+        const userId = req.user && req.user.id ? req.user.id : 'user-001';
+        const courseId = req.params.id;
+
+        await pool.query(
+            `UPDATE public.cgpa_courses 
+             SET is_hidden = NOT is_hidden 
+             WHERE id = $1 AND user_id = $2`, 
+            [courseId, userId]
+        );
+
+        res.redirect('/cgpa');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error toggling course visibility');
+    }
+});
+
+// 6. PURGE COURSE LOG MATRIX RECORD
+app.post('/cgpa/course/delete/:id', async (req, res) => {
+    try {
+        const userId = req.user && req.user.id ? req.user.id : 'user-001';
+        const courseId = req.params.id;
+
+        await pool.query(
+            `UPDATE public.cgpa_courses 
+             SET deleted = true 
+             WHERE id = $1 AND user_id = $2`,
+            [courseId, userId]
+        );
+
+        res.redirect('/cgpa');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error dropping course record');
+    }
+});
+
+// 1. Centralized Community Links Configuration
+const knownGroups = {
+    "University of Ibadan": "https://chat.whatsapp.com/FJWqHSNpzyeGGi5XIvKn7c?s=cl&p=a&mlu=4",
+    "UNILAG": "https://chat.whatsapp.com/BE0QEAxTBLVKlcf8B2LAbi?s=cl&p=a&mlu=4",
+    "OAU": "https://chat.whatsapp.com/CZup8KilOPCAb0kKefvShu?s=cl&p=a&mlu=4",
+    "UNIBEN": "https://chat.whatsapp.com/J7eUUxqgjrd9axSaEA8phq?s=cl&p=a&mlu=4",
+    "LEAD CITY": "https://chat.whatsapp.com/DzYwcWKcoQ15GLuaQVzGNq?s=cl&p=a&mlu=4",
+    "FUNAAB": "https://chat.whatsapp.com/FxBGl0rsMhK9h0tgRKeWJw?s=cl&p=a&mlu=4",
+    "UNIZIK": "https://chat.whatsapp.com/DcRijbWvS6g6Yl6AikilFw?s=cl&p=a&mlu=4",
+    "FUTA": "https://chat.whatsapp.com/CMITBltuQas2OGpbRolNSO?s=cl&p=a&mlu=4",
+    "UNILORIN": " https://chat.whatsapp.com/BxTfRLzcbQJ8t1hsCRCqLT?s=cl&p=a&mlu=4",
+};
+const mainCommunityLink = "https://chat.whatsapp.com/Gt7G6pVT7Ed9te41QSxgca";
+
+// 2. GET Route: Render the Giveaway Form with Dynamic Dropdown
+app.get('/giveaway', (req, res) => {
+    // Extract just the school names from our config object keys
+    const universitiesList = Object.keys(knownGroups); 
+    res.render('giveaway', { universities: universitiesList });
+});
+
+// 3. POST Route: Process Form, Email to Inbox, Redirect to Hub
+app.post('/submit-giveaway', (req, res) => {
+    const { name, department, phone, university, customUniversity } = req.body;
+    
+    // Fallback logic for user-typed university
+    const studentSchool = (university === 'Other' && customUniversity) ? customUniversity.trim() : university;
+
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: 'israelatilola966@gmail.com',
+        subject: 'NEW GIVEAWAY',
+        text: `Name: ${name}\nDepartment: ${department}\nPhone: ${phone}\nUniversity: ${studentSchool}`
+    };
+
+    transporter.sendMail(mailOptions, (err, info) => {
+        if (err) {
+            console.error("[MAIL ERROR]:", err);
+        } else {
+            console.log("[MAIL SUCCESS]:", info.response);
+        }
+        
+        // Save data to session so the confirmation page knows who they are
+        req.session.giveawayUser = {
+            name: name,
+            school: studentSchool
+        };
+
+        res.redirect('/join-communities');
+    });
+});
+
+// 4. GET Route: Render the Community Target Destination Hub
+app.get('/join-communities', (req, res) => {
+    // Fallback defaults if they access page directly without filling the form
+    const sessionData = req.session.giveawayUser || { name: "Scholar", school: "Other" };
+    
+    const userSchool = sessionData.school;
+    const specializedLink = knownGroups[userSchool] || null;
+
+    res.render('join-communities', {
+        studentName: sessionData.name,
+        studentSchool: userSchool,
+        schoolLink: specializedLink,
+        mainLink: mainCommunityLink
+    });
+});
+
+// ══════════════════════════════════════════════════
+// SERVER DEPLOYMENT BOOTSTRAPPING
+// ══════════════════════════════════════════════════
 const config = {
-  maxDuration: 60,
+    maxDuration: 60,
 };
 
-// Wrap your local listener so it doesn't try to bind a port on Vercel
 if (process.env.NODE_ENV !== 'production') {
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
@@ -2390,6 +2681,4 @@ if (process.env.NODE_ENV !== 'production') {
     });
 }
 
-// THE CRITICAL FIX: Export the Express app so Vercel can run it as a serverless function
 module.exports = app;
-module.exports.config = config;
