@@ -52,19 +52,17 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
+// Add this line directly ABOVE your app.use(session({...})) middleware declaration
+app.set('trust proxy', 1);
+
 app.use(session({
-    store: new pgSession({
-        pool: pool,                // References your active PostgreSQL pool connection
-        tableName: 'session'       // Saves session records securely inside a database table
-    }),
     secret: process.env.SESSION_SECRET || 'prepium_secure_vault_key',
     resave: false,
     saveUninitialized: false,
-    rolling: true,                 // CRITICAL: Forces a cookie reset timer on every page view or API push
     cookie: { 
-        maxAge: 24 * 60 * 60 * 1000, // Keeps the login cookie alive for a full 24 hours
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true 
+        secure: true, // Required for production HTTPS connections
+        sameSite: 'none', // Allows session sharing across external Vercel subdomains
+        maxAge: 24 * 60 * 60 * 1000 
     }
 }));
 
