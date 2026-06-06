@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Prepium | Profile</title>
     
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2 family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
@@ -17,6 +17,7 @@
             --text-sub: #a3aed0;
             --border: #eef2f6;
             --danger: #ff4d4f;
+            --accent-green: #0d9488;
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; transition: all 0.2s ease; }
@@ -60,6 +61,10 @@
         .user-name { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.5px; margin: 0; }
         .user-email { color: var(--text-sub); font-size: 0.9rem; font-weight: 600; margin: 4px 0 15px; }
 
+        .uni-badges-wrapper {
+            display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 5px;
+        }
+
         .uni-badge {
             display: inline-flex; align-items: center; gap: 8px;
             background: white; border: 1px solid var(--border);
@@ -68,9 +73,10 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.03);
         }
         .uni-badge i { color: var(--brand); }
+        .dept-badge i { color: var(--accent-green); }
 
-        /* Stats Section */
-        .stats-row {
+        /* Stats Dashboard Sections */
+        .stats-grid {
             display: grid; grid-template-columns: 1fr 1fr;
             gap: 15px; padding: 0 1.5rem 2rem;
         }
@@ -78,6 +84,11 @@
         .stat-box {
             background: white; border: 1px solid var(--border);
             padding: 20px; border-radius: 24px; text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.01);
+        }
+        .stat-box.highlighted {
+            border-color: rgba(0, 98, 255, 0.15);
+            background: linear-gradient(180deg, #ffffff 0%, #f0f6ff 100%);
         }
         .stat-value { font-size: 1.5rem; font-weight: 800; color: var(--text-dark); display: block; }
         .stat-label { font-size: 0.65rem; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; display: block; }
@@ -102,6 +113,7 @@
         }
 
         .blue-icon { background: #eef2ff; color: var(--brand); }
+        .teal-icon { background: #e6f7f6; color: var(--accent-green); }
         .red-icon { background: #fff1f2; color: var(--danger); }
 
         .chevron { color: #cbd5e1; font-size: 0.8rem; }
@@ -134,19 +146,27 @@
         <div class="profile-header">
             <div class="avatar-container">
                 <div class="avatar-main">
-                    <%= user.fullname.charAt(0).toUpperCase() %>
+                    <%= user.fullname ? user.fullname.charAt(0).toUpperCase() : 'P' %>
                 </div>
             </div>
             <h1 class="user-name"><%= user.fullname %></h1>
             <p class="user-email"><%= user.email %></p>
             
-            <div class="uni-badge">
-                <i class="fas fa-university"></i>
-                <%= user.university_name || 'Institution' %>
+            <div class="uni-badges-wrapper">
+                <div class="uni-badge">
+                    <i class="fas fa-university"></i>
+                    <%= user.university_name || 'Institution' %>
+                </div>
+                <% if(cgpaProfile && cgpaProfile.department) { %>
+                    <div class="uni-badge dept-badge">
+                        <i class="fas fa-graduation-cap"></i>
+                        <%= cgpaProfile.department %>
+                    </div>
+                <% } %>
             </div>
         </div>
 
-        <div class="stats-row">
+        <div class="stats-grid">
             <div class="stat-box">
                 <span class="stat-value"><%= stats.total %></span>
                 <span class="stat-label">Total Tests</span>
@@ -154,6 +174,15 @@
             <div class="stat-box">
                 <span class="stat-value"><%= stats.average %>%</span>
                 <span class="stat-label">Avg. Score</span>
+            </div>
+            <div class="stat-box highlighted" style="grid-column: span 2;">
+                <span class="stat-value" style="font-size: 2rem; color: var(--brand);">
+                    <%= calculatedCGPA %> 
+                    <span style="font-size: 1rem; color: var(--text-sub); font-weight: 600;">
+                        / <%= cgpaProfile ? cgpaProfile.grading_scale : '5.0' %>
+                    </span>
+                </span>
+                <span class="stat-label" style="color: var(--brand);">Current Cumulative GPA</span>
             </div>
         </div>
 

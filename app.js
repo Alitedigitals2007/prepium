@@ -29,7 +29,7 @@ const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 10 * 1024 * 1024 } // 10MB individual file limit
 });
-
+const pgSession = require('connect-pg-simple')(session);
 
 // Initialize the connection pool
 const pool = new Pool({
@@ -51,7 +51,22 @@ app.set('view engine', 'ejs');
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
-app.use(session({ secret: 'prepium_secret', resave: false, saveUninitialized: true }));
+
+app.use(session({
+    store: new pgSession({
+        pool: pool,                // References your active PostgreSQL pool connection
+        tableName: 'session'       // Saves session records securely inside a database table
+    }),
+    secret: process.env.SESSION_SECRET || 'prepium_secure_vault_key',
+    resave: false,
+    saveUninitialized: false,
+    rolling: true,                 // CRITICAL: Forces a cookie reset timer on every page view or API push
+    cookie: { 
+        maxAge: 24 * 60 * 60 * 1000, // Keeps the login cookie alive for a full 24 hours
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true 
+    }
+}));
 
 // Middleware to check if user is logged in
 const isAuth = (req, res, next) => {
@@ -367,9 +382,12 @@ app.get('/verify-payment', async (req, res) => {
 
 app.get('/profile', isAuth, async (req, res) => {
     try {
+        if (!req.session || !req.session.user || !req.session.user.id) {
+            return res.redirect('/login');
+        }
         const userId = req.session.user.id;
         
-        // 1. Updated: Get user info JOINED with university data
+        // 1. Get user info JOINED with university data
         const userRes = await pool.query(
             `SELECT u.fullname, u.email, u.has_paid, uni.name as university_name 
              FROM users u 
@@ -386,8 +404,43 @@ app.get('/profile', isAuth, async (req, res) => {
         );
         const statsRow = statsRes.rows[0];
 
+        // 3. Get CGPA Profiles Metrics
+        const cgpaProfileRes = await pool.query(
+            'SELECT department, grading_scale, prev_units, prev_gp FROM public.cgpa_profiles WHERE user_id = $1',
+            [userId]
+        );
+        const cgpaProfile = cgpaProfileRes.rows[0];
+
+        // 4. Get Course Listing to Compute Dynamic Running Real-time Standing
+        const coursesRes = await pool.query(
+            'SELECT credit_units, grade FROM public.cgpa_courses WHERE user_id = $1 AND deleted = false AND is_hidden = false',
+            [userId]
+        );
+
+        // Grade Value Points Map mapping scale logic seamlessly
+        const scale = cgpaProfile ? parseInt(cgpaProfile.grading_scale) : 5;
+        const gradePointsMap = scale === 4 
+            ? { 'A': 4, 'B': 3, 'C': 2, 'D': 1, 'E': 0, 'F': 0 }
+            : { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1, 'F': 0 };
+
+        let totalUnits = cgpaProfile ? parseInt(cgpaProfile.prev_units) : 0;
+        let totalPoints = cgpaProfile ? parseFloat(cgpaProfile.prev_gp) : 0.00;
+
+        coursesRes.rows.forEach(course => {
+            const units = parseInt(course.credit_units) || 0;
+            const gradeLetter = (course.grade || 'F').toUpperCase();
+            const pointValue = gradePointsMap[gradeLetter] !== undefined ? gradePointsMap[gradeLetter] : 0;
+            
+            totalUnits += units;
+            totalPoints += (units * pointValue);
+        });
+
+        const calculatedCGPA = totalUnits > 0 ? parseFloat((totalPoints / totalUnits).toFixed(2)) : 0.00;
+
         res.render('profile', { 
             user, 
+            cgpaProfile: cgpaProfile || null,
+            calculatedCGPA,
             stats: {
                 total: parseInt(statsRow.total_tests) || 0,
                 average: Math.round(statsRow.avg_score) || 0
@@ -398,7 +451,6 @@ app.get('/profile', isAuth, async (req, res) => {
         res.status(500).send("Error loading profile");
     }
 });
-
 app.get('/admin/dashboard', isAdmin, async (req, res) => {
     try {
         // 1. Fetch all counts in parallel
@@ -2431,173 +2483,6 @@ app.post('/save-ai-quiz-results', isStudent, async (req, res) => {
     }
 });
 
-// 1. MAIN SYSTEM DASHBOARD OVERLOOK (Fixed to dynamically compute counters and grade stats)
-app.get('/cgpa', async (req, res) => {
-    try {
-        // Dynamically pull from session token profile, or fallback to test profile safely
-        const userId = req.user && req.user.id ? req.user.id : 'user-001'; 
-
-        // Fetch User Profile
-        const profileResult = await pool.query(
-            'SELECT * FROM public.cgpa_profiles WHERE user_id = $1', 
-            [userId]
-        );
-        const profile = profileResult.rows[0];
-
-        // Fetch Courses - Falling back gracefully without hitting a missing column failure
-        const coursesResult = await pool.query(
-            'SELECT id, id AS _id, course_code AS code, credit_units, grade, level_scope, semester, is_hidden, deleted FROM public.cgpa_courses WHERE user_id = $1 AND deleted = false ORDER BY level_scope ASC, semester ASC', 
-            [userId]
-        );
-        
-        // Map elements while safely handling title fallbacks instead of erasing real context
-        const courses = coursesResult.rows.map(row => ({
-            ...row,
-            title: row.title || 'Course Module'
-        }));
-
-        // Dynamically build Grade Counters and Distributions for the UI Dashboard parameters
-        const clientGradeCounts = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
-        courses.forEach(course => {
-            if (!course.is_hidden && clientGradeCounts[course.grade] !== undefined) {
-                clientGradeCounts[course.grade]++;
-            }
-        });
-
-        const user = req.user || { department: profile ? profile.department : '' }; 
-
-        // Render matching variable structural keys cleanly to the template Engine
-        res.render('cgpa', { 
-            profile: profile || null, 
-            courses: courses || [], 
-            hasProfile: !!profile,
-            clientGradeCounts, // Sent safely to replace missing front-end JS logic
-            user 
-        });
-    } catch (err) {
-        console.error("Dashboard error:", err);
-        res.status(500).send('Error loading CGPA dashboard');
-    }
-});
-
-// 2. ENTRY SETTINGS WIZARD STREAM
-app.post('/cgpa/setup', async (req, res) => {
-    try {
-        const userId = req.user && req.user.id ? req.user.id : 'user-001'; 
-        const { department, current_level, grading_scale, start_type, prev_units, prev_cgpa } = req.body;
-
-        let units = 0;
-        let gp = 0.00;
-
-        if (start_type === 'balance') {
-            units = parseInt(prev_units) || 0;
-            const cgpa = parseFloat(prev_cgpa) || 0.00;
-            gp = parseFloat((cgpa * units).toFixed(2));
-        }
-
-        await pool.query(
-            `INSERT INTO public.cgpa_profiles 
-             (user_id, department, current_level, grading_scale, prev_units, prev_gp) 
-             VALUES ($1, $2, $3, $4, $5, $6)
-             ON CONFLICT (user_id) DO UPDATE 
-             SET department = $2, current_level = $3, grading_scale = $4, prev_units = $5, prev_gp = $6`,
-            [userId, department, parseInt(current_level), parseInt(grading_scale), units, gp]
-        );
-
-        res.redirect('/cgpa');
-    } catch (err) {
-        console.error('Error processing setup profiles:', err);
-        res.status(500).send('Error compiling initialization metrics.');
-    }
-});
-
-// 3. EDIT EXISTING REGISTERED COURSE PARAMETERS
-app.post('/cgpa/course/edit', async (req, res) => {
-    try {
-        const userId = req.user && req.user.id ? req.user.id : 'user-001'; 
-        const { id, code, title, units, grade } = req.body;
-
-        await pool.query(
-            `UPDATE public.cgpa_courses 
-             SET course_code = $1, title = $2, credit_units = $3, grade = $4 
-             WHERE id = $5 AND user_id = $6`,
-            [code.toUpperCase(), title || 'Course Module', parseInt(units), grade, id, userId]
-        );
-
-        res.redirect('/cgpa');
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Error updating course parameters');
-    }
-});
-
-// 4. APPEND NEW MATRIX COURSE ROUTE
-app.post('/cgpa/course/add', async (req, res) => {
-    try {
-        const userId = req.user && req.user.id ? req.user.id : 'user-001';
-        const { code, title, level_scope, semester, credit_units, grade } = req.body;
-
-        await pool.query(
-            `INSERT INTO public.cgpa_courses 
-             (user_id, course_code, title, level_scope, semester, credit_units, grade, is_hidden, deleted) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, false, false)`,
-            [
-                userId, 
-                code.toUpperCase(), 
-                title || 'Course Module',
-                parseInt(level_scope), 
-                parseInt(semester), 
-                parseInt(credit_units), 
-                grade
-            ]
-        );
-
-        res.redirect('/cgpa');
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Error adding course to registry matrix');
-    }
-});
-
-// 5. ATOMIC TOGGLE PIPELINE VISIBILITY
-app.post('/cgpa/course/toggle-visible/:id', async (req, res) => {
-    try {
-        const userId = req.user && req.user.id ? req.user.id : 'user-001';
-        const courseId = req.params.id;
-
-        await pool.query(
-            `UPDATE public.cgpa_courses 
-             SET is_hidden = NOT is_hidden 
-             WHERE id = $1 AND user_id = $2`, 
-            [courseId, userId]
-        );
-
-        res.redirect('/cgpa');
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Error toggling course visibility');
-    }
-});
-
-// 6. PURGE COURSE LOG MATRIX RECORD
-app.post('/cgpa/course/delete/:id', async (req, res) => {
-    try {
-        const userId = req.user && req.user.id ? req.user.id : 'user-001';
-        const courseId = req.params.id;
-
-        await pool.query(
-            `UPDATE public.cgpa_courses 
-             SET deleted = true 
-             WHERE id = $1 AND user_id = $2`,
-            [courseId, userId]
-        );
-
-        res.redirect('/cgpa');
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Error dropping course record');
-    }
-});
 
 // 1. Centralized Community Links Configuration
 const knownGroups = {
@@ -2667,9 +2552,282 @@ app.get('/join-communities', (req, res) => {
     });
 });
 
-// ══════════════════════════════════════════════════
-// SERVER DEPLOYMENT BOOTSTRAPPING
-// ══════════════════════════════════════════════════
+
+function buildCGPA(profile, courses) {
+    const scale  = parseInt(profile.grading_scale) || 5;
+    const gpMap5 = { A: 5, B: 4, C: 3, D: 2, E: 1, F: 0 };
+    const gpMap4 = { A: 4, B: 3, C: 2, D: 1, E: 0, F: 0 };
+    const gpMap  = scale === 5 ? gpMap5 : gpMap4;
+
+    // Carry forward the balance-imported quality points
+    let totalUnits  = parseInt(profile.prev_units) || 0;
+    let totalPoints = parseFloat(profile.prev_gp)  || 0;
+
+    const gradeCounts = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
+
+    courses.forEach(c => {
+        const g = (c.grade || 'F').toUpperCase();
+        if (gradeCounts.hasOwnProperty(g)) gradeCounts[g]++;
+        // Only count visible courses
+        if (!c.is_hidden) {
+            const u  = parseInt(c.credit_units) || 0;
+            const pt = gpMap[g] !== undefined ? gpMap[g] : 0;
+            totalUnits  += u;
+            totalPoints += pt * u;
+        }
+    });
+
+    const cgpa = totalUnits > 0
+        ? parseFloat((totalPoints / totalUnits).toFixed(2))
+        : 0;
+
+    // Degree class
+    let degreeClass = 'Pass';
+    let divBadge    = 'none';
+    if (scale === 5) {
+        if      (cgpa >= 4.50) { degreeClass = 'First Class Honours';  divBadge = 'first'; }
+        else if (cgpa >= 3.50) { degreeClass = 'Second Class (Upper)'; divBadge = 'upper'; }
+        else if (cgpa >= 2.40) { degreeClass = 'Second Class (Lower)'; divBadge = 'lower'; }
+        else if (cgpa >= 1.50) { degreeClass = 'Third Class';          divBadge = 'third'; }
+        else if (cgpa >= 1.00) { degreeClass = 'Pass';                 divBadge = 'none';  }
+        else                   { degreeClass = 'Fail';                 divBadge = 'fail';  }
+    } else {
+        if      (cgpa >= 3.50) { degreeClass = 'First Class Honours';  divBadge = 'first'; }
+        else if (cgpa >= 3.00) { degreeClass = 'Second Class (Upper)'; divBadge = 'upper'; }
+        else if (cgpa >= 2.00) { degreeClass = 'Second Class (Lower)'; divBadge = 'lower'; }
+        else if (cgpa >= 1.50) { degreeClass = 'Third Class';          divBadge = 'third'; }
+        else if (cgpa >= 1.00) { degreeClass = 'Pass';                 divBadge = 'none';  }
+        else                   { degreeClass = 'Fail';                 divBadge = 'fail';  }
+    }
+
+    const arcPct    = Math.min(cgpa / scale, 1);
+    const arcOffset = parseFloat((251.2 * (1 - arcPct)).toFixed(1));
+
+    return { cgpa: cgpa.toFixed(2), totalUnits, totalPoints, degreeClass, divBadge, gradeCounts, arcOffset, scale };
+}
+
+// A. GET: DASHBOARD LOADER
+app.get('/cgpa', isStudent, async (req, res) => {
+    try {
+        if (!req.session || !req.session.user || !req.session.user.id) {
+            return res.redirect('/login');
+        }
+        
+        const userId = req.session.user.id; 
+
+        const profileResult = await pool.query(
+            'SELECT * FROM public.cgpa_profiles WHERE user_id = $1', [userId]
+        );
+        const profile = profileResult.rows[0];
+
+        const coursesResult = await pool.query(
+            `SELECT id, id AS _id, course_code AS code, credit_units, grade, 
+                    level_scope, semester, is_hidden, deleted 
+             FROM public.cgpa_courses 
+             WHERE user_id = $1 AND deleted = false 
+             ORDER BY level_scope ASC, semester ASC`, [userId]
+        );
+        
+        const courses = coursesResult.rows.map(row => ({
+            ...row,
+            title: row.title || 'Course Module'
+        }));
+
+        // Compute template distribution indicators safely
+        const gradeCounts = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
+        courses.forEach(course => {
+            const g = (course.grade || 'F').toUpperCase();
+            if (!course.is_hidden && gradeCounts[g] !== undefined) {
+                gradeCounts[g]++;
+            }
+        });
+
+        res.render('cgpa', { 
+            profile: profile || null, 
+            courses: courses || [], 
+            hasProfile: !!profile,
+            gradeCounts, 
+            user: req.session.user,
+            flash: req.query.msg || null
+        });
+    } catch (err) {
+        console.error("Dashboard engine failure:", err);
+        res.status(500).send('Error loading dashboard workflow.');
+    }
+});
+
+// B. POST: CONFIGURATION WIZARD SUBMIT
+app.post('/cgpa/setup', isStudent, async (req, res) => {
+    if (!req.session || !req.session.user || !req.session.user.id) {
+        return res.redirect('/login');
+    }
+
+    const userId = req.session.user.id;
+    const { department, current_level, grading_scale, start_type, prev_cgpa, prev_units } = req.body;
+
+    const scale = parseInt(grading_scale) === 4 ? 4 : 5;
+    const sType = start_type === 'balance' ? 'balance' : 'fresh';
+    
+    // Process input parameters in isolated scope logic cleanly
+    const pCGPA  = sType === 'balance' ? (parseFloat(prev_cgpa) || 0.00) : 0.00;
+    const pUnits = sType === 'balance' ? (parseInt(prev_units) || 0) : 0;
+    const pGP    = parseFloat((pCGPA * pUnits).toFixed(2));
+
+    try {
+        await pool.query(
+            `INSERT INTO public.cgpa_profiles
+                (user_id, department, current_level, grading_scale, prev_units, prev_gp, prev_cgpa)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT (user_id) DO UPDATE SET
+                department    = EXCLUDED.department,
+                current_level = EXCLUDED.current_level,
+                grading_scale = EXCLUDED.grading_scale,
+                prev_units    = EXCLUDED.prev_units,
+                prev_gp       = EXCLUDED.prev_gp,
+                prev_cgpa     = EXCLUDED.prev_cgpa,
+                updated_at    = NOW()`,
+            [userId, department ? department.trim() : 'General', parseInt(current_level) || 300, scale, pUnits, pGP, pCGPA]
+        );
+        
+        res.redirect('/cgpa?msg=Profile configured successfully!');
+    } catch (err) {
+        console.error('CGPA Profiles Upsert Error:', err);
+        res.redirect('/cgpa?msg=Setup wizard failure. Please verify settings.');
+    }
+});
+
+// 4. APPEND NEW MATRIX COURSE ROUTE
+app.post('/cgpa/course/add', isStudent, async (req, res) => {
+    try {
+        if (!req.session || !req.session.user || !req.session.user.id) {
+            return res.redirect('/login');
+        }
+        const userId = req.session.user.id;
+        const { code, title, level_scope, semester, credit_units, grade } = req.body;
+
+        // Fixed query target column from 'code' to 'course_code'
+        await pool.query(
+            `INSERT INTO public.cgpa_courses 
+             (user_id, course_code, title, level_scope, semester, credit_units, grade, is_hidden, deleted) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, false, false)`,
+            [
+                userId, 
+                code.toUpperCase(), 
+                title || 'Course Module',
+                parseInt(level_scope), 
+                parseInt(semester), 
+                parseInt(credit_units), 
+                grade.toUpperCase()
+            ]
+        );
+
+        res.redirect('/cgpa?msg=Course added successfully!');
+    } catch (err) {
+        console.error('Add Course Error:', err);
+        res.status(500).send('Error adding course to registry matrix');
+    }
+});
+
+// 3. EDIT EXISTING REGISTERED COURSE PARAMETERS
+app.post('/cgpa/course/edit', isStudent, async (req, res) => {
+    try {
+        if (!req.session || !req.session.user || !req.session.user.id) {
+            return res.redirect('/login');
+        }
+        const userId = req.session.user.id; 
+        const { id, code, title, units, grade } = req.body;
+
+        // Fixed target column to match database schema exactly
+        await pool.query(
+            `UPDATE public.cgpa_courses 
+             SET course_code = $1, title = $2, credit_units = $3, grade = $4 
+             WHERE id = $5 AND user_id = $6`,
+            [code.toUpperCase(), title || 'Course Module', parseInt(units), grade.toUpperCase(), id, userId]
+        );
+
+        res.redirect('/cgpa?msg=Course updated successfully!');
+    } catch (err) {
+        console.error('Edit Course Error:', err);
+        res.status(500).send('Error updating course parameters');
+    }
+});
+
+app.post('/cgpa/course/toggle-visible/:id', isStudent, async (req, res) => {
+    const userId = req.session.user.id;
+    const { id }  = req.params;
+
+    try {
+        // Ownership + flip
+        await pool.query(
+            `UPDATE cgpa_courses
+             SET is_hidden = NOT is_hidden, updated_at = NOW()
+             WHERE id = $1 AND user_id = $2`,
+            [id, userId]
+        );
+        res.redirect('/cgpa');
+    } catch (err) {
+        console.error('Toggle Visibility Error:', err);
+        res.redirect('/cgpa');
+    }
+});
+
+
+app.post('/cgpa/course/delete/:id', isStudent, async (req, res) => {
+    const userId = req.session.user.id;
+    const { id }  = req.params;
+
+    try {
+        await pool.query(
+            'DELETE FROM cgpa_courses WHERE id = $1 AND user_id = $2',
+            [id, userId]
+        );
+        res.redirect('/cgpa?msg=Course removed.');
+    } catch (err) {
+        console.error('Delete Course Error:', err);
+        res.redirect('/cgpa');
+    }
+});
+
+
+app.post('/cgpa/reset', isStudent, async (req, res) => {
+    const userId = req.session.user.id;
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        await client.query('DELETE FROM cgpa_courses  WHERE user_id = $1', [userId]);
+        await client.query('DELETE FROM cgpa_profiles WHERE user_id = $1', [userId]);
+        await client.query('COMMIT');
+        res.redirect('/cgpa?msg=Profile reset. Start fresh!');
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('CGPA Reset Error:', err);
+        res.redirect('/cgpa?msg=Reset failed.');
+    } finally {
+        client.release();
+    }
+});
+
+app.get('/cgpa/api/data', isStudent, async (req, res) => {
+    const userId = req.session.user.id;
+    try {
+        const profileRes = await pool.query('SELECT * FROM cgpa_profiles WHERE user_id = $1', [userId]);
+        const coursesRes = await pool.query('SELECT * FROM cgpa_courses  WHERE user_id = $1 ORDER BY level_scope, semester, created_at', [userId]);
+
+        const profile = profileRes.rows[0];
+        if (!profile) return res.json({ hasProfile: false });
+
+        const stats = buildCGPA(profile, coursesRes.rows);
+        res.json({ hasProfile: true, profile, courses: coursesRes.rows, stats });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to load data.' });
+    }
+});
+
+app.get('/api/heartbeat', (req, res) => {
+    // Simply touching this route auto-renews your cookie expiration time via rolling: true
+    res.status(200).json({ status: 'alive' });
+});
+
 const config = {
     maxDuration: 60,
 };

@@ -3,1031 +3,1121 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Prepium | CGPA Tracker</title>
+<title>CGPA Tracker | Prepium</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;700;800;900&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
-
-/* ══════════════════════════════════════════════════
-   DESIGN TOKENS
-══════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════
+   TOKENS
+══════════════════════════════════════════════ */
 :root {
-  --bg:        #f8fafc;
-  --bg-2:      #ffffff;
-  --bg-3:      #f1f5f9;
-  --surface:   #ffffff;
-  --surface-2: #f8fafc;
-  --border:    rgba(15,23,42,0.08);
-  --border-2:  rgba(15,23,42,0.15);
-  --ink:       #0f172a;
-  --ink-2:     #475569;
-  --ink-3:     #94a3b8;
-  --blue:      #2563eb;
-  --blue-dk:   #1d4ed8;
-  --blue-lt:   rgba(37,99,235,0.08);
-  --violet:    #7c3aed;
-  --violet-lt: rgba(124,58,237,0.08);
-  --green:     #16a34a;
-  --green-lt:  rgba(22,163,74,0.08);
-  --red:       #dc2626;
-  --red-lt:    rgba(220,38,38,0.08);
-  --amber:     #d97706;
-  --amber-lt:  rgba(217,119,6,0.08);
-  --r-xs: 8px; --r-sm: 12px; --r: 16px; --r-lg: 22px; --r-xl: 28px;
-  --sh:   0 1px 3px rgba(15,23,42,0.06), 0 4px 12px rgba(15,23,42,0.04);
-  --sh-2: 0 4px 16px rgba(15,23,42,0.08), 0 1px 4px rgba(15,23,42,0.06);
+    --ink:     #09090b;
+    --ink-2:   #52525b;
+    --ink-3:   #a1a1aa;
+    --surface: #ffffff;
+    --s2:      #fafafa;
+    --s3:      #f4f4f5;
+    --border:  #e4e4e7;
+    --border2: #d4d4d8;
+
+    --blue:    #2563eb;
+    --blue-d:  #1d4ed8;
+    --blue-lt: rgba(37,99,235,0.07);
+    --teal:    #0d9488;
+    --teal-lt: rgba(13,148,136,0.07);
+    --amber:   #b45309;
+    --amber-lt:rgba(180,83,9,0.07);
+    --rose:    #e11d48;
+    --rose-lt: rgba(225,29,72,0.07);
+    --violet:  #7c3aed;
+    --violet-lt:rgba(124,58,237,0.07);
+    --green:   #16a34a;
+    --green-lt:rgba(22,163,74,0.07);
+
+    --r-sm: 10px; --r: 16px; --r-lg: 20px; --r-xl: 28px;
+    --sh: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.04);
+    --sh2:0 2px 4px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
 }
 
 *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
 html { scroll-behavior:smooth; }
 
 body {
-  font-family:'Plus Jakarta Sans',sans-serif;
-  background:var(--bg);
-  color:var(--ink);
-  min-height:100dvh;
-  display:flex;
-  justify-content:center;
-  overflow-x:hidden;
-  background-image:
-    radial-gradient(ellipse 70% 40% at 15% 0%, rgba(37,99,235,0.03) 0%, transparent 55%),
-    radial-gradient(ellipse 50% 30% at 85% 100%, rgba(124,58,237,0.03) 0%, transparent 55%);
+    font-family: 'Instrument Sans', sans-serif;
+    background: var(--s2);
+    color: var(--ink);
+    min-height: 100dvh;
+    display: flex;
+    justify-content: center;
+    overflow-x: hidden;
 }
 
+/* centered mobile shell */
 .shell {
-  width:100%; max-width:430px; min-height:100dvh;
-  background:#ffffff; position:relative; padding-bottom:100px;
-  box-shadow:0 0 60px rgba(0,0,0,0.04);
-  animation:shellIn 0.35s cubic-bezier(0.16,1,0.3,1);
+    width: 100%; max-width: 430px;
+    background: var(--surface);
+    min-height: 100dvh;
+    padding-bottom: 96px;
+    box-shadow: 0 0 80px rgba(0,0,0,0.05);
+    position: relative;
+    animation: appear .3s cubic-bezier(.16,1,.3,1);
 }
-@keyframes shellIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+@keyframes appear { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
 
 /* ══════════════ TOP BAR ══════════════ */
-.top-bar {
-  position:sticky; top:0; z-index:900;
-  padding:12px 16px;
-  display:flex; justify-content:space-between; align-items:center;
-  background:rgba(255,255,255,0.9);
-  backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
-  border-bottom:1px solid var(--border);
+.topbar {
+    position: sticky; top: 0; z-index: 800;
+    height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px;
+    background: rgba(255,255,255,0.9);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    border-bottom: 1px solid var(--border);
 }
-.brand { display:flex; align-items:center; gap:10px; }
-.brand-logo {
-  width:32px; height:32px;
-  background:linear-gradient(135deg,var(--blue),var(--violet));
-  border-radius:var(--r-sm);
-  display:flex; align-items:center; justify-content:center;
-  font-size:0.75rem; color:#fff;
-  box-shadow:0 4px 12px rgba(37,99,235,0.2);
+.topbar-brand {
+    display: flex; align-items: center; gap: 9px;
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-weight: 800; font-size: .95rem; color: var(--ink);
+    text-decoration: none;
 }
-.brand-name {
-  font-family:'Clash Display',sans-serif; font-size:1.05rem; font-weight:700;
-  background:linear-gradient(135deg,var(--ink),var(--ink-2));
-  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+.topbar-logo {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: .7rem;
 }
-.top-actions { display:flex; gap:8px; align-items:center; }
-.pdf-btn {
-  display:inline-flex; align-items:center; gap:6px;
-  font-family:'Clash Display',sans-serif; font-size:0.72rem; font-weight:600;
-  color:#fff; background:var(--blue); border:none;
-  padding:8px 13px; border-radius:var(--r-sm); cursor:pointer;
-  transition:all 0.2s;
+.topbar-right { display: flex; gap: 8px; align-items: center; }
+.icon-btn {
+    width: 34px; height: 34px; border-radius: var(--r-sm);
+    background: var(--s3); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-2); font-size: .78rem;
+    cursor: pointer; transition: .15s; text-decoration: none;
 }
-.pdf-btn:hover { background:var(--blue-dk); transform:translateY(-1px); }
+.icon-btn:hover { background: var(--border); color: var(--ink); }
+.export-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-size: .72rem; font-weight: 700;
+    background: var(--ink); color: #fff; border: none;
+    padding: 7px 13px; border-radius: var(--r-sm);
+    cursor: pointer; transition: .2s;
+}
+.export-btn:hover { background: #27272a; }
 
-/* ══════════════ SETUP WIZARD ══════════════ */
-.setup-wrap { padding:20px 14px 0; }
+/* ══════════════ FLASH MESSAGE ══════════════ */
+.flash {
+    margin: 12px 14px 0;
+    padding: 11px 14px;
+    background: var(--teal-lt);
+    border: 1px solid rgba(13,148,136,.2);
+    border-radius: var(--r-sm);
+    font-size: .8rem; font-weight: 600; color: var(--teal);
+    display: flex; align-items: center; gap: 7px;
+    animation: appear .25s ease;
+}
+
+/* ══════════════════════════════════════════════
+   SETUP WIZARD
+══════════════════════════════════════════════ */
+.wizard-wrap { padding: 20px 14px 0; }
 .wizard-card {
-  background:var(--surface); border:1px solid var(--border);
-  border-radius:var(--r-xl); padding:24px 20px;
-  box-shadow:var(--sh-2);
-  animation:shellIn 0.3s ease;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-xl);
+    padding: 26px 20px;
+    box-shadow: var(--sh2);
 }
-.step-dots { display:flex; gap:6px; margin-bottom:18px; }
-.step-dot { width:8px; height:8px; border-radius:50%; background:var(--bg-3); transition:all 0.25s; }
-.step-dot.active { background:var(--blue); width:22px; border-radius:4px; }
-.step-dot.done   { background:var(--green); }
-.wizard-title { font-family:'Clash Display',sans-serif; font-size:1.4rem; font-weight:700; margin-bottom:4px; }
-.wizard-sub   { font-size:0.78rem; color:var(--ink-2); line-height:1.5; margin-bottom:20px; }
-.setup-step { display:none; }
-.setup-step.active { display:block; animation:fadeUp 0.22s ease; }
-@keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
 
+/* step progress */
+.prog-bar {
+    height: 3px; background: var(--s3); border-radius: 2px;
+    margin-bottom: 24px; overflow: hidden;
+}
+.prog-fill {
+    height: 100%; border-radius: 2px;
+    background: linear-gradient(90deg, var(--blue), var(--violet));
+    transition: width .35s cubic-bezier(.4,0,.2,1);
+}
+
+.wiz-step { display: none; }
+.wiz-step.on { display: block; animation: appear .22s ease; }
+
+.wiz-eyebrow {
+    font-size: .62rem; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--blue); margin-bottom: 5px;
+}
+.wiz-title {
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-size: 1.45rem; font-weight: 900; margin-bottom: 5px;
+}
+.wiz-sub { font-size: .8rem; color: var(--ink-2); line-height: 1.55; margin-bottom: 22px; }
+
+/* path cards */
 .path-card {
-  display:block; width:100%; text-align:left;
-  background:var(--bg-3); border:1px solid var(--border);
-  border-radius:var(--r-lg); padding:16px; cursor:pointer; margin-bottom:10px;
-  transition:all 0.18s;
+    width: 100%; text-align: left;
+    background: var(--s2); border: 1.5px solid var(--border);
+    border-radius: var(--r-lg); padding: 16px;
+    cursor: pointer; margin-bottom: 10px;
+    transition: .18s; display: block;
 }
-.path-card:hover { border-color:var(--blue); background:rgba(37,99,235,0.03); }
-.path-card-top { display:flex; align-items:center; gap:10px; margin-bottom:5px; }
-.path-icon { width:30px; height:30px; border-radius:var(--r-xs); display:flex; align-items:center; justify-content:center; font-size:0.8rem; }
-.path-icon.blue   { background:var(--blue-lt); color:var(--blue); }
-.path-icon.violet { background:var(--violet-lt); color:var(--violet); }
-.path-card b { font-family:'Clash Display',sans-serif; font-size:0.88rem; font-weight:700; }
-.path-card small { font-size:0.72rem; color:var(--ink-2); padding-left:40px; display:block; line-height:1.4; }
+.path-card:hover { border-color: var(--blue); background: var(--blue-lt); }
+.path-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.path-dot {
+    width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: .8rem;
+}
+.path-dot.a { background: var(--blue-lt); color: var(--blue); }
+.path-dot.b { background: var(--violet-lt); color: var(--violet); }
+.path-card strong { font-family: 'Cabinet Grotesk',sans-serif; font-size: .9rem; font-weight: 800; }
+.path-card p { font-size: .74rem; color: var(--ink-2); line-height: 1.5; padding-left: 42px; }
 
-.balance-box {
-  background:var(--violet-lt); border:1px dashed rgba(124,58,237,0.2);
-  border-radius:var(--r-lg); padding:14px; margin-bottom:12px;
+.balance-hint {
+    background: var(--s3); border-radius: var(--r-sm); padding: 13px;
+    margin-bottom: 14px; font-size: .73rem; color: var(--ink-2); line-height: 1.6;
 }
-.balance-box-label {
-  font-size:0.62rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;
-  color:var(--violet); margin-bottom:10px; display:flex; align-items:center; gap:5px;
-}
-.balance-box small { font-size:0.68rem; color:rgba(124,58,237,0.6); display:block; margin-top:5px; }
-
-/* ══════════════ HERO ══════════════ */
-.hero {
-  margin:14px 14px 0; border-radius:var(--r-xl); overflow:hidden;
-  position:relative; padding:28px 22px 24px;
-  background:linear-gradient(140deg,#f1f5f9 0%,#e8edf5 100%);
-  border:1px solid var(--border); box-shadow:var(--sh);
-}
-.hero::before {
-  content:''; position:absolute; inset:0;
-  background:
-    radial-gradient(ellipse 80% 60% at 100% 0%, rgba(37,99,235,0.06) 0%, transparent 55%),
-    radial-gradient(ellipse 40% 40% at 0% 100%, rgba(124,58,237,0.04) 0%, transparent 55%);
-  pointer-events:none;
-}
-.hero-content { position:relative; z-index:1; }
-.hero-eyebrow {
-  font-family:'Clash Display',sans-serif; font-size:0.6rem; font-weight:600;
-  letter-spacing:2px; text-transform:uppercase; color:var(--blue); margin-bottom:8px;
-}
-.hero-main { display:flex; align-items:flex-end; justify-content:space-between; }
-.hero-cgpa {
-  font-family:'Clash Display',sans-serif; font-size:4.8rem; font-weight:700;
-  color:var(--ink); line-height:1; letter-spacing:-3px;
-  animation:counterIn 0.45s cubic-bezier(0.34,1.56,0.64,1);
-}
-@keyframes counterIn { from{transform:scale(0.85);opacity:0} to{transform:scale(1);opacity:1} }
-
-/* Radial arc */
-.arc-wrap { position:relative; width:90px; height:90px; flex-shrink:0; }
-.arc-wrap svg { display:block; transform:rotate(-90deg); }
-.arc-bg   { fill:none; stroke:rgba(15,23,42,0.07); stroke-width:8; }
-.arc-fill {
-  fill:none; stroke:url(#heroGrad); stroke-width:8;
-  stroke-linecap:round; stroke-dasharray:251.2; stroke-dashoffset:251.2;
-  transition:stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1);
-}
-.arc-pct {
-  position:absolute; inset:0;
-  display:flex; align-items:center; justify-content:center;
-  font-family:'Clash Display',sans-serif; font-size:0.72rem; font-weight:700;
-  color:var(--ink-2);
-}
-
-.division-badge {
-  display:inline-block; padding:3px 11px; border-radius:50px;
-  font-size:0.68rem; font-weight:700; margin-top:10px;
-}
-.division-badge.first { background:var(--amber-lt); color:var(--amber); border:1px solid rgba(217,119,6,0.2); }
-.division-badge.upper { background:var(--blue-lt);  color:var(--blue);  border:1px solid rgba(37,99,235,0.2); }
-.division-badge.lower { background:var(--green-lt); color:var(--green); border:1px solid rgba(22,163,74,0.2); }
-.division-badge.third { background:var(--violet-lt);color:var(--violet);border:1px solid rgba(124,58,237,0.2); }
-.division-badge.fail  { background:var(--red-lt);   color:var(--red);   border:1px solid rgba(220,38,38,0.2); }
-.division-badge.none  { background:var(--bg-3); color:var(--ink-3); border:1px solid var(--border); }
-
-.hero-meta {
-  margin-top:14px; display:flex; align-items:center; gap:6px;
-  font-size:0.72rem; color:var(--ink-2);
-}
-.hero-meta strong { color:var(--ink); font-weight:600; }
-.hero-dot { width:3px; height:3px; border-radius:50%; background:var(--ink-3); }
-
-/* ══════════════ STATS ROW ══════════════ */
-.stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:10px 14px 0; }
-.stat-tile {
-  background:var(--surface); border:1px solid var(--border);
-  border-radius:var(--r-lg); padding:14px 10px 12px; text-align:center;
-  position:relative; overflow:hidden; box-shadow:var(--sh);
-}
-.stat-tile::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
-.stat-tile.blue::before  { background:linear-gradient(90deg,var(--blue),#60a5fa); }
-.stat-tile.green::before { background:linear-gradient(90deg,var(--green),#4ade80); }
-.stat-tile.red::before   { background:linear-gradient(90deg,var(--red),#f87171); }
-.stat-icon { font-size:0.7rem; margin-bottom:6px; opacity:0.6; }
-.stat-tile.blue .stat-icon  { color:var(--blue); }
-.stat-tile.green .stat-icon { color:var(--green); }
-.stat-tile.red .stat-icon   { color:var(--red); }
-.stat-num { font-family:'Clash Display',sans-serif; font-size:1.5rem; font-weight:700; line-height:1; margin-bottom:4px; }
-.stat-tile.blue .stat-num  { color:var(--blue); }
-.stat-tile.green .stat-num { color:var(--green); }
-.stat-tile.red .stat-num   { color:var(--red); }
-.stat-label { font-size:0.58rem; font-weight:700; text-transform:uppercase; letter-spacing:0.6px; color:var(--ink-2); }
-
-/* ══════════════ ANALYTICS CARD ══════════════ */
-.analytics-card {
-  background:var(--surface); border:1px solid var(--border);
-  border-radius:var(--r-xl); padding:18px; margin:12px 14px 0;
-  box-shadow:var(--sh);
-}
-.chart-container { position:relative; width:100%; height:160px; margin:12px 0 14px; }
-.grade-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:10px; }
-.grade-pill {
-  background:var(--bg-3); border:1px solid var(--border);
-  border-radius:var(--r-sm); padding:8px 4px; text-align:center;
-  transition:transform 0.18s;
-}
-.grade-pill:hover { transform:translateY(-1px); }
-.grade-letter { font-family:'Clash Display',sans-serif; font-size:0.95rem; font-weight:700; }
-.grade-letter.A { color:var(--amber); }
-.grade-letter.B { color:var(--blue); }
-.grade-letter.C { color:var(--green); }
-.grade-letter.D { color:var(--violet); }
-.grade-letter.E { color:var(--ink-2); }
-.grade-letter.F { color:var(--red); }
-.grade-count { font-size:0.62rem; font-weight:700; color:var(--ink-2); text-transform:uppercase; margin-top:2px; }
-
-/* ══════════════ FILTER PILLS ══════════════ */
-.section-header { display:flex; align-items:center; justify-content:space-between; padding:18px 16px 10px; }
-.section-label { font-family:'Clash Display',sans-serif; font-size:0.8rem; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:var(--ink-2); }
-.scroll-row { display:flex; gap:7px; padding:0 14px; overflow-x:auto; scrollbar-width:none; }
-.scroll-row::-webkit-scrollbar { display:none; }
-.pill {
-  display:inline-flex; align-items:center; gap:5px; white-space:nowrap;
-  font-family:'Clash Display',sans-serif; font-size:0.75rem; font-weight:600;
-  padding:8px 15px; border-radius:50px; background:var(--surface-2);
-  border:1px solid var(--border); color:var(--ink-2); cursor:pointer;
-  transition:all 0.18s; box-shadow:var(--sh);
-}
-.pill:hover { border-color:var(--border-2); }
-.pill.active { background:var(--blue); border-color:var(--blue); color:#fff; box-shadow:0 4px 14px rgba(37,99,235,0.25); }
-
-.sem-row { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; }
-.sem-pills { display:flex; gap:7px; }
-.gpa-badge {
-  font-family:'Clash Display',sans-serif; font-size:0.8rem; font-weight:700;
-  color:var(--blue); background:var(--blue-lt);
-  border:1px solid rgba(37,99,235,0.12); padding:6px 13px; border-radius:50px;
-}
-
-/* ══════════════ COURSE MATRIX ══════════════ */
-.card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-xl); padding:18px; margin:0 14px 10px; box-shadow:var(--sh); }
-.card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
-.card-title { font-family:'Clash Display',sans-serif; font-size:0.9rem; font-weight:700; }
-.card-meta  { font-size:0.7rem; color:var(--ink-2); font-weight:500; }
-
-.course-row {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:12px 0; border-bottom:1px solid var(--border);
-  animation:rowIn 0.25s ease both;
-}
-.course-row:last-child { border-bottom:none; padding-bottom:0; }
-.course-row:first-child { padding-top:0; }
-@keyframes rowIn { from{opacity:0;transform:translateX(-4px)} to{opacity:1;transform:translateX(0)} }
-.course-row.is-hidden { opacity:0.35; }
-.course-row.is-hidden .cname { text-decoration:line-through; }
-
-.course-left { flex:1; min-width:0; }
-.cname { font-family:'Clash Display',sans-serif; font-size:0.9rem; font-weight:700; display:flex; align-items:center; gap:6px; margin-bottom:3px; }
-.tag-hidden { font-size:0.55rem; font-weight:700; text-transform:uppercase; letter-spacing:0.3px; background:var(--bg-3); color:var(--ink-3); padding:2px 6px; border-radius:4px; }
-.cmeta { font-size:0.68rem; color:var(--ink-2); display:flex; gap:8px; }
-.cmeta span { display:inline-flex; align-items:center; gap:3px; }
-
-.course-right { display:flex; align-items:center; gap:8px; flex-shrink:0; }
-.grade-chip { width:36px; height:36px; border-radius:var(--r-sm); display:flex; align-items:center; justify-content:center; font-family:'Clash Display',sans-serif; font-weight:700; font-size:0.88rem; border:1px solid var(--border); }
-.grade-chip.A { background:var(--amber-lt); color:var(--amber); border-color:rgba(217,119,6,0.15); }
-.grade-chip.B { background:var(--blue-lt);  color:var(--blue);  border-color:rgba(37,99,235,0.15); }
-.grade-chip.C { background:var(--green-lt); color:var(--green); border-color:rgba(22,163,74,0.15); }
-.grade-chip.D { background:var(--violet-lt);color:var(--violet);border-color:rgba(124,58,237,0.15); }
-.grade-chip.E { background:var(--bg-3); color:var(--ink-2); }
-.grade-chip.F { background:var(--red-lt); color:var(--red); border-color:rgba(220,38,38,0.15); }
-
-.action-btns { display:flex; gap:4px; }
-.act-btn { width:30px; height:30px; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-xs); color:var(--ink-2); font-size:0.7rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
-.act-btn:hover { border-color:var(--border-2); color:var(--ink); background:var(--bg-3); }
-.act-btn.danger:hover { color:var(--red); border-color:rgba(220,38,38,0.2); background:var(--red-lt); }
-.act-btn.eye-active { color:var(--amber); border-color:rgba(217,119,6,0.2); background:var(--amber-lt); }
-
-.empty-state { text-align:center; padding:32px 0 16px; color:var(--ink-2); }
-.empty-state i { font-size:2.2rem; opacity:0.35; display:block; margin-bottom:10px; }
-.empty-state p { font-size:0.8rem; }
+.balance-hint strong { color: var(--ink); }
 
 /* ══════════════ FORM ELEMENTS ══════════════ */
-.form-title { font-family:'Clash Display',sans-serif; font-size:0.9rem; font-weight:700; margin-bottom:15px; display:flex; align-items:center; gap:8px; }
-.form-title i { color:var(--blue); }
-.form-group { margin-bottom:12px; }
-.form-group label { display:block; font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--ink-2); margin-bottom:6px; }
-.form-group input,
-.form-group select { width:100%; padding:12px 14px; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-sm); font-family:'Plus Jakarta Sans',sans-serif; font-size:0.88rem; font-weight:500; color:var(--ink); outline:none; transition:all 0.15s; appearance:none; -webkit-appearance:none; }
-.form-group input:focus,
-.form-group select:focus { border-color:var(--blue); background:#fff; }
-.form-group select option { background:#fff; }
-.form-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-
-.btn { width:100%; padding:14px; border:none; border-radius:var(--r-lg); font-family:'Clash Display',sans-serif; font-size:0.85rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px; transition:all 0.2s; }
-.btn:active { transform:scale(0.98); }
-.btn-primary { background:var(--blue); color:#fff; box-shadow:0 4px 14px rgba(37,99,235,0.2); }
-.btn-primary:hover { background:var(--blue-dk); }
-.btn-outline  { background:#fff; color:var(--ink-2); border:1px solid var(--border); margin-top:8px; }
-.btn-outline:hover { background:var(--bg-3); }
-
-/* ══════════════ OVERLAYS ══════════════ */
-.overlay { display:none; position:fixed; inset:0; z-index:2000; background:#ffffff; overflow-y:auto; padding-bottom:48px; }
-.overlay.show { display:block; animation:fadeUp 0.2s ease; }
-@keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-.overlay-inner { max-width:430px; margin:0 auto; padding:14px; }
-.overlay-header { display:flex; align-items:center; justify-content:space-between; padding:8px 0 16px; border-bottom:1px solid var(--border); margin-bottom:16px; }
-.overlay-title  { font-family:'Clash Display',sans-serif; font-size:1rem; font-weight:700; }
-.overlay-close  { background:var(--bg-3); border:none; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--ink-2); cursor:pointer; font-size:0.85rem; }
-
-/* ══════════════ BOTTOM NAV ══════════════ */
-.bottom-nav {
-  position:fixed; bottom:14px; left:50%; transform:translateX(-50%);
-  width:calc(100% - 28px); max-width:402px; height:64px;
-  background:rgba(255,255,255,0.92); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
-  border:1px solid var(--border); border-radius:20px;
-  display:flex; justify-content:space-around; align-items:center;
-  box-shadow:0 8px 24px rgba(0,0,0,0.06); z-index:1000;
+.fg { margin-bottom: 13px; }
+.fg label {
+    display: block; font-size: .62rem; font-weight: 700;
+    letter-spacing: .8px; text-transform: uppercase; color: var(--ink-2);
+    margin-bottom: 6px;
 }
-.nav-item { flex:1; text-decoration:none; display:flex; flex-direction:column; align-items:center; gap:4px; color:var(--ink-3); cursor:pointer; transition:color 0.2s; }
-.nav-item.active { color:var(--blue); }
-.nav-item i { font-size:1.1rem; }
-.nav-item span { font-size:0.58rem; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; }
-.fab { width:44px; height:44px; background:var(--blue); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1rem; box-shadow:0 4px 12px rgba(37,99,235,0.3); border:none; cursor:pointer; transition:transform 0.2s; }
-.fab:hover { transform:scale(1.08) rotate(90deg); }
-
-@media print {
-  body { background:#fff; }
-  .shell { max-width:100% !important; box-shadow:none !important; }
-  .bottom-nav, .top-actions { display:none !important; }
+.fg input, .fg select {
+    width: 100%; padding: 11px 13px;
+    background: var(--s2); border: 1.5px solid var(--border);
+    border-radius: var(--r-sm); outline: none;
+    font-family: 'Instrument Sans', sans-serif;
+    font-size: .9rem; font-weight: 500; color: var(--ink);
+    transition: .15s; appearance: none; -webkit-appearance: none;
 }
+.fg input:focus, .fg select:focus { border-color: var(--blue); background: #fff; }
+.fg select option { background: #fff; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.btn {
+    width: 100%; padding: 13px; border: none; border-radius: var(--r-lg);
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-size: .85rem; font-weight: 800; letter-spacing: .3px;
+    cursor: pointer; transition: .18s;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+}
+.btn:active { transform: scale(.98); }
+.btn-primary { background: var(--ink); color: #fff; }
+.btn-primary:hover { background: #27272a; }
+.btn-ghost {
+    background: none; color: var(--ink-2);
+    border: 1.5px solid var(--border); margin-top: 8px;
+}
+.btn-ghost:hover { background: var(--s3); color: var(--ink); }
+.btn-danger { background: var(--rose-lt); color: var(--rose); border: 1.5px solid rgba(225,29,72,.15); margin-top: 8px; }
+.btn-danger:hover { background: rgba(225,29,72,.14); }
+
+/* ══════════════════════════════════════════════
+   DASHBOARD
+══════════════════════════════════════════════ */
+
+/* ── Hero ── */
+.hero {
+    margin: 14px 14px 0;
+    background: var(--ink);
+    border-radius: var(--r-xl);
+    padding: 26px 22px 24px;
+    color: #fff; position: relative; overflow: hidden;
+    box-shadow: 0 8px 32px rgba(9,9,11,.18);
+}
+.hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+        radial-gradient(ellipse 80% 70% at 110% -10%, rgba(37,99,235,.35) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 50% at -10% 110%, rgba(124,58,237,.25) 0%, transparent 60%);
+    pointer-events: none;
+}
+.hero-grid { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: flex-start; }
+.hero-left {}
+.hero-eyebrow {
+    font-size: .58rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+    color: rgba(255,255,255,.45); margin-bottom: 6px;
+}
+.hero-cgpa {
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-size: 5.5rem; font-weight: 900; line-height: .9;
+    letter-spacing: -4px; color: #fff;
+    animation: pop .5s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes pop { from{transform:scale(.85);opacity:0} to{transform:scale(1);opacity:1} }
+.hero-scale {
+    font-size: .7rem; font-weight: 600; color: rgba(255,255,255,.4);
+    letter-spacing: .5px; margin-top: 5px;
+}
+
+/* ring */
+.ring-wrap { position: relative; width: 88px; height: 88px; flex-shrink: 0; }
+.ring-wrap svg { display: block; transform: rotate(-90deg); }
+.ring-bg   { fill: none; stroke: rgba(255,255,255,.1); stroke-width: 8; }
+.ring-fill {
+    fill: none; stroke: url(#rg); stroke-width: 8; stroke-linecap: round;
+    stroke-dasharray: 251.2; stroke-dashoffset: 251.2;
+    transition: stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1);
+}
+.ring-pct {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-size: .78rem; font-weight: 700; color: rgba(255,255,255,.6);
+}
+
+.hero-bottom { position: relative; z-index: 1; margin-top: 16px; display: flex; align-items: center; justify-content: space-between; }
+.div-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: .68rem; font-weight: 700; padding: 4px 12px;
+    border-radius: 50px;
+}
+.div-badge.first  { background:rgba(251,191,36,.15); color:#fbbf24; border:1px solid rgba(251,191,36,.2); }
+.div-badge.upper  { background:rgba(96,165,250,.12); color:#60a5fa; border:1px solid rgba(96,165,250,.2); }
+.div-badge.lower  { background:rgba(52,211,153,.12); color:#34d399; border:1px solid rgba(52,211,153,.2); }
+.div-badge.third  { background:rgba(167,139,250,.12);color:#a78bfa; border:1px solid rgba(167,139,250,.2); }
+.div-badge.fail   { background:rgba(251,113,133,.12);color:#fb7185; border:1px solid rgba(251,113,133,.2); }
+.div-badge.none   { background:rgba(255,255,255,.07);color:rgba(255,255,255,.5); border:1px solid rgba(255,255,255,.1); }
+.hero-meta { font-size: .68rem; color: rgba(255,255,255,.4); }
+
+/* ── Stat tiles ── */
+.tiles { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin: 10px 14px 0; }
+.tile {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r-lg); padding: 14px 10px 12px; text-align: center;
+    box-shadow: var(--sh); position: relative; overflow: hidden;
+}
+.tile::after { content:''; position:absolute; top:0; left:0; right:0; height:2.5px; border-radius:2px 2px 0 0; }
+.tile.t-blue::after  { background: linear-gradient(90deg,var(--blue),#60a5fa); }
+.tile.t-teal::after  { background: linear-gradient(90deg,var(--teal),#2dd4bf); }
+.tile.t-amber::after { background: linear-gradient(90deg,var(--amber),#fbbf24); }
+.tile-icon { font-size: .65rem; margin-bottom: 6px; }
+.tile.t-blue .tile-icon  { color: var(--blue); }
+.tile.t-teal .tile-icon  { color: var(--teal); }
+.tile.t-amber .tile-icon { color: var(--amber); }
+.tile-num {
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-size: 1.55rem; font-weight: 900; line-height: 1; margin-bottom: 3px;
+}
+.tile.t-blue .tile-num  { color: var(--blue); }
+.tile.t-teal .tile-num  { color: var(--teal); }
+.tile.t-amber .tile-num { color: var(--amber); }
+.tile-label { font-size: .57rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--ink-2); }
+
+/* ── Analytics card ── */
+.analytics {
+    margin: 12px 14px 0;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r-xl); padding: 18px; box-shadow: var(--sh);
+}
+.section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.section-label {
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-size: .82rem; font-weight: 800; display: flex; align-items: center; gap: 6px;
+}
+.section-label i { color: var(--blue); }
+.chart-box { height: 150px; position: relative; margin-bottom: 14px; }
+.grade-chips { display: grid; grid-template-columns: repeat(6,1fr); gap: 5px; }
+.gchip {
+    background: var(--s3); border: 1px solid var(--border);
+    border-radius: var(--r-sm); padding: 7px 3px; text-align: center;
+}
+.gchip-letter {
+    font-family: 'Cabinet Grotesk', sans-serif; font-size: 1rem; font-weight: 900; line-height: 1;
+}
+.gchip-letter.A { color: var(--amber); }
+.gchip-letter.B { color: var(--blue); }
+.gchip-letter.C { color: var(--teal); }
+.gchip-letter.D { color: var(--violet); }
+.gchip-letter.E { color: var(--ink-2); }
+.gchip-letter.F { color: var(--rose); }
+.gchip-count { font-size: .58rem; font-weight: 700; color: var(--ink-2); margin-top: 2px; text-transform: uppercase; }
+
+/* ── Filter pills ── */
+.filters { padding: 14px 14px 0; }
+.pill-row { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.pill-row::-webkit-scrollbar { display: none; }
+.pill {
+    white-space: nowrap;
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-size: .74rem; font-weight: 700;
+    padding: 7px 14px; border-radius: 50px;
+    background: var(--s3); border: 1px solid var(--border);
+    color: var(--ink-2); cursor: pointer; transition: .15s;
+    flex-shrink: 0;
+}
+.pill:hover { border-color: var(--border2); }
+.pill.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+.filter-row2 {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px 0;
+}
+.gpa-live {
+    font-family: 'Cabinet Grotesk', sans-serif; font-size: .8rem; font-weight: 800;
+    color: var(--blue); background: var(--blue-lt);
+    border: 1px solid rgba(37,99,235,.12);
+    padding: 6px 13px; border-radius: 50px;
+}
+
+/* ── Course list ── */
+.course-card {
+    margin: 10px 14px 0;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r-xl); padding: 18px;
+    box-shadow: var(--sh);
+}
+.course-card-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px;
+}
+.course-card-title { font-family:'Cabinet Grotesk',sans-serif; font-size:.88rem; font-weight:800; }
+.course-card-meta  { font-size:.7rem; color:var(--ink-2); }
+
+.crow {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 0; border-bottom: 1px solid var(--border);
+    animation: rowIn .22s ease both;
+}
+.crow:last-child { border-bottom: none; padding-bottom: 0; }
+.crow:first-child { padding-top: 0; }
+@keyframes rowIn { from{opacity:0;transform:translateX(-4px)} to{opacity:1;transform:translateX(0)} }
+.crow.hidden-row { opacity: .35; }
+.crow.hidden-row .ccode { text-decoration: line-through; }
+
+.crow-left { flex: 1; min-width: 0; }
+.ccode {
+    font-family: 'Cabinet Grotesk', sans-serif; font-size: .92rem; font-weight: 800;
+    display: flex; align-items: center; gap: 6px; margin-bottom: 3px;
+}
+.excl-tag {
+    font-size: .52rem; font-weight: 700; text-transform: uppercase; letter-spacing: .3px;
+    background: var(--s3); color: var(--ink-3); padding: 2px 6px; border-radius: 4px;
+}
+.cmeta { font-size: .68rem; color: var(--ink-2); display: flex; gap: 8px; }
+
+.crow-right { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+.grade-chip {
+    width: 36px; height: 36px; border-radius: var(--r-sm);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Cabinet Grotesk', sans-serif; font-weight: 900; font-size: .88rem;
+    border: 1px solid var(--border);
+}
+.grade-chip.A { background:var(--amber-lt); color:var(--amber); border-color:rgba(180,83,9,.15); }
+.grade-chip.B { background:var(--blue-lt);  color:var(--blue);  border-color:rgba(37,99,235,.15); }
+.grade-chip.C { background:var(--teal-lt);  color:var(--teal);  border-color:rgba(13,148,136,.15); }
+.grade-chip.D { background:var(--violet-lt);color:var(--violet);border-color:rgba(124,58,237,.15); }
+.grade-chip.E { background:var(--s3);       color:var(--ink-2); }
+.grade-chip.F { background:var(--rose-lt);  color:var(--rose);  border-color:rgba(225,29,72,.15); }
+
+.act-row { display: flex; gap: 5px; }
+.act {
+    width: 30px; height: 30px; border-radius: var(--r-sm);
+    background: var(--s3); border: 1px solid var(--border);
+    color: var(--ink-2); font-size: .7rem;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: .15s;
+}
+.act:hover { background: var(--border); color: var(--ink); }
+.act.danger:hover { background: var(--rose-lt); color: var(--rose); border-color:rgba(225,29,72,.2); }
+.act.eye-on { background:rgba(180,83,9,.07); color:var(--amber); border-color:rgba(180,83,9,.15); }
+
+.empty-state { text-align: center; padding: 32px 0 16px; }
+.empty-state i { font-size: 2rem; color: var(--border2); display: block; margin-bottom: 10px; }
+.empty-state p { font-size: .8rem; color: var(--ink-2); }
+
+/* ── Reset section ── */
+.reset-section {
+    margin: 16px 14px 0;
+    background: var(--s2); border: 1.5px dashed var(--border);
+    border-radius: var(--r-lg); padding: 16px;
+}
+.reset-section h4 {
+    font-family:'Cabinet Grotesk',sans-serif; font-size:.8rem; font-weight:800;
+    color:var(--ink); margin-bottom:5px; display:flex;align-items:center;gap:6px;
+}
+.reset-section h4 i { color: var(--rose); }
+.reset-section p { font-size:.73rem; color:var(--ink-2); line-height:1.5; }
+
+/* ══════════════════════════════════════════════
+   OVERLAYS
+══════════════════════════════════════════════ */
+.overlay {
+    display: none; position: fixed; inset: 0; z-index: 2000;
+    background: #fff; overflow-y: auto; padding-bottom: 48px;
+}
+.overlay.show { display: block; animation: appear .2s ease; }
+.ov-inner { max-width: 430px; margin: 0 auto; padding: 14px; }
+.ov-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 0 16px; border-bottom: 1px solid var(--border); margin-bottom: 18px;
+}
+.ov-title { font-family:'Cabinet Grotesk',sans-serif; font-size:1rem; font-weight:900; }
+.ov-close {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--s3); border: none;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-2); cursor: pointer; font-size: .85rem;
+}
+
+/* ══════════════════════════════════════════════
+   BOTTOM NAV
+══════════════════════════════════════════════ */
+.bnav {
+    position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
+    width: calc(100% - 28px); max-width: 402px; height: 62px;
+    background: rgba(255,255,255,.92);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border); border-radius: 20px;
+    display: flex; justify-content: space-around; align-items: center;
+    box-shadow: 0 8px 24px rgba(0,0,0,.07); z-index: 700;
+}
+.bnav-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    color: var(--ink-3); text-decoration: none; cursor: pointer; transition: .15s;
+}
+.bnav-item i { font-size: 1.1rem; }
+.bnav-item span { font-size: .56rem; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+.bnav-item.on { color: var(--blue); }
+.bnav-fab {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--ink); border: none;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 1rem; cursor: pointer;
+    box-shadow: 0 4px 14px rgba(9,9,11,.2);
+    transition: .2s;
+}
+.bnav-fab:hover { transform: scale(1.06) rotate(90deg); }
 </style>
 </head>
 <body>
+<div class="shell" id="pdf-root">
 
-<div class="shell" id="pdf-target">
-
-  <!-- TOP BAR -->
-  <div class="top-bar">
-    <div class="brand">
-      <div class="brand-logo"><i class="fas fa-graduation-cap"></i></div>
-      <div class="brand-name">Prepium</div>
+<!-- ══ TOPBAR ══ -->
+<div class="topbar">
+    <a href="/dashboard" class="topbar-brand">
+        <div class="topbar-logo"><i class="fas fa-graduation-cap"></i></div>
+        Prepium
+    </a>
+    <div class="topbar-right">
+        <% if (hasProfile) { %>
+        <button class="export-btn" id="pdfBtn"><i class="fas fa-file-pdf"></i> Export</button>
+        <% } %>
+        <a href="/dashboard" class="icon-btn" title="Dashboard"><i class="fas fa-house"></i></a>
     </div>
-    <div class="top-actions">
-      <% if (hasProfile) { %>
-        <button class="pdf-btn" id="pdf-btn">
-          <i class="fas fa-file-pdf"></i> Export PDF
-        </button>
-      <% } %>
-    </div>
-  </div>
+</div>
 
+<!-- ══ FLASH ══ -->
+<% if (flash) { %>
+<div class="flash"><i class="fas fa-circle-check"></i><%= flash %></div>
+<% } %>
 
-  <!-- ════════════ SETUP WIZARD (no profile) ════════════ -->
-  <% if (!hasProfile) { %>
-  <div class="setup-wrap">
-    <div class="wizard-card">
-      <form action="/cgpa/setup" method="POST" id="wizardForm">
-        <input type="hidden" name="start_type" id="start_type_val" value="fresh">
+<!-- ════════════════════════════════════════════
+     SETUP WIZARD  (no profile yet)
+════════════════════════════════════════════ -->
+<% if (!hasProfile) { %>
+<div class="wizard-wrap">
+<div class="wizard-card">
+<form action="/cgpa/setup" method="POST" id="wiz-form">
+    <input type="hidden" name="start_type" id="stype" value="fresh">
 
-        <div class="step-dots">
-          <div class="step-dot active" id="dot-1"></div>
-          <div class="step-dot" id="dot-2"></div>
-          <div class="step-dot" id="dot-3"></div>
-        </div>
+    <div class="prog-bar"><div class="prog-fill" id="prog" style="width:33%"></div></div>
 
-        <!-- Step 1: Academic Profile -->
-        <div class="setup-step active" id="step-1">
-          <div class="wizard-title">Setup Profile</div>
-          <div class="wizard-sub">Enter your academic details to begin tracking your CGPA.</div>
+    <!-- STEP 1: Academic Profile -->
+    <div class="wiz-step on" id="s1">
+        <div class="wiz-eyebrow">Step 1 of 3</div>
+        <div class="wiz-title">Your Academic Profile</div>
+        <div class="wiz-sub">Enter your department and grading preferences to get started.</div>
 
-          <div class="form-group">
-            <label>Department</label>
+        <div class="fg">
+            <label>Department / Faculty</label>
             <input type="text" name="department" placeholder="e.g. Computer Science" required>
-          </div>
-          <div class="form-grid-2">
-            <div class="form-group">
-              <label>Current Level</label>
-              <select name="current_level">
-                <option value="100">100 Level</option>
-                <option value="200">200 Level</option>
-                <option value="300" selected>300 Level</option>
-                <option value="400">400 Level</option>
-                <option value="500">500 Level</option>
-              </select>
+        </div>
+        <div class="grid2">
+            <div class="fg">
+                <label>Current Level</label>
+                <select name="current_level">
+                    <option value="100">100 Level</option>
+                    <option value="200">200 Level</option>
+                    <option value="300" selected>300 Level</option>
+                    <option value="400">400 Level</option>
+                    <option value="500">500 Level</option>
+                </select>
             </div>
-            <div class="form-group">
-              <label>Grading Scale</label>
-              <select name="grading_scale">
-                <option value="5" selected>5-Point</option>
-                <option value="4">4-Point</option>
-              </select>
+            <div class="fg">
+                <label>Grading Scale</label>
+                <select name="grading_scale" id="scale-sel">
+                    <option value="5" selected>5-Point</option>
+                    <option value="4">4-Point</option>
+                </select>
             </div>
-          </div>
-          <button type="button" class="btn btn-primary" onclick="wizNext(2)">
+        </div>
+        <button type="button" class="btn btn-primary" onclick="goStep(2)">
             Continue <i class="fas fa-arrow-right"></i>
-          </button>
-        </div>
-
-        <!-- Step 2: Track Type -->
-        <div class="setup-step" id="step-2">
-          <div class="wizard-title">Track Type</div>
-          <div class="wizard-sub">Choose how you want to start logging grades.</div>
-
-          <button type="button" class="path-card" onclick="selectPath('fresh')">
-            <div class="path-card-top">
-              <div class="path-icon blue"><i class="fas fa-star"></i></div>
-              <b>Fresh Start</b>
-            </div>
-            <small>Log everything from scratch, semester by semester.</small>
-          </button>
-
-          <button type="button" class="path-card" onclick="selectPath('balance')">
-            <div class="path-card-top">
-              <div class="path-icon violet"><i class="fas fa-history"></i></div>
-              <b>Import Balance</b>
-            </div>
-            <small>Carry forward your existing CGPA and unit totals.</small>
-          </button>
-
-          <button type="button" class="btn btn-outline" onclick="wizNext(1)">
-            <i class="fas fa-arrow-left"></i> Back
-          </button>
-        </div>
-
-        <!-- Step 3: Balance Import -->
-        <div class="setup-step" id="step-3">
-          <div class="wizard-title">Balance Import</div>
-          <div class="wizard-sub">Enter your current academic standing to carry it forward.</div>
-
-          <div class="form-grid-2">
-            <div class="form-group">
-              <label>Current CGPA</label>
-              <input type="number" name="prev_cgpa" id="prev_cgpa_input" step="0.01" min="0" max="5" value="0.00" placeholder="e.g. 3.75 (5-pt) or 3.0 (4-pt)">
-            </div>
-            <div class="form-group">
-              <label>Total Units Registered</label>
-              <input type="number" name="prev_units" min="0" value="0">
-            </div>
-          </div>
-
-          <div class="balance-box">
-            <div class="balance-box-label"><i class="fas fa-info-circle"></i> How it works</div>
-            <small>
-              <strong>5-point scale:</strong> max CGPA is 5.00 &nbsp;|&nbsp; <strong>4-point scale:</strong> max CGPA is 4.00<br><br>
-              Your existing CGPA × units will be stored as a quality-point base. New courses build on top of it.
-            </small>
-          </div>
-
-          <button type="submit" class="btn btn-primary">
-            <i class="fas fa-chart-line"></i> Build My Dashboard
-          </button>
-          <button type="button" class="btn btn-outline" onclick="wizNext(2)">
-            <i class="fas fa-arrow-left"></i> Back
-          </button>
-        </div>
-
-      </form>
+        </button>
     </div>
-  </div>
 
+    <!-- STEP 2: Track type -->
+    <div class="wiz-step" id="s2">
+        <div class="wiz-eyebrow">Step 2 of 3</div>
+        <div class="wiz-title">How do you want to track?</div>
+        <div class="wiz-sub">Choose whether you're starting fresh or importing existing grades.</div>
 
-  <!-- ════════════ DASHBOARD (has profile) ════════════ -->
-  <% } else { %>
+        <button type="button" class="path-card" onclick="pickPath('fresh')">
+            <div class="path-card-head">
+                <div class="path-dot a"><i class="fas fa-star-of-life"></i></div>
+                <strong>Start Fresh</strong>
+            </div>
+            <p>Log everything from scratch — semester by semester, clean slate.</p>
+        </button>
 
-  <%
-    // ── Server-side CGPA computation ─────────────────────────
-    const scale = parseInt(profile.grading_scale) || 5;
+        <button type="button" class="path-card" onclick="pickPath('balance')">
+            <div class="path-card-head">
+                <div class="path-dot b"><i class="fas fa-clock-rotate-left"></i></div>
+                <strong>Import Previous CGPA</strong>
+            </div>
+            <p>Carry forward your existing CGPA and total unit load as a balance.</p>
+        </button>
 
-    // Base from balance import
+        <button type="button" class="btn btn-ghost" onclick="goStep(1)">
+            <i class="fas fa-arrow-left"></i> Back
+        </button>
+    </div>
+
+    <!-- STEP 3: Balance -->
+    <div class="wiz-step" id="s3">
+        <div class="wiz-eyebrow">Step 3 of 3</div>
+        <div class="wiz-title">Import Your Balance</div>
+        <div class="wiz-sub">We'll use these as a base. New courses build on top.</div>
+
+        <div class="grid2">
+            <div class="fg">
+                <label>Previous CGPA</label>
+                <input type="number" name="prev_cgpa" id="prev_cgpa" step="0.01" min="0" max="5" value="0.00" placeholder="e.g. 3.75">
+            </div>
+            <div class="fg">
+                <label>Total Units Done</label>
+                <input type="number" name="prev_units" min="0" value="0" placeholder="e.g. 60">
+            </div>
+        </div>
+
+        <div class="balance-hint">
+            <strong>How it works:</strong> Your CGPA × units = quality points. These are added to your running total each time we recalculate.<br><br>
+            <strong>5-point scale:</strong> max CGPA 5.00 &nbsp;·&nbsp; <strong>4-point scale:</strong> max CGPA 4.00
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-chart-line"></i> Build My Tracker
+        </button>
+        <button type="button" class="btn btn-ghost" onclick="goStep(2)">
+            <i class="fas fa-arrow-left"></i> Back
+        </button>
+    </div>
+</form>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     DASHBOARD  (profile exists)
+════════════════════════════════════════════ -->
+<% } else { %>
+
+<%
+    const scale  = parseInt(profile.grading_scale) || 5;
+    const gpMap5 = { A:5, B:4, C:3, D:2, E:1, F:0 };
+    const gpMap4 = { A:4, B:3, C:2, D:1, E:0, F:0 };
+    const gp     = scale === 5 ? gpMap5 : gpMap4;
+
     let totalUnits  = parseInt(profile.prev_units) || 0;
     let totalPoints = parseFloat(profile.prev_gp)  || 0;
-
-    // Grade-point map
-    const gpMap5 = { A:5, B:4, C:3, D:2, E:1, F:0 };
-    const gpMap4 = { A:4, B:3, C:2, D:1, F:0 };
-    const gpMap  = scale === 5 ? gpMap5 : gpMap4;
-
     const gradeCounts = { A:0, B:0, C:0, D:0, E:0, F:0 };
 
     courses.forEach(c => {
-      const g = (c.grade || 'F').toUpperCase();
-      if (gradeCounts.hasOwnProperty(g)) gradeCounts[g]++;
-      if (!c.is_hidden) {
-        const u  = parseInt(c.credit_units) || 0;
-        const pt = (gpMap[g] !== undefined ? gpMap[g] : 0);
-        totalUnits  += u;
-        totalPoints += pt * u;
-      }
+        const g = (c.grade||'F').toUpperCase();
+        if (gradeCounts.hasOwnProperty(g)) gradeCounts[g]++;
+        if (!c.is_hidden) {
+            const u = parseInt(c.credit_units)||0;
+            totalUnits  += u;
+            totalPoints += (gp[g]!==undefined?gp[g]:0)*u;
+        }
     });
 
-    const calculatedCGPA = totalUnits > 0
-      ? (totalPoints / totalUnits).toFixed(2)
-      : '0.00';
+    const cgpa      = totalUnits > 0 ? (totalPoints/totalUnits).toFixed(2) : '0.00';
+    const cgpaF     = parseFloat(cgpa);
+    const arcPct    = Math.min(cgpaF/scale, 1);
+    const arcOffset = (251.2*(1-arcPct)).toFixed(1);
 
-    const cgpaFloat = parseFloat(calculatedCGPA);
-
-    let degreeClass = 'Pass';
-    let divBadge    = 'none';
-
-    if (scale === 5) {
-      if      (cgpaFloat >= 4.50) { degreeClass = 'First Class Honours';   divBadge = 'first'; }
-      else if (cgpaFloat >= 3.50) { degreeClass = 'Second Class (Upper)';  divBadge = 'upper'; }
-      else if (cgpaFloat >= 2.40) { degreeClass = 'Second Class (Lower)';  divBadge = 'lower'; }
-      else if (cgpaFloat >= 1.50) { degreeClass = 'Third Class';           divBadge = 'third'; }
-      else if (cgpaFloat >= 1.00) { degreeClass = 'Pass';                  divBadge = 'none';  }
-      else                        { degreeClass = 'Fail';                  divBadge = 'fail';  }
+    let cls='Fail', badge='fail';
+    if (scale===5){
+        if      (cgpaF>=4.50){cls='First Class Honours';   badge='first';}
+        else if (cgpaF>=3.50){cls='Second Class (Upper)';  badge='upper';}
+        else if (cgpaF>=2.40){cls='Second Class (Lower)';  badge='lower';}
+        else if (cgpaF>=1.50){cls='Third Class';           badge='third';}
+        else if (cgpaF>=1.00){cls='Pass';                  badge='none'; }
     } else {
-      if      (cgpaFloat >= 3.50) { degreeClass = 'First Class Honours';   divBadge = 'first'; }
-      else if (cgpaFloat >= 3.00) { degreeClass = 'Second Class (Upper)';  divBadge = 'upper'; }
-      else if (cgpaFloat >= 2.00) { degreeClass = 'Second Class (Lower)';  divBadge = 'lower'; }
-      else if (cgpaFloat >= 1.50) { degreeClass = 'Third Class';           divBadge = 'third'; }
-      else if (cgpaFloat >= 1.00) { degreeClass = 'Pass';                  divBadge = 'none';  }
-      else                        { degreeClass = 'Fail';                  divBadge = 'fail';  }
+        if      (cgpaF>=3.50){cls='First Class Honours';   badge='first';}
+        else if (cgpaF>=3.00){cls='Second Class (Upper)';  badge='upper';}
+        else if (cgpaF>=2.00){cls='Second Class (Lower)';  badge='lower';}
+        else if (cgpaF>=1.50){cls='Third Class';           badge='third';}
+        else if (cgpaF>=1.00){cls='Pass';                  badge='none'; }
     }
+%>
 
-    const arcPct = Math.min(cgpaFloat / scale, 1);
-    const arcOffset = (251.2 * (1 - arcPct)).toFixed(1);
-  %>
+<!-- Hero -->
+<div class="hero">
+    <svg width="0" height="0"><defs>
+        <linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#60a5fa"/>
+            <stop offset="100%" stop-color="#a78bfa"/>
+        </linearGradient>
+    </defs></svg>
 
-  <!-- Hero Banner -->
-  <div class="hero">
-    <div class="hero-content">
-      <p class="hero-eyebrow">Cumulative Grade Point Average</p>
-
-      <div class="hero-main">
-        <h1 class="hero-cgpa"><%= calculatedCGPA %></h1>
-
-        <div class="arc-wrap">
-          <svg width="90" height="90" viewBox="0 0 100 100">
-            <defs>
-              <linearGradient id="heroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#2563eb"/>
-                <stop offset="100%" stop-color="#7c3aed"/>
-              </linearGradient>
-            </defs>
-            <circle class="arc-bg"   cx="50" cy="50" r="40"/>
-            <circle class="arc-fill" cx="50" cy="50" r="40"
-              style="stroke-dashoffset:<%= arcOffset %>"/>
-          </svg>
-          <div class="arc-pct"><%= Math.round(arcPct * 100) %>%</div>
+    <div class="hero-grid">
+        <div class="hero-left">
+            <div class="hero-eyebrow">Cumulative GPA</div>
+            <div class="hero-cgpa"><%= cgpa %></div>
+            <div class="hero-scale">out of <%= scale %>.00</div>
         </div>
-      </div>
-
-      <div>
-        <span class="division-badge <%= divBadge %>"><%= degreeClass %></span>
-      </div>
-
-      <div class="hero-meta">
-        <span><%= profile.department %></span>
-        <div class="hero-dot"></div>
-        <span><strong><%= scale %>.0 Scale</strong></span>
-        <div class="hero-dot"></div>
-        <span><%= courses.length %> courses logged</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Stats Row -->
-  <div class="stats-row">
-    <div class="stat-tile blue">
-      <div class="stat-icon"><i class="fas fa-layer-group"></i></div>
-      <div class="stat-num"><%= totalUnits %></div>
-      <div class="stat-label">Total Units</div>
-    </div>
-    <div class="stat-tile green">
-      <div class="stat-icon"><i class="fas fa-star"></i></div>
-      <div class="stat-num"><%= totalPoints.toFixed(1) %></div>
-      <div class="stat-label">Quality Points</div>
-    </div>
-    <div class="stat-tile red">
-      <div class="stat-icon"><i class="fas fa-book"></i></div>
-      <div class="stat-num"><%= courses.length %></div>
-      <div class="stat-label">Logged Courses</div>
-    </div>
-  </div>
-
-  <!-- Analytics Card -->
-  <div class="analytics-card">
-    <div class="card-title" style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-      <i class="fas fa-chart-bar" style="color:var(--blue);"></i>
-      Grade Distribution
-    </div>
-    <div class="chart-container">
-      <canvas id="gradeChart"></canvas>
-    </div>
-    <div class="grade-grid">
-      <% ['A','B','C','D','E','F'].forEach(letter => { %>
-        <div class="grade-pill">
-          <div class="grade-letter <%= letter %>"><%= letter %></div>
-          <div class="grade-count"><%= gradeCounts[letter] %>×</div>
+        <div class="ring-wrap">
+            <svg width="88" height="88" viewBox="0 0 100 100">
+                <circle class="ring-bg"   cx="50" cy="50" r="40"/>
+                <circle class="ring-fill" cx="50" cy="50" r="40"
+                    style="stroke-dashoffset:<%= arcOffset %>"/>
+            </svg>
+            <div class="ring-pct"><%= Math.round(arcPct*100) %>%</div>
         </div>
-      <% }) %>
-    </div>
-  </div>
-
-  <!-- Level Filter -->
-  <div class="section-header">
-    <div class="section-label">Academic Portfolio</div>
-  </div>
-
-  <div class="scroll-row">
-    <button class="pill active" id="level-pill-all"  onclick="filterLevel('all',this)">All Levels</button>
-    <button class="pill"        id="level-pill-100"  onclick="filterLevel('100',this)">100L</button>
-    <button class="pill"        id="level-pill-200"  onclick="filterLevel('200',this)">200L</button>
-    <button class="pill"        id="level-pill-300"  onclick="filterLevel('300',this)">300L</button>
-    <button class="pill"        id="level-pill-400"  onclick="filterLevel('400',this)">400L</button>
-    <button class="pill"        id="level-pill-500"  onclick="filterLevel('500',this)">500L</button>
-  </div>
-
-  <div class="sem-row">
-    <div class="sem-pills">
-      <button class="pill active" id="sem-pill-all" onclick="filterSem('all',this)">Both</button>
-      <button class="pill"        id="sem-pill-1"   onclick="filterSem('1',this)">1st Sem</button>
-      <button class="pill"        id="sem-pill-2"   onclick="filterSem('2',this)">2nd Sem</button>
-    </div>
-    <div class="gpa-badge" id="term-gpa-badge">GPA: <%= calculatedCGPA %></div>
-  </div>
-
-  <!-- Course Matrix -->
-  <div class="card">
-    <div class="card-header">
-      <div class="card-title" id="matrix-label">All Courses</div>
-      <div class="card-meta"  id="matrix-count"><%= courses.length %> total</div>
     </div>
 
-    <div id="course-matrix">
-      <% if (courses.length === 0) { %>
-        <div class="empty-state">
-          <i class="fas fa-folder-open"></i>
-          <p>No courses logged yet. Tap <strong>+</strong> to add your first course.</p>
+    <div class="hero-bottom">
+        <span class="div-badge <%= badge %>">
+            <i class="fas fa-medal"></i> <%= cls %>
+        </span>
+        <div class="hero-meta"><%= profile.department %> · L<%= profile.current_level %></div>
+    </div>
+</div>
+
+<!-- Tiles -->
+<div class="tiles">
+    <div class="tile t-blue">
+        <div class="tile-icon"><i class="fas fa-layer-group"></i></div>
+        <div class="tile-num"><%= totalUnits %></div>
+        <div class="tile-label">Units</div>
+    </div>
+    <div class="tile t-teal">
+        <div class="tile-icon"><i class="fas fa-star"></i></div>
+        <div class="tile-num"><%= totalPoints.toFixed(1) %></div>
+        <div class="tile-label">Quality Pts</div>
+    </div>
+    <div class="tile t-amber">
+        <div class="tile-icon"><i class="fas fa-book-open"></i></div>
+        <div class="tile-num"><%= courses.length %></div>
+        <div class="tile-label">Courses</div>
+    </div>
+</div>
+
+<!-- Analytics -->
+<div class="analytics">
+    <div class="section-head">
+        <div class="section-label"><i class="fas fa-chart-bar"></i> Grade Breakdown</div>
+    </div>
+    <div class="chart-box">
+        <canvas id="gChart"></canvas>
+    </div>
+    <div class="grade-chips">
+        <% ['A','B','C','D','E','F'].forEach(l => { %>
+        <div class="gchip">
+            <div class="gchip-letter <%= l %>"><%= l %></div>
+            <div class="gchip-count"><%= gradeCounts[l] %>×</div>
         </div>
-      <% } else { %>
-        <% courses.forEach(c => { %>
-          <div class="course-row data-row <%= c.is_hidden ? 'is-hidden' : '' %>"
-               data-id="<%= c.id %>"
-               data-code="<%= c.code %>"
-               data-title="<%= c.title || 'Course Module' %>"
-               data-units="<%= c.credit_units %>"
-               data-grade="<%= c.grade %>"
-               data-level="<%= c.level_scope %>"
-               data-semester="<%= c.semester %>">
-            <div class="course-left">
-              <div class="cname">
-                <%= c.code %>
-                <% if (c.is_hidden) { %><span class="tag-hidden">excluded</span><% } %>
-              </div>
-              <div class="cmeta">
-                <span><i class="fas fa-circle" style="font-size:0.3rem;"></i> <%= c.credit_units %> units</span>
-                <span><%= c.title || 'Course Module' %></span>
-                <span>L<%= c.level_scope %> · S<%= c.semester %></span>
-              </div>
-            </div>
-            <div class="course-right">
-              <div class="grade-chip <%= c.grade %>"><%= c.grade %></div>
-              <div class="action-btns">
-                <button type="button" class="act-btn" title="Edit" onclick="openEdit('<%= c.id %>')">
-                  <i class="fas fa-pen"></i>
-                </button>
-                <form action="/cgpa/course/toggle-visible/<%= c.id %>" method="POST" style="display:contents;">
-                  <button type="submit" class="act-btn <%= c.is_hidden ? 'eye-active' : '' %>" title="Toggle visibility">
-                    <i class="fas <%= c.is_hidden ? 'fa-eye-slash' : 'fa-eye' %>"></i>
-                  </button>
-                </form>
-                <form action="/cgpa/course/delete/<%= c.id %>" method="POST" style="display:contents;"
-                      onsubmit="return confirm('Delete <%= c.code %>?');">
-                  <button type="submit" class="act-btn danger" title="Delete">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </form>
-              </div>
-            </div>
-          </div>
         <% }) %>
-      <% } %>
     </div>
-  </div>
+</div>
 
-  <% } %> <!-- end hasProfile -->
-</div><!-- end shell -->
+<!-- Filters -->
+<div class="filters">
+    <div class="pill-row" id="lvl-pills">
+        <button class="pill on" onclick="fLvl('all',this)">All</button>
+        <button class="pill"    onclick="fLvl('100',this)">100L</button>
+        <button class="pill"    onclick="fLvl('200',this)">200L</button>
+        <button class="pill"    onclick="fLvl('300',this)">300L</button>
+        <button class="pill"    onclick="fLvl('400',this)">400L</button>
+        <button class="pill"    onclick="fLvl('500',this)">500L</button>
+    </div>
+</div>
+<div class="filter-row2">
+    <div class="pill-row" id="sem-pills" style="padding:0;">
+        <button class="pill on" onclick="fSem('all',this)">Both Sems</button>
+        <button class="pill"    onclick="fSem('1',this)">1st Sem</button>
+        <button class="pill"    onclick="fSem('2',this)">2nd Sem</button>
+    </div>
+    <div class="gpa-live" id="termGPA">GPA: <%= cgpa %></div>
+</div>
 
-
-<!-- ════════════ ADD COURSE OVERLAY ════════════ -->
-<div class="overlay" id="add-overlay">
-  <div class="overlay-inner">
-    <div class="overlay-header">
-      <div class="overlay-title">Log Course Outcome</div>
-      <button class="overlay-close" onclick="closeOverlay('add-overlay')"><i class="fas fa-times"></i></button>
+<!-- Course list -->
+<div class="course-card">
+    <div class="course-card-head">
+        <div class="course-card-title" id="matLabel">All Courses</div>
+        <div class="course-card-meta"  id="matCount"><%= courses.length %> total</div>
     </div>
 
+    <div id="matrix">
+    <% if (!courses.length) { %>
+        <div class="empty-state">
+            <i class="fas fa-folder-open"></i>
+            <p>No courses yet. Tap <strong>+</strong> to log your first course.</p>
+        </div>
+    <% } else { %>
+        <% courses.forEach(c => { %>
+        <div class="crow <%= c.is_hidden ? 'hidden-row' : '' %> data-row"
+             data-id="<%= c.id %>"
+             data-code="<%= c.code %>"
+             data-title="<%= c.title || '' %>"
+             data-units="<%= c.credit_units %>"
+             data-grade="<%= c.grade %>"
+             data-level="<%= c.level_scope %>"
+             data-semester="<%= c.semester %>">
+            <div class="crow-left">
+                <div class="ccode">
+                    <%= c.code %>
+                    <% if (c.is_hidden) { %><span class="excl-tag">excluded</span><% } %>
+                </div>
+                <div class="cmeta">
+                    <span><%= c.credit_units %> units</span>
+                    <% if (c.title) { %><span>· <%= c.title %></span><% } %>
+                    <span>· L<%= c.level_scope %> S<%= c.semester %></span>
+                </div>
+            </div>
+            <div class="crow-right">
+                <div class="grade-chip <%= c.grade %>"><%= c.grade %></div>
+                <div class="act-row">
+                    <button class="act" title="Edit" onclick="openEdit('<%= c.id %>')">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                    <form action="/cgpa/course/toggle-visible/<%= c.id %>" method="POST" style="display:contents">
+                        <button type="submit" class="act <%= c.is_hidden ? 'eye-on' : '' %>" title="Toggle">
+                            <i class="fas <%= c.is_hidden ? 'fa-eye-slash' : 'fa-eye' %>"></i>
+                        </button>
+                    </form>
+                    <form action="/cgpa/course/delete/<%= c.id %>" method="POST" style="display:contents"
+                          onsubmit="return confirm('Delete <%= c.code %>?')">
+                        <button type="submit" class="act danger" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <% }) %>
+    <% } %>
+    </div>
+</div>
+
+<!-- Reset section -->
+<div class="reset-section">
+    <h4><i class="fas fa-triangle-exclamation"></i> Danger Zone</h4>
+    <p>Reset your profile and all courses. This cannot be undone.</p>
+    <form action="/cgpa/reset" method="POST" onsubmit="return confirm('Delete everything and start over?')">
+        <button type="submit" class="btn btn-danger">
+            <i class="fas fa-rotate-left"></i> Reset Tracker
+        </button>
+    </form>
+</div>
+
+<% } %> <!-- end hasProfile -->
+</div><!-- /shell -->
+
+
+<!-- ════ ADD COURSE OVERLAY ════ -->
+<div class="overlay" id="ov-add">
+<div class="ov-inner">
+    <div class="ov-head">
+        <div class="ov-title">Log a Course</div>
+        <button class="ov-close" onclick="closeOv('ov-add')"><i class="fas fa-times"></i></button>
+    </div>
     <form action="/cgpa/course/add" method="POST">
-      <div class="form-grid-2">
-        <div class="form-group">
-          <label>Course Code</label>
-          <input type="text" name="code" placeholder="e.g. PHY301" required style="text-transform:uppercase;">
+        <div class="grid2">
+            <div class="fg">
+                <label>Course Code</label>
+                <input type="text" name="code" placeholder="e.g. PHY301" required style="text-transform:uppercase">
+            </div>
+            <div class="fg">
+                <label>Course Title</label>
+                <input type="text" name="title" placeholder="e.g. Thermodynamics">
+            </div>
         </div>
-        <div class="form-group">
-          <label>Course Title</label>
-          <input type="text" name="title" placeholder="e.g. Thermodynamics">
+        <div class="grid2">
+            <div class="fg">
+                <label>Level</label>
+                <select name="level_scope">
+                    <option value="100">100 Level</option>
+                    <option value="200">200 Level</option>
+                    <option value="300" selected>300 Level</option>
+                    <option value="400">400 Level</option>
+                    <option value="500">500 Level</option>
+                </select>
+            </div>
+            <div class="fg">
+                <label>Semester</label>
+                <select name="semester">
+                    <option value="1" selected>1st Semester</option>
+                    <option value="2">2nd Semester</option>
+                </select>
+            </div>
         </div>
-      </div>
-
-      <div class="form-grid-2">
-        <div class="form-group">
-          <label>Level</label>
-          <select name="level_scope" required>
-            <option value="100">100 Level</option>
-            <option value="200">200 Level</option>
-            <option value="300" selected>300 Level</option>
-            <option value="400">400 Level</option>
-            <option value="500">500 Level</option>
-          </select>
+        <div class="grid2">
+            <div class="fg">
+                <label>Credit Units</label>
+                <input type="number" name="credit_units" min="1" max="8" value="3" required>
+            </div>
+            <div class="fg">
+                <label>Grade
+                    <% if (hasProfile) { %>
+                    <small style="text-transform:none;letter-spacing:0;color:var(--blue);">(<%= profile.grading_scale %>-pt)</small>
+                    <% } %>
+                </label>
+                <select name="grade" required>
+                    <% if (hasProfile && profile.grading_scale == 5) { %>
+                        <option value="A">A — 5 pts</option>
+                        <option value="B">B — 4 pts</option>
+                        <option value="C">C — 3 pts</option>
+                        <option value="D">D — 2 pts</option>
+                        <option value="E">E — 1 pt</option>
+                        <option value="F">F — 0 pts</option>
+                    <% } else { %>
+                        <option value="A">A — 4 pts</option>
+                        <option value="B">B — 3 pts</option>
+                        <option value="C">C — 2 pts</option>
+                        <option value="D">D — 1 pt</option>
+                        <option value="F">F — 0 pts</option>
+                    <% } %>
+                </select>
+            </div>
         </div>
-        <div class="form-group">
-          <label>Semester</label>
-          <select name="semester" required>
-            <option value="1" selected>1st Semester</option>
-            <option value="2">2nd Semester</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="form-grid-2">
-        <div class="form-group">
-          <label>Credit Units</label>
-          <input type="number" name="credit_units" min="1" max="8" value="3" required>
-        </div>
-        <div class="form-group">
-          <label>Grade <small style="text-transform:none;letter-spacing:0;color:var(--blue);">(<%= hasProfile ? profile.grading_scale : 5 %>-pt scale)</small></label>
-          <select name="grade" required>
-            <% if (hasProfile && profile.grading_scale == 5) { %>
-              <option value="A">A — 5 pts (Excellent)</option>
-              <option value="B">B — 4 pts (Good)</option>
-              <option value="C">C — 3 pts (Average)</option>
-              <option value="D">D — 2 pts (Below Avg)</option>
-              <option value="E">E — 1 pt  (Poor)</option>
-              <option value="F">F — 0 pts (Fail)</option>
-            <% } else { %>
-              <option value="A">A — 4 pts (Excellent)</option>
-              <option value="B">B — 3 pts (Good)</option>
-              <option value="C">C — 2 pts (Average)</option>
-              <option value="D">D — 1 pt  (Below Avg)</option>
-              <option value="F">F — 0 pts (Fail)</option>
-            <% } %>
-          </select>
-        </div>
-      </div>
-
-      <button type="submit" class="btn btn-primary" style="margin-top:10px;">
-        <i class="fas fa-plus"></i> Save Course
-      </button>
+        <button type="submit" class="btn btn-primary" style="margin-top:8px">
+            <i class="fas fa-plus"></i> Save Course
+        </button>
     </form>
-  </div>
+</div>
 </div>
 
-
-<!-- ════════════ EDIT COURSE OVERLAY ════════════ -->
-<div class="overlay" id="edit-overlay">
-  <div class="overlay-inner">
-    <div class="overlay-header">
-      <div class="overlay-title">Edit Course</div>
-      <button class="overlay-close" onclick="closeOverlay('edit-overlay')"><i class="fas fa-times"></i></button>
+<!-- ════ EDIT COURSE OVERLAY ════ -->
+<div class="overlay" id="ov-edit">
+<div class="ov-inner">
+    <div class="ov-head">
+        <div class="ov-title">Edit Course</div>
+        <button class="ov-close" onclick="closeOv('ov-edit')"><i class="fas fa-times"></i></button>
     </div>
-
     <form action="/cgpa/course/edit" method="POST">
-      <input type="hidden" name="id" id="edit-id">
-
-      <div class="form-grid-2">
-        <div class="form-group">
-          <label>Course Code</label>
-          <input type="text" name="code" id="edit-code" required style="text-transform:uppercase;">
+        <input type="hidden" name="id" id="e-id">
+        <div class="grid2">
+            <div class="fg">
+                <label>Course Code</label>
+                <input type="text" name="code" id="e-code" required style="text-transform:uppercase">
+            </div>
+            <div class="fg">
+                <label>Course Title</label>
+                <input type="text" name="title" id="e-title">
+            </div>
         </div>
-        <div class="form-group">
-          <label>Course Title</label>
-          <input type="text" name="title" id="edit-title">
+        <div class="grid2">
+            <div class="fg">
+                <label>Credit Units</label>
+                <input type="number" name="units" id="e-units" min="1" max="8" required>
+            </div>
+            <div class="fg">
+                <label>Grade</label>
+                <select name="grade" id="e-grade" required>
+                    <% if (hasProfile && profile.grading_scale == 5) { %>
+                        <option value="A">A — 5 pts</option>
+                        <option value="B">B — 4 pts</option>
+                        <option value="C">C — 3 pts</option>
+                        <option value="D">D — 2 pts</option>
+                        <option value="E">E — 1 pt</option>
+                        <option value="F">F — 0 pts</option>
+                    <% } else { %>
+                        <option value="A">A — 4 pts</option>
+                        <option value="B">B — 3 pts</option>
+                        <option value="C">C — 2 pts</option>
+                        <option value="D">D — 1 pt</option>
+                        <option value="F">F — 0 pts</option>
+                    <% } %>
+                </select>
+            </div>
         </div>
-      </div>
-
-      <div class="form-grid-2">
-        <div class="form-group">
-          <label>Credit Units</label>
-          <input type="number" name="units" id="edit-units" min="1" max="8" required>
-        </div>
-        <div class="form-group">
-          <label>Grade <small style="text-transform:none;letter-spacing:0;color:var(--blue);">(<%= hasProfile ? profile.grading_scale : 5 %>-pt scale)</small></label>
-          <select name="grade" id="edit-grade" required>
-            <% if (hasProfile && profile.grading_scale == 5) { %>
-              <option value="A">A — 5 pts</option>
-              <option value="B">B — 4 pts</option>
-              <option value="C">C — 3 pts</option>
-              <option value="D">D — 2 pts</option>
-              <option value="E">E — 1 pt</option>
-              <option value="F">F — 0 pts</option>
-            <% } else { %>
-              <option value="A">A — 4 pts</option>
-              <option value="B">B — 3 pts</option>
-              <option value="C">C — 2 pts</option>
-              <option value="D">D — 1 pt</option>
-              <option value="F">F — 0 pts</option>
-            <% } %>
-          </select>
-        </div>
-      </div>
-
-      <button type="submit" class="btn btn-primary" style="margin-top:10px;">
-        <i class="fas fa-save"></i> Save Changes
-      </button>
+        <button type="submit" class="btn btn-primary" style="margin-top:8px">
+            <i class="fas fa-floppy-disk"></i> Save Changes
+        </button>
     </form>
-  </div>
+</div>
+</div>
+
+<!-- ════ BOTTOM NAV ════ -->
+<div class="bnav">
+    <a href="/dashboard" class="bnav-item">
+        <i class="fas fa-house"></i><span>Home</span>
+    </a>
+    <div class="bnav-item on">
+        <i class="fas fa-chart-pie"></i><span>CGPA</span>
+    </div>
+    <% if (hasProfile) { %>
+    <button class="bnav-fab" onclick="openOv('ov-add')"><i class="fas fa-plus"></i></button>
+    <% } else { %>
+    <div style="width:44px"></div>
+    <% } %>
+    <a href="/setup-test" class="bnav-item">
+        <i class="fas fa-bolt"></i><span>Quiz</span>
+    </a>
+    <a href="/profile" class="bnav-item">
+        <i class="fas fa-user-circle"></i><span>Profile</span>
+    </a>
 </div>
 
 
-<!-- ════════════ BOTTOM NAV ════════════ -->
-<div class="bottom-nav">
-  <a href="/dashboard" class="nav-item">
-    <i class="fas fa-house"></i><span>Home</span>
-  </a>
-  <div class="nav-item active">
-    <i class="fas fa-chart-pie"></i><span>CGPA</span>
-  </div>
-  <% if (hasProfile) { %>
-    <button class="fab" onclick="openOverlay('add-overlay')" title="Add Course">
-      <i class="fas fa-plus"></i>
-    </button>
-  <% } else { %>
-    <div style="width:44px;"></div>
-  <% } %>
-  <a href="/setup-test" class="nav-item">
-    <i class="fas fa-bolt"></i><span>Quiz</span>
-  </a>
-  <a href="/profile" class="nav-item">
-    <i class="fas fa-user-circle"></i><span>Profile</span>
-  </a>
-</div>
-
-
-<!-- ════════════ SCRIPTS ════════════ -->
+<!-- ════ SCRIPTS ════ -->
 <script>
-
-/* ── Setup wizard ─────────────────────────────── */
-// Dynamically update CGPA max when scale is changed in step 1
-document.addEventListener('DOMContentLoaded', () => {
-  const scaleSelect = document.querySelector('select[name="grading_scale"]');
-  const cgpaInput   = document.getElementById('prev_cgpa_input');
-  if (scaleSelect && cgpaInput) {
-    scaleSelect.addEventListener('change', () => {
-      cgpaInput.max         = scaleSelect.value;
-      cgpaInput.placeholder = scaleSelect.value === '5'
-        ? 'e.g. 3.75 (max 5.00)' : 'e.g. 3.00 (max 4.00)';
+/* ── Wizard ─────────────────────────────── */
+const PROGS = { 1:'33%', 2:'66%', 3:'100%' };
+function goStep(n) {
+    document.querySelectorAll('.wiz-step').forEach(s => s.classList.remove('on'));
+    document.getElementById('s'+n).classList.add('on');
+    document.getElementById('prog').style.width = PROGS[n];
+}
+function pickPath(val) {
+    document.getElementById('stype').value = val;
+    if (val === 'balance') goStep(3);
+    else document.getElementById('wiz-form').submit();
+}
+// sync max attr for CGPA input when scale changes
+const scaleSel = document.getElementById('scale-sel');
+const prevCGPA = document.getElementById('prev_cgpa');
+if (scaleSel && prevCGPA) {
+    scaleSel.addEventListener('change', () => {
+        prevCGPA.max         = scaleSel.value;
+        prevCGPA.placeholder = `e.g. ${scaleSel.value==='5'?'3.75':'3.00'}`;
     });
-  }
-});
-function wizNext(step) {
-  document.querySelectorAll('.setup-step').forEach(el => el.classList.remove('active'));
-  document.getElementById('step-' + step).classList.add('active');
-  document.querySelectorAll('.step-dot').forEach((d, i) => {
-    d.classList.remove('active','done');
-    if (i + 1 < step)  d.classList.add('done');
-    if (i + 1 === step) d.classList.add('active');
-  });
-}
-function selectPath(val) {
-  document.getElementById('start_type_val').value = val;
-  if (val === 'balance') wizNext(3);
-  else document.getElementById('wizardForm').submit();
 }
 
-/* ── Overlays ─────────────────────────────────── */
-function openOverlay(id) {
-  document.getElementById(id).classList.add('show');
-  document.body.style.overflow = 'hidden';
-}
-function closeOverlay(id) {
-  document.getElementById(id).classList.remove('show');
-  document.body.style.overflow = '';
-}
-
-/* ── Edit modal pre-fill ──────────────────────── */
-function openEdit(id) {
-  const row = document.querySelector(`.data-row[data-id="${id}"]`);
-  if (!row) return;
-  document.getElementById('edit-id').value    = id;
-  document.getElementById('edit-code').value  = row.dataset.code;
-  document.getElementById('edit-title').value = row.dataset.title;
-  document.getElementById('edit-units').value = row.dataset.units;
-  const sel = document.getElementById('edit-grade');
-  if (sel) sel.value = row.dataset.grade;
-  openOverlay('edit-overlay');
-}
-
-/* ── Close overlay on backdrop click ─────────── */
+/* ── Overlays ────────────────────────────── */
+function openOv(id)  { document.getElementById(id).classList.add('show'); document.body.style.overflow='hidden'; }
+function closeOv(id) { document.getElementById(id).classList.remove('show'); document.body.style.overflow=''; }
 document.querySelectorAll('.overlay').forEach(ov => {
-  ov.addEventListener('click', e => {
-    if (e.target === ov) closeOverlay(ov.id);
-  });
+    ov.addEventListener('click', e => { if (e.target===ov) closeOv(ov.id); });
 });
+
+/* ── Edit pre-fill ───────────────────────── */
+function openEdit(id) {
+    const r = document.querySelector(`.data-row[data-id="${id}"]`);
+    if (!r) return;
+    document.getElementById('e-id').value    = id;
+    document.getElementById('e-code').value  = r.dataset.code;
+    document.getElementById('e-title').value = r.dataset.title;
+    document.getElementById('e-units').value = r.dataset.units;
+    const sel = document.getElementById('e-grade');
+    if (sel) sel.value = r.dataset.grade;
+    openOv('ov-edit');
+}
 
 <% if (hasProfile) { %>
-/* ── Grade counts (safe JS variable) ─────────── */
-const GRADE_COUNTS = <%- JSON.stringify(typeof gradeCounts !== 'undefined' ? gradeCounts : {A:0,B:0,C:0,D:0,E:0,F:0}) %>;
+/* ── Filter state ────────────────────────── */
+const SCALE  = <%= parseInt(profile.grading_scale)||5 %>;
+const GP_MAP = SCALE === 5
+    ? { A:5, B:4, C:3, D:2, E:1, F:0 }
+    : { A:4, B:3, C:2, D:1, E:0, F:0 };
+const PREV_UNITS = <%= parseInt(profile.prev_units)||0 %>;
+const PREV_GP    = <%= parseFloat(profile.prev_gp)||0 %>;
+const GRADE_COUNTS = <%- JSON.stringify(gradeCounts) %>;
 
-/* ── Filter state ─────────────────────────────── */
-let lvlFilter = 'all', semFilter = 'all';
-const scale = <%= parseInt(profile.grading_scale) || 5 %>;
+let curLvl = 'all', curSem = 'all';
 
-// Grade-to-point maps — E only exists on 5-point scale
-const gpMap = scale === 5
-  ? { A:5, B:4, C:3, D:2, E:1, F:0 }
-  : { A:4, B:3, C:2, D:1, E:0, F:0 }; // E treated as F on 4-pt
-
-function filterLevel(val, btn) {
-  lvlFilter = val;
-  document.querySelectorAll('[id^="level-pill-"]').forEach(p => p.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  renderMatrix();
+function fLvl(v, btn) {
+    curLvl = v;
+    document.querySelectorAll('#lvl-pills .pill').forEach(p => p.classList.remove('on'));
+    btn.classList.add('on');
+    render();
 }
-function filterSem(val, btn) {
-  semFilter = val;
-  document.querySelectorAll('[id^="sem-pill-"]').forEach(p => p.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  renderMatrix();
-}
-
-function renderMatrix() {
-  const rows = document.querySelectorAll('.data-row');
-  let shown = 0, units = 0, pts = 0;
-
-  rows.forEach(r => {
-    const lvl = r.dataset.level;
-    const sem = r.dataset.semester;
-    const ok  = (lvlFilter === 'all' || lvlFilter === lvl) &&
-                (semFilter === 'all' || semFilter === sem);
-
-    r.style.display = ok ? 'flex' : 'none';
-    if (ok) {
-      shown++;
-      if (!r.classList.contains('is-hidden')) {
-        const u = parseInt(r.dataset.units) || 0;
-        const g = (r.dataset.grade || 'F').toUpperCase();
-        const p = gpMap[g] !== undefined ? gpMap[g] : 0;
-        units += u;
-        pts   += p * u;
-      }
-    }
-  });
-
-  const termGPA = units > 0 ? (pts / units).toFixed(2) : '—';
-  document.getElementById('term-gpa-badge').textContent = `GPA: ${termGPA}`;
-  document.getElementById('matrix-count').textContent   = `${shown} shown`;
-
-  const lvlLabel = lvlFilter === 'all' ? 'All Levels'  : `${lvlFilter}L`;
-  const semLabel = semFilter === 'all' ? 'All Semesters': `Semester ${semFilter}`;
-  document.getElementById('matrix-label').textContent = `${lvlLabel} · ${semLabel}`;
+function fSem(v, btn) {
+    curSem = v;
+    document.querySelectorAll('#sem-pills .pill').forEach(p => p.classList.remove('on'));
+    btn.classList.add('on');
+    render();
 }
 
-/* ── Chart.js grade distribution ─────────────── */
-document.addEventListener('DOMContentLoaded', () => {
-  renderMatrix();
-
-  const ctx = document.getElementById('gradeChart');
-  if (ctx) {
-    new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: ['A','B','C','D','E','F'],
-        datasets: [{
-          data: [
-            GRADE_COUNTS.A, GRADE_COUNTS.B, GRADE_COUNTS.C,
-            GRADE_COUNTS.D, GRADE_COUNTS.E, GRADE_COUNTS.F
-          ],
-          backgroundColor: [
-            'rgba(217,119,6,0.12)','rgba(37,99,235,0.12)','rgba(22,163,74,0.12)',
-            'rgba(124,58,237,0.12)','rgba(71,85,105,0.12)','rgba(220,38,38,0.12)'
-          ],
-          borderColor: ['#d97706','#2563eb','#16a34a','#7c3aed','#475569','#dc2626'],
-          borderWidth: 1.5, borderRadius: 6, borderSkipped: false
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { grid: { display: false }, ticks: { font: { family: 'Clash Display', weight: '600' } } },
-          y: { grid: { color: 'rgba(15,23,42,0.05)' }, ticks: { precision: 0 } }
+function render() {
+    const rows = document.querySelectorAll('.data-row');
+    let shown=0, u=0, pts=0;
+    rows.forEach(r => {
+        const lvl = r.dataset.level, sem = r.dataset.semester;
+        const ok  = (curLvl==='all'||curLvl===lvl) && (curSem==='all'||curSem===sem);
+        r.style.display = ok ? 'flex' : 'none';
+        if (ok) {
+            shown++;
+            if (!r.classList.contains('hidden-row')) {
+                const cu = parseInt(r.dataset.units)||0;
+                const g  = (r.dataset.grade||'F').toUpperCase();
+                u   += cu;
+                pts += (GP_MAP[g]!==undefined?GP_MAP[g]:0)*cu;
+            }
         }
-      }
     });
-  }
+    // include prev balance in GPA only when showing all
+    const tu = (curLvl==='all'&&curSem==='all') ? u+PREV_UNITS : u;
+    const tp = (curLvl==='all'&&curSem==='all') ? pts+PREV_GP  : pts;
+    const gpa = tu>0 ? (tp/tu).toFixed(2) : '—';
+    document.getElementById('termGPA').textContent = `GPA: ${gpa}`;
+    document.getElementById('matCount').textContent = `${shown} shown`;
+
+    const ll = curLvl==='all'?'All Levels':`${curLvl}L`;
+    const sl = curSem==='all'?'Both Sems':`Sem ${curSem}`;
+    document.getElementById('matLabel').textContent = `${ll} · ${sl}`;
+}
+
+/* ── Chart.js ────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+    render();
+    const ctx = document.getElementById('gChart');
+    if (!ctx) return;
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['A','B','C','D','E','F'],
+            datasets: [{
+                data: [GRADE_COUNTS.A, GRADE_COUNTS.B, GRADE_COUNTS.C, GRADE_COUNTS.D, GRADE_COUNTS.E, GRADE_COUNTS.F],
+                backgroundColor: ['rgba(180,83,9,.1)','rgba(37,99,235,.1)','rgba(13,148,136,.1)','rgba(124,58,237,.1)','rgba(82,82,91,.1)','rgba(225,29,72,.1)'],
+                borderColor:     ['#b45309','#2563eb','#0d9488','#7c3aed','#52525b','#e11d48'],
+                borderWidth: 1.5, borderRadius: 7, borderSkipped: false
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend:{ display:false } },
+            scales: {
+                x: { grid:{ display:false }, ticks:{ font:{ family:'Cabinet Grotesk',weight:'700' } } },
+                y: { grid:{ color:'rgba(0,0,0,.04)' }, ticks:{ precision:0 } }
+            }
+        }
+    });
 });
 
-/* ── PDF export ───────────────────────────────── */
-document.getElementById('pdf-btn') && document.getElementById('pdf-btn').addEventListener('click', () => {
-  html2pdf().set({
-    margin: [12,10,12,10],
-    filename: 'prepium_transcript.pdf',
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0 },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-  }).from(document.getElementById('pdf-target')).save();
-});
+/* ── PDF export ──────────────────────────── */
+const pdfBtn = document.getElementById('pdfBtn');
+if (pdfBtn) {
+    pdfBtn.addEventListener('click', () => {
+        html2pdf().set({
+            margin: [10,10,10,10],
+            filename: 'prepium_cgpa.pdf',
+            image: { type:'jpeg', quality:.98 },
+            html2canvas: { scale:2, useCORS:true, scrollX:0, scrollY:0 },
+            jsPDF: { unit:'mm', format:'a4', orientation:'portrait' }
+        }).from(document.getElementById('pdf-root')).save();
+    });
+}
 <% } %>
 </script>
 </body>

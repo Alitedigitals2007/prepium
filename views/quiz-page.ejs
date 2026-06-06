@@ -298,6 +298,16 @@
         }
 
         window.onload = () => { renderQuestion(); startTimer(); };
+        
+
+        setInterval(async () => {
+        try {
+            await fetch('/api/heartbeat');
+            console.log('Session connection refreshed successfully.');
+        } catch (err) {
+            console.error('Heartbeat ping failed:', err);
+        }
+    }, 300000)
     </script>
 </body>
 </html>
