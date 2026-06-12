@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Prepium | Student Dashboard</title>
+    <title>Prepium | Advanced Premium Dashboard</title>
     
     <script src="https://js.paystack.co/v1/inline.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -13,50 +13,74 @@
         :root { 
             --brand: #0062ff; 
             --brand-gradient: linear-gradient(135deg, #0062ff 0%, #0045b5 100%);
-            --accent: #7c3aed;
+            --accent: #4f46e5;
             --bg: #f8fafc; 
-            --surface: #ffffff;
-            --text-dark: #0b1437; 
+            --surface: rgba(255, 255, 255, 0.45);
+            --text-dark: #0f172a; 
             --text-sub: #64748b;
-            --border: #f1f5f9;
-            --dark-surface: #0f172a;
+            --border: rgba(226, 232, 240, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.7);
             --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.02);
-            --shadow-md: 0 12px 30px rgba(11, 20, 55, 0.06);
+            --shadow-md: 0 12px 30px rgba(15, 23, 42, 0.04);
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            
+            --crazy-bg: radial-gradient(circle at top right, #0f172a 0%, #1e1b4b 50%, #020617 100%);
+            --crazy-surface: rgba(15, 23, 42, 0.45);
+            --crazy-border: rgba(99, 102, 241, 0.3);
+            --crazy-glass-border: rgba(255, 255, 255, 0.15);
+            --crazy-text: #f8fafc;
+            --crazy-glow: 0 0 20px rgba(99, 102, 241, 0.4);
         }
 
         * { 
             box-sizing: border-box; 
             -webkit-tap-highlight-color: transparent; 
-            transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1); 
-            outline: none; 
+            margin: 0; padding: 0;
         }
         
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: #0f172a; 
-            margin: 0; 
+            background: radial-gradient(circle at top right, #eff6ff 0%, #dbeafe 40%, #e2e8f0 100%);
+            background-attachment: fixed;
             color: var(--text-dark); 
             display: flex; 
             justify-content: center; 
+            min-height: 100vh;
+            transition: background 0.5s ease, color 0.3s ease;
+        }
+
+        body.crazy-active {
+            background: var(--crazy-bg);
+            background-attachment: fixed;
+            color: var(--crazy-text);
         }
 
         .app-shell { 
             width: 100%; 
             max-width: 430px; 
-            background: var(--bg); 
+            background: rgba(248, 250, 252, 0.6); 
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             min-height: 100vh; 
             position: relative; 
             padding-bottom: 120px;
-            box-shadow: 0 0 50px rgba(0,0,0,0.3);
+            box-shadow: 0 0 40px rgba(0, 98, 255, 0.05);
+            border-left: 1px solid var(--glass-border);
+            border-right: 1px solid var(--glass-border);
+            transition: background 0.5s ease, border 0.5s ease;
+        }
+        body.crazy-active .app-shell {
+            background: rgba(15, 23, 42, 0.6);
+            border-left: 1px solid var(--crazy-glass-border);
+            border-right: 1px solid var(--crazy-glass-border);
         }
 
-        /* Header Layout */
+        /* Header UI */
         .header-nav { 
-            padding: 1.75rem 1.5rem 1rem; 
+            padding: 1.75rem 1.5rem 0.5rem; 
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
-            background: var(--bg);
         }
         .logo { 
             font-weight: 800; 
@@ -65,250 +89,227 @@
             color: var(--text-dark); 
             text-decoration: none; 
         }
+        body.crazy-active .logo { color: var(--crazy-text); }
         .logo span { color: var(--brand); }
 
-        .profile-trigger {
-            width: 42px; 
-            height: 42px; 
-            background: var(--surface); 
-            border: 2px solid var(--surface);
-            border-radius: 14px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
-            font-weight: 700; 
-            color: var(--brand); 
-            text-decoration: none;
-            box-shadow: var(--shadow-sm);
+        .top-action-cluster { display: flex; align-items: center; gap: 10px; }
+
+        .crazy-toggle-btn {
+            width: 42px; height: 42px;
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: #f59e0b; font-size: 1.1rem;
+            box-shadow: var(--shadow-sm); transition: var(--transition);
+        }
+        body.crazy-active .crazy-toggle-btn {
+            background: rgba(30, 27, 75, 0.8); border-color: var(--crazy-glass-border); color: #a855f7;
         }
 
-        /* Hero Text */
-        .hero-section { padding: 0.5rem 1.5rem 1.25rem; }
-        .hero-section h1 { font-size: 1.65rem; font-weight: 800; margin: 0; letter-spacing: -0.5px; color: var(--text-dark); }
-        .hero-section p { color: var(--text-sub); font-size: 0.88rem; margin: 4px 0 0; font-weight: 500; }
+        .profile-trigger {
+            width: 42px; height: 42px; 
+            background: rgba(255, 255, 255, 0.8); border: 1px solid var(--glass-border);
+            border-radius: 14px; display: flex; align-items: center; justify-content: center;
+            font-weight: 700; color: var(--brand); text-decoration: none;
+            box-shadow: var(--shadow-sm);
+        }
+        body.crazy-active .profile-trigger {
+            background: rgba(30, 27, 75, 0.8); border-color: var(--crazy-glass-border); color: #6366f1;
+        }
 
-        /* Paywall Card Banner */
+        /* Status Pills */
+        .meta-status-row { padding: 0 1.5rem 1rem; display: flex; gap: 10px; align-items: center; }
+        .live-pill {
+            background: rgba(0, 98, 255, 0.1); border: 1px solid rgba(0, 98, 255, 0.15);
+            padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700;
+            color: var(--brand); display: flex; align-items: center; gap: 6px;
+        }
+        body.crazy-active .live-pill { background: rgba(99, 102, 241, 0.2); border-color: rgba(99, 102, 241, 0.3); color: #818cf8; }
+
+        /* Typography */
+        .hero-section { padding: 0.5rem 1.5rem 1rem; }
+        .hero-section h1 { font-size: 1.65rem; font-weight: 800; letter-spacing: -0.5px; color: var(--text-dark); }
+        body.crazy-active .hero-section h1 { color: var(--crazy-text); }
+        
+        .quote-box {
+            margin: 0 1.5rem 1.5rem; padding: 14px 18px;
+            background: rgba(255, 255, 255, 0.5); border: 1px solid var(--glass-border); border-radius: 18px;
+            display: flex; gap: 10px;
+        }
+        body.crazy-active .quote-box { background: rgba(15, 23, 42, 0.4); border-color: var(--crazy-glass-border); }
+        .quote-box i { color: var(--brand); font-size: 0.85rem; margin-top: 3px; opacity: 0.7; }
+        body.crazy-active .quote-box i { color: #6366f1; }
+        .quote-text { font-size: 0.78rem; color: var(--text-sub); font-weight: 600; line-height: 1.4; }
+        body.crazy-active .quote-text { color: #94a3b8; }
+
+        /* Premium Gate Banners */
         <% if (!user.has_paid) { %>
         .premium-card {
-            margin: 0 1.5rem 1.5rem; 
-            padding: 24px; 
-            background: var(--brand-gradient);
-            border-radius: 24px; 
-            color: white; 
-            position: relative; 
-            overflow: hidden;
-            box-shadow: 0 12px 25px rgba(0, 98, 255, 0.25);
+            margin: 0 1.5rem 1.5rem; padding: 24px; 
+            background: var(--brand-gradient); border-radius: 24px; color: white; 
+            box-shadow: 0 12px 25px rgba(0, 98, 255, 0.15);
         }
-        .premium-card h3 { font-size: 1.15rem; margin: 0; font-weight: 800; letter-spacing: -0.2px; }
-        .premium-card p { font-size: 0.85rem; opacity: 0.9; margin: 6px 0 16px; line-height: 1.45; font-weight: 500; }
+        body.crazy-active .premium-card { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); }
+        .premium-card h3 { font-size: 1.15rem; font-weight: 800; }
+        .premium-card p { font-size: 0.85rem; opacity: 0.9; margin: 6px 0 16px; font-weight: 500; }
         .upgrade-btn {
-            background: white; 
-            color: var(--brand); 
-            border: none; 
-            padding: 12px 22px; 
-            border-radius: 14px; 
-            font-weight: 800; 
-            font-size: 0.85rem; 
-            cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            background: #ffffff; color: var(--brand); border: none; padding: 12px 22px; 
+            border-radius: 14px; font-weight: 800; font-size: 0.85rem; cursor: pointer; transition: var(--transition);
         }
-        .premium-card::after {
-            content: '\f521';
-            font-family: "Font Awesome 6 Free";
-            font-weight: 900;
-            position: absolute;
-            right: -10px;
-            bottom: -15px;
-            font-size: 6rem;
-            opacity: 0.08;
-            transform: rotate(-15deg);
-        }
+        body.crazy-active .upgrade-btn { color: #4f46e5; }
         <% } %>
 
-        /* Standalone High-Priority Daily Challenge Hub */
         .challenge-hub {
-            margin: 0 1.5rem 1.5rem; 
-            padding: 22px;
-            background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
-            border-radius: 24px; 
-            display: flex; 
-            align-items: center;
-            justify-content: space-between; 
-            color: white; 
-            text-decoration: none;
-            box-shadow: 0 12px 24px rgba(124, 58, 237, 0.25);
-            position: relative;
-            overflow: hidden;
+            margin: 0 1.5rem 1.75rem; padding: 20px;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 24px; 
+            display: flex; align-items: center; justify-content: space-between; color: white; text-decoration: none;
         }
-        .challenge-hub:active { transform: scale(0.97); }
-        .challenge-icon-box {
-            width: 46px; 
-            height: 46px; 
-            background: rgba(255, 255, 255, 0.2); 
-            backdrop-filter: blur(8px);
-            border-radius: 14px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-size: 1.25rem;
-            animation: pulse-glow 2s infinite ease-in-out;
+        body.crazy-active .challenge-hub { background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); }
+        .challenge-icon-box { width: 44px; height: 44px; background: rgba(255, 255, 255, 0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+
+        /* Titles Headers */
+        .section-header { padding: 0.5rem 1.5rem 0.75rem; display: flex; justify-content: space-between; align-items: center; }
+        .section-header h2 { font-size: 1.05rem; font-weight: 800; color: var(--text-dark); letter-spacing: -0.3px; }
+        body.crazy-active .section-header h2 { color: var(--crazy-text); }
+
+        /* SPACIOUS UNIFIED GRID SYSTEM CODES */
+        .grid-wrapper { padding: 0 1.5rem 2rem; }
+        .clean-dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
         }
 
-        @keyframes pulse-glow {
-            0% { transform: scale(1); background: rgba(255, 255, 255, 0.2); }
-            50% { transform: scale(1.06); background: rgba(255, 255, 255, 0.3); }
-            100% { transform: scale(1); background: rgba(255, 255, 255, 0.2); }
-        }
-
-        /* Improved Expandable Group Folders */
-        .category-folder {
-            margin: 0 1.5rem 16px;
+        /* Glass Cards Components Layout */
+        .glass-card {
             background: var(--surface);
-            border: 1px solid rgba(226, 232, 240, 0.7);
-            border-radius: 24px;
-            overflow: hidden;
-            box-shadow: var(--shadow-sm);
+            backdrop-filter: blur(20px) saturate(140%);
+            -webkit-backdrop-filter: blur(20px) saturate(140%);
+            border: 1px solid var(--glass-border);
+            padding: 20px 16px; border-radius: 24px; text-decoration: none;
+            display: flex; flex-direction: column; position: relative;
+            box-shadow: 0 8px 24px rgba(148, 163, 184, 0.06);
+            transition: var(--transition);
         }
-        
-        /* Interactive State Management Appearance Updates */
-        .category-folder.open {
-            box-shadow: var(--shadow-md);
-            border-color: rgba(0, 98, 255, 0.15);
-        }
-        
-        .category-header {
-            padding: 22px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            cursor: pointer;
-            user-select: none;
-        }
-        .category-header:active { background: #f8fafc; }
-        
-        .category-title-info { display: flex; align-items: center; gap: 14px; }
-        .category-folder-icon {
-            width: 44px; height: 44px; border-radius: 14px;
-            display: flex; align-items: center; justify-content: center; font-size: 1.15rem;
-        }
-        .category-title-info h3 { margin: 0; font-size: 1.02rem; font-weight: 800; color: var(--text-dark); letter-spacing: -0.3px; }
-        .category-title-info p { margin: 4px 0 0; font-size: 0.78rem; color: var(--text-sub); font-weight: 500; }
-        
-        .category-chevron { font-size: 0.85rem; color: #94a3b8; transition: transform 0.3s ease; }
-        
-        /* Smooth Content Container View */
-        .category-content {
-            max-height: 0;
-            overflow: hidden;
-            padding: 0 20px;
-            opacity: 0;
-            transform: translateY(-8px);
-            transition: max-height 0.35s ease, padding 0.35s ease, opacity 0.3s ease, transform 0.3s ease;
-        }
-        
-        .category-folder.open .category-content {
-            max-height: 1000px; 
-            padding: 4px 20px 24px;
-            opacity: 1;
-            transform: translateY(0);
-        }
-        .category-folder.open .category-chevron { transform: rotate(180deg); color: var(--text-dark); }
+        body.crazy-active .glass-card { background: var(--crazy-surface); border-color: var(--crazy-border); }
+        .glass-card:not(.locked):active { transform: scale(0.96); background: rgba(255, 255, 255, 0.75); }
 
-        /* Redesigned Minimal Grid & Modular Menu Cards */
-        .menu-grid { 
-            display: grid; 
-            grid-template-columns: repeat(2, 1fr); 
-            gap: 12px; 
-            padding-top: 10px;
-        }
-        .menu-item {
-            background: #f8fafc; 
-            padding: 20px 16px; 
-            border-radius: 20px;
-            border: 1px solid #f1f5f9; 
-            text-decoration: none;
-            display: flex; 
-            flex-direction: column; 
-            position: relative;
-        }
-        .menu-item:not(.locked):active { transform: scale(0.95); background: #f1f5f9; }
-        
+        .highlight-border { border-left: 3px solid var(--brand); }
+        body.crazy-active .highlight-border { border-left-color: #6366f1; }
+
         .item-icon {
-            width: 40px; 
-            height: 40px; 
-            border-radius: 12px;
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
-            margin-bottom: 12px; 
-            font-size: 1.05rem;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+            width: 42px; height: 42px; border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem; margin-bottom: 14px;
+            background: #ffffff; color: var(--brand);
+            border: 1px solid var(--border); flex-shrink: 0;
         }
-        .menu-item b { font-size: 0.9rem; font-weight: 800; color: var(--text-dark); display: block; letter-spacing: -0.1px; }
-        .menu-item span { font-size: 0.72rem; color: var(--text-sub); font-weight: 600; margin-top: 4px; line-height: 1.2; }
+        body.crazy-active .item-icon { background: #1e1b4b; color: #818cf8; border-color: var(--crazy-border); }
 
-        /* Lock Security Infrastructure Overlays */
-        .locked { cursor: pointer; }
+        .glass-card b { font-size: 0.92rem; font-weight: 800; color: var(--text-dark); letter-spacing: -0.1px; line-height: 1.2; }
+        body.crazy-active .glass-card b { color: var(--crazy-text); }
+        .glass-card span { font-size: 0.72rem; color: var(--text-sub); font-weight: 600; margin-top: 5px; line-height: 1.3; }
+        body.crazy-active .glass-card span { color: #94a3b8; }
+
+        /* Global Security Locks Design Overlay */
         .locked::after {
-            content: '\f023'; 
-            font-family: "Font Awesome 6 Free"; 
-            font-weight: 900;
-            position: absolute; 
-            top: 16px; 
-            right: 16px; 
-            color: #94a3b8; 
-            font-size: 0.7rem;
-            background: #ffffff;
-            width: 22px;
-            height: 22px;
-            border-radius: 8px;
+            content: '\f023'; font-family: "Font Awesome 6 Free"; font-weight: 900;
+            position: absolute; top: 16px; right: 16px; 
+            color: #94a3b8; font-size: 0.68rem;
+            background: #ffffff; width: 22px; height: 22px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+        }
+        body.crazy-active .locked::after { background: #0f172a; border-color: var(--crazy-border); color: #64748b; }
+        .locked .item-icon { background: rgba(226, 232, 240, 0.7) !important; color: #94a3b8 !important; box-shadow: none !important; }
+
+        /* Navigation Systems Footer */
+        .bottom-nav {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: calc(100% - 32px); max-width: 398px;
+            background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+            height: 74px; border-radius: 24px; display: flex; align-items: center;
+            box-shadow: 0 16px 35px rgba(0, 98, 255, 0.08); border: 1px solid var(--glass-border); z-index: 1000;
+            transition: background 0.5s ease, border 0.5s ease;
+        }
+        body.crazy-active .bottom-nav { background: rgba(15, 23, 42, 0.75); border-color: var(--crazy-border); }
+        
+        .nav-link { 
+            text-decoration: none; 
+            color: var(--text-sub); 
+            text-align: center; 
+            flex: 1; 
+            font-weight: 700; 
+            cursor: pointer; 
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-link.active { color: var(--brand); }
+        body.crazy-active .nav-link.active { color: #818cf8; }
+        .nav-link i { font-size: 1.15rem; display: block; margin-bottom: 4px; }
+        .nav-link span { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        /* Interactive Notification Badge Dot */
+        .nav-link .notification-dot {
+            position: absolute;
+            top: 4px;
+            right: 28px;
+            background-color: #ef4444;
+            color: #ffffff;
+            font-size: 0.55rem;
+            font-weight: 800;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 1.5px solid #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 1px solid #e2e8f0;
-            box-shadow: var(--shadow-sm);
         }
-        .locked .item-icon { background: #e2e8f0 !important; color: #94a3b8 !important; box-shadow: none !important; }
+        body.crazy-active .nav-link .notification-dot { border-color: #1e1b4b; }
 
-        /* Bottom Menu Shell Navigation */
-        .bottom-nav {
-            position: fixed; 
-            bottom: 20px; 
-            left: 50%; 
-            transform: translateX(-50%);
-            width: calc(100% - 32px); 
-            max-width: 398px;
-            background: #0b1437; 
-            height: 74px; 
-            border-radius: 24px;
-            display: flex; 
-            justify-space: around; 
-            align-items: center;
-            box-shadow: 0 16px 35px rgba(11, 20, 55, 0.35); 
-            z-index: 1000;
-            padding: 0 10px;
-        }
-        .nav-link { text-decoration: none; color: #64748b; text-align: center; padding: 4px 12px; flex: 1; }
-        .nav-link.active { color: #ffffff; }
-        .nav-link i { font-size: 1.2rem; display: block; margin-bottom: 4px; }
-        .nav-link span { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-        
         .nav-center-btn {
-            width: 56px; 
-            height: 56px; 
-            background: var(--brand); 
-            border-radius: 18px;
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
-            color: white; 
-            font-size: 1.4rem; 
-            transform: translateY(-24px);
-            border: 5px solid var(--bg); 
-            box-shadow: 0 8px 20px rgba(0, 98, 255, 0.4);
+            width: 54px; height: 54px; background: var(--brand); border-radius: 18px;
+            display: flex; align-items: center; justify-content: center; color: white; font-size: 1.35rem; 
+            transform: translateY(-22px); border: 4px solid #f1f5f9; box-shadow: 0 8px 20px rgba(0, 98, 255, 0.2);
             text-decoration: none;
         }
-        .nav-center-btn:active { transform: translateY(-24px) scale(0.92); }
+        body.crazy-active .nav-center-btn { background: #6366f1; border-color: #0f172a; box-shadow: var(--crazy-glow); }
+
+        /* Overlay Layout All Pages Navigator */
+        .master-navigator {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.3); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+            z-index: 9999; display: flex; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.4s ease; padding: 24px;
+        }
+        .master-navigator.show { opacity: 1; pointer-events: auto; }
+        .navigator-content {
+            background: rgba(255, 255, 255, 0.88); border: 1px solid rgba(255, 255, 255, 0.6);
+            width: 100%; max-width: 380px; border-radius: 32px; padding: 24px;
+            max-height: 80vh; overflow-y: auto; scrollbar-width: none;
+        }
+        .navigator-content::-webkit-scrollbar { display: none; }
+        body.crazy-active .navigator-content { background: rgba(15, 23, 42, 0.95); border-color: var(--crazy-border); }
+        .navigator-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid rgba(0,0,0,0.06); }
+        body.crazy-active .navigator-header { border-bottom-color: rgba(255,255,255,0.1); }
+        .navigator-header h3 { font-size: 1.15rem; font-weight: 800; }
+        body.crazy-active .navigator-header h3 { color: white; }
+        .close-navigator-btn { width: 32px; height: 32px; border-radius: 50%; background: rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        body.crazy-active .close-navigator-btn { background: rgba(255,255,255,0.1); color: white; }
+        .navigator-links-stack { display: flex; flex-direction: column; gap: 8px; }
+        .navigator-row-item { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 16px; text-decoration: none; color: var(--text-dark); }
+        body.crazy-active .navigator-row-item { background: rgba(30, 27, 75, 0.4); border-color: rgba(255,255,255,0.05); color: white; }
+        .navigator-row-item i { font-size: 1.05rem; color: var(--brand); width: 24px; text-align: center; }
+        body.crazy-active .navigator-row-item i { color: #818cf8; }
+        .navigator-row-item div b { font-size: 0.88rem; font-weight: 700; display: block; }
+        .navigator-row-item div span { font-size: 0.72rem; color: var(--text-sub); }
+        body.crazy-active .navigator-row-item div span { color: #94a3b8; }
+        .navigator-row-item.nav-locked { opacity: 0.55; }
     </style>
 </head>
 <body>
@@ -316,148 +317,112 @@
     <div class="app-shell">
         <header class="header-nav">
             <a href="/dashboard" class="logo">Prepium<span>.</span></a>
-            <a href="/profile" class="profile-trigger">
-                <%= user.fullname ? user.fullname.charAt(0).toUpperCase() : 'U' %>
-            </a>
+            <div class="top-action-cluster">
+                <div class="crazy-toggle-btn" id="toggle-crazy-mode">
+                    <i class="fas fa-moon"></i>
+                </div>
+                <a href="/profile" class="profile-trigger">
+                    <%= user.fullname ? user.fullname.charAt(0).toUpperCase() : 'U' %>
+                </a>
+            </div>
         </header>
 
+        <div class="meta-status-row">
+            <div class="live-pill"><i class="fas fa-clock"></i> <span id="live-time-display">00:00:00</span></div>
+            <div class="live-pill" style="background:rgba(79, 70, 229, 0.1); color:var(--accent); border-color:rgba(79, 70, 229, 0.15)">
+                <i class="fas fa-calendar"></i> <span id="live-date-display">Date</span>
+            </div>
+        </div>
+
         <section class="hero-section">
-            <h1>Hi, <%= user.fullname ? user.fullname.split(' ')[0] : 'Student' %> 👋</h1>
-            <p>Ready to crush your goals today?</p>
+            <h1 id="greeting-field">Hello, Student 👋</h1>
         </section>
+
+        <div class="quote-box">
+            <i class="fas fa-quote-left"></i>
+            <div class="quote-text" id="quote-field">"Loading strategic quotes engine..."</div>
+        </div>
 
         <% if (!user.has_paid) { %>
             <div class="premium-card">
                 <h3>Upgrade to Premium</h3>
-                <p>Access the Study Library, Arena, and all Pro tools for just <b>₦1,000</b>.</p>
+                <p>Unlock Study Library, Audio Podcasts, CGPA Trackers, and AI engines for <b>₦1,000</b>.</p>
                 <button onclick="payWithPaystack()" id="pay-btn" class="upgrade-btn">Get Full Access</button>
             </div>
         <% } %>
 
         <a href="/daily-challenge" class="challenge-hub">
             <div style="display: flex; align-items: center; gap: 14px;">
-                <div class="challenge-icon-box">
-                    <i class="fas fa-fire-alt"></i>
-                </div>
+                <div class="challenge-icon-box"><i class="fas fa-fire-alt"></i></div>
                 <div>
-                    <h4 style="margin:0; font-weight:800; font-size: 0.98rem; letter-spacing: -0.1px;">Daily Challenge</h4>
-                    <p style="margin:3px 0 0; font-size:0.78rem; opacity:0.9; font-weight: 500;">Compete with students live</p>
+                    <h4 style="font-weight:800; font-size: 0.95rem;">Daily Challenge</h4>
+                    <p style="font-size:0.75rem; opacity:0.9; margin-top:2px;">Compete live with peers</p>
                 </div>
             </div>
-            <i class="fas fa-chevron-right" style="opacity: 0.8; font-size: 0.85rem;"></i>
+            <i class="fas fa-chevron-right" style="opacity: 0.8; font-size: 0.8rem;"></i>
         </a>
 
-        <div class="category-folder open" id="cat-exams">
-            <div class="category-header" onclick="toggleCategory('cat-exams')">
-                <div class="category-title-info">
-                    <div class="category-folder-icon" style="background: #e0f7ff; color: var(--brand);"><i class="fas fa-laptop-code"></i></div>
-                    <div>
-                        <h3>Academic Tools</h3>
-                        <p>Practice engines, AI Bots, and Analyzers</p>
-                    </div>
-                </div>
-                <i class="fas fa-chevron-down category-chevron"></i>
-            </div>
-            <div class="category-content">
-                <div class="menu-grid">
-                    <a href="/setup-test" class="menu-item" style="background: #ffffff; border-color: #e0f2fe;">
-                        <div class="item-icon" style="background: var(--brand); color: white;"><i class="fas fa-bolt"></i></div>
-                        <b>Practice Quiz</b>
-                        <span><%= user.has_paid ? 'Unlimited Access' : (2 - user.quiz_attempts) + ' Free Remaining' %></span>
-                    </a>
-
-                    <a href="<%= user.has_paid ? '/ai-quiz' : '#' %>" class="menu-item <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>" style="<%= user.has_paid ? 'background: #ffffff; border-color: #f3e8ff;' : '' %>">
-                        <div class="item-icon" style="background: #f3e8ff; color: var(--accent);"><i class="fas fa-robot"></i></div>
-                        <b>AI Quiz Bot</b>
-                        <span>PDF to CBT Exam</span>
-                    </a>
-
-                    <a href="<%= user.has_paid ? '/cgpa' : '#' %>" class="menu-item <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>" style="<%= user.has_paid ? 'background: #ffffff; border-color: #dcfce7;' : '' %>">
-                        <div class="item-icon" style="background: #dcfce7; color: #16a34a;"><i class="fas fa-chart-line"></i></div>
-                        <b>CGPA Tracker</b>
-                        <span>Grade Calculator</span>
-                    </a>
-
-                    <a href="<%= user.has_paid ? '/competition' : '#' %>" class="menu-item <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>" style="<%= user.has_paid ? 'background: #ffffff; border-color: #fef3c7;' : '' %>">
-                        <div class="item-icon" style="background: #fef3c7; color: #d97706;"><i class="fas fa-trophy"></i></div>
-                        <b>Live Arena</b>
-                        <span>Global Rankings</span>
-                    </a>
-                </div>
-            </div>
+        <div class="section-header">
+            <h2>Academic Workspace</h2>
         </div>
+        
+        <div class="grid-wrapper">
+            <div class="clean-dashboard-grid">
+                
+                <a href="/setup-test" class="glass-card highlight-border">
+                    <div class="item-icon"><i class="fas fa-bolt"></i></div>
+                    <b>Practice Quiz</b>
+                    <span><%= user.has_paid ? 'Unlimited Mode' : (2 - user.quiz_attempts) + ' Free Left' %></span>
+                </a>
 
-        <div class="category-folder" id="cat-studykit">
-            <div class="category-header" onclick="toggleCategory('cat-studykit')">
-                <div class="category-title-info">
-                    <div class="category-folder-icon" style="background: #f3e8ff; color: var(--accent);"><i class="fas fa-briefcase"></i></div>
-                    <div>
-                        <h3>Study Kit</h3>
-                        <p>Timetables, Guides, and Tracking</p>
-                    </div>
-                </div>
-                <i class="fas fa-chevron-down category-chevron"></i>
-            </div>
-            <div class="category-content">
-                <div class="menu-grid">
-                    <a href="<%= user.has_paid ? '/subjects' : '#' %>" class="menu-item <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>" style="background: #ffffff;">
-                        <div class="item-icon" style="background: #e0e7ff; color: #4f46e5;"><i class="fas fa-book-open"></i></div>
-                        <b>Study Library</b>
-                        <span>Course Manuals</span>
-                    </a>
+                <a href="<%= user.has_paid ? '/ai-quiz' : '#' %>" class="glass-card <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>">
+                    <div class="item-icon"><i class="fas fa-robot"></i></div>
+                    <b>AI Quiz Bot</b>
+                    <span>PDF parsing to CBT exam sets</span>
+                </a>
 
-                    <a href="<%= user.has_paid ? '/pomodoro' : '#' %>" class="menu-item <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>" style="background: #ffffff;">
-                        <div class="item-icon" style="background: #ffe4e6; color: #e11d48;"><i class="fas fa-stopwatch"></i></div>
-                        <b>Pomodoro</b>
-                        <span>Focus Sessions</span>
-                    </a>
+                <a href="<%= user.has_paid ? '/cgpa' : '#' %>" class="glass-card <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>">
+                    <div class="item-icon" style="color: #0284c7;"><i class="fas fa-chart-line"></i></div>
+                    <b>CGPA Tracker</b>
+                    <span>Target calculation and profile analysis</span>
+                </a>
 
-                    <a href="<%= user.has_paid ? '/deadlines' : '#' %>" class="menu-item <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>" style="background: #ffffff;">
-                        <div class="item-icon" style="background: #fce7f3; color: #db2777;"><i class="fas fa-hourglass-start"></i></div>
-                        <b>Deadlines</b>
-                        <span>Exam Tracker</span>
-                    </a>
+                <a href="/deadlines" class="glass-card">
+                    <div class="item-icon" style="color: #ef4444;"><i class="fas fa-hourglass-half"></i></div>
+                    <b>Deadline Tracker</b>
+                    <span>Track execution milestones</span>
+                </a>
 
-                    <a href="<%= user.has_paid ? '/timetable' : '#' %>" class="menu-item <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>" style="background: #ffffff;">
-                        <div class="item-icon" style="background: #dcfce7; color: #16a34a;"><i class="fas fa-calendar-day"></i></div>
-                        <b>Timetable</b>
-                        <span>Study Planner</span>
-                    </a>
-                </div>
-            </div>
-        </div>
+                <a href="<%= user.has_paid ? '/subjects' : '#' %>" class="glass-card <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>">
+                    <div class="item-icon" style="color: #ea580c;"><i class="fas fa-book-open"></i></div>
+                    <b>Study Library</b>
+                    <span>Course notebooks and structural references</span>
+                </a>
 
-        <div class="category-folder" id="cat-extras">
-            <div class="category-header" onclick="toggleCategory('cat-extras')">
-                <div class="category-title-info">
-                    <div class="category-folder-icon" style="background: #f1f5f9; color: var(--text-dark);"><i class="fas fa-folder-plus"></i></div>
-                    <div>
-                        <h3>More Resources</h3>
-                        <p>Developer store, labs, and updates</p>
-                    </div>
-                </div>
-                <i class="fas fa-chevron-down category-chevron"></i>
-            </div>
-            <div class="category-content">
-                <div class="menu-grid">
-                    <a href="https://alitedigitals.vercel.app/projects" target="_blank" class="menu-item" style="background: #ffffff;">
-                        <div class="item-icon" style="background: #f8fafc; color: var(--text-dark); border: 1px solid var(--border);"><i class="fas fa-shopping-cart"></i></div>
-                        <b>Alite Store</b>
-                        <span>Tech Shop</span>
-                    </a>
+                <a href="<%= user.has_paid ? '/competition' : '#' %>" class="glass-card <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>">
+                    <div class="item-icon" style="color: #e11d48;"><i class="fas fa-trophy"></i></div>
+                    <b>Live Arena</b>
+                    <span>Realtime scores metrics ranking panels</span>
+                </a>
 
-                    <a href="/suggestions" class="menu-item" style="background: #ffffff;">
-                        <div class="item-icon" style="background: #f3e8ff; color: #7c3aed;"><i class="fas fa-pen-fancy"></i></div>
-                        <b>Feedback</b>
-                        <span>Tell us more</span>
-                    </a>
+                <a href="<%= user.has_paid ? '/pomodoro' : '#' %>" class="glass-card" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>">
+                    <div class="item-icon"><i class="fas fa-stopwatch"></i></div>
+                    <b>Pomodoro</b>
+                    <span>Structured execution focus timers</span>
+                </a>
 
-                    <a href="#" class="menu-item locked" style="background: #ffffff; grid-column: span 2;">
-                        <div class="item-icon" style="background: var(--dark-surface); color: white;"><i class="fas fa-vr-cardboard"></i></div>
-                        <b>Simuverse Reality Laboratory</b>
-                        <span>Interactive 3D Learning Modules Coming Soon</span>
-                    </a>
-                </div>
+                <a href="https://alitedigitals.vercel.app/projects" target="_blank" class="glass-card">
+                    <div class="item-icon" style="color: #d97706;"><i class="fas fa-shopping-cart"></i></div>
+                    <b>Alite Store</b>
+                    <span>Utilities marketplace storefront</span>
+                </a>
+
+                <a href="/suggestions" class="glass-card">
+                    <div class="item-icon"><i class="fas fa-pen-fancy"></i></div>
+                    <b>Feedback</b>
+                    <span>Submit software enhancement advice</span>
+                </a>
+
             </div>
         </div>
 
@@ -466,16 +431,15 @@
                 <i class="fas fa-home"></i>
                 <span>Home</span>
             </a>
-            <a href="<%= user.has_paid ? '/history' : '#' %>" class="nav-link">
+            <a href="/history" class="nav-link">
                 <i class="fas fa-chart-bar"></i>
                 <span>Stats</span>
             </a>
-            
             <a href="/setup-test" class="nav-center-btn"><i class="fas fa-plus"></i></a>
-            
-            <a href="<%= user.has_paid ? '/notifications' : '#' %>" class="nav-link">
+            <a href="/notifications" class="nav-link" id="trigger-notifications">
+                <div class="notification-dot">3</div>
                 <i class="fas fa-bell"></i>
-                <span>Alerts</span>
+                <span>Notification</span>
             </a>
             <a href="/profile" class="nav-link">
                 <i class="fas fa-user-circle"></i>
@@ -484,35 +448,97 @@
         </nav>
     </div>
 
+    <div class="master-navigator" id="navigator-overlay">
+        <div class="navigator-content">
+            <div class="navigator-header">
+                <h3>Notifications</h3>
+                <div class="close-navigator-btn" id="close-navigator"><i class="fas fa-times"></i></div>
+            </div>
+            <div class="navigator-links-stack">
+                <div class="navigator-row-item">
+                    <i class="fas fa-bolt" style="color: #eab308;"></i>
+                    <div><b>Quiz Performance</b><span>Your performance profile analytics are updated.</span></div>
+                </div>
+                <div class="navigator-row-item">
+                    <i class="fas fa-gift" style="color: #ec4899;"></i>
+                    <div><b>Premium Features</b><span>Access tailored mock templates dynamically instantly.</span></div>
+                </div>
+                <div class="navigator-row-item">
+                    <i class="fas fa-star" style="color: #3b82f6;"></i>
+                    <div><b>New Study Assets</b><span>Fresh physics and electronics reference kits dropped.</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
-        function toggleCategory(id) {
-            const targetFolder = document.getElementById(id);
-            const isOpen = targetFolder.classList.contains('open');
+        const userName = "<%= user.fullname ? user.fullname.split(' ')[0] : 'Student' %>";
+        
+        function updateTimeAndGreeting() {
+            const now = new Date();
+            let hours = now.getHours();
+            let minutes = now.getMinutes();
+            let seconds = now.getSeconds();
+            minutes = minutes < 10 ? '0' + minutes : minutes;
+            seconds = seconds < 10 ? '0' + seconds : seconds;
+            document.getElementById('live-time-display').innerText = `${hours}:${minutes}:${seconds}`;
             
-            document.querySelectorAll('.category-folder').forEach(folder => {
-                folder.classList.remove('open');
-            });
+            const options = { month: 'short', day: 'numeric' };
+            document.getElementById('live-date-display').innerText = now.toLocaleDateString('en-US', options);
+
+            let greeting = "Good day";
+            if (hours < 12) greeting = "Good morning";
+            else if (hours < 16) greeting = "Good afternoon";
+            else greeting = "Good evening";
             
-            if (!isOpen) {
-                targetFolder.classList.add('open');
-            }
+            document.getElementById('greeting-field').innerHTML = `${greeting}, ${userName} 👋`;
         }
+        setInterval(updateTimeAndGreeting, 1000);
+        updateTimeAndGreeting();
+
+        const academicQuotes = [
+            "Your commitment to continuous learning builds structural momentum for future goals.",
+            "Consistency scales faster over time than sporadic intensive efforts. Keep showing up.",
+            "Excellence is an architectural pattern formed through incremental daily focus loops.",
+            "Great developers and exceptional scientists are forged by resolving complex issues.",
+            "Do not wish for lighter tasks; engineer a highly streamlined focus strategy instead.",
+            "Every practice exam completed scales your absolute error tolerance downwards."
+        ];
+        function injectRandomQuote() {
+            const randomIndex = Math.floor(Math.random() * academicQuotes.length);
+            document.getElementById('quote-field').innerText = `"${academicQuotes[randomIndex]}"`;
+        }
+        injectRandomQuote();
+
+        const toggleCrazyBtn = document.getElementById('toggle-crazy-mode');
+        toggleCrazyBtn.addEventListener('click', () => {
+            document.body.classList.toggle('crazy-active');
+            const icon = toggleCrazyBtn.querySelector('i');
+            icon.className = document.body.classList.contains('crazy-active') ? 'fas fa-sun' : 'fas fa-moon';
+        });
+
+        const overlay = document.getElementById('navigator-overlay');
+       
+        notifLink.addEventListener('click', (e) => { 
+            e.preventDefault(); 
+            overlay.classList.add('show'); 
+            const badge = notifLink.querySelector('.notification-dot');
+            if (badge) badge.style.display = 'none';
+        });
+        
+        document.getElementById('close-navigator').addEventListener('click', () => { overlay.classList.remove('show'); });
+        overlay.addEventListener('click', (e) => { if(e.target === overlay) overlay.classList.remove('show'); });
 
         function payWithPaystack() {
             const btn = document.getElementById('pay-btn');
             if (btn) { btn.innerHTML = "Opening Gateway..."; btn.disabled = true; }
-
             let handler = PaystackPop.setup({
                 key: '<%= paystack_key %>',
                 email: '<%= user.email %>',
                 amount: 1000 * 100, 
                 currency: 'NGN',
-                callback: function(response) {
-                    window.location.href = "/verify-payment?reference=" + response.reference;
-                },
-                onClose: function() {
-                    if (btn) { btn.innerHTML = "Get Full Access"; btn.disabled = false; }
-                }
+                callback: function(response) { window.location.href = "/verify-payment?reference=" + response.reference; },
+                onClose: function() { if (btn) { btn.innerHTML = "Get Full Access"; btn.disabled = false; } }
             });
             handler.openIframe();
         }

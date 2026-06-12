@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Prepium Workspace Lounge</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --brand: #075e54;
+            --brand-dark: #128c7e;
+            --whatsapp-green: #25d366;
+            --chat-bg: #efeae2;
+            --bubble-me: #d9fdd3;
+            --bubble-them: #ffffff;
+            --bg: #f0f2f5;
+            --surface: #ffffff;
+            --text-dark: #111b21;
+            --text-sub: #667781;
+            --border: #e9edef;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background: var(--bg); color: var(--text-dark); display: flex; justify-content: center; }
+        
+        .app-shell { width: 100%; max-width: 430px; background: var(--surface); height: 100vh; position: relative; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+        
+        .wa-header { background: var(--brand); color: white; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
+        .wa-header h1 { font-size: 1.25rem; font-weight: 700; }
+        .wa-header-actions { display: flex; gap: 18px; font-size: 1.1rem; align-items: center; }
+        
+        .sub-nav-tabs { display: flex; background: var(--brand); padding: 0 2px; z-index: 10; overflow-x: auto; }
+        .tab-btn { flex: 1; padding: 12px 4px; border: none; background: none; font-weight: 700; font-size: 0.78rem; color: rgba(255, 255, 255, 0.7); cursor: pointer; position: relative; text-align: center; text-transform: uppercase; white-space: nowrap; }
+        .tab-btn.active { color: white; }
+        .tab-btn.active::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: var(--whatsapp-green); }
+        
+        .view-panel { display: none; flex-grow: 1; flex-direction: column; overflow: hidden; background: var(--surface); }
+        .view-panel.active { display: flex; }
+        
+        /* CHAT WINDOW PANELS */
+        .group-chat-container { display: flex; flex-direction: column; flex-grow: 1; background: var(--chat-bg); background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); position: relative; overflow: hidden; }
+        .chat-messages-stream { flex-grow: 1; padding: 12px 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        
+        .chat-row { display: flex; flex-direction: column; max-width: 85%; width: fit-content; position: relative; }
+        .chat-row.me { align-self: flex-end; align-items: flex-end; }
+        .chat-row.them { align-self: flex-start; align-items: flex-start; }
+        
+        .chat-sender-info { font-size: 0.72rem; font-weight: 700; margin-bottom: 2px; display: flex; align-items: center; gap: 6px; padding: 0 4px; }
+        .chat-sender-info span { font-weight: 500; color: var(--text-sub); }
+        
+        .chat-bubble-node { padding: 6px 10px; border-radius: 8px; font-size: 0.88rem; line-height: 1.4; color: #111b21; box-shadow: 0 1px 1px rgba(0,0,0,0.15); position: relative; word-break: break-word; }
+        .chat-row.me .chat-bubble-node { background: var(--bubble-me); border-top-right-radius: 0; }
+        .chat-row.them .chat-bubble-node { background: var(--bubble-them); border-top-left-radius: 0; }
+        
+        .bubble-meta-ticks { display: inline-flex; align-items: center; float: right; gap: 3px; font-size: 0.65rem; color: var(--text-sub); margin-top: 4px; margin-left: 12px; }
+        .blue-tick-icon { color: #53bdeb; font-size: 0.78rem; }
+
+        .chat-input-footer-bar { display: flex; gap: 6px; padding: 8px 10px; background: #f0f2f5; align-items: center; border-top: 1px solid var(--border); }
+        .chat-input-footer-bar input { flex-grow: 1; border: none; background: var(--surface); border-radius: 8px; padding: 10px 14px; outline: none; font-size: 0.9rem; }
+        
+        .chat-btn { background: var(--brand-dark); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+        .connect-link-btn { background: #efeae2; border: 1px solid var(--border); color: var(--brand-dark); font-weight: 700; font-size: 0.65rem; padding: 1px 4px; border-radius: 4px; cursor: pointer; text-transform: uppercase; }
+
+        /* LIST PANELS */
+        .scroll-view-list { flex-grow: 1; overflow-y: auto; background: var(--surface); }
+        .item-row { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); gap: 14px; cursor: pointer; }
+        .item-row:hover { background: #f0f2f5; }
+        
+        .wa-avatar { width: 45px; height: 45px; background: #dfe5e7; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--brand-dark); flex-shrink: 0; }
+        .row-details { flex-grow: 1; display: flex; flex-direction: column; gap: 2px; }
+        .row-details strong { font-size: 0.92rem; color: var(--text-dark); }
+        .row-details span { font-size: 0.78rem; color: var(--text-sub); }
+        
+        .action-badge { font-size: 0.72rem; color: var(--brand-dark); font-weight: 700; background: #e8f5e9; padding: 4px 8px; border-radius: 12px; }
+
+        /* DIRECT CHAT INTERLAY COMPONENT */
+        .direct-chat-interlay { position: absolute; top: 110px; bottom: 55px; left: 0; right: 0; background: var(--chat-bg); background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); z-index: 20; display: none; flex-direction: column; }
+        .direct-chat-header { background: #f0f2f5; padding: 10px 14px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); }
+
+        .bottom-nav { height: 55px; background: #f0f2f5; border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 10; }
+        .nav-link { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: var(--text-sub); font-size: 0.68rem; font-weight: 600; gap: 2px; }
+        .nav-link.active { color: var(--brand-dark); }
+    </style>
+</head>
+<body>
+
+    <div class="app-shell">
+        <header class="wa-header">
+            <h1 id="main-title-header">General Lounge</h1>
+            <div class="wa-header-actions">
+                <i class="fas fa-arrows-rotate" onclick="triggerInPageRefreshSync()"></i>
+                <i class="fas fa-ellipsis-vertical"></i>
+            </div>
+        </header>
+
+        <div class="sub-nav-tabs">
+            <button class="tab-btn active" onclick="switchMainTab('general-group-view', 'General Lounge', this)">General</button>
+            <button class="tab-btn" onclick="switchMainTab('school-group-view', 'School Lounge', this)">My School</button>
+            <button class="tab-btn" onclick="switchMainTab('direct-chats-view', 'Direct Messages', this)">DM Chats</button>
+            <button class="tab-btn" onclick="switchMainTab('network-view', 'Academic Network', this)">Network</button>
+        </div>
+
+        <div id="general-group-view" class="view-panel active">
+            <div class="group-chat-container">
+                <div class="chat-messages-stream" id="general-chat-box"></div>
+                <form onsubmit="dispatchGroupMessage(event, 'general', 'general-input')" class="chat-input-footer-bar">
+                    <input type="text" id="general-input" placeholder="Type a message to General Group..." autocomplete="off" required>
+                    <button type="submit" class="chat-btn"><i class="fas fa-paper-plane"></i></button>
+                </form>
+            </div>
+        </div>
+
+        <div id="school-group-view" class="view-panel">
+            <div class="group-chat-container">
+                <div class="chat-messages-stream" id="school-chat-box"></div>
+                <form onsubmit="dispatchGroupMessage(event, 'school', 'school-input')" class="chat-input-footer-bar">
+                    <input type="text" id="school-input" placeholder="Type a message to School Group..." autocomplete="off" required>
+                    <button type="submit" class="chat-btn"><i class="fas fa-paper-plane"></i></button>
+                </form>
+            </div>
+        </div>
+
+        <div id="direct-chats-view" class="view-panel">
+            <div class="scroll-view-list" id="dm-conversations-list-box"></div>
+        </div>
+
+        <div id="network-view" class="view-panel">
+            <div class="scroll-view-list">
+                <div id="pending-requests-box"></div>
+                <div id="active-network-box"></div>
+            </div>
+        </div>
+
+        <div id="active-dm-overlay" class="direct-chat-interlay">
+            <div class="direct-chat-header">
+                <button onclick="closeDirectChatOverlay()" style="background:none; border:none; color:var(--brand-dark); font-size:1.1rem; cursor:pointer;"><i class="fas fa-arrow-left"></i></button>
+                <div class="wa-avatar" id="overlay-avatar">??</div>
+                <strong id="overlay-partner-name">Student</strong>
+            </div>
+            <div class="chat-messages-stream" id="dm-chat-box"></div>
+            <form onsubmit="dispatchDirectMessage(event)" class="chat-input-footer-bar">
+                <input type="text" id="dm-message-input" placeholder="Type private message..." autocomplete="off" required>
+                <button type="submit" class="chat-btn"><i class="fas fa-paper-plane"></i></button>
+            </form>
+        </div>
+
+        <nav class="bottom-nav">
+            <a href="/dashboard" class="nav-link"><i class="fas fa-th-large"></i><span>Dashboard</span></a>
+            <a href="/subjects" class="nav-link"><i class="fas fa-book"></i><span>Subjects</span></a>
+            <a href="/community" class="nav-link active"><i class="fas fa-user-group"></i><span>Community</span></a>
+            <a href="/profile" class="nav-link"><i class="fas fa-user-circle"></i><span>Profile</span></a>
+        </nav>
+    </div>
+
+    <script>
+        let currentUserIdSession = null;
+        let activeDMKeyPartnerId = null;
+        let lockScrollTracking = true;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            triggerInPageRefreshSync();
+            setInterval(triggerInPageRefreshSync, 3000);
+        });
+
+        function switchMainTab(panelId, headerText, btnElement) {
+            document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(panelId).classList.add('active');
+            btnElement.classList.add('active');
+            document.getElementById('main-title-header').innerText = headerText;
+            closeDirectChatOverlay();
+            forceScrollToBottom();
+        }
+
+        async function triggerInPageRefreshSync() {
+            try {
+                const response = await fetch('/api/community/sync');
+                const data = await response.json();
+                if (!data.success) return;
+
+                currentUserIdSession = data.user.id;
+                
+                renderChannelMessages(data.generalFeed, 'general-chat-box');
+                renderChannelMessages(data.schoolFeed, 'school-chat-box');
+                renderDMConversationsDirectory(data.friends, data.directMessages);
+                renderNetworkDirectory(data.friends, data.pendingRequests);
+
+                if (activeDMKeyPartnerId) {
+                    renderActiveDMBubbleStream(data.directMessages);
+                }
+            } catch (err) { console.error("Sync framework failed:", err); }
+        }
+
+        function renderChannelMessages(messages, containerId) {
+            const target = document.getElementById(containerId);
+            const currentScrollTop = target.scrollTop;
+            const currentScrollHeight = target.scrollHeight;
+            const wasAtBottom = (currentScrollTop + target.clientHeight >= currentScrollHeight - 60);
+
+            target.innerHTML = '';
+            messages.forEach(msg => {
+                const isMe = (msg.sender_id === currentUserIdSession);
+                const row = document.createElement('div');
+                row.className = `chat-row ${isMe ? 'me' : 'them'}`;
+
+                const showConnectAction = !isMe && !msg.is_friend;
+                let headerHTML = '';
+                if (!isMe) {
+                    headerHTML = `
+                        <div class="chat-sender-info" style="color:#e54287;">
+                            <strong>${msg.sender_name}</strong>
+                            <span>• ${msg.sender_department || 'General'}</span>
+                            ${showConnectAction ? `<button class="connect-link-btn" onclick="dispatchFriendInvite('${msg.sender_id}', this)"><i class="fas fa-plus"></i> Connect</button>` : ''}
+                        </div>`;
+                }
+
+                const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                row.innerHTML = `
+                    ${headerHTML}
+                    <div class="chat-bubble-node">
+                        ${msg.message}
+                        <div class="bubble-meta-ticks"><span>${time}</span><i class="fas fa-check-double blue-tick-icon"></i></div>
+                    </div>`;
+                target.appendChild(row);
+            });
+
+            if (wasAtBottom || lockScrollTracking) {
+                target.scrollTop = target.scrollHeight;
+            }
+        }
+
+        function renderDMConversationsDirectory(friends, directMessages) {
+            const target = document.getElementById('dm-conversations-list-box');
+            target.innerHTML = '';
+
+            if (friends.length === 0) {
+                target.innerHTML = `<p style="padding:16px; font-size:0.85rem; color:var(--text-sub);">No active chat connections found. Send connection requests in group channels to begin one-on-one chats.</p>`;
+                return;
+            }
+
+            friends.forEach(f => {
+                const friendMsgs = directMessages.filter(m => m.sender_id === f.id || (m.user_one === f.id || m.user_two === f.id));
+                const lastMsg = friendMsgs.length > 0 ? friendMsgs[friendMsgs.length - 1].message : 'Tap to start conversion';
+
+                const row = document.createElement('div');
+                row.className = 'item-row';
+                row.onclick = () => launchDirectChatOverlay(f.id, f.display_name);
+                row.innerHTML = `
+                    <div class="wa-avatar">${f.display_name.substring(0,2).toUpperCase()}</div>
+                    <div class="row-details">
+                        <strong>${f.display_name}</strong>
+                        <span>${lastMsg.substring(0, 40)}</span>
+                    </div>`;
+                target.appendChild(row);
+            });
+        }
+
+        function launchDirectChatOverlay(partnerId, partnerName) {
+            activeDMKeyPartnerId = partnerId;
+            document.getElementById('overlay-avatar').innerText = partnerName.substring(0,2).toUpperCase();
+            document.getElementById('overlay-partner-name').innerText = partnerName;
+            document.getElementById('active-dm-overlay').style.display = 'flex';
+            lockScrollTracking = true;
+            triggerInPageRefreshSync();
+        }
+
+        function closeDirectChatOverlay() {
+            activeDMKeyPartnerId = null;
+            document.getElementById('active-dm-overlay').style.display = 'none';
+        }
+
+        function renderActiveDMBubbleStream(allDirectMessages) {
+            const target = document.getElementById('dm-chat-box');
+            target.innerHTML = '';
+
+            const currentRoomMessages = allDirectMessages.filter(m => 
+                (m.sender_id === currentUserIdSession && (m.user_one === activeDMKeyPartnerId || m.user_two === activeDMKeyPartnerId)) ||
+                (m.sender_id === activeDMKeyPartnerId)
+            );
+
+            currentRoomMessages.forEach(msg => {
+                const isMe = (msg.sender_id === currentUserIdSession);
+                const row = document.createElement('div');
+                row.className = `chat-row ${isMe ? 'me' : 'them'}`;
+
+                const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                row.innerHTML = `
+                    <div class="chat-bubble-node">
+                        ${msg.message}
+                        <div class="bubble-meta-ticks"><span>${time}</span><i class="fas fa-check-double blue-tick-icon"></i></div>
+                    </div>`;
+                target.appendChild(row);
+            });
+
+            if (lockScrollTracking) {
+                target.scrollTop = target.scrollHeight;
+                lockScrollTracking = false;
+            }
+        }
+
+        function renderNetworkDirectory(friends, pending) {
+            const inviteBox = document.getElementById('pending-requests-box');
+            inviteBox.innerHTML = '';
+            if (pending.length > 0) {
+                inviteBox.innerHTML = `<div style="padding:10px 16px; font-size:0.8rem; font-weight:700; color:#f59e0b; background:#fff9e6;">INCOMING REQUESTS</div>`;
+                pending.forEach(p => {
+                    const row = document.createElement('div');
+                    row.className = 'item-row';
+                    row.innerHTML = `
+                        <div class="wa-avatar">${p.display_name.substring(0,2).toUpperCase()}</div>
+                        <div class="row-details"><strong>${p.display_name}</strong><span>${p.department || 'General'}</span></div>
+                        <button class="chat-btn" style="background:#10b981; width:34px; height:34px;" onclick="acceptIncomingInvite(${p.request_row_id})"><i class="fas fa-check"></i></button>`;
+                    inviteBox.appendChild(row);
+                });
+            }
+
+            const friendsBox = document.getElementById('active-network-box');
+            friendsBox.innerHTML = `<div style="padding:14px 16px 6px 16px; font-size:0.8rem; font-weight:700; color:var(--brand-dark);">CONNECTED PEERS</div>`;
+            if (friends.length === 0) {
+                friendsBox.innerHTML += `<p style="padding:16px; font-size:0.85rem; color:var(--text-sub);">Your academic network list is currently empty.</p>`;
+                return;
+            }
+            friends.forEach(f => {
+                const row = document.createElement('div');
+                row.className = 'item-row';
+                row.innerHTML = `
+                    <div class="wa-avatar">${f.display_name.substring(0,2).toUpperCase()}</div>
+                    <div class="row-details"><strong>${f.display_name}</strong><span>${f.department || 'General'} • ${f.school_name || 'Institution'}</span></div>
+                    <div class="action-badge"><i class="fas fa-circle-check"></i> Friend</div>`;
+                friendsBox.appendChild(row);
+            });
+        }
+
+        async function dispatchGroupMessage(event, channelType, inputId) {
+            event.preventDefault();
+            const input = document.getElementById(inputId);
+            const message = input.value.trim();
+            if (!message) return;
+
+            input.value = '';
+            lockScrollTracking = true;
+
+            await fetch('/api/group-chat/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message, channel_type: channelType })
+            });
+            triggerInPageRefreshSync();
+        }
+
+        async function dispatchDirectMessage(event) {
+            event.preventDefault();
+            const input = document.getElementById('dm-message-input');
+            const message = input.value.trim();
+            if (!message || !activeDMKeyPartnerId) return;
+
+            input.value = '';
+            lockScrollTracking = true;
+
+            await fetch('/chat/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ partnerId: activeDMKeyPartnerId, message })
+            });
+            triggerInPageRefreshSync();
+        }
+
+        async function dispatchFriendInvite(receiverId, element) {
+            const response = await fetch('/connect/request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ receiver_id: receiverId })
+            });
+            const data = await response.json();
+            if(data.success) { 
+                element.innerHTML = "<i class='fas fa-check'></i> Sent"; 
+                element.disabled = true; 
+                element.style.color = "var(--text-sub)";
+            }
+        }
+
+        async function acceptIncomingInvite(reqId) {
+            await fetch('/connect/accept', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ request_id: reqId })
+            });
+            triggerInPageRefreshSync();
+        }
+
+        function forceScrollToBottom() {
+            document.getElementById('general-chat-box').scrollTop = document.getElementById('general-chat-box').scrollHeight;
+            document.getElementById('school-chat-box').scrollTop = document.getElementById('school-chat-box').scrollHeight;
+        }
+    </script>
+</body>
+</html>

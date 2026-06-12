@@ -7,7 +7,7 @@ const app = express();
 const multer = require('multer');
 
 const fs = require('fs');
-
+const path = require('path')
 const crypto = require('crypto');
 const { Pool } = require('pg');
 require('dotenv').config();
@@ -30,7 +30,7 @@ const upload = multer({
     limits: { fileSize: 10 * 1024 * 1024 } // 10MB individual file limit
 });
 const pgSession = require('connect-pg-simple')(session);
-
+const MemoryStore = require('memorystore')(session);
 // Initialize the connection pool
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -56,13 +56,18 @@ app.use(express.static('public'));
 app.set('trust proxy', 1);
 
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'prepium_secure_vault_key',
+    secret: process.env.SESSION_SECRET || 'prepium_secure_encryption_token',
     resave: false,
     saveUninitialized: false,
-    cookie: { 
-        secure: true, // Required for production HTTPS connections
-        sameSite: 'none', // Allows session sharing across external Vercel subdomains
-        maxAge: 24 * 60 * 60 * 1000 
+    // Safely limits memory leaks by tracking session lifespan loops
+    store: new MemoryStore({
+        checkPeriod: 86400000 // Prune expired entries every 24 hours
+    }),
+    cookie: {
+        maxAge: 1000 * 60 * 60 * 24, // Valid for 1 day
+        // CRITICAL FIX: Set to false on localhost so browser stores cookie without HTTPS
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
     }
 }));
 
@@ -2318,7 +2323,7 @@ app.post('/upload-pdf', async (req, res) => {
     }
 });
 
-// POST: Process and Generate Contextual Quizzes from PDFs
+// POST: Process and Generate Contextual Quizzes from PDFs with Gemini and OpenRouter Backup
 app.post('/generate-ai-quiz', isStudent, upload.single('lecture_note'), async (req, res) => {
     try {
         if (!req.file) {
@@ -2327,108 +2332,185 @@ app.post('/generate-ai-quiz', isStudent, upload.single('lecture_note'), async (r
 
         const numQuestions = parseInt(req.body.num_questions) || 5;
         const quizDuration = parseInt(req.body.quiz_duration) || 5; 
-        const questionType = req.body.question_type || 'obj'; // 'obj', 'german', 'theory', 'mixed'
+        const questionType = req.body.question_type || 'obj'; 
         const originalFileName = req.file.originalname;
+        const pdfBase64 = req.file.buffer.toString("base64");
 
         console.log(`[AI ENGINE] Compiling exactly ${numQuestions} [Format: ${questionType.toUpperCase()}] questions for "${originalFileName}"`);
 
-        const pdfBase64 = req.file.buffer.toString("base64");
+        // Strict style guidelines to prevent format bleeding and mixed questions
+        let styleInstruction = "";
+        if (questionType === 'obj') {
+            styleInstruction = "You MUST generate ONLY standard 4-choice Multiple Choice Questions. Every item's 'type' field MUST be exactly 'obj'. Options array must have exactly 4 distinct text items.";
+        } else if (questionType === 'german') {
+            styleInstruction = "You MUST generate ONLY Fill-in-the-gap questions containing a blank line (____). Every item's 'type' field MUST be exactly 'german'. Keep the options array completely empty [].";
+        } else if (questionType === 'theory') {
+            styleInstruction = "You MUST generate ONLY open-ended deep conceptual essay questions. Every item's 'type' field MUST be exactly 'theory'. Provide grading keywords. Keep options array completely empty [].";
+        } else {
+            styleInstruction = "You may mix 'obj', 'german', and 'theory' question types throughout the collection layout.";
+        }
 
-        // System prompt context designed to accelerate parsing speed and maintain structured structural fidelity
-        const promptText = `You are an expert academic examiner. Analyze the attached PDF document carefully.
+        const promptText = `You are an expert academic examiner. Analyze the attached PDF file context carefully.
         Generate exactly ${numQuestions} unique, highly relevant academic questions based strictly on its contents.
         
-        Adapt your generation style to the requested format profile:
-        - Format type 'obj': Standard 4-choice Multiple Choice Question.
-        - Format type 'german': Fill-in-the-gap testing style where 'correct' contains precise missing word.
-        - Format type 'theory': Deep conceptual open-ended essay questions requiring benchmark criteria and matching verification keywords.
+        CRITICAL STYLE RULE: ${styleInstruction}
 
-        Ensure all items evaluate core definitions, calculations, laws, formulas, or concepts from the text.`;
+        You MUST respond with a raw JSON array matching this structure format:
+        [
+          {
+            "type": "${questionType === 'mixed' ? 'obj' : questionType}",
+            "question": "Question text here...",
+            "options": ["Option A", "Option B", "Option C", "Option D"],
+            "correct": "Correct option text or keyword answer definition",
+            "keywords": ["key1", "key2"],
+            "explanation": "Detailed explanation context..."
+          }
+        ]`;
 
-        const payload = {
+        // Native Gemini payload format
+        const geminiPayload = {
             contents: [{
                 parts: [
                     { text: promptText },
-                    {
-                        inlineData: {
-                            mimeType: "application/pdf",
-                            data: pdfBase64
-                        }
-                    }
+                    { inlineData: { mimeType: "application/pdf", data: pdfBase64 } }
                 ]
             }],
             generationConfig: {
                 responseMimeType: "application/json",
                 responseSchema: {
                     type: "ARRAY",
-                    description: `A list of exactly ${numQuestions} questions matching the configuration formats specified.`,
+                    description: `A list of exactly ${numQuestions} questions matching the configurations specified.`,
                     items: {
                         type: "OBJECT",
                         properties: {
-                            type: { 
-                                type: "STRING", 
-                                enum: ["obj", "german", "theory"],
-                                description: "The single specific category format this precise question belongs to." 
-                            },
-                            question: { 
-                                type: "STRING",
-                                description: "For 'german' formats, make sure to explicitly include a blank space or clear dashes (____) inside the string block."
-                            },
-                            options: {
-                                type: "ARRAY",
-                                items: { type: "STRING" },
-                                description: "Exactly 4 options if type is 'obj'. Leave completely empty [] for 'german' or 'theory' formats."
-                            },
-                            correct: { 
-                                type: "STRING", 
-                                description: "For 'obj', match an option element string exactly. For 'german', the specific string answer. For 'theory', provide comprehensive model grading criteria answers." 
-                            },
-                            keywords: {
-                                type: "ARRAY",
-                                items: { type: "STRING" },
-                                description: "A list of 3-6 critical technical words or phrases mandatory for full point acquisition. Required for 'theory' questions, leave empty [] for others."
-                            },
-                            explanation: { 
-                                type: "STRING",
-                                description: "The logical deep structural academic context rationale behind the solution." 
-                            }
+                            type: { type: "STRING", enum: questionType === 'mixed' ? ["obj", "german", "theory"] : [questionType] },
+                            question: { type: "STRING" },
+                            options: { type: "ARRAY", items: { type: "STRING" } },
+                            correct: { type: "STRING" },
+                            keywords: { type: "ARRAY", items: { type: "STRING" } },
+                            explanation: { type: "STRING" }
                         },
                         required: ["type", "question", "options", "correct", "keywords", "explanation"]
                     }
                 },
-                // Lower temperature speeds up synthesis execution loops and forces strict contextual compliance
                 temperature: 0.15, 
                 maxOutputTokens: 8192 
             }
         };
 
-        const apiKeys = [
-    process.env.GEMINI_API_KEY,           // Default
-    process.env.GEMINI_API_KEY_PRIMARY,   // Primary
-    process.env.GEMINI_API_KEY_SECONDARY  // Add more as needed
-].filter(Boolean);
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKeys[0]}`;
+        // OpenRouter chat completions format
+        const openRouterPayload = {
+            model: "openrouter/free", 
+            messages: [
+                {
+                    role: "user",
+                    content: [
+                        { type: "text", text: promptText },
+                        {
+                            type: "image_url",
+                            image_url: { url: `data:application/pdf;base64,${pdfBase64}` }
+                        }
+                    ]
+                }
+            ],
+            response_format: { type: "json_object" }, 
+            temperature: 0.15
+        };
 
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+        // The Router Queue Array (Ordered by your preference: Native first, OpenRouter last)
+        const activeEndpoints = [
+            { 
+                provider: 'gemini',
+                url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', 
+                key: process.env.GEMINI_API_KEY_PRIMARY 
+            },
+            { 
+                provider: 'gemini',
+                url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', 
+                key: process.env.GEMINI_API_KEY_SECONDARY 
+            },
+            { 
+                provider: 'openrouter',
+                url: 'https://openrouter.ai/api/v1/chat/completions', 
+                key: process.env.OPENROUTER_API_KEY 
+            }
+        ].filter(endpoint => endpoint.key); // Drops any slots missing keys from env
 
-        if (!response.ok) {
-            const errorLog = await response.text();
-            throw new Error(`Gemini API responded with status ${response.status}: ${errorLog}`);
+        let response;
+        let data;
+        let transmissionSuccess = false;
+        let connectionErrors = [];
+        let responseText = "";
+
+        // Core Fallback Processing Loop
+        for (let i = 0; i < activeEndpoints.length; i++) {
+            try {
+                const currentTarget = activeEndpoints[i];
+                console.log(`[AI ROUTER] Trying Route #${i + 1} (${currentTarget.provider.toUpperCase()})...`);
+
+                let requestUrl = "";
+                let requestBody = {};
+                let headers = { 'Content-Type': 'application/json' };
+
+                if (currentTarget.provider === 'gemini') {
+                    requestUrl = `${currentTarget.url}?key=${currentTarget.key}`;
+                    requestBody = geminiPayload;
+                } else if (currentTarget.provider === 'openrouter') {
+                    requestUrl = currentTarget.url;
+                    headers['Authorization'] = `Bearer ${currentTarget.key}`;
+                    headers['HTTP-Referer'] = 'https://theprepium.vercel.app'; 
+                    headers['X-Title'] = 'Prepium CBT';
+                    requestBody = openRouterPayload;
+                }
+
+                response = await fetch(requestUrl, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(requestBody),
+                    signal: AbortSignal.timeout(50000) // 50s timeout limit before moving to next engine
+                });
+
+                if (response.ok) {
+                    data = await response.json();
+                    transmissionSuccess = true;
+                    console.log(`[AI ROUTER] Route #${i + 1} (${currentTarget.provider.toUpperCase()}) Succeeded!`);
+                    
+                    if (currentTarget.provider === 'gemini') {
+                        responseText = data.candidates[0].content.parts[0].text.trim();
+                    } else if (currentTarget.provider === 'openrouter') {
+                        responseText = data.choices[0].message.content.trim();
+                    }
+                    break; // Exit loop on successful execution
+                } else {
+                    const statusText = await response.text();
+                    connectionErrors.push(`Route #${i + 1} failed (${response.status}): ${statusText}`);
+                }
+            } catch (err) {
+                connectionErrors.push(`Route #${i + 1} encountered an exception: ${err.message}`);
+            }
         }
 
-        const data = await response.json();
-        const responseText = data.candidates[0].content.parts[0].text.trim();
-        let structuredQuiz = JSON.parse(responseText);
+        if (!transmissionSuccess) {
+            console.error("[AI ROUTER TOTAL SYSTEM FAILURE]", connectionErrors.join("\n"));
+            return res.status(500).json({ success: false, message: "All generation channels are busy. Please try again." });
+        }
 
-        // Fail-safe programmatic mapping normalization for strict type enforcement during mixed evaluations
+        // Standard sanitization clean up for Markdown blocks if returned
+        if (responseText.startsWith("```json")) responseText = responseText.replace(/^```json/, "").replace(/```$/, "");
+        if (responseText.startsWith("```")) responseText = responseText.replace(/^```/, "").replace(/```$/, "");
+
+        let parsedData = JSON.parse(responseText.trim());
+        let structuredQuiz = Array.isArray(parsedData) ? parsedData : (parsedData.questions || parsedData.quiz || []);
+
+        // Strict mapping sanitization layout formatting
         structuredQuiz = structuredQuiz.map(q => {
             if (questionType !== 'mixed') q.type = questionType;
             if (!q.options) q.options = [];
             if (!q.keywords) q.keywords = [];
+            
+            if (questionType === 'obj' && q.options.length === 0) {
+                q.options = ["Option A", "Option B", "Option C", "Option D"];
+            }
             return q;
         });
 
@@ -2439,9 +2521,9 @@ app.post('/generate-ai-quiz', isStudent, upload.single('lecture_note'), async (r
             durationSeconds: quizDuration * 60
         });
 
-  } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, message: "Something went wrong" });
+    } catch (error) {
+        console.error("Critical Hybrid Routing Failure:", error);
+        res.status(500).json({ success: false, message: "Error compiling quiz matrix." });
     }
 });
 
@@ -2826,6 +2908,206 @@ app.get('/api/heartbeat', (req, res) => {
     res.status(200).json({ status: 'alive' });
 });
 
+const sendNotificationEmail = async (toEmail, subject, htmlContent) => {
+    try {
+        if (!toEmail) return;
+        const mailOptions = {
+            from: `"Prepium" <${process.env.EMAIL_USER}>`,
+            to: toEmail,
+            subject: subject,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #f1f5f9; border-radius: 16px;">
+                    <div style="color: #0062ff; font-size: 24px; font-weight: 800; margin-bottom: 20px;">Prepium</div>
+                    <div style="color: #0b1437; font-size: 16px; line-height: 1.6;">${htmlContent}</div>
+                    <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 20px 0;">
+                    <p style="color: #64748b; font-size: 12px;">Automated Workspace Notification.</p>
+                </div>`
+        };
+        await transporter.sendMail(mailOptions);
+    } catch (error) {
+        console.error("Mail worker failed:", error.message);
+    }
+};
+
+function formatUsernameFallback(rawName) {
+    if (!rawName || rawName.trim().length === 0) {
+        return `Student_${Math.floor(1000 + Math.random() * 9000)}`;
+    }
+    const cleanName = rawName.replace(/[^a-zA-Z0-9]/g, '');
+    return `@${cleanName.toLowerCase().substring(0, 12)}`;
+}
+
+// GET INITIAL COMMUNITY PAGE FRAMEWORK
+app.get('/community', isAuth, (req, res) => {
+    res.render('community');
+});
+// POST: DISPATCH NEW GROUP MESSAGE (GENERAL OR SCHOOL)
+app.post('/api/group-chat/send', isAuth, async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+        const { message, channel_type } = req.body; // channel_type: 'general' or 'school'
+
+        if (!message || message.trim() === '') {
+            return res.json({ success: false, error: 'Message cannot be empty.' });
+        }
+
+        const userCheck = await pool.query('SELECT university_id FROM users WHERE id = $1', [userId]);
+        const universityId = userCheck.rows[0]?.university_id;
+
+        await pool.query(
+            'INSERT INTO group_messages (user_id, university_id, channel_type, message, created_at) VALUES ($1, $2, $3, $4, NOW())',
+            [userId, universityId, channel_type, message]
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// GET: COMPLETE REAL-TIME WORKSPACE SYNC ENGINE
+app.get('/api/community/sync', isAuth, async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+
+        // Fetch current authenticated user context
+        const userResult = await pool.query(`
+            SELECT u.id, u.fullname, u.email, cp.department, un.name as university_name, u.university_id 
+            FROM users u
+            LEFT JOIN cgpa_profiles cp ON u.id = CAST(cp.user_id AS INTEGER)
+            LEFT JOIN universities un ON u.university_id = un.id 
+            WHERE u.id = $1`, [userId]);
+        const currentUser = userResult.rows[0];
+
+        // Fetch Group Chat Streams with accurate user friendship metrics
+        const groupMessagesQuery = await pool.query(`
+            SELECT gm.id, gm.message, gm.created_at, gm.channel_type, gm.university_id,
+                   u.id as sender_id, u.fullname as sender_name, cp.department as sender_department,
+                   (SELECT COUNT(*) FROM friend_requests fr 
+                    WHERE ((fr.sender_id = $1 AND fr.receiver_id = u.id) OR (fr.sender_id = u.id AND fr.receiver_id = $1)) 
+                    AND fr.status = 'accepted') > 0 as is_friend
+            FROM group_messages gm
+            JOIN users u ON gm.user_id = u.id
+            LEFT JOIN cgpa_profiles cp ON u.id = CAST(cp.user_id AS INTEGER)
+            ORDER BY gm.created_at ASC`, [userId]);
+
+        const allGroupMessages = groupMessagesQuery.rows;
+
+        // Filter messages locally into General Feed vs School Feed channels
+        const generalFeed = allGroupMessages.filter(m => m.channel_type === 'general');
+        const schoolFeed = allGroupMessages.filter(m => m.channel_type === 'school' && m.university_id === currentUser.university_id);
+
+        // Fetch One-on-One chat logs with active counter mapping 
+        const directMessagesQuery = await pool.query(`
+            SELECT dm.*, u.fullname as sender_name,
+                   cr.user_one, cr.user_two
+            FROM direct_messages dm
+            JOIN chat_rooms cr ON dm.room_id = cr.id
+            JOIN users u ON dm.sender_id = u.id
+            WHERE cr.user_one = $1 OR cr.user_two = $1
+            ORDER BY dm.created_at ASC`, [userId]);
+
+        // Process networks and academic connections list maps
+        const friends = await pool.query(`
+            SELECT u.id, u.fullname as name, cp.department, un.name as school_name FROM friend_requests fr
+            JOIN users u ON (fr.sender_id = u.id OR fr.receiver_id = u.id)
+            LEFT JOIN cgpa_profiles cp ON u.id = CAST(cp.user_id AS INTEGER)
+            LEFT JOIN universities un ON u.university_id = un.id
+            WHERE (fr.sender_id = $1 OR fr.receiver_id = $1) AND fr.status = 'accepted' AND u.id != $1`, [userId]);
+
+        const pendingRequests = await pool.query(`
+            SELECT fr.id as request_row_id, u.id as sender_id, u.fullname as name, cp.department FROM friend_requests fr
+            JOIN users u ON fr.sender_id = u.id 
+            LEFT JOIN cgpa_profiles cp ON u.id = CAST(cp.user_id AS INTEGER)
+            WHERE fr.receiver_id = $1 AND fr.status = 'pending'`, [userId]);
+
+        res.json({
+            success: true,
+            user: {
+                id: currentUser.id,
+                name: currentUser.fullname,
+                email: currentUser.email,
+                department: currentUser.department || 'General Studies',
+                university_name: currentUser.university_name,
+                university_id: currentUser.university_id
+            },
+            generalFeed: generalFeed,
+            schoolFeed: schoolFeed,
+            directMessages: directMessagesQuery.rows,
+            friends: friends.rows.map(f => ({ ...f, display_name: f.name })),
+            pendingRequests: pendingRequests.rows.map(p => ({ ...p, display_name: p.name }))
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// POST: DISPATCH DIRECT MESSAGE FROM ONE-ON-ONE CHATS
+app.post('/chat/send', isAuth, async (req, res) => {
+    try {
+        const { partnerId, message } = req.body;
+        const userId = req.session.user.id;
+
+        if (!message || message.trim() === '') {
+            return res.json({ success: false, error: 'Message cannot be empty.' });
+        }
+
+        // Search or construct a persistent Room instance ID
+        let roomCheck = await pool.query(
+            'SELECT id FROM chat_rooms WHERE (user_one = $1 AND user_two = $2) OR (user_one = $2 AND user_two = $1)', 
+            [userId, partnerId]
+        );
+
+        let roomId = roomCheck.rows[0]?.id;
+        if (!roomId) {
+            const newRoom = await pool.query(
+                'INSERT INTO chat_rooms (user_one, user_two) VALUES (LEAST($1, $2), GREATEST($1, $2)) RETURNING id', 
+                [userId, partnerId]
+            );
+            roomId = newRoom.rows[0].id;
+        }
+
+        await pool.query(
+            'INSERT INTO direct_messages (room_id, sender_id, message, created_at) VALUES ($1, $2, $3, NOW())', 
+            [roomId, userId, message]
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// FRIEND CONNECTION AND ACCEPTANCE API ENDPOINTS
+app.post('/connect/request', isAuth, async (req, res) => {
+    try {
+        const { receiver_id } = req.body;
+        const sender_id = req.session.user.id;
+
+        await pool.query(
+            'INSERT INTO friend_requests (sender_id, receiver_id, status) VALUES ($1, $2, \'pending\') ON CONFLICT DO NOTHING',
+            [sender_id, receiver_id]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/connect/accept', isAuth, async (req, res) => {
+    try {
+        const { request_id } = req.body;
+        const userId = req.session.user.id;
+
+        await pool.query(
+            'UPDATE friend_requests SET status = \'accepted\' WHERE id = $1 AND receiver_id = $2',
+            [request_id, userId]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
 const config = {
     maxDuration: 60,
 };
