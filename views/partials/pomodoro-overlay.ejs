@@ -1,0 +1,153 @@
+<!-- Global Pomodoro Overlay - Include in any page -->
+<style>
+    .pomo-fab {
+        position: fixed; bottom: 100px; right: 20px; width: 52px; height: 52px;
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        color: white; font-size: 1.2rem; cursor: pointer; z-index: 999;
+        box-shadow: 0 6px 20px rgba(239,68,68,0.35);
+        animation: pomoPulse 2s ease-in-out infinite;
+        border: none;
+    }
+    @keyframes pomoPulse {
+        0%, 100% { transform: scale(1); box-shadow: 0 6px 20px rgba(239,68,68,0.35); }
+        50% { transform: scale(1.05); box-shadow: 0 8px 25px rgba(239,68,68,0.45); }
+    }
+
+    .pomo-overlay {
+        display: none; position: fixed; inset: 0; z-index: 2000;
+        background: rgba(0,0,0,0.5); backdrop-filter: blur(8px);
+        align-items: flex-end; justify-content: center;
+    }
+    .pomo-overlay.show { display: flex; }
+
+    .pomo-sheet {
+        width: 100%; max-width: 430px; background: white;
+        border-radius: 24px 24px 0 0; padding: 24px 20px 32px;
+        animation: slideUp 0.3s cubic-bezier(0.16,1,0.3,1);
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+    .pomo-handle { width: 40px; height: 4px; background: #e2e8f0; border-radius: 2px; margin: 0 auto 20px; }
+
+    .pomo-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .pomo-title { font-size: 1rem; font-weight: 800; }
+    .pomo-close { width: 32px; height: 32px; border-radius: 50%; background: #f1f5f9; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #64748b; }
+
+    .pomo-modes { display: flex; gap: 8px; margin-bottom: 24px; }
+    .pomo-mode {
+        flex: 1; padding: 10px; border: 1.5px solid #e2e8f0; border-radius: 12px;
+        background: white; font-size: 0.7rem; font-weight: 700; cursor: pointer;
+        text-align: center; transition: all 0.2s;
+    }
+    .pomo-mode.active { border-color: #ef4444; background: #fef2f2; color: #ef4444; }
+
+    .pomo-timer {
+        text-align: center; font-size: 4rem; font-weight: 800; color: #0b1437;
+        letter-spacing: -3px; margin-bottom: 24px;
+    }
+
+    .pomo-controls { display: flex; gap: 10px; }
+    .pomo-btn {
+        flex: 1; padding: 14px; border: none; border-radius: 14px;
+        font-size: 0.85rem; font-weight: 700; cursor: pointer;
+        display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .pomo-btn.play { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; }
+    .pomo-btn.reset { background: #f1f5f9; color: #0b1437; }
+    .pomo-btn:active { transform: scale(0.97); }
+</style>
+
+<button class="pomo-fab" onclick="openPomodoro()" title="Focus Timer">
+    <i class="fas fa-stopwatch"></i>
+</button>
+
+<div class="pomo-overlay" id="pomoOverlay" onclick="if(event.target===this)closePomodoro()">
+    <div class="pomo-sheet">
+        <div class="pomo-handle"></div>
+        <div class="pomo-header">
+            <div class="pomo-title">Focus Timer</div>
+            <button class="pomo-close" onclick="closePomodoro()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="pomo-modes">
+            <button class="pomo-mode active" onclick="pomoSetMode(25,this)">25m Study</button>
+            <button class="pomo-mode" onclick="pomoSetMode(5,this)">5m Break</button>
+            <button class="pomo-mode" onclick="pomoSetMode(15,this)">15m Long</button>
+        </div>
+        <div class="pomo-timer" id="pomoTimer">25:00</div>
+        <div class="pomo-controls">
+            <button class="pomo-btn play" id="pomoPlayBtn" onclick="pomoToggle()">
+                <i class="fas fa-play"></i> Start
+            </button>
+            <button class="pomo-btn reset" onclick="pomoReset()">
+                <i class="fas fa-redo"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    let pomoInterval = null, pomoTime = 25*60, pomoRunning = false, pomoDefault = 25*60;
+
+    window.openPomodoro = () => document.getElementById('pomoOverlay').classList.add('show');
+    window.closePomodoro = () => document.getElementById('pomoOverlay').classList.remove('show');
+
+    window.pomoSetMode = (mins, btn) => {
+        document.querySelectorAll('.pomo-mode').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        pomoDefault = mins * 60;
+        pomoTime = pomoDefault;
+        pomoUpdateDisplay();
+        if(pomoRunning) { clearInterval(pomoInterval); pomoRunning = false; pomoUpdateBtn(); }
+    };
+
+    window.pomoToggle = () => {
+        if(pomoRunning) {
+            clearInterval(pomoInterval);
+            pomoRunning = false;
+        } else {
+            pomoRunning = true;
+            pomoInterval = setInterval(() => {
+                pomoTime--;
+                pomoUpdateDisplay();
+                if(pomoTime <= 0) {
+                    clearInterval(pomoInterval);
+                    pomoRunning = false;
+                    pomoUpdateBtn();
+                    if('Notification' in window && Notification.permission === 'granted') {
+                        new Notification('Focus session complete! Take a break.');
+                    }
+                    alert('Focus session complete!');
+                    pomoReset();
+                }
+            }, 1000);
+        }
+        pomoUpdateBtn();
+    };
+
+    window.pomoReset = () => {
+        clearInterval(pomoInterval);
+        pomoRunning = false;
+        pomoTime = pomoDefault;
+        pomoUpdateDisplay();
+        pomoUpdateBtn();
+    };
+
+    function pomoUpdateDisplay() {
+        const m = Math.floor(pomoTime/60), s = pomoTime%60;
+        document.getElementById('pomoTimer').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }
+
+    function pomoUpdateBtn() {
+        const btn = document.getElementById('pomoPlayBtn');
+        btn.innerHTML = pomoRunning 
+            ? '<i class="fas fa-pause"></i> Pause'
+            : '<i class="fas fa-play"></i> Start';
+    }
+
+    if('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+})();
+</script>

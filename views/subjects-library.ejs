@@ -3,10 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Prepium | Study Library</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
         :root { 
@@ -16,154 +19,383 @@
             --text-dark: #0b1437; 
             --text-sub: #a3aed0;
             --border: #eef2f6;
+            --surface: #ffffff;
+            --danger: #ef4444;
+            --success: #10b981;
         }
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; transition: all 0.2s ease; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif; 
             background: var(--bg); margin: 0; color: var(--text-dark); 
-            display: flex; justify-content: center; 
+            display: flex; justify-content: center;
+            -webkit-font-smoothing: antialiased;
         }
 
         .app-shell { 
             width: 100%; max-width: 430px; 
-            background: #ffffff; min-height: 100vh; 
-            position: relative; padding-bottom: 120px;
+            background: var(--surface); min-height: 100vh; 
+            position: relative; padding-bottom: 100px;
             box-shadow: 0 0 40px rgba(0,0,0,0.02);
+        }
+
+        /* Status Bar */
+        .status-bar {
+            height: env(safe-area-inset-top, 0px);
+            background: var(--surface);
         }
 
         /* Header */
         header { 
-            padding: 2.5rem 1.5rem 1rem; 
+            padding: 1.5rem 1.5rem 1rem; 
             display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            z-index: 100; border-bottom: 1px solid rgba(0,0,0,0.03);
         }
         
         .header-left { display: flex; align-items: center; gap: 12px; }
         .avatar-sm { 
-            width: 38px; height: 38px; background: var(--brand-gradient); 
-            border-radius: 12px; color: white; display: flex; 
-            align-items: center; justify-content: center; font-weight: 800; font-size: 0.9rem;
+            width: 42px; height: 42px; background: var(--brand-gradient); 
+            border-radius: 14px; color: white; display: flex; 
+            align-items: center; justify-content: center; font-weight: 800; font-size: 1rem;
+            box-shadow: 0 4px 12px rgba(0,98,255,0.2);
         }
-        .header-title h1 { font-size: 1.3rem; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
+        .header-title h1 { font-size: 1.2rem; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
+        .header-title p { font-size: 0.7rem; color: var(--text-sub); margin: 2px 0 0; font-weight: 600; }
+
+        .back-btn {
+            width: 40px; height: 40px; border-radius: 12px;
+            background: #f1f5f9; border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--text-dark); font-size: 1rem; text-decoration: none;
+        }
 
         /* Search Bar */
-        .search-area { padding: 1rem 1.5rem; position: sticky; top: 0; background: white; z-index: 10; }
+        .search-area { padding: 1rem 1.5rem; position: sticky; top: 72px; background: rgba(255,255,255,0.95); backdrop-filter: blur(20px); z-index: 99; }
         .search-wrapper { position: relative; }
-        .search-wrapper i { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--text-sub); }
+        .search-wrapper i { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--text-sub); font-size: 0.9rem; }
         .search-input {
-            width: 100%; padding: 16px 16px 16px 48px; border-radius: 18px;
-            border: 1px solid var(--border); background: #f8fafc;
-            font-family: inherit; font-weight: 600; font-size: 0.95rem;
+            width: 100%; padding: 14px 14px 14px 46px; border-radius: 16px;
+            border: 1.5px solid var(--border); background: #f8fafc;
+            font-family: inherit; font-weight: 600; font-size: 0.9rem;
+            transition: all 0.2s ease;
         }
-        .search-input:focus { background: white; border-color: var(--brand); box-shadow: 0 10px 25px rgba(0,98,255,0.08); outline: none; }
+        .search-input:focus { background: white; border-color: var(--brand); box-shadow: 0 0 0 4px rgba(0,98,255,0.06); outline: none; }
+
+        /* Tab Switcher */
+        .tab-bar {
+            display: flex; gap: 6px; padding: 0 1.5rem; margin-bottom: 1rem;
+        }
+        .tab-pill {
+            flex: 1; padding: 12px; border-radius: 14px;
+            background: #f1f5f9; border: none; cursor: pointer;
+            font-family: inherit; font-weight: 700; font-size: 0.78rem;
+            color: var(--text-sub); transition: all 0.2s ease;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .tab-pill.active { background: var(--text-dark); color: white; }
+        .tab-pill i { font-size: 0.85rem; }
 
         /* Section Label */
-        .section-label { padding: 1.5rem 1.5rem 0.8rem; font-size: 0.7rem; font-weight: 800; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; }
+        .section-label { 
+            padding: 1rem 1.5rem 0.6rem; font-size: 0.65rem; font-weight: 800; 
+            color: var(--text-sub); text-transform: uppercase; letter-spacing: 1.2px; 
+        }
 
-        /* Grid */
+        /* Subject Cards */
         .library-grid { padding: 0 1.5rem; }
         
         .subject-card {
-            background: white; border: 1px solid var(--border);
-            border-radius: 24px; padding: 20px; margin-bottom: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.01);
+            background: white; border: 1.5px solid var(--border);
+            border-radius: 22px; padding: 18px; margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.01);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
+        .subject-card:active { transform: scale(0.98); }
 
-        .subject-meta { display: flex; align-items: flex-start; gap: 15px; margin-bottom: 1.2rem; }
+        .subject-meta { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
         .folder-icon { 
-            width: 48px; height: 48px; background: #f0f7ff; border-radius: 14px;
+            width: 46px; height: 46px; background: #f0f7ff; border-radius: 14px;
             display: flex; align-items: center; justify-content: center;
-            color: var(--brand); font-size: 1.2rem;
+            color: var(--brand); font-size: 1.1rem; flex-shrink: 0;
         }
 
-        .subject-info h3 { margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--text-dark); text-transform: capitalize; }
-        .subject-info p { margin: 4px 0 0; font-size: 0.8rem; color: var(--text-sub); font-weight: 600; }
+        .subject-info { flex: 1; min-width: 0; }
+        .subject-info h3 { margin: 0; font-size: 0.95rem; font-weight: 800; text-transform: capitalize; }
+        .subject-info p { margin: 3px 0 0; font-size: 0.72rem; color: var(--text-sub); font-weight: 600; }
 
-        /* Actions */
-        .action-row { display: flex; gap: 10px; }
+        .question-badge {
+            background: #f0f7ff; color: var(--brand);
+            padding: 4px 10px; border-radius: 8px;
+            font-size: 0.65rem; font-weight: 800; flex-shrink: 0;
+        }
+
+        .action-row { display: flex; gap: 8px; }
         .btn-act { 
-            flex: 1; padding: 12px; border-radius: 14px; font-size: 0.8rem; 
+            flex: 1; padding: 11px; border-radius: 13px; font-size: 0.78rem; 
             font-weight: 700; text-decoration: none; text-align: center;
-            display: flex; align-items: center; justify-content: center; gap: 8px;
+            display: flex; align-items: center; justify-content: center; gap: 7px;
+            transition: all 0.2s ease; border: none; cursor: pointer;
         }
+        .btn-act:active { transform: scale(0.96); }
         .btn-primary { background: var(--brand); color: white; }
         .btn-outline { background: white; border: 1.5px solid var(--border); color: var(--text-dark); }
 
-        /* Bottom Floating Navbar */
+        /* My Materials Section */
+        .materials-section { display: none; padding: 0 1.5rem; }
+        .materials-section.active { display: block; }
+        .library-grid.hidden { display: none; }
+
+        .upload-card {
+            background: linear-gradient(135deg, #f0f7ff 0%, #e0f2fe 100%);
+            border: 2px dashed #93c5fd; border-radius: 22px;
+            padding: 24px; text-align: center; margin-bottom: 16px;
+            cursor: pointer; transition: all 0.2s ease;
+        }
+        .upload-card:active { transform: scale(0.97); }
+        .upload-card i { font-size: 2rem; color: var(--brand); margin-bottom: 10px; display: block; }
+        .upload-card h4 { font-size: 0.9rem; font-weight: 800; margin: 0 0 4px; }
+        .upload-card p { font-size: 0.72rem; color: var(--text-sub); margin: 0; }
+
+        .material-card {
+            display: flex; align-items: center; gap: 14px;
+            padding: 16px; background: white; border: 1.5px solid var(--border);
+            border-radius: 18px; margin-bottom: 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.01);
+            transition: transform 0.2s ease;
+        }
+        .material-card:active { transform: scale(0.98); }
+
+        .file-icon {
+            width: 44px; height: 44px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem; flex-shrink: 0;
+        }
+        .file-icon.pdf { background: #fef2f2; color: #ef4444; }
+        .file-icon.doc { background: #eff6ff; color: #3b82f6; }
+        .file-icon.img { background: #f0fdf4; color: #22c55e; }
+        .file-icon.other { background: #f8fafc; color: #64748b; }
+
+        .material-info { flex: 1; min-width: 0; }
+        .material-info h4 { font-size: 0.85rem; font-weight: 700; margin: 0 0 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .material-info p { font-size: 0.68rem; color: var(--text-sub); margin: 0; }
+
+        .material-actions { display: flex; gap: 4px; flex-shrink: 0; }
+        .mat-btn {
+            width: 36px; height: 36px; border-radius: 10px;
+            border: none; cursor: pointer; display: flex;
+            align-items: center; justify-content: center; font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+        .mat-btn:active { transform: scale(0.9); }
+        .mat-btn.view { background: #f0f7ff; color: var(--brand); }
+        .mat-btn.delete { background: #fef2f2; color: #ef4444; }
+
+        /* Upload Modal */
+        .upload-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(10px);
+            z-index: 9999; display: flex; justify-content: center; align-items: flex-end;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        .upload-overlay.show { opacity: 1; pointer-events: auto; }
+
+        .upload-sheet {
+            background: white; width: 100%; max-width: 430px;
+            border-radius: 24px 24px 0 0; padding: 0;
+            transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .upload-overlay.show .upload-sheet { transform: translateY(0); }
+
+        .sheet-handle { width: 36px; height: 4px; border-radius: 4px; background: #e2e8f0; margin: 12px auto 0; }
+        .sheet-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 20px; border-bottom: 1px solid #f1f5f9;
+        }
+        .sheet-header h3 { font-size: 1rem; font-weight: 800; margin: 0; }
+        .sheet-close {
+            width: 32px; height: 32px; border-radius: 50%; background: #f1f5f9;
+            border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+
+        .upload-form { padding: 20px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 0.7rem; font-weight: 800; color: var(--text-sub); text-transform: uppercase; margin-bottom: 6px; }
+        .form-input {
+            width: 100%; padding: 14px; border-radius: 14px;
+            border: 1.5px solid var(--border); font-family: inherit;
+            font-weight: 600; font-size: 0.88rem; background: #f8fafc;
+            transition: all 0.2s ease;
+        }
+        .form-input:focus { border-color: var(--brand); outline: none; background: white; }
+
+        .file-drop-zone {
+            border: 2px dashed #d1d5db; border-radius: 16px;
+            padding: 30px; text-align: center; cursor: pointer;
+            transition: all 0.2s ease; background: #f8fafc;
+        }
+        .file-drop-zone:hover, .file-drop-zone.dragover {
+            border-color: var(--brand); background: #f0f7ff;
+        }
+        .file-drop-zone i { font-size: 1.5rem; color: #94a3b8; margin-bottom: 8px; display: block; }
+        .file-drop-zone p { font-size: 0.8rem; color: var(--text-sub); margin: 0; }
+        .file-drop-zone .file-name { color: var(--brand); font-weight: 700; margin-top: 8px; }
+
+        .btn-upload {
+            width: 100%; padding: 15px; border-radius: 16px;
+            background: var(--brand-gradient); color: white; border: none;
+            font-family: inherit; font-weight: 800; font-size: 0.9rem;
+            cursor: pointer; margin-top: 8px;
+            box-shadow: 0 6px 16px rgba(0,98,255,0.25);
+        }
+        .btn-upload:active { transform: scale(0.97); }
+        .btn-upload:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .empty-materials { text-align: center; padding: 40px 20px; color: var(--text-sub); }
+        .empty-materials i { font-size: 2.5rem; margin-bottom: 10px; display: block; opacity: 0.3; }
+        .empty-materials p { font-size: 0.85rem; font-weight: 600; }
+
+        /* Bottom Nav */
         .bottom-nav {
             position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            width: calc(100% - 40px); max-width: 390px;
-            background: #0b1437; height: 75px; border-radius: 24px;
-            display: flex; justify-content: space-around; align-items: center;
-            box-shadow: 0 12px 30px rgba(11, 20, 55, 0.3); z-index: 1000;
+            width: calc(100% - 32px); max-width: 398px;
+            background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(30px);
+            height: 72px; border-radius: 22px; display: flex; align-items: center;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.08); border: 1px solid rgba(255,255,255,0.7);
+            z-index: 1000;
         }
-        .nav-link { text-decoration: none; color: #a3aed0; text-align: center; }
-        .nav-link.active { color: white; }
-        .nav-link i { font-size: 1.25rem; display: block; margin-bottom: 3px; }
-        .nav-link span { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
+        .nav-link { 
+            text-decoration: none; color: var(--text-sub); text-align: center; 
+            flex: 1; font-weight: 700; cursor: pointer; position: relative;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .nav-link.active { color: var(--brand); }
+        .nav-link i { font-size: 1.1rem; display: block; margin-bottom: 3px; }
+        .nav-link span { font-size: 0.56rem; text-transform: uppercase; letter-spacing: 0.3px; }
         
         .nav-center-btn {
-            width: 60px; height: 60px; background: var(--brand); border-radius: 20px;
-            display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 1.6rem; transform: translateY(-28px);
-            border: 5px solid #ffffff; box-shadow: 0 8px 15px rgba(0, 98, 255, 0.4);
+            width: 52px; height: 52px; background: var(--brand); border-radius: 16px;
+            display: flex; align-items: center; justify-content: center; 
+            color: white; font-size: 1.25rem; transform: translateY(-20px);
+            border: 3px solid white; box-shadow: 0 6px 16px rgba(0,98,255,0.3);
             text-decoration: none;
         }
 
-        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-sub); }
-        .empty-state i { font-size: 3rem; margin-bottom: 15px; display: block; }
+        .empty-state { text-align: center; padding: 50px 20px; color: var(--text-sub); }
+        .empty-state i { font-size: 2.5rem; margin-bottom: 12px; display: block; opacity: 0.3; }
+        .empty-state p { font-size: 0.85rem; font-weight: 600; }
     </style>
 </head>
 <body>
 
     <div class="app-shell">
+        <div class="status-bar"></div>
+        
         <header>
             <div class="header-left">
                 <div class="avatar-sm"><%= user.fullname ? user.fullname[0].toUpperCase() : 'U' %></div>
-                <div class="header-title"><h1>Study Library</h1></div>
+                <div class="header-title">
+                    <h1>Study Library</h1>
+                    <p><%= user.has_paid ? 'Premium Access' : 'Free Tier' %></p>
+                </div>
             </div>
-            <a href="/dashboard" style="color: var(--text-dark);"><i class="fas fa-cog"></i></a>
+            <a href="/dashboard" class="back-btn"><i class="fas fa-arrow-left"></i></a>
         </header>
 
         <div class="search-area">
             <div class="search-wrapper">
                 <i class="fas fa-search"></i>
-                <input type="text" id="subjectSearch" class="search-input" placeholder="Search your courses..." onkeyup="filterSubjects()">
+                <input type="text" id="subjectSearch" class="search-input" placeholder="Search courses or materials..." onkeyup="filterContent()">
             </div>
         </div>
 
-        <div class="section-label">Academic Resources</div>
-        
-        <div class="library-grid" id="libraryGrid">
+        <!-- Tab Switcher -->
+        <div class="tab-bar">
+            <button class="tab-pill active" onclick="switchTab('courses', this)">
+                <i class="fas fa-book"></i> Courses
+            </button>
+            <button class="tab-pill" onclick="switchTab('materials', this)">
+                <i class="fas fa-folder"></i> My Materials
+            </button>
+        </div>
+
+        <!-- Courses Tab -->
+        <div class="library-grid" id="coursesTab">
+            <div class="section-label">Academic Resources</div>
             <% if (subjects && subjects.length > 0) { %>
                 <% subjects.forEach(sub => { %>
-                    <div class="subject-card">
+                    <div class="subject-card" data-search="<%= sub.subject.toLowerCase() %>">
                         <div class="subject-meta">
                             <div class="folder-icon"><i class="fas fa-folder-open"></i></div>
                             <div class="subject-info">
                                 <h3><%= sub.subject %></h3>
-                                <p>Practice & Official Guide</p>
+                                <p><%= sub.question_count %> questions available</p>
                             </div>
+                            <% if (sub.question_count > 0) { %>
+                            <span class="question-badge"><%= sub.question_count %></span>
+                            <% } %>
                         </div>
 
                         <div class="action-row">
                             <a href="/setup-test" class="btn-act btn-primary">
                                 <i class="fas fa-bolt"></i> Practice
                             </a>
-                            <a href="<%= (sub.drive_link && sub.drive_link.trim() !== '') ? sub.drive_link : 'https://drive.google.com/' %>" 
-                               target="_blank" class="btn-act btn-outline">
-                                <i class="fab fa-google-drive"></i> Drive
+                            <% if (sub.drive_link && sub.drive_link.trim() !== '') { %>
+                            <a href="<%= sub.drive_link %>" target="_blank" class="btn-act btn-outline">
+                                <i class="fab fa-google-drive"></i> Materials
                             </a>
+                            <% } %>
                         </div>
                     </div>
                 <% }) %>
             <% } else { %>
                 <div class="empty-state">
-                    <i class="fas fa-books"></i>
-                    <p>No study folders found for your institution.</p>
+                    <i class="fas fa-book-open"></i>
+                    <p>No courses found for your institution.</p>
                 </div>
             <% } %>
+        </div>
+
+        <!-- My Materials Tab -->
+        <div class="materials-section" id="materialsTab">
+            <div class="section-label">Your Uploaded Materials</div>
+            
+            <div class="upload-card" onclick="openUploadModal()">
+                <i class="fas fa-cloud-arrow-up"></i>
+                <h4>Upload New Material</h4>
+                <p>PDF, DOC, images, and more</p>
+            </div>
+
+            <div id="materialsList">
+                <% if (materials && materials.length > 0) { %>
+                    <% materials.forEach(mat => { %>
+                        <div class="material-card" data-search="<%= mat.name.toLowerCase() %>">
+                            <div class="file-icon <%= mat.file_type.includes('pdf') ? 'pdf' : mat.file_type.includes('doc') ? 'doc' : mat.file_type.includes('image') ? 'img' : 'other' %>">
+                                <i class="fas <%= mat.file_type.includes('pdf') ? 'fa-file-pdf' : mat.file_type.includes('doc') ? 'fa-file-word' : mat.file_type.includes('image') ? 'fa-file-image' : 'fa-file' %>"></i>
+                            </div>
+                            <div class="material-info">
+                                <h4><%= mat.name %></h4>
+                                <p><%= mat.upload_date %> • <%= (mat.file_size / 1024).toFixed(1) %>KB</p>
+                            </div>
+                            <div class="material-actions">
+                                <button class="mat-btn view" onclick="viewMaterial(<%= mat.id %>)" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="mat-btn delete" onclick="deleteMaterial(<%= mat.id %>, '<%= mat.name %>')" title="Delete">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                    <% }) %>
+                <% } else { %>
+                    <div class="empty-materials">
+                        <i class="fas fa-folder-open"></i>
+                        <p>No materials uploaded yet.</p>
+                    </div>
+                <% } %>
+            </div>
         </div>
 
         <nav class="bottom-nav">
@@ -175,9 +407,7 @@
                 <i class="fas fa-chart-bar"></i>
                 <span>Stats</span>
             </a>
-            
             <a href="/setup-test" class="nav-center-btn"><i class="fas fa-plus"></i></a>
-            
             <a href="/subjects" class="nav-link active">
                 <i class="fas fa-book-open"></i>
                 <span>Library</span>
@@ -189,16 +419,159 @@
         </nav>
     </div>
 
-    <script>
-        function filterSubjects() {
-            const filter = document.getElementById('subjectSearch').value.toLowerCase();
-            const cards = document.querySelectorAll('.subject-card');
+    <!-- Upload Modal -->
+    <div class="upload-overlay" id="uploadOverlay">
+        <div class="upload-sheet">
+            <div class="sheet-handle"></div>
+            <div class="sheet-header">
+                <h3>Upload Material</h3>
+                <button class="sheet-close" onclick="closeUploadModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <form class="upload-form" id="uploadForm" onsubmit="handleUpload(event)">
+                <div class="form-group">
+                    <label>Material Name</label>
+                    <input type="text" class="form-input" name="name" id="matName" required placeholder="e.g. GST 101 Past Questions">
+                </div>
+                <div class="form-group">
+                    <label>Description (optional)</label>
+                    <input type="text" class="form-input" name="description" id="matDesc" placeholder="Brief description...">
+                </div>
+                <div class="form-group">
+                    <label>Select File</label>
+                    <div class="file-drop-zone" id="fileDropZone" onclick="document.getElementById('fileInput').click()">
+                        <i class="fas fa-cloud-arrow-up"></i>
+                        <p>Tap to choose file</p>
+                        <div class="file-name" id="fileName"></div>
+                    </div>
+                    <input type="file" id="fileInput" name="file" style="display:none" onchange="handleFileSelect(this)" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.ppt,.pptx,.xls,.xlsx">
+                </div>
+                <button type="submit" class="btn-upload" id="uploadBtn" disabled>
+                    <i class="fas fa-upload"></i> Upload Material
+                </button>
+            </form>
+        </div>
+    </div>
 
-            cards.forEach(card => {
-                const title = card.querySelector('h3').textContent.toLowerCase();
-                card.style.display = title.includes(filter) ? "block" : "none";
+    <script>
+        let selectedFile = null;
+
+        function switchTab(tab, btn) {
+            document.querySelectorAll('.tab-pill').forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+
+            if (tab === 'courses') {
+                document.getElementById('coursesTab').classList.remove('hidden');
+                document.getElementById('materialsTab').classList.remove('active');
+            } else {
+                document.getElementById('coursesTab').classList.add('hidden');
+                document.getElementById('materialsTab').classList.add('active');
+            }
+        }
+
+        function filterContent() {
+            const query = document.getElementById('subjectSearch').value.toLowerCase();
+            
+            document.querySelectorAll('.subject-card, .material-card').forEach(card => {
+                const text = card.getAttribute('data-search') || card.textContent.toLowerCase();
+                card.style.display = text.includes(query) ? '' : 'none';
             });
         }
+
+        function openUploadModal() {
+            document.getElementById('uploadOverlay').classList.add('show');
+        }
+
+        function closeUploadModal() {
+            document.getElementById('uploadOverlay').classList.remove('show');
+            document.getElementById('uploadForm').reset();
+            document.getElementById('fileName').textContent = '';
+            document.getElementById('uploadBtn').disabled = true;
+            selectedFile = null;
+        }
+
+        document.getElementById('uploadOverlay').addEventListener('click', function(e) {
+            if (e.target === this) closeUploadModal();
+        });
+
+        function handleFileSelect(input) {
+            if (input.files && input.files[0]) {
+                selectedFile = input.files[0];
+                document.getElementById('fileName').textContent = selectedFile.name;
+                document.getElementById('uploadBtn').disabled = false;
+            }
+        }
+
+        // Drag and drop
+        const dropZone = document.getElementById('fileDropZone');
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('dragover'); });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                document.getElementById('fileInput').files = e.dataTransfer.files;
+                handleFileSelect(document.getElementById('fileInput'));
+            }
+        });
+
+        async function handleUpload(e) {
+            e.preventDefault();
+            const btn = document.getElementById('uploadBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+
+            const formData = new FormData();
+            formData.append('name', document.getElementById('matName').value);
+            formData.append('description', document.getElementById('matDesc').value);
+            formData.append('file', selectedFile);
+
+            try {
+                const res = await fetch('/api/materials/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    closeUploadModal();
+                    Swal.fire({ icon: 'success', title: 'Uploaded!', text: 'Material saved to your library', confirmButtonColor: '#0062ff', timer: 1500, showConfirmButton: false });
+                    setTimeout(() => location.reload(), 1200);
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (err) {
+                Swal.fire({ icon: 'error', title: 'Upload Failed', text: err.message || 'Please try again', confirmButtonColor: '#0062ff' });
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-upload"></i> Upload Material';
+            }
+        }
+
+        function viewMaterial(id) {
+            window.open('/api/materials/' + id + '/view', '_blank');
+        }
+
+        async function deleteMaterial(id, name) {
+            const result = await Swal.fire({
+                title: 'Delete Material?',
+                text: `"${name}" will be permanently removed`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Yes, delete it'
+            });
+
+            if (result.isConfirmed) {
+                try {
+                    await fetch('/api/materials/' + id + '/delete', { method: 'POST' });
+                    Swal.fire({ icon: 'success', title: 'Deleted!', timer: 1000, showConfirmButton: false });
+                    setTimeout(() => location.reload(), 800);
+                } catch (err) {
+                    Swal.fire({ icon: 'error', title: 'Failed', text: 'Could not delete material' });
+                }
+            }
+        }
     </script>
+    <%- include('partials/pomodoro-overlay') %>
 </body>
 </html>

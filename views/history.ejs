@@ -3,10 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Prepium | Quiz History</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
         :root { 
@@ -20,102 +23,160 @@
             --success: #10b981;
             --danger: #ef4444;
             --warning: #f59e0b;
+            --surface: #ffffff;
         }
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; transition: all 0.2s ease; outline: none; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif; 
             background: var(--bg); margin: 0; color: var(--text-dark); 
-            display: flex; justify-content: center; 
+            display: flex; justify-content: center;
+            -webkit-font-smoothing: antialiased;
         }
 
         .app-shell { 
             width: 100%; max-width: 430px; 
-            background: #ffffff; min-height: 100vh; 
-            position: relative; padding-bottom: 120px;
+            background: var(--surface); min-height: 100vh; 
+            position: relative; padding-bottom: 100px;
             box-shadow: 0 0 40px rgba(0,0,0,0.02);
         }
 
+        /* Status Bar */
+        .status-bar { height: env(safe-area-inset-top, 0px); background: var(--surface); }
+
         /* Header */
-        header { padding: 2rem 1.5rem 1rem; display: flex; justify-content: space-between; align-items: center; }
-        .logo { font-weight: 800; font-size: 1.4rem; letter-spacing: -1px; color: var(--text-dark); text-decoration: none; }
+        header { 
+            padding: 1.5rem 1.5rem 1rem; 
+            display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            z-index: 100; border-bottom: 1px solid rgba(0,0,0,0.03);
+        }
+        .logo { font-weight: 800; font-size: 1.3rem; letter-spacing: -1px; color: var(--text-dark); text-decoration: none; }
         .logo span { color: var(--brand); }
 
-        /* Page Intro */
-        .intro { padding: 0 1.5rem 1.5rem; }
-        .intro h1 { font-size: 1.7rem; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
-        .intro p { color: var(--text-sub); font-size: 0.9rem; margin: 5px 0 0; font-weight: 500; }
+        /* Stats Overview */
+        .stats-row {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+            padding: 0 1.5rem; margin-bottom: 1.5rem;
+        }
+        .stat-card {
+            background: white; border: 1.5px solid var(--border);
+            border-radius: 18px; padding: 16px 12px; text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.01);
+        }
+        .stat-icon { font-size: 1.2rem; margin-bottom: 6px; }
+        .stat-card:nth-child(1) .stat-icon { color: var(--brand); }
+        .stat-card:nth-child(2) .stat-icon { color: var(--success); }
+        .stat-card:nth-child(3) .stat-icon { color: var(--warning); }
+        .stat-num { font-size: 1.4rem; font-weight: 800; display: block; }
+        .stat-label { font-size: 0.6rem; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.5px; }
 
-        /* History List */
+        /* Performance Chart */
+        .chart-section {
+            margin: 0 1.5rem 1.5rem;
+            background: white; border: 1.5px solid var(--border);
+            border-radius: 22px; padding: 18px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.01);
+        }
+        .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        .chart-title { font-size: 0.85rem; font-weight: 800; }
+        .chart-badge { font-size: 0.65rem; font-weight: 700; color: var(--brand); background: #f0f7ff; padding: 4px 10px; border-radius: 8px; }
+        .chart-canvas { height: 160px; position: relative; }
+
+        /* Section Header */
+        .section-header {
+            padding: 0 1.5rem; margin-bottom: 1rem;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .section-header h2 { font-size: 1rem; font-weight: 800; margin: 0; }
+        .section-header span { font-size: 0.7rem; color: var(--text-sub); font-weight: 600; }
+
+        /* History Cards */
         .history-list { padding: 0 1.5rem; }
         
         .history-card {
-            background: white; border-radius: 24px; padding: 18px;
-            border: 1px solid var(--border); margin-bottom: 14px;
-            display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.01);
-            position: relative; overflow: hidden;
+            background: white; border-radius: 20px; padding: 16px;
+            border: 1.5px solid var(--border); margin-bottom: 10px;
+            display: flex; align-items: center; gap: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.01);
+            transition: transform 0.2s ease;
         }
-        .history-card:hover { border-color: #cbd5e1; transform: translateY(-1px); }
+        .history-card:active { transform: scale(0.98); }
 
-        .subject-box { display: flex; align-items: center; gap: 14px; max-width: 70%; }
-        
+        .history-card.ai-session { border-left: 4px solid #7c3aed; }
+
         .icon-circle {
-            width: 46px; height: 46px; background: #f0f7ff; color: var(--brand);
-            border-radius: 14px; display: flex; align-items: center; justify-content: center;
+            width: 48px; height: 48px; border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
             font-size: 1.1rem; flex-shrink: 0;
         }
-        
-        /* Premium AI Badge Styling */
-        .history-card.ai-session { border-left: 4px solid #7c3aed; }
-        .history-card.ai-session .icon-circle { background: #f5f3ff; color: #7c3aed; }
+        .icon-circle.standard { background: #f0f7ff; color: var(--brand); }
+        .icon-circle.ai { background: #f5f3ff; color: #7c3aed; }
 
-        .title-wrapper { display: flex; flex-direction: column; min-width: 0; }
-        .subj-name { font-weight: 800; font-size: 0.95rem; color: var(--text-dark); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        
-        .meta-row { display: flex; align-items: center; gap: 8px; margin-top: 3px; }
-        .quiz-date { font-size: 0.75rem; color: var(--text-sub); font-weight: 600; }
-        
-        .type-tag { font-size: 0.65rem; font-weight: 700; padding: 1px 6px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.3px; }
+        .card-content { flex: 1; min-width: 0; }
+        .card-title { font-weight: 800; font-size: 0.9rem; margin: 0 0 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .card-meta { display: flex; align-items: center; gap: 8px; }
+        .card-date { font-size: 0.7rem; color: var(--text-sub); font-weight: 600; }
+        .type-tag { font-size: 0.58rem; font-weight: 700; padding: 2px 7px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.3px; }
         .type-tag.standard { background: #e0f2fe; color: #0369a1; }
         .type-tag.ai { background: #f3e8ff; color: #6b21a8; }
 
-        .score-display { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; }
-        .score-text { font-size: 1.05rem; font-weight: 800; color: var(--text-dark); display: block; }
-        
-        .accuracy-tag { 
-            font-size: 0.68rem; font-weight: 700; padding: 3px 8px; border-radius: 8px;
-            display: inline-block; margin-top: 5px;
+        .score-badge { text-align: right; flex-shrink: 0; }
+        .score-num { font-size: 1.05rem; font-weight: 800; display: block; }
+        .accuracy-pill { 
+            font-size: 0.62rem; font-weight: 700; padding: 3px 8px; 
+            border-radius: 8px; display: inline-block; margin-top: 4px;
         }
-        .accuracy-tag.high { background: #dcfce7; color: #15803d; }
-        .accuracy-tag.mid { background: #fef3c7; color: #b45309; }
-        .accuracy-tag.low { background: #fee2e2; color: #b91c1c; }
+        .accuracy-pill.high { background: #dcfce7; color: #15803d; }
+        .accuracy-pill.mid { background: #fef3c7; color: #b45309; }
+        .accuracy-pill.low { background: #fee2e2; color: #b91c1c; }
+
+        /* Progress Bar in Card */
+        .progress-mini {
+            width: 100%; height: 4px; background: #f1f5f9; border-radius: 2px;
+            margin-top: 6px; overflow: hidden;
+        }
+        .progress-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+        .progress-fill.high { background: var(--success); }
+        .progress-fill.mid { background: var(--warning); }
+        .progress-fill.low { background: var(--danger); }
 
         /* Empty State */
-        .empty-state { text-align: center; padding: 80px 20px; }
-        .empty-state i { font-size: 3.5rem; color: #e2e8f0; margin-bottom: 16px; }
-        .empty-state h3 { font-weight: 800; color: var(--text-dark); margin: 0; }
-        .empty-state p { color: var(--text-sub); font-size: 0.85rem; margin-top: 8px; }
+        .empty-state { text-align: center; padding: 60px 20px; }
+        .empty-state i { font-size: 3rem; color: #e2e8f0; margin-bottom: 12px; display: block; }
+        .empty-state h3 { font-weight: 800; margin: 0 0 6px; }
+        .empty-state p { color: var(--text-sub); font-size: 0.85rem; margin: 0; }
+        .empty-state .cta-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            margin-top: 16px; padding: 12px 24px; border-radius: 14px;
+            background: var(--brand-gradient); color: white; text-decoration: none;
+            font-weight: 700; font-size: 0.85rem;
+        }
 
-        /* Bottom Floating Navbar */
+        /* Bottom Nav */
         .bottom-nav {
             position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            width: calc(100% - 40px); max-width: 390px;
-            background: #0b1437; height: 75px; border-radius: 24px;
-            display: flex; justify-content: space-around; align-items: center;
-            box-shadow: 0 12px 30px rgba(11, 20, 55, 0.3); z-index: 1000;
+            width: calc(100% - 32px); max-width: 398px;
+            background: rgba(255,255,255,0.85); backdrop-filter: blur(30px);
+            height: 72px; border-radius: 22px; display: flex; align-items: center;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.08); border: 1px solid rgba(255,255,255,0.7);
+            z-index: 1000;
         }
-        .nav-link { text-decoration: none; color: #a3aed0; text-align: center; }
-        .nav-link.active { color: white; }
-        .nav-link i { font-size: 1.25rem; display: block; margin-bottom: 3px; }
-        .nav-link span { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
-        
+        .nav-link { 
+            text-decoration: none; color: var(--text-sub); text-align: center; 
+            flex: 1; font-weight: 700; cursor: pointer; position: relative;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .nav-link.active { color: var(--brand); }
+        .nav-link i { font-size: 1.1rem; display: block; margin-bottom: 3px; }
+        .nav-link span { font-size: 0.56rem; text-transform: uppercase; letter-spacing: 0.3px; }
         .nav-center-btn {
-            width: 60px; height: 60px; background: var(--brand); border-radius: 20px;
-            display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 1.6rem; transform: translateY(-28px);
-            border: 5px solid #ffffff; box-shadow: 0 8px 15px rgba(0, 98, 255, 0.4);
+            width: 52px; height: 52px; background: var(--brand); border-radius: 16px;
+            display: flex; align-items: center; justify-content: center; 
+            color: white; font-size: 1.25rem; transform: translateY(-20px);
+            border: 3px solid white; box-shadow: 0 6px 16px rgba(0,98,255,0.3);
             text-decoration: none;
         }
     </style>
@@ -123,47 +184,78 @@
 <body>
 
     <div class="app-shell">
+        <div class="status-bar"></div>
+        
         <header>
             <a href="/dashboard" class="logo">Prepium<span>.</span></a>
+            <div style="font-size:0.75rem; font-weight:700; color:var(--text-sub);">
+                <i class="fas fa-chart-bar"></i> Performance
+            </div>
         </header>
 
-        <section class="intro">
-            <h1>Performance History</h1>
-            <p>Tracking your journey to mastery.</p>
-        </section>
+        <!-- Stats Overview -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-clipboard-check"></i></div>
+                <span class="stat-num" id="totalQuizzes">0</span>
+                <span class="stat-label">Quizzes</span>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-bullseye"></i></div>
+                <span class="stat-num" id="avgScore">0%</span>
+                <span class="stat-label">Avg Score</span>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-trophy"></i></div>
+                <span class="stat-num" id="bestScore">0%</span>
+                <span class="stat-label">Best</span>
+            </div>
+        </div>
+
+        <!-- Performance Chart -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <div class="chart-title">Score Trend</div>
+                <div class="chart-badge">Last 10</div>
+            </div>
+            <div class="chart-canvas">
+                <canvas id="perfChart"></canvas>
+            </div>
+        </div>
+
+        <!-- History List -->
+        <div class="section-header">
+            <h2>Quiz History</h2>
+            <span id="historyCount">0 sessions</span>
+        </div>
 
         <div class="history-list">
             <% if (history && history.length > 0) { %>
-                <% history.forEach(item => { %>
+                <% history.forEach(item => { 
+                    const pct = item.percentage || 0;
+                    const cls = pct >= 70 ? 'high' : pct >= 45 ? 'mid' : 'low';
+                %>
                     <div class="history-card <%= !item.subject_name ? 'ai-session' : '' %>">
-                        <div class="subject-box">
-                            <div class="icon-circle">
-                                <i class="fas <%= !item.subject_name ? 'fa-robot' : 'fa-file-invoice' %>"></i>
+                        <div class="icon-circle <%= !item.subject_name ? 'ai' : 'standard' %>">
+                            <i class="fas <%= !item.subject_name ? 'fa-robot' : 'fa-file-invoice' %>"></i>
+                        </div>
+                        <div class="card-content">
+                            <p class="card-title"><%= item.subject_name || item.title || 'AI Engine Test' %></p>
+                            <div class="card-meta">
+                                <span class="card-date">
+                                    <%= new Date(item.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) %>
+                                </span>
+                                <span class="type-tag <%= !item.subject_name ? 'ai' : 'standard' %>">
+                                    <%= !item.subject_name ? 'AI Quiz' : 'Standard' %>
+                                </span>
                             </div>
-                            <div class="title-wrapper">
-                                <span class="subj-name"><%= item.subject_name || item.title || 'AI Engine Test' %></span>
-                                <div class="meta-row">
-                                    <span class="quiz-date">
-                                        <%= new Date(item.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) %>
-                                    </span>
-                                    <% if (!item.subject_name) { %>
-                                        <span class="type-tag ai">AI Quiz</span>
-                                    <% } else { %>
-                                        <span class="type-tag standard">Standard</span>
-                                    <% } %>
-                                </div>
+                            <div class="progress-mini">
+                                <div class="progress-fill <%= cls %>" style="width: <%= pct %>%"></div>
                             </div>
                         </div>
-                        <div class="score-display">
-                            <span class="score-text"><%= item.score %> / <%= item.total_questions %></span>
-                            
-                            <% if (item.percentage >= 70) { %>
-                                <span class="accuracy-tag high"><%= item.percentage %>% Accuracy</span>
-                            <% } else if (item.percentage >= 45) { %>
-                                <span class="accuracy-tag mid"><%= item.percentage %>% Accuracy</span>
-                            <% } else { %>
-                                <span class="accuracy-tag low"><%= item.percentage %>% Accuracy</span>
-                            <% } %>
+                        <div class="score-badge">
+                            <span class="score-num"><%= item.score %>/<%= item.total_questions %></span>
+                            <span class="accuracy-pill <%= cls %>"><%= pct %>%</span>
                         </div>
                     </div>
                 <% }) %>
@@ -172,32 +264,80 @@
                     <i class="fas fa-chart-line"></i>
                     <h3>No quizzes yet</h3>
                     <p>Complete your first quiz to see your growth here.</p>
+                    <a href="/setup-test" class="cta-btn"><i class="fas fa-bolt"></i> Start First Quiz</a>
                 </div>
             <% } %>
         </div>
 
         <nav class="bottom-nav">
             <a href="/dashboard" class="nav-link">
-                <i class="fas fa-home"></i>
-                <span>Home</span>
+                <i class="fas fa-home"></i><span>Home</span>
             </a>
             <a href="/history" class="nav-link active">
-                <i class="fas fa-chart-bar"></i>
-                <span>Stats</span>
+                <i class="fas fa-chart-bar"></i><span>Stats</span>
             </a>
-            
-            <a href="/ai-quiz" class="nav-center-btn"><i class="fas fa-plus"></i></a>
-            
+            <a href="/setup-test" class="nav-center-btn"><i class="fas fa-plus"></i></a>
             <a href="/notifications" class="nav-link">
-                <i class="fas fa-bell"></i>
-                <span>Alerts</span>
+                <i class="fas fa-bell"></i><span>Alerts</span>
             </a>
             <a href="/profile" class="nav-link">
-                <i class="fas fa-user-circle"></i>
-                <span>Profile</span>
+                <i class="fas fa-user-circle"></i><span>Profile</span>
             </a>
         </nav>
     </div>
 
+    <script>
+        // Calculate stats from history data
+        const historyData = <%- JSON.stringify(history || []) %>;
+        
+        if (historyData.length > 0) {
+            const total = historyData.length;
+            const avgPct = Math.round(historyData.reduce((a, b) => a + (b.percentage || 0), 0) / total);
+            const bestPct = Math.max(...historyData.map(h => h.percentage || 0));
+            
+            document.getElementById('totalQuizzes').textContent = total;
+            document.getElementById('avgScore').textContent = avgPct + '%';
+            document.getElementById('bestScore').textContent = bestPct + '%';
+            document.getElementById('historyCount').textContent = total + ' session' + (total !== 1 ? 's' : '');
+
+            // Render performance chart
+            const recent = historyData.slice(0, 10).reverse();
+            const ctx = document.getElementById('perfChart');
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: recent.map((h, i) => {
+                            const d = new Date(h.created_at);
+                            return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                        }),
+                        datasets: [{
+                            data: recent.map(h => h.percentage || 0),
+                            borderColor: '#0062ff',
+                            backgroundColor: 'rgba(0,98,255,0.05)',
+                            borderWidth: 2.5,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#0062ff',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { font: { size: 10, weight: '600' }, color: '#a3aed0' } },
+                            y: { min: 0, max: 100, grid: { color: 'rgba(0,0,0,0.03)' }, ticks: { font: { size: 10 }, callback: v => v + '%' } }
+                        }
+                    }
+                });
+            }
+        }
+    </script>
+    <%- include('partials/pomodoro-overlay') %>
 </body>
 </html>

@@ -7,37 +7,105 @@ const app = express();
 const multer = require('multer');
 
 const fs = require('fs');
-const path = require('path')
+const path = require('path');
 const crypto = require('crypto');
 const { Pool } = require('pg');
-require('dotenv').config();
 
-// Import the correct class name: GoogleGenerativeAI (not GoogleGenAI)
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// Initialize it with the correct class constructor
-// This is correct:
-const apiKeys = [process.env.GEMINI_API_KEY, process.env.GEMINI_API_KEY_PRIMARY];
-
-// Then inside your function, you pick one:
-const ai = new GoogleGenerativeAI(apiKeys[0]);
+const apiKeys = [process.env.GEMINI_API_KEY_PRIMARY, process.env.GEMINI_API_KEY_SECONDARY].filter(Boolean);
+const ai = new GoogleGenerativeAI(apiKeys[0] || '');
 const pdfToText = require('pdf-to-text');
-// Configure Multer to save uploaded files temporarily on your disk
 
-// Optimized for serverless compliance (Vercel/Netlify friendly)
 const upload = multer({ 
     storage: multer.memoryStorage(),
-    limits: { fileSize: 10 * 1024 * 1024 } // 10MB individual file limit
+    limits: { fileSize: 10 * 1024 * 1024 }
 });
+
 const pgSession = require('connect-pg-simple')(session);
-const MemoryStore = require('memorystore')(session);
-// Initialize the connection pool
+
+// Simple in-memory rate limiter
+const rateLimitStore = {};
+function rateLimit(maxRequests = 10, windowMs = 60000) {
+    return (req, res, next) => {
+        const key = req.ip + req.path;
+        const now = Date.now();
+        if (!rateLimitStore[key] || now - rateLimitStore[key].start > windowMs) {
+            rateLimitStore[key] = { start: now, count: 1 };
+            return next();
+        }
+        rateLimitStore[key].count++;
+        if (rateLimitStore[key].count > maxRequests) {
+            return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+        }
+        next();
+    };
+}
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
     rejectUnauthorized: false
-  }
+  },
+  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: 30000
 });
+
+// Handle pool errors gracefully
+pool.on('error', (err) => {
+    console.error('[DB] Pool error:', err.message);
+});
+
+// Test database connection on startup
+(async () => {
+    try {
+        await pool.query('SELECT 1');
+        console.log('[DB] Connected to PostgreSQL successfully');
+    } catch (err) {
+        console.error('[DB] CONNECTION FAILED:', err.message);
+        console.error('[DB] Please check your DATABASE_URL in .env file');
+        console.error('[DB] Get correct URL from: https://console.neon.tech');
+    }
+})();
+
+// Auto-create student_materials table if it doesn't exist
+(async () => {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS student_materials (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                description TEXT DEFAULT '',
+                file_type VARCHAR(100),
+                file_size INTEGER,
+                file_data BYTEA,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        console.log('[DB] student_materials table ready');
+    } catch (err) {
+        console.error('[DB] student_materials table setup:', err.message);
+    }
+})();
+
+// Auto-create user_sessions table for PostgreSQL session store
+(async () => {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS "user_sessions" (
+                "sid" varchar NOT NULL COLLATE "default",
+                "sess" json NOT NULL,
+                "expire" timestamp(6) NOT NULL,
+                CONSTRAINT "user_sessions_pkey" PRIMARY KEY ("sid")
+            );
+            CREATE INDEX IF NOT EXISTS "IDX_user_sessions_expire" ON "user_sessions" ("expire");
+        `);
+        console.log('[DB] user_sessions table ready');
+    } catch (err) {
+        console.error('[DB] user_sessions table setup:', err.message);
+    }
+})();
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -56,16 +124,16 @@ app.use(express.static('public'));
 app.set('trust proxy', 1);
 
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'prepium_secure_encryption_token',
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    // Safely limits memory leaks by tracking session lifespan loops
-    store: new MemoryStore({
-        checkPeriod: 86400000 // Prune expired entries every 24 hours
+    store: new pgSession({
+        pool: pool,
+        tableName: 'user_sessions',
+        createTableIfMissing: true
     }),
     cookie: {
-        maxAge: 1000 * 60 * 60 * 24, // Valid for 1 day
-        // CRITICAL FIX: Set to false on localhost so browser stores cookie without HTTPS
+        maxAge: 1000 * 60 * 60 * 24,
         secure: process.env.NODE_ENV === 'production',
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
     }
@@ -149,10 +217,8 @@ app.get('/signup', async (req, res) => {
         res.render('signup', { universities: [] }); 
     }
 });
-app.get('/login', (req, res) => res.render('login'));
 
-
-app.post('/auth/signup', async (req, res) => {
+app.post('/auth/signup', rateLimit(5, 60000), async (req, res) => {
     const { fullname, email, password, university_id, referred_by } = req.body; 
     
     try {
@@ -182,7 +248,7 @@ app.post('/auth/signup', async (req, res) => {
 });
 
 
-app.post('/dashboard/verify-payment', async (req, res) => {
+app.post('/dashboard/verify-payment', rateLimit(5, 300000), async (req, res) => {
     if (!req.session.user) return res.redirect('/login');
     const userEmail = req.session.user.email;
 
@@ -257,7 +323,7 @@ app.get('/login', (req, res) => {
 });
 
 // --- POST Login Handler (Updated for AJAX) ---
-app.post('/auth/login', async (req, res) => {
+app.post('/auth/login', rateLimit(10, 60000), async (req, res) => {
     const { email, password } = req.body;
 
     try {
@@ -271,15 +337,12 @@ app.post('/auth/login', async (req, res) => {
             const isMatch = await bcrypt.compare(password, user.password);
 
             if (isMatch) {
-                // 3. Define Admin Status
-                const isAdminAccount = (user.email === 'michaelbrainny842@gmail.com');
-
                 // 4. Construct Session Object
                 req.session.user = { 
                     id: user.id, 
                     fullname: user.fullname, 
                     email: user.email,
-                    is_admin: user.is_admin || isAdminAccount, 
+                    is_admin: user.is_admin === true, 
                     has_paid: user.has_paid,
                     current_streak: user.current_streak || 0
                 };
@@ -308,17 +371,34 @@ app.post('/auth/login', async (req, res) => {
 });
 
 // Add this to your app.js / server file
-app.get('/verify-payment', async (req, res) => {
+app.get('/verify-payment', rateLimit(5, 300000), async (req, res) => {
     const { reference } = req.query;
 
     if (!req.session.user) {
         return res.redirect('/login');
     }
 
+    if (!reference) {
+        return res.redirect('/dashboard?payment=failed&reason=no_reference');
+    }
+
     const userId = req.session.user.id;
 
     try {
-        // 1. Fetch user data to see their unique code and current status before updating
+        // 0. Verify the transaction with Paystack API
+        const paystackRes = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+            headers: {
+                'Authorization': `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        const paystackData = await paystackRes.json();
+
+        if (!paystackData.status || paystackData.data.status !== 'success') {
+            return res.redirect('/dashboard?payment=failed&reason=transaction_not_successful');
+        }
+
+        // 1. Fetch user data
         const userQuery = await pool.query(
             'SELECT unique_code, has_paid FROM users WHERE id = $1', 
             [userId]
@@ -330,7 +410,7 @@ app.get('/verify-payment', async (req, res) => {
 
         const user = userQuery.rows[0];
 
-        // 2. Prevent double-crediting if they are already activated
+        // 2. Prevent double-crediting
         if (user.has_paid === true) {
             req.session.user.has_paid = true;
             return res.redirect('/dashboard?payment=success');
@@ -582,7 +662,7 @@ app.post('/admin/subjects/update/:id', isAdmin, async (req, res) => {
 });
 
 // DELETE SUBJECT
-app.get('/admin/subjects/delete/:id', isAdmin, async (req, res) => {
+app.post('/admin/subjects/delete/:id', isAdmin, async (req, res) => {
     try {
         await pool.query('DELETE FROM subjects WHERE id = $1', [req.params.id]);
         res.redirect('/admin/subjects');
@@ -635,27 +715,44 @@ app.get('/admin/questions/manage/:id', isAdmin, async (req, res) => {
 app.post('/admin/questions/bulk-import', isAdmin, async (req, res) => {
     const { subject_id, university_id, json_data } = req.body;
     try {
-        const questions = JSON.parse(json_data); 
+        const questions = JSON.parse(json_data);
         
-        for (let q of questions) {
-            await pool.query(
-                `INSERT INTO questions 
-                (subject_id, university_id, question_text, option_a, option_b, option_c, option_d, correct_option, explanation, hint) 
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-                [
-                    subject_id, 
-                    university_id || 1, // Defaulting to 1 if not provided
-                    q.question_text, 
-                    q.option_a, 
-                    q.option_b, 
-                    q.option_c, 
-                    q.option_d, 
-                    q.correct_option, 
-                    q.explanation || null,
-                    q.hint || null
-                ]
-            );
+        if (!Array.isArray(questions) || questions.length === 0) {
+            return res.redirect(`/admin/questions/manage/${subject_id}?error=No questions provided`);
         }
+
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            
+            for (const q of questions) {
+                await client.query(
+                    `INSERT INTO questions 
+                    (subject_id, university_id, question_text, option_a, option_b, option_c, option_d, correct_option, explanation, hint) 
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+                    [
+                        subject_id, 
+                        university_id || 1,
+                        q.question_text, 
+                        q.option_a, 
+                        q.option_b, 
+                        q.option_c, 
+                        q.option_d, 
+                        q.correct_option, 
+                        q.explanation || null,
+                        q.hint || null
+                    ]
+                );
+            }
+            
+            await client.query('COMMIT');
+        } catch (err) {
+            await client.query('ROLLBACK');
+            throw err;
+        } finally {
+            client.release();
+        }
+        
         res.redirect(`/admin/questions/manage/${subject_id}`);
     } catch (err) {
         console.error("JSON Import Error:", err);
@@ -664,7 +761,7 @@ app.post('/admin/questions/bulk-import', isAdmin, async (req, res) => {
 });
 
 // DELETE QUESTION
-app.get('/admin/questions/delete/:id/:subject_id', isAdmin, async (req, res) => {
+app.post('/admin/questions/delete/:id/:subject_id', isAdmin, async (req, res) => {
     await pool.query('DELETE FROM questions WHERE id = $1', [req.params.id]);
     res.redirect(`/admin/questions/manage/${req.params.subject_id}`);
 });
@@ -704,7 +801,7 @@ app.post('/admin/questions/update', isAdmin, async (req, res) => {
 app.get('/api/subjects', async (req, res) => {
     try {
         // Assume user object has university_id from signup
-        const userUni = req.user.university_id; 
+        const userUni = req.session.user.university_id; 
         const result = await pool.query('SELECT * FROM subjects WHERE university_id = $1', [userUni]);
         res.json(result.rows);
     } catch (err) {
@@ -793,9 +890,9 @@ app.get('/dashboard', isStudent, async (req, res) => {
         );
         const userData = userRes.rows[0];
 
-        // 2. Notification Check (For the Red Dot)
-        const notifCheck = await pool.query('SELECT COUNT(*) FROM notifications');
-        const hasNewNotifs = parseInt(notifCheck.rows[0].count) > 0;
+        // 2. Notification Count (Unread)
+        const notifCheck = await pool.query('SELECT COUNT(*) FROM notifications WHERE is_read = false');
+        const unreadNotifs = parseInt(notifCheck.rows[0].count) || 0;
 
         // 3. Get Recent History
         const historyRes = await pool.query(`
@@ -809,13 +906,23 @@ app.get('/dashboard', isStudent, async (req, res) => {
         const compRes = await pool.query('SELECT * FROM competitions WHERE is_active = true LIMIT 1');
         const subjectsRes = await pool.query('SELECT * FROM subjects ORDER BY name ASC');
 
+        // 5. Count upcoming deadlines (within 24 hours)
+        const deadlineCount = await pool.query(
+            `SELECT COUNT(*) FROM deadlines 
+             WHERE user_id = $1 
+             AND (due_date + due_time) > NOW() 
+             AND (due_date + due_time) < NOW() + INTERVAL '24 hours'`,
+            [userId]
+        );
+        const upcomingDeadlines = parseInt(deadlineCount.rows[0].count) || 0;
+
         res.render('dashboard', { 
-            // Combines session info with database status including quiz_attempts
             user: { ...req.session.user, ...userData }, 
             competition: compRes.rows[0],
             subjects: subjectsRes.rows,
             history: historyRes.rows,
-            hasNewNotifs: hasNewNotifs, // This triggers your red dot
+            unreadNotifs,
+            upcomingDeadlines,
             paystack_key: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_your_key',
             currentTime: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })
         });
@@ -848,6 +955,7 @@ app.get('/notifications', isStudent, async (req, res) => {
 app.get('/subjects', isStudent, async (req, res) => {
     try {
         const universityId = req.session.user.university_id;
+        const userId = req.session.user.id;
 
         // Fetch subjects, question counts, and the drive link
         const result = await pool.query(`
@@ -862,13 +970,115 @@ app.get('/subjects', isStudent, async (req, res) => {
             ORDER BY s.name ASC
         `, [universityId]);
 
+        // Fetch student's uploaded materials
+        const materialsRes = await pool.query(`
+            SELECT id, name, description, file_type, file_size,
+                   TO_CHAR(created_at, 'Mon DD, YYYY') as upload_date
+            FROM student_materials 
+            WHERE user_id = $1 
+            ORDER BY created_at DESC
+        `, [userId]);
+
         res.render('subjects-library', {
             user: req.session.user,
-            subjects: result.rows
+            subjects: result.rows,
+            materials: materialsRes.rows
         });
     } catch (err) {
         console.error("Subjects Library Error:", err.message);
-        res.status(500).send("Error loading study library.");
+        // If table doesn't exist, render without materials
+        const universityId = req.session.user.university_id;
+        const result = await pool.query(`
+            SELECT s.id, s.name AS subject, s.drive_link, COUNT(q.id) as question_count 
+            FROM subjects s
+            LEFT JOIN questions q ON s.id = q.subject_id AND q.university_id = $1
+            GROUP BY s.id, s.name, s.drive_link
+            ORDER BY s.name ASC
+        `, [universityId]);
+        res.render('subjects-library', {
+            user: req.session.user,
+            subjects: result.rows,
+            materials: []
+        });
+    }
+});
+
+// API: Upload a study material
+app.post('/api/materials/upload', isAuth, upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No file uploaded' });
+        }
+
+        const { name, description } = req.body;
+        const userId = req.session.user.id;
+        const file = req.file;
+
+        // Store file info in database (file stays in memory buffer)
+        await pool.query(`
+            INSERT INTO student_materials (user_id, name, description, file_type, file_size, file_data)
+            VALUES ($1, $2, $3, $4, $5, $6)
+        `, [
+            userId,
+            name || file.originalname,
+            description || '',
+            file.mimetype,
+            file.size,
+            file.buffer
+        ]);
+
+        res.json({ success: true, message: 'Material uploaded successfully' });
+    } catch (err) {
+        console.error('Material upload error:', err);
+        res.status(500).json({ success: false, message: 'Upload failed' });
+    }
+});
+
+// API: Get user's materials
+app.get('/api/materials', isAuth, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT id, name, description, file_type, file_size,
+                   TO_CHAR(created_at, 'Mon DD, YYYY') as upload_date
+            FROM student_materials 
+            WHERE user_id = $1 
+            ORDER BY created_at DESC
+        `, [req.session.user.id]);
+        res.json({ materials: result.rows });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to load materials' });
+    }
+});
+
+// API: Download/view a material file
+app.get('/api/materials/:id/view', isAuth, async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT file_data, file_type, name FROM student_materials WHERE id = $1 AND user_id = $2',
+            [req.params.id, req.session.user.id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).send('Material not found');
+        }
+        const file = result.rows[0];
+        res.setHeader('Content-Type', file.file_type);
+        res.setHeader('Content-Disposition', `inline; filename="${file.name}"`);
+        res.send(file.file_data);
+    } catch (err) {
+        res.status(500).send('Error loading file');
+    }
+});
+
+// API: Delete a material
+app.post('/api/materials/:id/delete', isAuth, async (req, res) => {
+    try {
+        await pool.query(
+            'DELETE FROM student_materials WHERE id = $1 AND user_id = $2',
+            [req.params.id, req.session.user.id]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Delete failed' });
     }
 });
 
@@ -1221,7 +1431,7 @@ app.post('/ambassador/update-bank', async (req, res) => {
 
 // GET: Admin View - Manage Ambassadors
 app.get('/admin/ambassadors', async (req, res) => {
-    if (!req.session.admin) return res.redirect('/admin/login'); // Ensure admin is logged in
+    if (!req.session.user || !req.session.user.is_admin) return res.redirect('/admin/login');
 
     try {
         const result = await pool.query(`
@@ -1259,9 +1469,7 @@ app.get('/admin/ambassadors', async (req, res) => {
 });
 
 // POST: Add a new ambassador manually
-app.post('/admin/add-ambassador', async (req, res) => {
-    if (!req.session.admin) return res.redirect('/admin/login');
-
+app.post('/admin/add-ambassador', isAdmin, async (req, res) => {
     const { name, unique_code } = req.body;
     try {
         // Force clean, lowercase codes before adding to database
@@ -1279,7 +1487,7 @@ app.post('/admin/add-ambassador', async (req, res) => {
 });
 
 // POST: Admin marks payout as complete
-app.post('/admin/payout-complete/:id', async (req, res) => {
+app.post('/admin/payout-complete/:id', isAdmin, async (req, res) => {
     try {
         // Fetch existing total_earned to move it to total_withdrawn
         const ambCheck = await pool.query('SELECT total_earned FROM ambassadors WHERE id = $1', [req.params.id]);
@@ -1302,8 +1510,7 @@ app.post('/admin/payout-complete/:id', async (req, res) => {
 
 // GET: Render the Admin Login Page
 app.get('/admin/login', (req, res) => {
-    // If admin is already logged in, redirect directly to the ambassadors list
-    if (req.session.admin) {
+    if (req.session.user && req.session.user.is_admin) {
         return res.redirect('/admin/ambassadors');
     }
     res.render('admin-login', { error: null });
@@ -1314,14 +1521,23 @@ app.post('/admin/login', async (req, res) => {
     const { email, password } = req.body;
 
     try {
-        const adminEmail = process.env.ADMIN_EMAIL || "admin@gmail.com";
-        const adminPassword = process.env.ADMIN_PASSWORD || "ayomide2007";
+        const adminEmail = process.env.ADMIN_EMAIL;
+        const adminPassword = process.env.ADMIN_PASSWORD;
+
+        if (!adminEmail || !adminPassword) {
+            console.error("ADMIN_EMAIL and ADMIN_PASSWORD must be set in .env");
+            return res.render('admin-login', { error: "Admin login not configured." });
+        }
 
         if (email === adminEmail && password === adminPassword) {
-            // Set session variable
-            req.session.admin = { email: adminEmail };
+            req.session.user = { 
+                id: 0, 
+                fullname: 'Admin', 
+                email: adminEmail, 
+                is_admin: true,
+                has_paid: true
+            };
             
-            // Save session explicitly and redirect to the ambassador page
             req.session.save((err) => {
                 if (err) {
                     console.error("Session Save Error:", err);
@@ -1340,8 +1556,8 @@ app.post('/admin/login', async (req, res) => {
 
 // GET: Admin Sign Out
 app.get('/admin/logout', (req, res) => {
-    req.session.admin = null;
-    req.session.save(() => {
+    req.session.destroy((err) => {
+        res.clearCookie('connect.sid');
         res.redirect('/admin/login?msg=Logged out successfully');
     });
 });
@@ -1353,10 +1569,7 @@ app.get('/competition', (req, res) => {
 });
 
 // GET: View student deadlines
-app.get('/deadlines', async (req, res) => {
-    if (!req.session.user) return res.redirect('/login');
-    
-    // Safety check: Lock feature if basic user hasn't paid
+app.get('/deadlines', isAuth, async (req, res) => {
     if (!req.session.user.has_paid) {
         return res.redirect('/dashboard?msg=Upgrade to use deadlines');
     }
@@ -1383,8 +1596,8 @@ app.get('/deadlines', async (req, res) => {
 });
 
 // POST: Save a new deadline
-app.post('/deadlines/add', async (req, res) => {
-    if (!req.session.user || !req.session.user.has_paid) {
+app.post('/deadlines/add', isAuth, async (req, res) => {
+    if (!req.session.user.has_paid) {
         return res.redirect('/dashboard');
     }
 
@@ -1406,8 +1619,7 @@ app.post('/deadlines/add', async (req, res) => {
 });
 
 // POST: Delete an individual deadline
-app.post('/deadlines/delete/:id', async (req, res) => {
-    if (!req.session.user) return res.redirect('/login');
+app.post('/deadlines/delete/:id', isAuth, async (req, res) => {
 
     try {
         await pool.query(
@@ -1417,15 +1629,32 @@ app.post('/deadlines/delete/:id', async (req, res) => {
         res.redirect('/deadlines');
     } catch (err) {
         console.error("Error deleting deadline:", err);
+        if (req.xhr) return res.status(500).json({ error: 'Failed to delete' });
         res.redirect('/deadlines?error=Failed to delete deadline');
     }
 });
 
+// JSON API: Get deadlines for overlay
+app.get('/api/deadlines', isAuth, async (req, res) => {
+    try {
+        const query = `
+            SELECT id, title, 
+                   TO_CHAR(due_date, 'YYYY-MM-DD') as date_str, 
+                   TO_CHAR(due_time, 'HH24:MI') as time_str 
+            FROM deadlines 
+            WHERE user_id = $1 
+            ORDER BY due_date ASC, due_time ASC
+        `;
+        const result = await pool.query(query, [req.session.user.id]);
+        res.json({ deadlines: result.rows });
+    } catch (err) {
+        console.error("API Deadlines Error:", err);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
 // GET: Render the Pomodoro Timer page
-app.get('/pomodoro', (req, res) => {
-    if (!req.session.user) return res.redirect('/login');
-    
-    // Check if the student has paid for premium access
+app.get('/pomodoro', isAuth, (req, res) => {
     if (!req.session.user.has_paid) {
         return res.redirect('/dashboard?msg=Upgrade to access the Pomodoro Timer');
     }
@@ -1437,8 +1666,7 @@ app.get('/pomodoro', (req, res) => {
 });
 
 // GET: Render the Timetable page with stored data
-app.get('/timetable', async (req, res) => {
-    if (!req.session.user) return res.redirect('/login');
+app.get('/timetable', isAuth, async (req, res) => {
     if (!req.session.user.has_paid) {
         return res.redirect('/dashboard?msg=Upgrade to access the Day Planner');
     }
@@ -1462,9 +1690,7 @@ app.get('/timetable', async (req, res) => {
 });
 
 // POST: Save a new course slot to the user's timetable
-app.post('/timetable/add', async (req, res) => {
-    if (!req.session.user) return res.status(401).json({ error: 'Unauthorized' });
-    
+app.post('/timetable/add', isAuth, async (req, res) => {
     const { course, day, start_time, end_time, venue } = req.body;
     
     try {
@@ -1480,8 +1706,7 @@ app.post('/timetable/add', async (req, res) => {
 });
 
 // GET: Render the How It Works Guide
-app.get('/how-it-works', (req, res) => {
-    if (!req.session.user) return res.redirect('/login');
+app.get('/how-it-works', isAuth, (req, res) => {
     
     res.render('how-it-works', { 
         user: req.session.user,
@@ -1494,8 +1719,7 @@ app.get('/how-it-works', (req, res) => {
 // ==========================================
 
 // GET: View all threads & chat interface
-app.get('/suggestions', async (req, res) => {
-    if (!req.session.user) return res.redirect('/login');
+app.get('/suggestions', isAuth, async (req, res) => {
     const activeThreadId = req.query.threadId;
 
     try {
@@ -1558,8 +1782,7 @@ app.get('/suggestions', async (req, res) => {
 });
 
 // POST: Create a new thread (Starting the conversation)
-app.post('/suggestions/new', async (req, res) => {
-    if (!req.session.user) return res.redirect('/login');
+app.post('/suggestions/new', isAuth, async (req, res) => {
     const { title, message } = req.body;
     try {
         const newThread = await pool.query(
@@ -1580,8 +1803,7 @@ app.post('/suggestions/new', async (req, res) => {
 });
 
 // POST: Send message inside an existing thread
-app.post('/suggestions/reply', async (req, res) => {
-    if (!req.session.user) return res.redirect('/login');
+app.post('/suggestions/reply', isAuth, async (req, res) => {
     const { thread_id, message } = req.body;
     try {
         // Verify thread is Open and owned by the user
@@ -1610,8 +1832,7 @@ app.post('/suggestions/reply', async (req, res) => {
 // ==========================================
 
 // GET: View all active student threads
-app.get('/admin/suggestions', async (req, res) => {
-    if (!req.session.user || !req.session.user.is_admin) return res.redirect('/login');
+app.get('/admin/suggestions', isAdmin, async (req, res) => {
     const activeThreadId = req.query.threadId;
 
     try {
@@ -1656,8 +1877,7 @@ app.get('/admin/suggestions', async (req, res) => {
 });
 
 // POST: Admin sends a reply
-app.post('/admin/suggestions/reply', async (req, res) => {
-    if (!req.session.user || !req.session.user.is_admin) return res.redirect('/login');
+app.post('/admin/suggestions/reply', isAdmin, async (req, res) => {
     const { thread_id, message } = req.body;
     try {
         await pool.query(
@@ -1672,8 +1892,7 @@ app.post('/admin/suggestions/reply', async (req, res) => {
 });
 
 // POST: Admin updates the status (Close/Reopen Chat)
-app.post('/admin/suggestions/status', async (req, res) => {
-    if (!req.session.user || !req.session.user.is_admin) return res.redirect('/login');
+app.post('/admin/suggestions/status', isAdmin, async (req, res) => {
     const { thread_id, status } = req.body;
     try {
         await pool.query(
@@ -1802,7 +2021,7 @@ app.post('/admin/students/toggle-status/:id', isAdmin, async (req, res) => {
 });
 // --- ADMIN DAILY CHALLENGE ROUTES ---
 
-app.get('/admin/daily', async (req, res) => {
+app.get('/admin/daily', isAdmin, async (req, res) => {
     try {
         // Use 'pool' instead of 'db'
         const leaderboard = await pool.query(
@@ -1828,11 +2047,10 @@ app.get('/admin/daily', async (req, res) => {
     }
 });
 
-app.post('/admin/add-daily-batch', async (req, res) => {
+app.post('/admin/add-daily-batch', isAdmin, async (req, res) => {
     const questions = req.body.questions;
 
     try {
-        // Find the furthest date currently scheduled
         const lastDateRes = await pool.query('SELECT MAX(date_scheduled) as max_date FROM daily_questions');
         
         let nextDate;
@@ -1840,20 +2058,30 @@ app.post('/admin/add-daily-batch', async (req, res) => {
             nextDate = new Date(lastDateRes.rows[0].max_date);
             nextDate.setDate(nextDate.getDate() + 1);
         } else {
-            // Start from today if no questions exist
             nextDate = new Date();
         }
         
         const dateStr = nextDate.toISOString().split('T')[0];
 
-        // Insert 10 questions
-        for (let q of questions) {
-            await pool.query(
-                `INSERT INTO daily_questions 
-                (question_text, option_a, option_b, option_c, option_d, correct_option, explanation, date_scheduled) 
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-                [q.text, q.a, q.b, q.c, q.d, q.correct, q.explanation || '', dateStr]
-            );
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            
+            for (const q of questions) {
+                await client.query(
+                    `INSERT INTO daily_questions 
+                    (question_text, option_a, option_b, option_c, option_d, correct_option, explanation, date_scheduled) 
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                    [q.text, q.a, q.b, q.c, q.d, q.correct, q.explanation || '', dateStr]
+                );
+            }
+            
+            await client.query('COMMIT');
+        } catch (err) {
+            await client.query('ROLLBACK');
+            throw err;
+        } finally {
+            client.release();
         }
 
         res.redirect('/admin/daily?success=true');
@@ -1863,44 +2091,51 @@ app.post('/admin/add-daily-batch', async (req, res) => {
     }
 });
 
-app.post('/admin/bulk-daily', async (req, res) => {
+app.post('/admin/bulk-daily', isAdmin, async (req, res) => {
     try {
-        const rawData = JSON.parse(req.body.jsonData); // Parse the pasted JSON
+        const rawData = JSON.parse(req.body.jsonData);
         if (!Array.isArray(rawData)) throw new Error("Data must be an array");
 
-        // 1. Find the last scheduled date to start from
         const lastDateRes = await pool.query('SELECT MAX(date_scheduled) as max_date FROM daily_questions');
         let nextDate = lastDateRes.rows[0].max_date ? new Date(lastDateRes.rows[0].max_date) : new Date();
         
-        // Find how many questions are already on that last date to see if it's "full" (10 questions)
         const lastDateCount = await pool.query('SELECT COUNT(*) FROM daily_questions WHERE date_scheduled = $1', [nextDate]);
         let currentDayCount = parseInt(lastDateCount.rows[0].count) || 0;
 
-        // If the last day is already full or in the past, move to the next day
         if (currentDayCount >= 10 || nextDate < new Date().setHours(0,0,0,0)) {
             nextDate.setDate(nextDate.getDate() + 1);
             currentDayCount = 0;
         }
 
-        // 2. Loop through all questions and batch them
-        for (let i = 0; i < rawData.length; i++) {
-            const q = rawData[i];
-            const dateStr = nextDate.toISOString().split('T')[0];
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            
+            for (let i = 0; i < rawData.length; i++) {
+                const q = rawData[i];
+                const dateStr = nextDate.toISOString().split('T')[0];
 
-            await pool.query(
-                `INSERT INTO daily_questions 
-                (question_text, option_a, option_b, option_c, option_d, correct_option, explanation, date_scheduled) 
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-                [q.text, q.a, q.b, q.c, q.d, q.correct, q.explanation || '', dateStr]
-            );
+                await client.query(
+                    `INSERT INTO daily_questions 
+                    (question_text, option_a, option_b, option_c, option_d, correct_option, explanation, date_scheduled) 
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                    [q.text, q.a, q.b, q.c, q.d, q.correct, q.explanation || '', dateStr]
+                );
 
-            currentDayCount++;
+                currentDayCount++;
 
-            // Every 10 questions, move the date forward
-            if (currentDayCount >= 10) {
-                nextDate.setDate(nextDate.getDate() + 1);
-                currentDayCount = 0;
+                if (currentDayCount >= 10) {
+                    nextDate.setDate(nextDate.getDate() + 1);
+                    currentDayCount = 0;
+                }
             }
+            
+            await client.query('COMMIT');
+        } catch (err) {
+            await client.query('ROLLBACK');
+            throw err;
+        } finally {
+            client.release();
         }
 
         res.redirect('/admin/daily?bulkSuccess=true');
@@ -1910,10 +2145,8 @@ app.post('/admin/bulk-daily', async (req, res) => {
     }
 });
 
-app.get('/daily-challenge', async (req, res) => {
+app.get('/daily-challenge', isAuth, async (req, res) => {
     const sessionUser = req.session.user;
-
-    if (!sessionUser) return res.redirect('/login'); 
 
     const userId = sessionUser.id; 
     try {
@@ -1957,10 +2190,8 @@ app.get('/daily-challenge', async (req, res) => {
         res.status(500).send("Arena maintenance.");
     }
 });
-app.post('/api/submit-arena', async (req, res) => {
+app.post('/api/submit-arena', isAuth, async (req, res) => {
     const sessionUser = req.session.user;
-
-    if (!sessionUser) return res.status(401).json({ error: "Please log in" });
 
     const { score } = req.body;
     const userId = sessionUser.id;
@@ -2198,7 +2429,7 @@ app.get('/join', async (req, res) => {
     }
 });
 
-app.get('/admin/community', async (req, res) => {
+app.get('/admin/community', isAdmin, async (req, res) => {
     try {
         // Fetch all student leads and join with school names
         const leadsResult = await pool.query(`
@@ -2222,7 +2453,7 @@ app.get('/admin/community', async (req, res) => {
     }
 });
 
-app.post('/admin/add-school', async (req, res) => {
+app.post('/admin/add-school', isAdmin, async (req, res) => {
     const { schoolName, slug, groupLink } = req.body;
     try {
         await pool.query(
@@ -2236,22 +2467,8 @@ app.post('/admin/add-school', async (req, res) => {
     }
 });
 
-// POST: Admin add a new school link
-app.post('/admin/add-school', async (req, res) => {
-    const { schoolName, slug, groupLink } = req.body;
-    try {
-        await pool.query(
-            'INSERT INTO school_groups (school_name, slug, group_link) VALUES ($1, $2, $3)',
-            [schoolName, slug.toUpperCase(), groupLink]
-        );
-        res.redirect('/admin/community');
-    } catch (err) {
-        res.status(500).send("Error adding school");
-    }
-});
-
 // GET: Export Leads as CSV (Formatted for Alite's Contact List)
-app.get('/admin/export-leads', async (req, res) => {
+app.get('/admin/export-leads', isAdmin, async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT l.full_name, COALESCE(s.slug, 'GEN') as slug 
@@ -2291,30 +2508,31 @@ END:VCARD`;
 
     res.send(vcardContent);
 });
-app.get('/ai-quiz', (req, res) => {
-    // Passes the logged-in user profile metrics and public gateway keys to the EJS template
+app.get('/ai-quiz', isAuth, (req, res) => {
     res.render('ai-quiz', { 
-        user: req.user, 
+        user: req.session.user, 
         paystack_key: process.env.PAYSTACK_PUBLIC_KEY 
     });
 });
 
 
-app.post('/upload-pdf', async (req, res) => {
+app.post('/upload-pdf', upload.single('lecture_note'), async (req, res) => {
     try {
-        // Assuming you are using multer and req.file.path exists
-        const filePath = req.file.path; 
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: "No file uploaded." });
+        }
 
-        pdfToText.pdfToText(filePath, (err, text) => {
+        // memoryStorage gives us req.file.buffer, not a file path
+        const pdfBuffer = req.file.buffer;
+
+        pdfToText.pdfToText(pdfBuffer, (err, text) => {
             if (err) {
                 console.error("PDF Parsing Error:", err);
                 return res.status(500).json({ success: false, message: "Failed to parse PDF." });
             }
 
-            // 'text' now holds the raw string data. Send it to your AI generator here.
             console.log("Extracted text successfully.");
-            
-            // Your AI generation logic here...
+            res.json({ success: true, text: text });
         });
 
     } catch (err) {
@@ -2533,7 +2751,7 @@ app.post('/save-ai-quiz-results', isStudent, async (req, res) => {
         const { quizTitle, totalQuestions, correctAnswers, scorePercentage } = req.body;
         
         // Safety validation fallback check handling session tracking formats stably
-        const userId = req.user ? req.user.id : (req.session.user ? req.session.user.id : null);
+        const userId = req.session.user ? req.session.user.id : null;
         
         if (!userId) {
             return res.status(401).json({ success: false, message: "Unauthorized account context profile tracking session." });
@@ -2565,18 +2783,9 @@ app.post('/save-ai-quiz-results', isStudent, async (req, res) => {
 
 
 // 1. Centralized Community Links Configuration
-const knownGroups = {
-    "University of Ibadan": "https://chat.whatsapp.com/FJWqHSNpzyeGGi5XIvKn7c?s=cl&p=a&mlu=4",
-    "UNILAG": "https://chat.whatsapp.com/BE0QEAxTBLVKlcf8B2LAbi?s=cl&p=a&mlu=4",
-    "OAU": "https://chat.whatsapp.com/CZup8KilOPCAb0kKefvShu?s=cl&p=a&mlu=4",
-    "UNIBEN": "https://chat.whatsapp.com/J7eUUxqgjrd9axSaEA8phq?s=cl&p=a&mlu=4",
-    "LEAD CITY": "https://chat.whatsapp.com/DzYwcWKcoQ15GLuaQVzGNq?s=cl&p=a&mlu=4",
-    "FUNAAB": "https://chat.whatsapp.com/FxBGl0rsMhK9h0tgRKeWJw?s=cl&p=a&mlu=4",
-    "UNIZIK": "https://chat.whatsapp.com/DcRijbWvS6g6Yl6AikilFw?s=cl&p=a&mlu=4",
-    "FUTA": "https://chat.whatsapp.com/CMITBltuQas2OGpbRolNSO?s=cl&p=a&mlu=4",
-    "UNILORIN": " https://chat.whatsapp.com/BxTfRLzcbQJ8t1hsCRCqLT?s=cl&p=a&mlu=4",
-};
-const mainCommunityLink = "https://chat.whatsapp.com/Gt7G6pVT7Ed9te41QSxgca";
+// Community WhatsApp links - configure via environment variables
+const knownGroups = JSON.parse(process.env.WHATSAPP_GROUPS || '{}');
+const mainCommunityLink = process.env.WHATSAPP_MAIN_GROUP || '';
 
 // 2. GET Route: Render the Giveaway Form with Dynamic Dropdown
 app.get('/giveaway', (req, res) => {
@@ -3108,6 +3317,86 @@ app.post('/connect/accept', isAuth, async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 });
+
+// ==========================================
+// DEADLINE EMAIL NOTIFICATION SYSTEM
+// ==========================================
+
+// Track which deadlines we've already notified about (in-memory, resets on restart)
+const notifiedDeadlines = new Set();
+
+async function checkDeadlineNotifications() {
+    try {
+        // 1. Find deadlines approaching within 1 hour (and not yet notified)
+        const upcoming = await pool.query(`
+            SELECT d.id, d.title, 
+                   TO_CHAR(d.due_date, 'YYYY-MM-DD') as date_str,
+                   TO_CHAR(d.due_time, 'HH24:MI') as time_str,
+                   u.email, u.fullname
+            FROM deadlines d
+            JOIN users u ON d.user_id = u.id
+            WHERE (d.due_date + d.due_time) > NOW()
+            AND (d.due_date + d.due_time) <= NOW() + INTERVAL '1 hour'
+            AND (d.id = ANY($1::int[])) = FALSE
+        `, [notifiedDeadlines.size > 0 ? Array.from(notifiedDeadlines) : [0]]);
+
+        for (const dl of upcoming.rows) {
+            const dueDateTime = new Date(dl.date_str + 'T' + dl.time_str);
+            const timeLeft = Math.ceil((dueDateTime - new Date()) / 60000);
+
+            await sendNotificationEmail(
+                dl.email,
+                `⏰ Deadline Approaching: ${dl.title}`,
+                `<p>Hi ${dl.fullname},</p>
+                 <p>Your deadline <b>"${dl.title}"</b> is due in <b>${timeLeft} minutes</b>.</p>
+                 <p>Due: ${dl.date_str} at ${dl.time_str}</p>
+                 <p>Stay focused and finish strong!</p>`
+            );
+            notifiedDeadlines.add(dl.id);
+            console.log(`[DEADLINE ALERT] Sent 1-hour warning for "${dl.title}" to ${dl.email}`);
+        }
+
+        // 2. Find deadlines that just expired (within last 5 minutes) and mark as notified
+        const expired = await pool.query(`
+            SELECT d.id, d.title, 
+                   TO_CHAR(d.due_date, 'YYYY-MM-DD') as date_str,
+                   TO_CHAR(d.due_time, 'HH24:MI') as time_str,
+                   u.email, u.fullname
+            FROM deadlines d
+            JOIN users u ON d.user_id = u.id
+            WHERE (d.due_date + d.due_time) <= NOW()
+            AND (d.due_date + d.due_time) > NOW() - INTERVAL '5 minutes'
+            AND (d.id = ANY($1::int[])) = FALSE
+        `, [notifiedDeadlines.size > 0 ? Array.from(notifiedDeadlines) : [0]]);
+
+        for (const dl of expired.rows) {
+            await sendNotificationEmail(
+                dl.email,
+                `🚨 Deadline Reached: ${dl.title}`,
+                `<p>Hi ${dl.fullname},</p>
+                 <p>Your deadline <b>"${dl.title}"</b> has <b>just passed</b>.</p>
+                 <p>Due: ${dl.date_str} at ${dl.time_str}</p>
+                 <p>If you haven't completed it yet, consider updating your tracker with a new target.</p>`
+            );
+            notifiedDeadlines.add(dl.id);
+            console.log(`[DEADLINE ALERT] Sent expiry notification for "${dl.title}" to ${dl.email}`);
+        }
+
+        // Clean up old IDs from the set (older than 7 days) to prevent memory growth
+        if (notifiedDeadlines.size > 1000) {
+            notifiedDeadlines.clear();
+        }
+
+    } catch (err) {
+        console.error("[DEADLINE CHECKER ERROR]:", err.message);
+    }
+}
+
+// Run the deadline checker every 5 minutes
+setInterval(checkDeadlineNotifications, 5 * 60 * 1000);
+// Also run once on startup (after a short delay to let the server fully start)
+setTimeout(checkDeadlineNotifications, 10000);
+
 const config = {
     maxDuration: 60,
 };

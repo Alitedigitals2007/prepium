@@ -642,13 +642,11 @@
                             <a href="/admin/questions/edit/<%= q.id %>" class="btn-edit">
                                 <i class="fas fa-pen"></i> Edit
                             </a>
-                            <a
-                                href="/admin/questions/delete/<%= q.id %>"
-                                class="btn-delete"
-                                onclick="return confirm('Permanently delete this question?')"
-                            >
-                                <i class="fas fa-trash"></i> Delete
-                            </a>
+                            <form action="/admin/questions/delete/<%= q.id %>/<%= sub.id %>" method="POST" style="display:inline" onsubmit="return confirm('Permanently delete this question?')">
+                                <button type="submit" class="btn-delete">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </form>
                         </div>
                     </div>
 

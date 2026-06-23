@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Prepium | Advanced Premium Dashboard</title>
     
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0062ff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://js.paystack.co/v1/inline.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -310,6 +314,126 @@
         .navigator-row-item div span { font-size: 0.72rem; color: var(--text-sub); }
         body.crazy-active .navigator-row-item div span { color: #94a3b8; }
         .navigator-row-item.nav-locked { opacity: 0.55; }
+
+        /* Floating Deadline Tracker Button */
+        .deadline-fab {
+            position: fixed; bottom: 100px; right: 20px;
+            width: 56px; height: 56px; border-radius: 18px;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white; border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem; z-index: 1001;
+            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.35);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .deadline-fab:active { transform: scale(0.92); }
+        .deadline-fab .fab-badge {
+            position: absolute; top: -4px; right: -4px;
+            background: #1e1b4b; color: white;
+            font-size: 0.6rem; font-weight: 800;
+            width: 20px; height: 20px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            border: 2px solid white;
+        }
+
+        /* Deadline Overlay Sheet */
+        .deadline-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            z-index: 9998; display: flex; justify-content: center; align-items: flex-end;
+            opacity: 0; pointer-events: none; transition: opacity 0.35s ease;
+        }
+        .deadline-overlay.show { opacity: 1; pointer-events: auto; }
+
+        .deadline-sheet {
+            background: white; width: 100%; max-width: 430px;
+            border-radius: 28px 28px 0 0; padding: 0;
+            max-height: 85vh; overflow: hidden;
+            transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex; flex-direction: column;
+        }
+        .deadline-overlay.show .deadline-sheet { transform: translateY(0); }
+
+        .sheet-handle {
+            width: 40px; height: 4px; border-radius: 4px;
+            background: #e2e8f0; margin: 12px auto 0;
+        }
+        .sheet-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 20px 12px; border-bottom: 1px solid #f1f5f9;
+        }
+        .sheet-header h3 { font-size: 1.05rem; font-weight: 800; margin: 0; }
+        .sheet-close {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: #f1f5f9; border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            color: #64748b; font-size: 0.85rem;
+        }
+
+        .sheet-body {
+            overflow-y: auto; padding: 16px 20px 24px;
+            flex: 1; scrollbar-width: none;
+        }
+        .sheet-body::-webkit-scrollbar { display: none; }
+
+        /* Quick Add Form inside overlay */
+        .quick-add-form {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+            margin-bottom: 20px; padding: 16px;
+            background: #f8fafc; border-radius: 20px; border: 1px solid #eef2f6;
+        }
+        .quick-add-form .qa-group { margin-bottom: 0; }
+        .quick-add-form .qa-group.full { grid-column: span 2; }
+        .quick-add-form label {
+            display: block; font-size: 0.6rem; font-weight: 800;
+            color: #a3aed0; text-transform: uppercase; margin-bottom: 4px;
+        }
+        .quick-add-form input {
+            width: 100%; padding: 10px 12px; border-radius: 12px;
+            border: 1px solid #eef2f6; font-family: inherit;
+            font-weight: 600; font-size: 0.8rem; background: white;
+        }
+        .quick-add-form input:focus { border-color: var(--brand); outline: none; }
+        .quick-add-form button {
+            grid-column: span 2; padding: 12px; border-radius: 14px;
+            background: var(--brand); color: white; border: none;
+            font-weight: 800; font-size: 0.82rem; cursor: pointer;
+            margin-top: 4px;
+        }
+
+        /* Mini Deadline Cards in overlay */
+        .mini-deadline-card {
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px; background: white; border: 1px solid #eef2f6;
+            border-radius: 18px; margin-bottom: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.01);
+        }
+        .mini-deadline-card.expired {
+            border-color: #fff1f0; background: #fffafb;
+        }
+        .mini-avatar {
+            width: 40px; height: 40px; border-radius: 12px;
+            background: #fef2f2; color: #ef4444;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 0.95rem; flex-shrink: 0;
+        }
+        .mini-card-content { flex: 1; min-width: 0; }
+        .mini-card-title { font-size: 0.85rem; font-weight: 700; margin: 0 0 3px; }
+        .mini-card-meta { font-size: 0.65rem; color: #a3aed0; font-weight: 600; }
+        .mini-countdown {
+            display: inline-flex; align-items: center; gap: 4px;
+            background: #eef2f6; padding: 4px 10px; border-radius: 8px;
+            font-size: 0.7rem; font-weight: 800;
+        }
+        .mini-countdown.urgent { background: #fef2f2; color: #ef4444; }
+        .mini-countdown.expired { background: #ef4444; color: white; }
+        .mini-delete {
+            background: none; border: none; color: #cbd5e1;
+            padding: 8px; font-size: 0.85rem; cursor: pointer;
+        }
+        .mini-delete:hover { color: #ef4444; }
+        .mini-empty { text-align: center; padding: 30px 0; color: #a3aed0; }
+        .mini-empty i { font-size: 2rem; margin-bottom: 8px; display: block; opacity: 0.3; }
     </style>
 </head>
 <body>
@@ -426,6 +550,48 @@
             </div>
         </div>
 
+        <!-- Floating Deadline Tracker Button -->
+        <% if (user.has_paid) { %>
+        <button class="deadline-fab" id="deadline-fab" onclick="openDeadlineOverlay()">
+            <i class="fas fa-hourglass-half"></i>
+            <% if (typeof upcomingDeadlines !== 'undefined' && upcomingDeadlines > 0) { %>
+            <div class="fab-badge"><%= upcomingDeadlines %></div>
+            <% } %>
+        </button>
+        <% } %>
+
+        <!-- Deadline Tracker Overlay -->
+        <div class="deadline-overlay" id="deadline-overlay">
+            <div class="deadline-sheet">
+                <div class="sheet-handle"></div>
+                <div class="sheet-header">
+                    <h3><i class="fas fa-hourglass-half" style="color:#ef4444;"></i> Arena Tracker</h3>
+                    <button class="sheet-close" onclick="closeDeadlineOverlay()"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="sheet-body">
+                    <form class="quick-add-form" id="quick-deadline-form" onsubmit="submitQuickDeadline(event)">
+                        <div class="qa-group full">
+                            <label>Task Title</label>
+                            <input type="text" name="title" required placeholder="e.g. GST 101 Assignment" maxlength="40">
+                        </div>
+                        <div class="qa-group">
+                            <label>Date</label>
+                            <input type="date" name="due_date" id="qa-date" required>
+                        </div>
+                        <div class="qa-group">
+                            <label>Time</label>
+                            <input type="time" name="due_time" id="qa-time" required>
+                        </div>
+                        <button type="submit"><i class="fas fa-plus"></i> Add Target</button>
+                    </form>
+
+                    <div id="overlay-deadline-list">
+                        <div class="mini-empty"><i class="fas fa-hourglass-end"></i><p>Loading...</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <nav class="bottom-nav">
             <a href="/dashboard" class="nav-link active">
                 <i class="fas fa-home"></i>
@@ -437,7 +603,9 @@
             </a>
             <a href="/setup-test" class="nav-center-btn"><i class="fas fa-plus"></i></a>
             <a href="/notifications" class="nav-link" id="trigger-notifications">
-                <div class="notification-dot">3</div>
+                <% if (unreadNotifs > 0) { %>
+                <div class="notification-dot"><%= unreadNotifs %></div>
+                <% } %>
                 <i class="fas fa-bell"></i>
                 <span>Notification</span>
             </a>
@@ -542,6 +710,135 @@
             });
             handler.openIframe();
         }
+
+        // Deadline Overlay Functions
+        function openDeadlineOverlay() {
+            const overlay = document.getElementById('deadline-overlay');
+            overlay.classList.add('show');
+            loadOverlayDeadlines();
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('qa-date').value = today;
+            document.getElementById('qa-time').value = '12:00';
+        }
+
+        function closeDeadlineOverlay() {
+            document.getElementById('deadline-overlay').classList.remove('show');
+        }
+
+        document.getElementById('deadline-overlay').addEventListener('click', function(e) {
+            if (e.target === this) closeDeadlineOverlay();
+        });
+
+        async function loadOverlayDeadlines() {
+            try {
+                const res = await fetch('/api/deadlines');
+                const data = await res.json();
+                const list = document.getElementById('overlay-deadline-list');
+
+                if (!data.deadlines || data.deadlines.length === 0) {
+                    list.innerHTML = '<div class="mini-empty"><i class="fas fa-hourglass-end"></i><p>No active targets</p></div>';
+                    return;
+                }
+
+                list.innerHTML = data.deadlines.map(dl => {
+                    const target = new Date(dl.date_str + 'T' + dl.time_str).getTime();
+                    const now = Date.now();
+                    const diff = target - now;
+                    const isExpired = diff <= 0;
+
+                    let countdownHtml = '';
+                    if (isExpired) {
+                        countdownHtml = '<span class="mini-countdown expired"><i class="fas fa-clock"></i> Expired</span>';
+                    } else {
+                        const d = Math.floor(diff / 86400000);
+                        const h = Math.floor((diff % 86400000) / 3600000);
+                        const m = Math.floor((diff % 3600000) / 60000);
+                        const text = d > 0 ? `${d}d ${h}h ${m}m` : `${h}h ${m}m`;
+                        const urgent = diff < 3600000;
+                        countdownHtml = `<span class="mini-countdown ${urgent ? 'urgent' : ''}"><i class="fas fa-clock"></i> ${text}</span>`;
+                    }
+
+                    return `
+                        <div class="mini-deadline-card ${isExpired ? 'expired' : ''}" data-id="${dl.id}">
+                            <div class="mini-avatar">${dl.title.charAt(0).toUpperCase()}</div>
+                            <div class="mini-card-content">
+                                <p class="mini-card-title">${dl.title}</p>
+                                <div class="mini-card-meta">${dl.date_str} • ${dl.time_str}</div>
+                                ${countdownHtml}
+                            </div>
+                            <button class="mini-delete" onclick="deleteOverlayDeadline(${dl.id})" title="Delete">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+
+                // Start live countdowns in overlay
+                startOverlayTimers();
+            } catch (err) {
+                console.error('Failed to load deadlines:', err);
+            }
+        }
+
+        function startOverlayTimers() {
+            setInterval(() => {
+                const cards = document.querySelectorAll('.mini-deadline-card');
+                const now = Date.now();
+                cards.forEach(card => {
+                    const meta = card.querySelector('.mini-card-meta').textContent;
+                    const parts = meta.split(' • ');
+                    const target = new Date(parts[0] + 'T' + parts[1]).getTime();
+                    const diff = target - now;
+                    const countdown = card.querySelector('.mini-countdown');
+                    if (!countdown) return;
+
+                    if (diff <= 0) {
+                        countdown.className = 'mini-countdown expired';
+                        countdown.innerHTML = '<i class="fas fa-clock"></i> Expired';
+                        card.classList.add('expired');
+                        return;
+                    }
+                    const d = Math.floor(diff / 86400000);
+                    const h = Math.floor((diff % 86400000) / 3600000);
+                    const m = Math.floor((diff % 3600000) / 60000);
+                    const text = d > 0 ? `${d}d ${h}h ${m}m` : `${h}h ${m}m`;
+                    const urgent = diff < 3600000;
+                    countdown.className = `mini-countdown ${urgent ? 'urgent' : ''}`;
+                    countdown.innerHTML = `<i class="fas fa-clock"></i> ${text}`;
+                });
+            }, 60000);
+        }
+
+        async function submitQuickDeadline(e) {
+            e.preventDefault();
+            const form = e.target;
+            const data = Object.fromEntries(new FormData(form));
+
+            try {
+                const res = await fetch('/deadlines/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams(data)
+                });
+                if (res.ok) {
+                    form.reset();
+                    loadOverlayDeadlines();
+                }
+            } catch (err) {
+                console.error('Failed to add deadline:', err);
+            }
+        }
+
+        async function deleteOverlayDeadline(id) {
+            if (!confirm('Remove this target?')) return;
+            try {
+                await fetch(`/deadlines/delete/${id}`, { method: 'POST' });
+                loadOverlayDeadlines();
+            } catch (err) {
+                console.error('Failed to delete:', err);
+            }
+        }
     </script>
+    <%- include('partials/pomodoro-overlay') %>
 </body>
 </html>
