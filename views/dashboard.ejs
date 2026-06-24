@@ -344,7 +344,7 @@
 
         /* Floating Deadline Tracker Button */
         .deadline-fab {
-            position: fixed; bottom: 100px; right: 20px;
+            position: fixed; bottom: 100px; left: 20px;
             width: 56px; height: 56px; border-radius: 18px;
             background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
             color: white; border: none; cursor: pointer;
@@ -631,7 +631,7 @@
             <span>Stats</span>
         </a>
         <a href="/setup-test" class="nav-center-btn"><i class="fas fa-plus"></i></a>
-        <a href="/notifications" class="nav-link" id="trigger-notifications">
+        <a href="/notifications" class="nav-link">
             <% if (unreadNotifs > 0) { %>
             <div class="notification-dot"><%= unreadNotifs %></div>
             <% } %>
@@ -714,15 +714,7 @@
         });
 
         const overlay = document.getElementById('navigator-overlay');
-        const notifLink = document.getElementById('trigger-notifications');
        
-        notifLink.addEventListener('click', (e) => { 
-            e.preventDefault(); 
-            overlay.classList.add('show'); 
-            const badge = notifLink.querySelector('.notification-dot');
-            if (badge) badge.style.display = 'none';
-        });
-        
         document.getElementById('close-navigator').addEventListener('click', () => { overlay.classList.remove('show'); });
         overlay.addEventListener('click', (e) => { if(e.target === overlay) overlay.classList.remove('show'); });
 

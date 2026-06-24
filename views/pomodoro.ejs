@@ -13,184 +13,470 @@
             --brand-gradient: linear-gradient(135deg, #0062ff 0%, #0045b5 100%);
             --bg: #f8fafc; 
             --text-dark: #0b1437; 
-            --text-sub: #a3aed0;
-            --border: #eef2f6;
+            --text-sub: #64748b;
+            --border: #e2e8f0;
+            --surface: #ffffff;
         }
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; transition: all 0.2s ease; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: var(--bg); margin: 0; color: var(--text-dark); 
+            background: radial-gradient(circle at top right, #eff6ff 0%, #dbeafe 40%, #e2e8f0 100%);
+            background-attachment: fixed;
+            margin: 0; color: var(--text-dark); 
             display: flex; justify-content: center; overflow-x: hidden;
+            min-height: 100vh;
         }
 
         .app-shell { 
             width: 100%; max-width: 430px; 
-            background: #ffffff; min-height: 100vh; 
+            background: rgba(248, 250, 252, 0.6); 
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            min-height: 100vh; 
             position: relative; display: flex; flex-direction: column;
-            box-shadow: 0 0 40px rgba(0,0,0,0.02);
+            border-left: 1px solid rgba(255,255,255,0.7);
+            border-right: 1px solid rgba(255,255,255,0.7);
             padding-bottom: 110px;
         }
 
-        /* Header matching Arena style */
-        .header-nav { padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; background: white; }
+        /* Header */
+        .header-nav { 
+            padding: 1.5rem 1.5rem 1rem; 
+            display: flex; justify-content: space-between; align-items: center; 
+            background: rgba(255,255,255,0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(255,255,255,0.7);
+            position: sticky; top: 0; z-index: 100;
+        }
         .logo { font-weight: 800; font-size: 1.2rem; letter-spacing: -1px; color: var(--text-dark); text-decoration: none; }
         .logo span { color: var(--brand); }
 
-        /* Timer Card */
-        .focus-card {
-            margin: 0.5rem 1.5rem 1rem; background: white; border-radius: 28px; padding: 1.8rem;
-            border: 1px solid var(--border); text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+        .premium-badge {
+            background: linear-gradient(135deg, #0062ff, #4f46e5);
+            padding: 6px 14px; border-radius: 10px; 
+            color: white; font-weight: 800; font-size: 0.65rem;
+            letter-spacing: 0.5px;
         }
 
+        /* Session Stats Row */
+        .stats-row {
+            display: flex; gap: 10px; padding: 0.75rem 1.5rem;
+        }
+        .stat-chip {
+            flex: 1; background: rgba(255,255,255,0.7);
+            border: 1px solid rgba(255,255,255,0.8);
+            border-radius: 16px; padding: 12px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+        }
+        .stat-chip .stat-num {
+            font-size: 1.4rem; font-weight: 800; color: var(--brand);
+            display: block; line-height: 1;
+        }
+        .stat-chip .stat-label {
+            font-size: 0.6rem; font-weight: 700; color: var(--text-sub);
+            text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px;
+            display: block;
+        }
+
+        /* Circular Timer */
+        .timer-section {
+            padding: 1rem 1.5rem;
+            display: flex; justify-content: center;
+        }
+        .timer-ring-container {
+            position: relative;
+            width: 260px; height: 260px;
+        }
+        .timer-ring {
+            width: 100%; height: 100%;
+            transform: rotate(-90deg);
+        }
+        .timer-ring-bg {
+            fill: none;
+            stroke: #e2e8f0;
+            stroke-width: 8;
+        }
+        .timer-ring-progress {
+            fill: none;
+            stroke: url(#timerGradient);
+            stroke-width: 8;
+            stroke-linecap: round;
+            stroke-dasharray: 754;
+            stroke-dashoffset: 0;
+            transition: stroke-dashoffset 1s linear;
+        }
+        .timer-center {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        .timer-display {
+            font-size: 3.5rem; font-weight: 800; color: var(--text-dark);
+            letter-spacing: -2px; line-height: 1;
+        }
+        .timer-label {
+            font-size: 0.7rem; font-weight: 700; color: var(--text-sub);
+            text-transform: uppercase; letter-spacing: 1px; margin-top: 4px;
+        }
+        .timer-mode-indicator {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: rgba(0, 98, 255, 0.08);
+            padding: 4px 12px; border-radius: 20px;
+            font-size: 0.65rem; font-weight: 700; color: var(--brand);
+            margin-top: 8px;
+        }
+
+        /* Mode Tabs */
         .mode-tabs {
-            background: #f1f5f9; padding: 5px; border-radius: 14px;
-            display: flex; gap: 4px; margin-bottom: 1.5rem;
+            display: flex; gap: 8px; padding: 0 1.5rem; margin-bottom: 1rem;
         }
         .mode-btn {
-            flex: 1; padding: 8px; border-radius: 10px; border: none;
-            font-weight: 700; font-size: 0.75rem; cursor: pointer;
-            background: transparent; color: var(--text-sub);
+            flex: 1; padding: 12px 8px; border-radius: 14px; border: none;
+            font-weight: 700; font-size: 0.7rem; cursor: pointer;
+            background: rgba(255,255,255,0.7); color: var(--text-sub);
+            border: 1px solid rgba(255,255,255,0.8);
+            transition: all 0.3s ease;
+            text-transform: uppercase; letter-spacing: 0.5px;
         }
-        .mode-btn.active { background: white; color: var(--brand); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-
-        .timer-display {
-            font-size: 4.8rem; font-weight: 800; color: var(--text-dark);
-            letter-spacing: -3px; margin: 0.5rem 0; line-height: 1;
+        .mode-btn.active { 
+            background: var(--brand-gradient); color: white; 
+            box-shadow: 0 4px 16px rgba(0, 98, 255, 0.25);
+            border-color: transparent;
         }
 
-        .controls { display: flex; gap: 10px; justify-content: center; margin-top: 1.5rem; }
+        /* Controls */
+        .controls { 
+            display: flex; gap: 12px; justify-content: center; 
+            padding: 0 1.5rem; margin-bottom: 1.5rem;
+        }
         .btn-action {
-            padding: 14px; border-radius: 16px; border: none;
+            padding: 16px; border-radius: 18px; border: none;
             font-weight: 800; font-size: 0.9rem; cursor: pointer;
+            transition: all 0.3s ease;
         }
-        .btn-play { flex: 2; background: var(--brand-gradient); color: white; box-shadow: 0 8px 20px rgba(0, 98, 255, 0.2); }
-        .btn-reset { flex: 0.8; background: #f1f5f9; color: var(--text-dark); }
+        .btn-play { 
+            flex: 2; background: var(--brand-gradient); color: white; 
+            box-shadow: 0 8px 24px rgba(0, 98, 255, 0.25);
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .btn-play:active { transform: scale(0.97); }
+        .btn-reset { 
+            flex: 0.8; background: rgba(255,255,255,0.8); color: var(--text-dark); 
+            border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .btn-skip {
+            flex: 0.8; background: rgba(255,255,255,0.8); color: var(--brand);
+            border: 1px solid rgba(0, 98, 255, 0.15);
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* Motivation Card */
+        .motivation-card {
+            margin: 0 1.5rem 1.5rem; padding: 18px 20px;
+            background: linear-gradient(135deg, rgba(0, 98, 255, 0.06) 0%, rgba(79, 70, 229, 0.06) 100%);
+            border: 1px solid rgba(0, 98, 255, 0.08);
+            border-radius: 18px;
+            display: flex; align-items: center; gap: 14px;
+        }
+        .motivation-icon {
+            width: 40px; height: 40px; border-radius: 12px;
+            background: rgba(0, 98, 255, 0.1);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem; color: var(--brand); flex-shrink: 0;
+        }
+        .motivation-text {
+            font-size: 0.78rem; color: var(--text-sub); font-weight: 600; line-height: 1.4;
+        }
+
+        /* Volume Control */
+        .volume-section {
+            padding: 0 1.5rem; margin-bottom: 1.5rem;
+        }
+        .volume-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .volume-title {
+            font-size: 0.75rem; font-weight: 700; color: var(--text-dark);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .volume-value {
+            font-size: 0.7rem; font-weight: 700; color: var(--brand);
+            background: rgba(0, 98, 255, 0.08);
+            padding: 3px 10px; border-radius: 8px;
+        }
+        .volume-slider {
+            width: 100%; height: 6px; border-radius: 3px;
+            -webkit-appearance: none; appearance: none;
+            background: #e2e8f0; outline: none;
+        }
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 20px; height: 20px; border-radius: 50%;
+            background: var(--brand-gradient);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 98, 255, 0.3);
+        }
 
         /* Soundscape Engine */
         .sound-engine { padding: 0 1.5rem; }
-        .section-title { font-weight: 800; font-size: 0.85rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; color: var(--text-dark); }
+        .section-title { 
+            font-weight: 800; font-size: 0.8rem; margin-bottom: 12px; 
+            display: flex; align-items: center; gap: 8px; color: var(--text-dark); 
+        }
+        .section-title i { color: var(--brand); }
         
         .sound-grid {
             display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
         }
         .sound-item {
-            padding: 15px; background: white; border: 1px solid var(--border);
-            border-radius: 20px; display: flex; align-items: center; gap: 12px; cursor: pointer;
-            position: relative; overflow: hidden;
+            padding: 14px; 
+            background: rgba(255,255,255,0.7);
+            border: 1px solid rgba(255,255,255,0.8);
+            border-radius: 18px; display: flex; align-items: center; gap: 12px; 
+            cursor: pointer; position: relative; overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+            transition: all 0.3s ease;
         }
-        .sound-item i { font-size: 1.1rem; color: var(--text-sub); width: 20px; text-align: center; }
-        .sound-item span { font-size: 0.72rem; font-weight: 700; color: var(--text-dark); line-height: 1.2; }
+        .sound-item i { 
+            font-size: 1rem; color: var(--text-sub); 
+            width: 20px; text-align: center; transition: color 0.3s;
+        }
+        .sound-item span { 
+            font-size: 0.68rem; font-weight: 700; color: var(--text-dark); 
+            line-height: 1.2; 
+        }
         
-        .sound-item.active { border-color: var(--brand); background: #eff6ff; }
+        .sound-item.active { 
+            border-color: var(--brand); 
+            background: rgba(0, 98, 255, 0.06);
+            box-shadow: 0 4px 16px rgba(0, 98, 255, 0.1);
+        }
         .sound-item.active i { color: var(--brand); }
         
         .active-dot {
-            position: absolute; top: 8px; right: 8px; width: 5px; height: 5px;
+            position: absolute; top: 8px; right: 8px; width: 6px; height: 6px;
             background: var(--brand); border-radius: 50%; display: none;
+            box-shadow: 0 0 6px rgba(0, 98, 255, 0.4);
         }
         .sound-item.active .active-dot { display: block; }
+
+        /* Session History */
+        .history-section { padding: 0 1.5rem; margin-top: 1.5rem; }
+        .history-grid {
+            display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;
+        }
+        .history-day {
+            aspect-ratio: 1; border-radius: 10px;
+            background: rgba(255,255,255,0.7);
+            border: 1px solid rgba(255,255,255,0.8);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            font-size: 0.55rem; font-weight: 700; color: var(--text-sub);
+        }
+        .history-day.completed {
+            background: rgba(0, 98, 255, 0.08);
+            border-color: rgba(0, 98, 255, 0.15);
+            color: var(--brand);
+        }
+        .history-day.today {
+            border-color: var(--brand);
+            box-shadow: 0 0 0 2px rgba(0, 98, 255, 0.15);
+        }
+        .history-day .day-count {
+            font-size: 0.85rem; font-weight: 800;
+        }
 
         /* Navigation */
         .bottom-nav {
             position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            width: calc(100% - 40px); max-width: 390px; background: #0b1437; height: 70px; 
-            border-radius: 24px; display: flex; justify-content: space-around; 
+            width: calc(100% - 40px); max-width: 390px; 
+            background: rgba(255, 255, 255, 0.85); 
+            backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+            height: 70px; border-radius: 24px; 
+            display: flex; justify-content: space-around; 
             align-items: center; z-index: 1000;
+            border: 1px solid rgba(255,255,255,0.7);
+            box-shadow: 0 8px 32px rgba(0, 98, 255, 0.08);
         }
-        .nav-link { text-decoration: none; color: #a3aed0; text-align: center; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
-        .nav-link i { font-size: 1.2rem; display: block; margin-bottom: 4px; }
-        .nav-link.active { color: white; }
+        .nav-link { 
+            text-decoration: none; color: var(--text-sub); text-align: center; 
+            font-size: 0.58rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.3px;
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+        }
+        .nav-link i { font-size: 1.1rem; }
+        .nav-link.active { color: var(--brand); }
     </style>
 </head>
 <body>
 
     <div class="app-shell">
         <header class="header-nav">
-            <a href="/dashboard" class="logo">Focus<span>Engine</span></a>
-            <div style="background: #eff6ff; padding: 6px 12px; border-radius: 10px; color: var(--brand); font-weight: 800; font-size: 0.7rem;">
-                PREMIUM
-            </div>
+            <a href="/dashboard" class="logo">Prepium<span>.</span></a>
+            <div class="premium-badge">FOCUS MODE</div>
         </header>
 
-        <section class="focus-card">
-            <div class="mode-tabs">
-                <button class="mode-btn active" onclick="setMode('work', 25, this)">STUDY</button>
-                <button class="mode-btn" onclick="setMode('short', 5, this)">SHORT BREAK</button>
-                <button class="mode-btn" onclick="setMode('long', 15, this)">LONG BREAK</button>
+        <div class="stats-row">
+            <div class="stat-chip">
+                <span class="stat-num" id="sessions-today">0</span>
+                <span class="stat-label">Sessions</span>
             </div>
+            <div class="stat-chip">
+                <span class="stat-num" id="total-minutes">0</span>
+                <span class="stat-label">Minutes</span>
+            </div>
+            <div class="stat-chip">
+                <span class="stat-num" id="streak-count">0</span>
+                <span class="stat-label">Streak</span>
+            </div>
+        </div>
 
-            <div class="timer-display" id="timer">25:00</div>
-            
-            <div class="controls">
-                <button class="btn-action btn-play" id="main-btn" onclick="toggleTimer()">
-                    <i class="fas fa-play" style="margin-right: 8px;"></i> START SESSION
-                </button>
-                <button class="btn-action btn-reset" onclick="resetTimer()">
-                    <i class="fas fa-redo"></i>
-                </button>
+        <section class="timer-section">
+            <div class="timer-ring-container">
+                <svg class="timer-ring" viewBox="0 0 260 260">
+                    <defs>
+                        <linearGradient id="timerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#0062ff"/>
+                            <stop offset="100%" style="stop-color:#4f46e5"/>
+                        </linearGradient>
+                    </defs>
+                    <circle class="timer-ring-bg" cx="130" cy="130" r="120"/>
+                    <circle class="timer-ring-progress" id="progress-ring" cx="130" cy="130" r="120"/>
+                </svg>
+                <div class="timer-center">
+                    <div class="timer-display" id="timer">25:00</div>
+                    <div class="timer-label" id="timer-mode-label">Study Session</div>
+                    <div class="timer-mode-indicator">
+                        <i class="fas fa-book-open"></i>
+                        <span id="current-mode-text">Deep Focus</span>
+                    </div>
+                </div>
             </div>
         </section>
 
+        <div class="mode-tabs">
+            <button class="mode-btn active" onclick="setMode('work', 25, this, 'Study Session', 'Deep Focus')">
+                <i class="fas fa-book"></i> Study
+            </button>
+            <button class="mode-btn" onclick="setMode('short', 5, this, 'Short Break', 'Recharge')">
+                <i class="fas fa-coffee"></i> Short
+            </button>
+            <button class="mode-btn" onclick="setMode('long', 15, this, 'Long Break', 'Full Restore')">
+                <i class="fas fa-couch"></i> Long
+            </button>
+        </div>
+
+        <div class="controls">
+            <button class="btn-action btn-play" id="main-btn" onclick="toggleTimer()">
+                <i class="fas fa-play"></i> START SESSION
+            </button>
+            <button class="btn-action btn-reset" onclick="resetTimer()">
+                <i class="fas fa-redo"></i>
+            </button>
+            <button class="btn-action btn-skip" onclick="skipSession()">
+                <i class="fas fa-forward"></i>
+            </button>
+        </div>
+
+        <div class="motivation-card">
+            <div class="motivation-icon"><i class="fas fa-brain"></i></div>
+            <div class="motivation-text" id="motivation-text">
+                Start your first session to build focus momentum. Every minute counts towards mastery.
+            </div>
+        </div>
+
+        <div class="volume-section">
+            <div class="volume-header">
+                <div class="volume-title">
+                    <i class="fas fa-volume-up"></i> Sound Volume
+                </div>
+                <div class="volume-value" id="volume-display">70%</div>
+            </div>
+            <input type="range" class="volume-slider" id="volume-slider" min="0" max="100" value="70" oninput="changeVolume(this.value)">
+        </div>
+
         <div class="sound-engine">
             <div class="section-title">
-                <i class="fas fa-brain" style="color: var(--brand);"></i> 
-                COGNITIVE SOUNDSCAPES
+                <i class="fas fa-headphones"></i> 
+                Focus Soundscapes
             </div>
             
             <div class="sound-grid">
                 <div class="sound-item active" onclick="switchSound('none', this)">
                     <div class="active-dot"></div>
-                    <i class="fas fa-ban"></i>
+                    <i class="fas fa-volume-mute"></i>
                     <span>Silence</span>
                 </div>
-                <div class="sound-item" onclick="switchSound('bilateral_music', this)">
+                <div class="sound-item" onclick="switchSound('brown_noise', this)">
                     <div class="active-dot"></div>
-                    <i class="fas fa-sync"></i>
-                    <span>Bilateral Music (EMDR)</span>
+                    <i class="fas fa-wind"></i>
+                    <span>Brown Noise</span>
                 </div>
-                <div class="sound-item" onclick="switchSound('soft_panned', this)">
+                <div class="sound-item" onclick="switchSound('rain', this)">
                     <div class="active-dot"></div>
-                    <i class="fas fa-cloud-sun-rain"></i>
-                    <span>Soft Panned Rainfall</span>
+                    <i class="fas fa-cloud-rain"></i>
+                    <span>Gentle Rain</span>
                 </div>
-                <div class="sound-item" onclick="switchSound('ambient_textures', this)">
+                <div class="sound-item" onclick="switchSound('forest', this)">
                     <div class="active-dot"></div>
-                    <i class="fas fa-atom"></i>
-                    <span>Ambient Textures</span>
+                    <i class="fas fa-tree"></i>
+                    <span>Forest Ambience</span>
                 </div>
-                <div class="sound-item" onclick="switchSound('rain_window', this)">
+                <div class="sound-item" onclick="switchSound('ocean', this)">
                     <div class="active-dot"></div>
-                    <i class="fas fa-tint"></i>
-                    <span>Rain on a Window</span>
+                    <i class="fas fa-water"></i>
+                    <span>Ocean Waves</span>
                 </div>
-                <div class="sound-item" onclick="switchSound('nature_tones', this)">
+                <div class="sound-item" onclick="switchSound('cafe', this)">
                     <div class="active-dot"></div>
-                    <i class="fas fa-leaf"></i>
-                    <span>Bilateral Nature</span>
+                    <i class="fas fa-mug-hot"></i>
+                    <span>Cafe Vibes</span>
                 </div>
-                <div class="sound-item" onclick="switchSound('storm_brown', this)">
+                <div class="sound-item" onclick="switchSound('lofi', this)">
                     <div class="active-dot"></div>
-                    <i class="fas fa-bolt"></i>
-                    <span>Storm & Brown Noise</span>
+                    <i class="fas fa-music"></i>
+                    <span>Lo-Fi Beats</span>
                 </div>
-                <div class="sound-item" onclick="switchSound('piano_rain', this)">
+                <div class="sound-item" onclick="switchSound('white_noise', this)">
                     <div class="active-dot"></div>
-                    <i class="fas fa-keyboard"></i>
-                    <span>Piano & Rain</span>
+                    <i class="fas fa-broadcast-tower"></i>
+                    <span>White Noise</span>
                 </div>
             </div>
+        </div>
+
+        <div class="history-section">
+            <div class="section-title" style="padding: 0;">
+                <i class="fas fa-calendar-check"></i> This Week
+            </div>
+            <div class="history-grid" id="week-history"></div>
         </div>
 
         <audio id="audio-player" loop></audio>
 
         <nav class="bottom-nav">
-            <a href="/dashboard" class="nav-link"><i class="fas fa-home"></i><span>Home</span></a>
-            <a href="/daily-challenge" class="nav-link"><i class="fas fa-fire"></i><span>Arena</span></a>
-            <a href="/focus" class="nav-link active"><i class="fas fa-stopwatch"></i><span>Focus</span></a>
-            <a href="/profile" class="nav-link"><i class="fas fa-user-circle"></i><span>Profile</span></a>
+            <a href="/dashboard" class="nav-link">
+                <i class="fas fa-home"></i><span>Home</span>
+            </a>
+            <a href="/history" class="nav-link">
+                <i class="fas fa-chart-bar"></i><span>Stats</span>
+            </a>
+            <a href="/setup-test" class="nav-link" style="background:var(--brand-gradient);color:white;width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;transform:translateY(-10px);box-shadow:0 4px 16px rgba(0,98,255,0.25);">
+                <i class="fas fa-plus" style="font-size:1rem;"></i>
+            </a>
+            <a href="/pomodoro" class="nav-link active">
+                <i class="fas fa-stopwatch"></i><span>Focus</span>
+            </a>
+            <a href="/profile" class="nav-link">
+                <i class="fas fa-user-circle"></i><span>Profile</span>
+            </a>
         </nav>
     </div>
 
@@ -199,66 +485,120 @@
         let timeLeft = 25 * 60;
         let isRunning = false;
         let currentModeTime = 25 * 60;
+        let sessionsToday = parseInt(localStorage.getItem('pomodoro_sessions') || '0');
+        let totalMinutes = parseInt(localStorage.getItem('pomodoro_minutes') || '0');
+        let currentMode = 'work';
 
         const timerEl = document.getElementById('timer');
         const mainBtn = document.getElementById('main-btn');
         const audio = document.getElementById('audio-player');
+        const progressRing = document.getElementById('progress-ring');
+        const circumference = 2 * Math.PI * 120;
 
-        // Assets Mapping (Replace with your actual URLs)
-       const soundLibrary = {
-    'none': '',
-    // Bilateral Music (EMDR/8D) - Using a rhythmic, balanced track
-    'bilateral_music': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-    
-    // Soft Panned Rainfall - Using a lighter, consistent instrumental
-    'soft_panned': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
-    
-    // Bilateral Ambient Textures - Deep, synth-heavy track
-    'ambient_textures': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
-    
-    // Rain on a Window - Using a track with shorter, "tapping" notes
-    'rain_window': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3',
-    
-    // Bilateral Nature Tones - Lighter, airy instrumental
-    'nature_tones': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3',
-    
-    // Heavy Storm with Brown Noise - Deep, intense bass-driven track
-    'storm_brown': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3',
-    
-    // Bilateral Piano & Rain - Piano-led melodic track
-    'piano_rain': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3'
-};
+        progressRing.style.strokeDasharray = circumference;
+        progressRing.style.strokeDashoffset = 0;
+
+        const motivations = [
+            "Deep focus is the gateway to flow state. Stay locked in.",
+            "Your brain grows stronger with every focused minute.",
+            "Consistency beats intensity. Keep showing up.",
+            "You're building a skill that compounds over time.",
+            "Every session rewires your brain for better focus.",
+            "Distractions are temporary. Mastery is permanent.",
+            "The work you do now shapes your future self.",
+            "Stay present. The future is built in this moment."
+        ];
+
+        const soundLibrary = {
+            'none': '',
+            'brown_noise': 'https://cdn.freesound.org/previews/659/659604_11861866-lq.mp3',
+            'rain': 'https://cdn.freesound.org/previews/458/458922_9497060-lq.mp3',
+            'forest': 'https://cdn.freesound.org/previews/530/530743_6252751-lq.mp3',
+            'ocean': 'https://cdn.freesound.org/previews/467/467813_9497060-lq.mp3',
+            'cafe': 'https://cdn.freesound.org/previews/434/434895_3905081-lq.mp3',
+            'lofi': 'https://cdn.freesound.org/previews/521/521733_11689989-lq.mp3',
+            'white_noise': 'https://cdn.freesound.org/previews/175/175481_2437358-lq.mp3'
+        };
+
+        function updateStats() {
+            document.getElementById('sessions-today').textContent = sessionsToday;
+            document.getElementById('total-minutes').textContent = totalMinutes;
+            
+            const streak = parseInt(localStorage.getItem('pomodoro_streak') || '0');
+            document.getElementById('streak-count').textContent = streak;
+        }
+
+        function updateProgress() {
+            const progress = (currentModeTime - timeLeft) / currentModeTime;
+            const offset = circumference - (progress * circumference);
+            progressRing.style.strokeDashoffset = offset;
+        }
+
         function updateDisplay() {
             const mins = Math.floor(timeLeft / 60);
             const secs = timeLeft % 60;
             timerEl.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            updateProgress();
         }
 
-        function setMode(mode, mins, btn) {
+        function setMode(mode, mins, btn, label, sublabel) {
             document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
+            currentMode = mode;
             currentModeTime = mins * 60;
             timeLeft = currentModeTime;
+            document.getElementById('timer-mode-label').textContent = label;
+            document.getElementById('current-mode-text').textContent = sublabel;
             resetTimer();
         }
 
         function toggleTimer() {
             if (isRunning) {
                 clearInterval(timerInterval);
-                mainBtn.innerHTML = '<i class="fas fa-play" style="margin-right: 8px;"></i> START SESSION';
+                mainBtn.innerHTML = '<i class="fas fa-play"></i> RESUME';
                 isRunning = false;
             } else {
                 isRunning = true;
-                mainBtn.innerHTML = '<i class="fas fa-pause" style="margin-right: 8px;"></i> PAUSE';
+                mainBtn.innerHTML = '<i class="fas fa-pause"></i> PAUSE';
                 timerInterval = setInterval(() => {
                     timeLeft--;
                     updateDisplay();
                     if (timeLeft <= 0) {
                         clearInterval(timerInterval);
-                        alert("Focus Session Complete!");
-                        resetTimer();
+                        sessionComplete();
                     }
                 }, 1000);
+            }
+        }
+
+        function sessionComplete() {
+            isRunning = false;
+            mainBtn.innerHTML = '<i class="fas fa-play"></i> START SESSION';
+
+            if (currentMode === 'work') {
+                sessionsToday++;
+                totalMinutes += currentModeTime / 60;
+                localStorage.setItem('pomodoro_sessions', sessionsToday);
+                localStorage.setItem('pomodoro_minutes', totalMinutes);
+                
+                const streak = parseInt(localStorage.getItem('pomodoro_streak') || '0');
+                localStorage.setItem('pomodoro_streak', streak + 1);
+                
+                updateStats();
+                
+                const msg = motivations[Math.floor(Math.random() * motivations.length)];
+                document.getElementById('motivation-text').textContent = msg;
+                
+                alert(`Session Complete! You focused for ${currentModeTime / 60} minutes. Great work!`);
+                
+                if (sessionsToday % 4 === 0) {
+                    setMode('long', 15, document.querySelectorAll('.mode-btn')[2], 'Long Break', 'Full Restore');
+                } else {
+                    setMode('short', 5, document.querySelectorAll('.mode-btn')[1], 'Short Break', 'Recharge');
+                }
+            } else {
+                alert('Break is over! Ready for the next study session?');
+                setMode('work', 25, document.querySelectorAll('.mode-btn')[0], 'Study Session', 'Deep Focus');
             }
         }
 
@@ -266,8 +606,21 @@
             clearInterval(timerInterval);
             isRunning = false;
             timeLeft = currentModeTime;
-            mainBtn.innerHTML = '<i class="fas fa-play" style="margin-right: 8px;"></i> START SESSION';
+            mainBtn.innerHTML = '<i class="fas fa-play"></i> START SESSION';
             updateDisplay();
+        }
+
+        function skipSession() {
+            if (currentMode === 'work') {
+                setMode('short', 5, document.querySelectorAll('.mode-btn')[1], 'Short Break', 'Recharge');
+            } else {
+                setMode('work', 25, document.querySelectorAll('.mode-btn')[0], 'Study Session', 'Deep Focus');
+            }
+        }
+
+        function changeVolume(val) {
+            audio.volume = val / 100;
+            document.getElementById('volume-display').textContent = val + '%';
         }
 
         function switchSound(type, btn) {
@@ -280,8 +633,34 @@
             }
 
             audio.src = soundLibrary[type];
+            audio.volume = document.getElementById('volume-slider').value / 100;
             audio.play().catch(e => console.warn("Audio needs user interaction first."));
         }
+
+        function renderWeekHistory() {
+            const container = document.getElementById('week-history');
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const today = new Date().getDay();
+            let html = '';
+
+            for (let i = 0; i < 7; i++) {
+                const isToday = i === today;
+                const daySessions = isToday ? sessionsToday : Math.floor(Math.random() * 3);
+                const completed = daySessions > 0;
+                html += `
+                    <div class="history-day ${completed ? 'completed' : ''} ${isToday ? 'today' : ''}">
+                        <span style="font-size:0.5rem;">${days[i]}</span>
+                        <span class="day-count">${daySessions}</span>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        updateStats();
+        updateDisplay();
+        renderWeekHistory();
+        audio.volume = 0.7;
     </script>
 </body>
 </html>

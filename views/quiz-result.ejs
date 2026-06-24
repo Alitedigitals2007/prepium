@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Prepium | Performance Review</title>
     
     <script>
@@ -20,137 +20,491 @@
     </script>
     <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
     
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root { --brand: #0062ff; --bg: #f8fafc; --danger: #ef4444; --text: #1e293b; --header-h: 70px; }
+        :root { 
+            --brand: #0062ff; 
+            --brand-gradient: linear-gradient(135deg, #0062ff 0%, #4f46e5 100%);
+            --success: #10b981; 
+            --danger: #ef4444; 
+            --text-dark: #0f172a; 
+            --text-sub: #64748b;
+            --border: #e2e8f0;
+        }
         
-        * { box-sizing: border-box; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; padding-top: calc(var(--header-h) + 20px); color: var(--text); }
-
-        /* STICKY HEADER */
-        header { position: fixed; top: 0; left: 0; right: 0; height: var(--header-h); background: white; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
-        .logo { font-weight: 800; font-size: 1.4rem; color: var(--brand); letter-spacing: -0.5px; }
-        .session-tag { background: #eff6ff; color: var(--brand); padding: 6px 12px; border-radius: 10px; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; }
-
-        .container { max-width: 600px; margin: auto; padding: 0 15px; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
-        /* SCORE CHART */
-        .card { background: white; padding: 25px; border-radius: 28px; box-shadow: 0 10px 40px rgba(0,0,0,0.04); margin-bottom: 24px; border: 1px solid #f1f5f9; position: relative; }
-        .score-section { display: flex; flex-direction: column; align-items: center; text-align: center; }
-        .chart { width: 140px; height: 140px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            background: radial-gradient(closest-side, white 82%, transparent 0), 
-            conic-gradient(var(--brand) <%= percentage %>%, #f1f5f9 0); margin-bottom: 15px; }
-        .chart-pct { font-size: 2rem; font-weight: 800; color: var(--brand); }
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: radial-gradient(circle at top right, #eff6ff 0%, #dbeafe 40%, #e2e8f0 100%);
+            background-attachment: fixed;
+            margin: 0; color: var(--text-dark); 
+            display: flex; justify-content: center;
+            min-height: 100vh;
+            padding: 0;
+        }
 
-        /* COLLAPSIBLE BREAKDOWN */
-        .breakdown { background: white; border-radius: 20px; border: 1.5px solid #e2e8f0; margin-bottom: 30px; overflow: hidden; }
-        .breakdown summary { padding: 18px; font-weight: 800; font-size: 0.9rem; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; }
-        .breakdown summary::after { content: 'Report Details +'; font-size: 0.7rem; color: var(--brand); text-transform: uppercase; }
-        .breakdown[open] summary::after { content: 'Close Report −'; }
-        .breakdown-inner { padding: 0 18px 18px; border-top: 1px solid #f1f5f9; }
-        .subj-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f8fafc; font-weight: 700; font-size: 0.85rem; color: #64748b; }
+        .app-shell {
+            width: 100%; max-width: 430px;
+            background: rgba(248, 250, 252, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            min-height: 100vh;
+            border-left: 1px solid rgba(255,255,255,0.7);
+            border-right: 1px solid rgba(255,255,255,0.7);
+            padding-bottom: 100px;
+        }
 
-        /* QUESTION CARDS */
-        .q-card { border-top: 12px solid #cbd5e1; }
-        .q-card.is-correct-q { border-top-color: var(--brand); }
-        .q-card.is-wrong-q { border-top-color: var(--danger); }
-        .q-num { font-size: 0.65rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px; display: block; }
-        .q-text { font-weight: 800; font-size: 1.1rem; color: #0f172a; margin-bottom: 25px; }
+        /* Sticky Header */
+        .header-glass {
+            padding: 1.25rem 1.5rem;
+            background: rgba(255,255,255,0.5);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            position: sticky; top: 0; z-index: 100;
+            border-bottom: 1px solid rgba(255,255,255,0.7);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .back-circle { 
+            width: 42px; height: 42px; 
+            background: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.9);
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            text-decoration: none; color: var(--text-dark);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        }
+        .header-title { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.5px; }
+        .session-tag { 
+            background: linear-gradient(135deg, rgba(0, 98, 255, 0.08), rgba(79, 70, 229, 0.08));
+            color: var(--brand); padding: 6px 14px; border-radius: 10px; 
+            font-weight: 800; font-size: 0.65rem; text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
 
-        /* OPTION HIGHLIGHTING */
-        .opt-list { display: flex; flex-direction: column; gap: 12px; }
-        .opt-item { padding: 16px 20px; border-radius: 18px; border: 2px solid #f1f5f9; font-weight: 700; display: flex; align-items: center; position: relative; transition: 0.2s; background: white; }
-        .opt-prefix { width: 32px; height: 32px; background: #f1f5f9; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-weight: 800; color: #94a3b8; }
+        /* Score Hero Card */
+        .score-hero {
+            margin: 1.25rem 1.5rem;
+            padding: 32px 24px;
+            background: rgba(255,255,255,0.7);
+            border: 1px solid rgba(255,255,255,0.8);
+            border-radius: 28px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.03);
+            position: relative;
+            overflow: hidden;
+        }
+        .score-hero::before {
+            content: ''; position: absolute; top: -60%; right: -30%;
+            width: 200px; height: 200px; border-radius: 50%;
+            background: rgba(0, 98, 255, 0.04);
+        }
+        .score-hero::after {
+            content: ''; position: absolute; bottom: -40%; left: -20%;
+            width: 160px; height: 160px; border-radius: 50%;
+            background: rgba(79, 70, 229, 0.04);
+        }
 
-        /* CORRECT: BLUE THEME */
-        .opt-item.is-correct-choice { border-color: var(--brand); background: #eff6ff; color: var(--brand); }
-        .opt-item.is-correct-choice .opt-prefix { background: var(--brand); color: white; }
-        .opt-item.is-correct-choice::after { content: 'CORRECT ✓'; position: absolute; right: 15px; font-size: 0.6rem; font-weight: 800; }
+        .score-ring {
+            width: 160px; height: 160px;
+            margin: 0 auto 20px;
+            position: relative;
+        }
+        .score-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+        .score-ring-bg { fill: none; stroke: #e2e8f0; stroke-width: 10; }
+        .score-ring-fill { 
+            fill: none; stroke-width: 10; stroke-linecap: round;
+            stroke-dasharray: 440; 
+            transition: stroke-dashoffset 1.5s ease;
+        }
+        .score-ring-fill.good { stroke: url(#successGrad); }
+        .score-ring-fill.mid { stroke: url(#warningGrad); }
+        .score-ring-fill.low { stroke: url(#dangerGrad); }
 
-        /* WRONG: RED THEME */
-        .opt-item.is-wrong-choice { border-color: var(--danger); background: #fef2f2; color: #991b1b; }
-        .opt-item.is-wrong-choice .opt-prefix { background: var(--danger); color: white; }
-        .opt-item.is-wrong-choice::after { content: 'YOUR CHOICE ✗'; position: absolute; right: 15px; font-size: 0.6rem; font-weight: 800; }
+        .score-center {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        .score-pct { font-size: 2.8rem; font-weight: 800; letter-spacing: -2px; line-height: 1; }
+        .score-pct.good { color: var(--success); }
+        .score-pct.mid { color: #f59e0b; }
+        .score-pct.low { color: var(--danger); }
+        .score-label { font-size: 0.65rem; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; }
 
-        /* SOLUTION */
-        .sol-details { margin-top: 25px; border-radius: 16px; background: #f8fafc; border: 1px solid #e2e8f0; cursor: pointer; }
-        .sol-details summary { padding: 14px; font-size: 0.75rem; font-weight: 800; text-align: center; color: #64748b; list-style: none; }
-        .sol-text { padding: 15px; font-size: 0.85rem; border-top: 1px solid #e2e8f0; line-height: 1.6; color: #475569; }
+        .score-summary {
+            font-size: 0.95rem; font-weight: 700; color: var(--text-sub);
+            margin-top: 8px; position: relative;
+        }
+        .score-summary strong { color: var(--text-dark); font-weight: 800; }
 
-        .footer { margin: 40px 0; text-align: center; }
-        .btn-dash { background: var(--brand); color: white; padding: 18px 45px; border-radius: 20px; text-decoration: none; font-weight: 800; display: inline-block; box-shadow: 0 10px 25px rgba(0,98,255,0.2); }
+        /* Stats Row */
+        .result-stats {
+            display: flex; gap: 10px; margin-top: 20px; position: relative;
+        }
+        .result-stat {
+            flex: 1; padding: 12px 8px; background: rgba(248,250,252,0.8);
+            border-radius: 14px; text-align: center;
+        }
+        .result-stat .r-num { font-size: 1.1rem; font-weight: 800; display: block; }
+        .result-stat .r-label { font-size: 0.55rem; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.3px; }
+        .correct-color { color: var(--success); }
+        .wrong-color { color: var(--danger); }
+        .total-color { color: var(--brand); }
+
+        /* Performance Message */
+        .perf-msg {
+            margin: 0 1.5rem 1rem; padding: 16px 18px;
+            border-radius: 18px;
+            display: flex; align-items: center; gap: 14px;
+        }
+        .perf-msg.great { background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.1); }
+        .perf-msg.good { background: rgba(0, 98, 255, 0.06); border: 1px solid rgba(0, 98, 255, 0.1); }
+        .perf-msg.poor { background: rgba(239, 68, 68, 0.06); border: 1px solid rgba(239, 68, 68, 0.1); }
+        .perf-icon {
+            width: 42px; height: 42px; border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem; flex-shrink: 0;
+        }
+        .perf-msg.great .perf-icon { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .perf-msg.good .perf-icon { background: rgba(0, 98, 255, 0.1); color: var(--brand); }
+        .perf-msg.poor .perf-icon { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+        .perf-text { font-size: 0.8rem; font-weight: 600; color: var(--text-sub); line-height: 1.4; }
+
+        /* Breakdown */
+        .breakdown {
+            margin: 0 1.5rem 1.5rem;
+            background: rgba(255,255,255,0.7);
+            border: 1px solid rgba(255,255,255,0.8);
+            border-radius: 20px; overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.02);
+        }
+        .breakdown summary { 
+            padding: 16px 18px; font-weight: 800; font-size: 0.85rem; 
+            cursor: pointer; list-style: none; 
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .breakdown summary::after { 
+            content: 'View Details'; font-size: 0.65rem; color: var(--brand); 
+            font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .breakdown[open] summary::after { content: 'Hide Details'; }
+        .breakdown-inner { padding: 0 18px 18px; border-top: 1px solid rgba(226,232,240,0.5); }
+        .subj-row { 
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 0; border-bottom: 1px solid rgba(248,250,252,0.8);
+        }
+        .subj-row:last-child { border-bottom: none; }
+        .subj-name { font-weight: 700; font-size: 0.82rem; color: var(--text-dark); }
+        .subj-score { 
+            font-weight: 800; font-size: 0.82rem; color: var(--brand);
+            background: rgba(0, 98, 255, 0.06);
+            padding: 4px 12px; border-radius: 8px;
+        }
+
+        /* Section Title */
+        .section-header {
+            padding: 0.5rem 1.5rem 0.75rem;
+            font-size: 0.75rem; font-weight: 800; color: var(--text-dark);
+            letter-spacing: -0.2px;
+        }
+
+        /* Question Cards */
+        .q-card {
+            margin: 0 1.5rem 1rem;
+            background: rgba(255,255,255,0.7);
+            border: 1px solid rgba(255,255,255,0.8);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.02);
+        }
+        .q-card-top {
+            height: 4px; width: 100%;
+        }
+        .q-card-top.correct { background: linear-gradient(90deg, #10b981, #34d399); }
+        .q-card-top.wrong { background: linear-gradient(90deg, #ef4444, #f87171); }
+        .q-card-top.skipped { background: linear-gradient(90deg, #94a3b8, #cbd5e1); }
+
+        .q-card-body { padding: 18px; }
+        .q-num { 
+            font-size: 0.6rem; font-weight: 800; color: var(--text-sub); 
+            text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; 
+            display: flex; align-items: center; gap: 8px;
+        }
+        .q-badge {
+            padding: 2px 8px; border-radius: 6px; font-size: 0.55rem;
+        }
+        .q-badge.correct { background: rgba(16,185,129,0.1); color: var(--success); }
+        .q-badge.wrong { background: rgba(239,68,68,0.1); color: var(--danger); }
+
+        .q-text { 
+            font-weight: 700; font-size: 0.95rem; color: var(--text-dark); 
+            margin-bottom: 20px; line-height: 1.5;
+        }
+
+        /* Options */
+        .opt-list { display: flex; flex-direction: column; gap: 10px; }
+        .opt-item { 
+            padding: 14px 16px; border-radius: 14px; 
+            border: 1.5px solid rgba(226,232,240,0.6); 
+            font-weight: 600; font-size: 0.85rem;
+            display: flex; align-items: center; gap: 12px;
+            background: rgba(255,255,255,0.6);
+            transition: all 0.2s ease;
+        }
+        .opt-prefix { 
+            width: 30px; height: 30px; background: rgba(241,245,249,0.8); 
+            border-radius: 10px; display: flex; align-items: center; 
+            justify-content: center; font-weight: 800; color: var(--text-sub);
+            font-size: 0.75rem; flex-shrink: 0;
+        }
+        .opt-text { flex: 1; line-height: 1.4; }
+
+        /* Correct Option */
+        .opt-item.is-correct { 
+            border-color: var(--success); background: rgba(16,185,129,0.04); 
+        }
+        .opt-item.is-correct .opt-prefix { background: var(--success); color: white; }
+        .opt-item.is-correct::after { 
+            content: '\f00c'; font-family: 'Font Awesome 6 Free'; font-weight: 900;
+            color: var(--success); font-size: 0.75rem;
+        }
+
+        /* Wrong Option */
+        .opt-item.is-wrong { 
+            border-color: var(--danger); background: rgba(239,68,68,0.04); 
+        }
+        .opt-item.is-wrong .opt-prefix { background: var(--danger); color: white; }
+        .opt-item.is-wrong::after { 
+            content: '\f00d'; font-family: 'Font Awesome 6 Free'; font-weight: 900;
+            color: var(--danger); font-size: 0.75rem;
+        }
+
+        /* Solution */
+        .sol-details {
+            margin-top: 16px; border-radius: 14px;
+            background: rgba(248,250,252,0.8);
+            border: 1px solid rgba(226,232,240,0.5);
+            overflow: hidden;
+        }
+        .sol-details summary { 
+            padding: 12px 14px; font-size: 0.7rem; font-weight: 800; 
+            text-align: center; color: var(--brand); list-style: none;
+            cursor: pointer;
+        }
+        .sol-text { 
+            padding: 14px; font-size: 0.82rem; line-height: 1.6; 
+            color: var(--text-sub); border-top: 1px solid rgba(226,232,240,0.5);
+        }
+        .sol-text b { color: var(--text-dark); }
+
+        /* Action Buttons */
+        .action-bar {
+            display: flex; gap: 10px; padding: 0 1.5rem; margin-top: 1.5rem;
+        }
+        .btn-action {
+            flex: 1; padding: 16px; border-radius: 16px; border: none;
+            font-weight: 800; font-size: 0.85rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            transition: all 0.3s ease;
+        }
+        .btn-primary { 
+            background: var(--brand-gradient); color: white;
+            box-shadow: 0 6px 20px rgba(0, 98, 255, 0.2);
+        }
+        .btn-secondary { 
+            background: rgba(255,255,255,0.8); color: var(--text-dark);
+            border: 1px solid rgba(226,232,240,0.6);
+        }
+        .btn-action:active { transform: scale(0.97); }
+
+        /* Bottom Nav */
+        .bottom-nav {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: calc(100% - 40px); max-width: 390px; 
+            background: rgba(255,255,255,0.85); 
+            backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+            height: 70px; border-radius: 24px; 
+            display: flex; justify-content: space-around; 
+            align-items: center; z-index: 1000;
+            border: 1px solid rgba(255,255,255,0.7);
+            box-shadow: 0 8px 32px rgba(0, 98, 255, 0.08);
+        }
+        .nav-link { 
+            text-decoration: none; color: var(--text-sub); text-align: center; 
+            font-size: 0.58rem; font-weight: 700; text-transform: uppercase;
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+        }
+        .nav-link i { font-size: 1.1rem; }
+        .nav-link.active { color: var(--brand); }
     </style>
 </head>
 <body>
 
-    <header>
-        <div class="logo">PREPIUM</div>
-        <div class="session-tag">Result Scrutiny</div>
-    </header>
+    <div class="app-shell">
+        <div class="header-glass">
+            <a href="/dashboard" class="back-circle"><i class="fas fa-chevron-left"></i></a>
+            <span class="header-title">Results</span>
+            <div class="session-tag"><%= total %> Questions</div>
+        </div>
 
-    <div class="container">
-        <div class="card score-section">
-            <div class="chart">
-                <span class="chart-pct"><%= percentage %>%</span>
+        <div class="score-hero">
+            <div class="score-ring">
+                <svg viewBox="0 0 160 160">
+                    <defs>
+                        <linearGradient id="successGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#10b981"/>
+                            <stop offset="100%" style="stop-color:#34d399"/>
+                        </linearGradient>
+                        <linearGradient id="warningGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#f59e0b"/>
+                            <stop offset="100%" style="stop-color:#fbbf24"/>
+                        </linearGradient>
+                        <linearGradient id="dangerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#ef4444"/>
+                            <stop offset="100%" style="stop-color:#f87171"/>
+                        </linearGradient>
+                    </defs>
+                    <circle class="score-ring-bg" cx="80" cy="80" r="70"/>
+                    <circle class="score-ring-fill <%= percentage >= 70 ? 'good' : percentage >= 40 ? 'mid' : 'low' %>" 
+                            cx="80" cy="80" r="70"
+                            style="stroke-dashoffset: <%= 440 - (440 * percentage / 100) %>"/>
+                </svg>
+                <div class="score-center">
+                    <div class="score-pct <%= percentage >= 70 ? 'good' : percentage >= 40 ? 'mid' : 'low' %>"><%= percentage %>%</div>
+                    <div class="score-label">Score</div>
+                </div>
             </div>
-            <div style="font-weight: 800; font-size: 1rem; color: #64748b;">
-                You scored <%= score %> out of <%= total %>
+
+            <div class="score-summary">
+                You scored <strong><%= score %></strong> out of <strong><%= total %></strong>
+            </div>
+
+            <div class="result-stats">
+                <div class="result-stat">
+                    <span class="r-num correct-color"><%= score %></span>
+                    <span class="r-label">Correct</span>
+                </div>
+                <div class="result-stat">
+                    <span class="r-num wrong-color"><%= total - score %></span>
+                    <span class="r-label">Wrong</span>
+                </div>
+                <div class="result-stat">
+                    <span class="r-num total-color"><%= total %></span>
+                    <span class="r-label">Total</span>
+                </div>
             </div>
         </div>
 
+        <% 
+            let perfClass = 'good';
+            let perfIcon = 'fas fa-thumbs-up';
+            let perfText = 'Good effort! Keep practicing to reach 80%+.';
+            if (percentage >= 80) { 
+                perfClass = 'great'; 
+                perfIcon = 'fas fa-star';
+                perfText = 'Excellent performance! You\'re mastering this material.';
+            } else if (percentage < 40) { 
+                perfClass = 'poor'; 
+                perfIcon = 'fas fa-book-open';
+                perfText = 'Keep studying! Review the explanations below to improve.';
+            }
+        %>
+        <div class="perf-msg <%= perfClass %>">
+            <div class="perf-icon"><i class="<%= perfIcon %>"></i></div>
+            <div class="perf-text"><%= perfText %></div>
+        </div>
+
+        <% if (Object.keys(subjectStats).length > 0) { %>
         <details class="breakdown">
-            <summary>Subject Performance Report</summary>
+            <summary><i class="fas fa-chart-pie" style="color:var(--brand); margin-right:8px;"></i> Subject Breakdown</summary>
             <div class="breakdown-inner">
                 <% Object.keys(subjectStats).forEach(subject => { %>
                     <div class="subj-row">
-                        <span><%= subject %></span>
-                        <span style="color: var(--brand)"><%= subjectStats[subject].correct %> / <%= subjectStats[subject].total %></span>
+                        <span class="subj-name"><%= subject %></span>
+                        <span class="subj-score"><%= subjectStats[subject].correct %>/<%= subjectStats[subject].total %></span>
                     </div>
                 <% }) %>
             </div>
         </details>
+        <% } %>
+
+        <div class="section-header">Question Review</div>
 
         <% results.forEach((r, i) => { %>
-            <div class="card q-card <%= r.isCorrect ? 'is-correct-q' : 'is-wrong-q' %>">
-                <span class="q-num">Question <%= i + 1 %></span>
-                <div class="q-text tex2jax_process"><%= r.question_text %></div>
+            <div class="q-card">
+                <div class="q-card-top <%= r.isCorrect ? 'correct' : 'wrong' %>"></div>
+                <div class="q-card-body">
+                    <div class="q-num">
+                        Question <%= i + 1 %>
+                        <span class="q-badge <%= r.isCorrect ? 'correct' : 'wrong' %>">
+                            <%= r.isCorrect ? 'CORRECT' : 'WRONG' %>
+                        </span>
+                    </div>
+                    <div class="q-text tex2jax_process"><%= r.question_text %></div>
 
-                <div class="opt-list">
-                    <% ['a', 'b', 'c', 'd'].forEach(letter => { 
-                        let stateClass = '';
-                        if(letter.toLowerCase() === r.correctAnswer.toLowerCase()) {
-                            stateClass = 'is-correct-choice';
-                        } 
-                        else if(letter.toLowerCase() === r.userChoice.toLowerCase() && !r.isCorrect) {
-                            stateClass = 'is-wrong-choice';
-                        }
-                    %>
-                        <div class="opt-item <%= stateClass %> tex2jax_process">
-                            <div class="opt-prefix"><%= letter.toUpperCase() %></div>
-                            <%= r['option_' + letter] %>
-                        </div>
-                    <% }) %>
+                    <div class="opt-list">
+                        <% ['a', 'b', 'c', 'd'].forEach(letter => { 
+                            let stateClass = '';
+                            if(letter.toLowerCase() === r.correctAnswer.toLowerCase()) {
+                                stateClass = 'is-correct';
+                            } 
+                            else if(letter.toLowerCase() === r.userChoice.toLowerCase() && !r.isCorrect) {
+                                stateClass = 'is-wrong';
+                            }
+                        %>
+                            <div class="opt-item <%= stateClass %> tex2jax_process">
+                                <div class="opt-prefix"><%= letter.toUpperCase() %></div>
+                                <span class="opt-text"><%= r['option_' + letter] %></span>
+                            </div>
+                        <% }) %>
+                    </div>
+
+                    <% if(r.hint || r.explanation) { %>
+                        <details class="sol-details">
+                            <summary><i class="fas fa-lightbulb" style="margin-right:4px;"></i> View Explanation</summary>
+                            <div class="sol-text tex2jax_process">
+                                <% if(r.hint) { %>
+                                    <p style="margin-top:0;"><b>Hint:</b> <i><%= r.hint %></i></p>
+                                <% } %>
+                                <% if(r.explanation) { %>
+                                    <p style="margin-bottom:0;"><b>Solution:</b> <%= r.explanation %></p>
+                                <% } %>
+                            </div>
+                        </details>
+                    <% } %>
                 </div>
-
-                <% if(r.hint || r.explanation) { %>
-                    <details class="sol-details">
-                        <summary>ANALYSIS & HINTS</summary>
-                        <div class="sol-text tex2jax_process">
-                            <% if(r.hint) { %>
-                                <p style="margin-top:0;"><b>💡 Hint:</b> <i><%= r.hint %></i></p>
-                            <% } %>
-                            <% if(r.explanation) { %>
-                                <p style="margin-bottom:0;"><b>🔍 Solution:</b> <%= r.explanation %></p>
-                            <% } %>
-                        </div>
-                    </details>
-                <% } %>
             </div>
         <% }) %>
 
-        <div class="footer">
-            <a href="/dashboard" class="btn-dash">Back to Dashboard</a>
+        <div class="action-bar">
+            <a href="/dashboard" class="btn-action btn-secondary">
+                <i class="fas fa-home"></i> Dashboard
+            </a>
+            <a href="/setup-test" class="btn-action btn-primary">
+                <i class="fas fa-redo"></i> Try Again
+            </a>
         </div>
+
+        <nav class="bottom-nav">
+            <a href="/dashboard" class="nav-link">
+                <i class="fas fa-home"></i><span>Home</span>
+            </a>
+            <a href="/history" class="nav-link">
+                <i class="fas fa-chart-bar"></i><span>Stats</span>
+            </a>
+            <a href="/setup-test" style="text-decoration:none;">
+                <div style="width:48px;height:48px;background:var(--brand-gradient);border-radius:14px;display:flex;align-items:center;justify-content:center;color:white;font-size:1rem;transform:translateY(-10px);box-shadow:0 4px 16px rgba(0,98,255,0.25);">
+                    <i class="fas fa-plus"></i>
+                </div>
+            </a>
+            <a href="/notifications" class="nav-link">
+                <i class="fas fa-bell"></i><span>Alerts</span>
+            </a>
+            <a href="/profile" class="nav-link">
+                <i class="fas fa-user-circle"></i><span>Profile</span>
+            </a>
+        </nav>
     </div>
 
 </body>
