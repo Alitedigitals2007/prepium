@@ -4,138 +4,311 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Prepium | Profile</title>
-    
-    <link href="https://fonts.googleapis.com/css2 family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        :root { 
-            --brand: #0062ff; 
+        :root {
+            --brand: #0062ff;
             --brand-gradient: linear-gradient(135deg, #0062ff 0%, #0045b5 100%);
-            --bg: #f8fafc; 
-            --text-dark: #0b1437; 
-            --text-sub: #a3aed0;
-            --border: #eef2f6;
+            --text-dark: #0f172a;
+            --text-sub: #64748b;
+            --border: rgba(226, 232, 240, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.7);
             --danger: #ff4d4f;
-            --accent-green: #0d9488;
+            --green: #0d9488;
+            --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.02);
+            --shadow-md: 0 12px 30px rgba(15, 23, 42, 0.04);
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; transition: all 0.2s ease; }
-        
-        body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: var(--bg); margin: 0; color: var(--text-dark); 
-            display: flex; justify-content: center; 
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: radial-gradient(circle at top right, #eff6ff 0%, #dbeafe 40%, #e2e8f0 100%);
+            background-attachment: fixed;
+            color: var(--text-dark);
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
         }
 
-        .app-shell { 
-            width: 100%; max-width: 430px; 
-            background: #ffffff; min-height: 100vh; 
-            position: relative; padding-bottom: 120px;
-            box-shadow: 0 0 40px rgba(0,0,0,0.02);
+        .app-shell {
+            width: 100%; max-width: 430px;
+            background: rgba(248, 250, 252, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            min-height: 100vh;
+            position: relative;
+            padding-bottom: 120px;
+            box-shadow: 0 0 40px rgba(0, 98, 255, 0.05);
+            border-left: 1px solid var(--glass-border);
+            border-right: 1px solid var(--glass-border);
         }
 
-        /* Profile Top Section */
-        .profile-header {
-            background: linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%);
+        /* Profile Hero */
+        .profile-hero {
+            background: linear-gradient(160deg, rgba(0, 98, 255, 0.08) 0%, rgba(79, 70, 229, 0.06) 50%, rgba(255, 255, 255, 0) 100%);
             padding: 3rem 1.5rem 2rem;
             text-align: center;
+            border-bottom: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+        .profile-hero::before {
+            content: '';
+            position: absolute;
+            top: -60%;
+            right: -20%;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: rgba(0, 98, 255, 0.04);
+        }
+        .profile-hero::after {
+            content: '';
+            position: absolute;
+            bottom: -40%;
+            left: -10%;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: rgba(79, 70, 229, 0.03);
         }
 
-        .avatar-container {
+        .avatar-wrap {
             position: relative;
             width: 100px; height: 100px;
             margin: 0 auto 1.2rem;
+            z-index: 1;
         }
-
-        .avatar-main {
+        .avatar-ring {
             width: 100%; height: 100%;
             background: var(--brand-gradient);
-            color: white; border-radius: 32px;
+            border-radius: 32px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 2.2rem; font-weight: 800;
+            font-size: 2.2rem; font-weight: 800; color: white;
             box-shadow: 0 15px 35px rgba(0, 98, 255, 0.25);
             border: 4px solid white;
+            position: relative;
+        }
+        .avatar-badge {
+            position: absolute;
+            bottom: -2px; right: -2px;
+            width: 26px; height: 26px;
+            background: #10b981;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            border: 3px solid white;
+            font-size: 0.65rem;
+            color: white;
         }
 
-        .user-name { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.5px; margin: 0; }
-        .user-email { color: var(--text-sub); font-size: 0.9rem; font-weight: 600; margin: 4px 0 15px; }
-
-        .uni-badges-wrapper {
-            display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 5px;
+        .user-name {
+            font-size: 1.65rem; font-weight: 800;
+            letter-spacing: -0.6px; margin: 0;
+            color: var(--text-dark);
+        }
+        .user-email {
+            color: var(--text-sub);
+            font-size: 0.85rem; font-weight: 600;
+            margin: 4px 0 18px;
         }
 
-        .uni-badge {
-            display: inline-flex; align-items: center; gap: 8px;
-            background: white; border: 1px solid var(--border);
-            padding: 8px 16px; border-radius: 100px;
-            font-size: 0.8rem; font-weight: 700; color: var(--text-dark);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+        .badges-row {
+            display: flex; flex-wrap: wrap;
+            justify-content: center; gap: 8px;
+            position: relative; z-index: 1;
         }
-        .uni-badge i { color: var(--brand); }
-        .dept-badge i { color: var(--accent-green); }
+        .badge-pill {
+            display: inline-flex; align-items: center; gap: 7px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            padding: 7px 14px; border-radius: 100px;
+            font-size: 0.78rem; font-weight: 700;
+            color: var(--text-dark);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        }
+        .badge-pill i { font-size: 0.85rem; }
+        .badge-pill.uni i { color: var(--brand); }
+        .badge-pill.dept i { color: var(--green); }
 
-        /* Stats Dashboard Sections */
+        /* Stats Section */
+        .stats-section { padding: 1.5rem 1.5rem 0.75rem; }
+        .section-label {
+            font-size: 0.65rem; font-weight: 800;
+            color: var(--text-sub); text-transform: uppercase;
+            letter-spacing: 1px; margin-bottom: 12px;
+        }
+
         .stats-grid {
-            display: grid; grid-template-columns: 1fr 1fr;
-            gap: 15px; padding: 0 1.5rem 2rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
         }
 
-        .stat-box {
-            background: white; border: 1px solid var(--border);
-            padding: 20px; border-radius: 24px; text-align: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.01);
+        .stat-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px) saturate(140%);
+            -webkit-backdrop-filter: blur(20px) saturate(140%);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            padding: 20px 16px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03), 0 1px 4px rgba(0, 0, 0, 0.02);
+            transition: var(--transition);
         }
-        .stat-box.highlighted {
-            border-color: rgba(0, 98, 255, 0.15);
-            background: linear-gradient(180deg, #ffffff 0%, #f0f6ff 100%);
+        .stat-card:active { transform: scale(0.97); }
+
+        .stat-icon {
+            width: 42px; height: 42px;
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.05rem;
+            margin: 0 auto 12px;
         }
-        .stat-value { font-size: 1.5rem; font-weight: 800; color: var(--text-dark); display: block; }
-        .stat-label { font-size: 0.65rem; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; display: block; }
+        .stat-icon.blue { background: rgba(0, 98, 255, 0.08); color: var(--brand); border: 1px solid rgba(0, 98, 255, 0.08); }
+        .stat-icon.green { background: rgba(13, 148, 136, 0.08); color: var(--green); border: 1px solid rgba(13, 148, 136, 0.08); }
+
+        .stat-val {
+            font-size: 1.45rem; font-weight: 800;
+            color: var(--text-dark); display: block;
+            letter-spacing: -0.5px;
+        }
+        .stat-lbl {
+            font-size: 0.62rem; font-weight: 700;
+            color: var(--text-sub); text-transform: uppercase;
+            letter-spacing: 0.5px; margin-top: 3px; display: block;
+        }
+
+        .stat-card.cgpa-card {
+            grid-column: span 2;
+            background: linear-gradient(135deg, rgba(0, 98, 255, 0.06) 0%, rgba(79, 70, 229, 0.04) 100%);
+            border: 1px solid rgba(0, 98, 255, 0.1);
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 16px;
+            text-align: left;
+            padding: 22px 20px;
+        }
+        .stat-card.cgpa-card .stat-icon {
+            margin: 0;
+            width: 50px; height: 50px;
+            font-size: 1.2rem;
+            background: linear-gradient(135deg, #0062ff 0%, #4f46e5 100%);
+            color: white; border: none;
+            box-shadow: 0 8px 20px rgba(0, 98, 255, 0.2);
+            flex-shrink: 0;
+        }
+        .cgpa-info { flex: 1; }
+        .cgpa-info .stat-val {
+            font-size: 1.6rem;
+            color: var(--brand);
+            line-height: 1;
+        }
+        .cgpa-info .stat-val .scale {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            font-weight: 600;
+        }
+        .cgpa-info .stat-lbl {
+            color: var(--brand);
+            margin-top: 5px;
+            font-size: 0.68rem;
+        }
 
         /* Menu Section */
-        .menu-group { padding: 0 1.5rem; }
-        
-        .menu-link {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 18px 20px; background: #f8fafc;
-            border-radius: 20px; margin-bottom: 12px;
-            text-decoration: none; color: var(--text-dark);
-            border: 1px solid transparent;
-        }
-        .menu-link:active { transform: scale(0.98); background: #f1f5f9; }
+        .menu-section { padding: 0.75rem 1.5rem 1.5rem; }
 
-        .menu-info { display: flex; align-items: center; gap: 15px; font-weight: 700; font-size: 0.95rem; }
-        .menu-icon { 
-            width: 38px; height: 38px; border-radius: 12px; 
+        .menu-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px) saturate(140%);
+            -webkit-backdrop-filter: blur(20px) saturate(140%);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+        }
+
+        .menu-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 18px 20px;
+            text-decoration: none; color: var(--text-dark);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.4);
+            transition: var(--transition);
+        }
+        .menu-item:last-child { border-bottom: none; }
+        .menu-item:active { background: rgba(0, 0, 0, 0.02); }
+
+        .menu-left {
+            display: flex; align-items: center; gap: 14px;
+        }
+        .menu-icon {
+            width: 40px; height: 40px;
+            border-radius: 13px;
             display: flex; align-items: center; justify-content: center;
             font-size: 1rem;
+            flex-shrink: 0;
         }
+        .menu-icon.blue { background: rgba(0, 98, 255, 0.08); color: var(--brand); }
+        .menu-icon.red { background: rgba(255, 77, 79, 0.08); color: var(--danger); }
+        .menu-text {
+            font-weight: 700; font-size: 0.92rem;
+        }
+        .menu-item.danger .menu-text { color: var(--danger); }
+        .menu-chevron { color: #cbd5e1; font-size: 0.75rem; }
 
-        .blue-icon { background: #eef2ff; color: var(--brand); }
-        .teal-icon { background: #e6f7f6; color: var(--accent-green); }
-        .red-icon { background: #fff1f2; color: var(--danger); }
-
-        .chevron { color: #cbd5e1; font-size: 0.8rem; }
-
-        /* Bottom Floating Navbar */
+        /* Bottom Navigation */
         .bottom-nav {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            width: calc(100% - 40px); max-width: 390px;
-            background: #0b1437; height: 75px; border-radius: 24px;
-            display: flex; justify-content: space-around; align-items: center;
-            box-shadow: 0 12px 30px rgba(11, 20, 55, 0.3); z-index: 1000;
+            position: fixed;
+            bottom: 20px; left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 32px);
+            max-width: 398px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            height: 74px;
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            box-shadow: 0 8px 32px rgba(0, 98, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
+            border: 1px solid var(--glass-border);
+            z-index: 1000;
         }
-        .nav-link { text-decoration: none; color: #a3aed0; text-align: center; }
-        .nav-link.active { color: white; }
-        .nav-link i { font-size: 1.25rem; display: block; margin-bottom: 3px; }
-        .nav-link span { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
-        
+
+        .nav-link {
+            text-decoration: none;
+            color: var(--text-sub);
+            text-align: center;
+            flex: 1;
+            font-weight: 700;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            cursor: pointer;
+        }
+        .nav-link.active { color: var(--brand); }
+        .nav-link i { font-size: 1.15rem; display: block; margin-bottom: 4px; }
+        .nav-link span { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.5px; }
+
         .nav-center-btn {
-            width: 60px; height: 60px; background: var(--brand); border-radius: 20px;
+            width: 54px; height: 54px;
+            background: var(--brand);
+            border-radius: 18px;
             display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 1.6rem; transform: translateY(-28px);
-            border: 5px solid #ffffff; box-shadow: 0 8px 15px rgba(0, 98, 255, 0.4);
+            color: white; font-size: 1.35rem;
+            transform: translateY(-22px);
+            border: 4px solid #f1f5f9;
+            box-shadow: 0 8px 20px rgba(0, 98, 255, 0.2);
             text-decoration: none;
         }
     </style>
@@ -143,22 +316,25 @@
 <body>
 
     <div class="app-shell">
-        <div class="profile-header">
-            <div class="avatar-container">
-                <div class="avatar-main">
+
+        <!-- Profile Hero Header -->
+        <div class="profile-hero">
+            <div class="avatar-wrap">
+                <div class="avatar-ring">
                     <%= user.fullname ? user.fullname.charAt(0).toUpperCase() : 'P' %>
+                    <div class="avatar-badge"><i class="fas fa-check"></i></div>
                 </div>
             </div>
             <h1 class="user-name"><%= user.fullname %></h1>
             <p class="user-email"><%= user.email %></p>
-            
-            <div class="uni-badges-wrapper">
-                <div class="uni-badge">
+
+            <div class="badges-row">
+                <div class="badge-pill uni">
                     <i class="fas fa-university"></i>
                     <%= user.university_name || 'Institution' %>
                 </div>
                 <% if(cgpaProfile && cgpaProfile.department) { %>
-                    <div class="uni-badge dept-badge">
+                    <div class="badge-pill dept">
                         <i class="fas fa-graduation-cap"></i>
                         <%= cgpaProfile.department %>
                     </div>
@@ -166,44 +342,55 @@
             </div>
         </div>
 
-        <div class="stats-grid">
-            <div class="stat-box">
-                <span class="stat-value"><%= stats.total %></span>
-                <span class="stat-label">Total Tests</span>
-            </div>
-            <div class="stat-box">
-                <span class="stat-value"><%= stats.average %>%</span>
-                <span class="stat-label">Avg. Score</span>
-            </div>
-            <div class="stat-box highlighted" style="grid-column: span 2;">
-                <span class="stat-value" style="font-size: 2rem; color: var(--brand);">
-                    <%= calculatedCGPA %> 
-                    <span style="font-size: 1rem; color: var(--text-sub); font-weight: 600;">
-                        / <%= cgpaProfile ? cgpaProfile.grading_scale : '5.0' %>
-                    </span>
-                </span>
-                <span class="stat-label" style="color: var(--brand);">Current Cumulative GPA</span>
+        <!-- Stats Grid -->
+        <div class="stats-section">
+            <div class="section-label">Performance Overview</div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon blue"><i class="fas fa-clipboard-list"></i></div>
+                    <span class="stat-val"><%= stats.total %></span>
+                    <span class="stat-lbl">Total Tests</span>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green"><i class="fas fa-chart-line"></i></div>
+                    <span class="stat-val"><%= stats.average %>%</span>
+                    <span class="stat-lbl">Avg. Score</span>
+                </div>
+                <div class="stat-card cgpa-card">
+                    <div class="stat-icon"><i class="fas fa-award"></i></div>
+                    <div class="cgpa-info">
+                        <span class="stat-val">
+                            <%= calculatedCGPA %>
+                            <span class="scale">/ <%= cgpaProfile ? cgpaProfile.grading_scale : '5.0' %></span>
+                        </span>
+                        <span class="stat-lbl">Current Cumulative GPA</span>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="menu-group">
-            <a href="/history" class="menu-link">
-                <div class="menu-info">
-                    <div class="menu-icon blue-icon"><i class="fas fa-chart-pie"></i></div>
-                    Detailed Analytics
-                </div>
-                <i class="fas fa-chevron-right chevron"></i>
-            </a>
-
-            <a href="/logout" class="menu-link" style="margin-top: 20px;">
-                <div class="menu-info" style="color: var(--danger);">
-                    <div class="menu-icon red-icon"><i class="fas fa-power-off"></i></div>
-                    Sign Out
-                </div>
-                <i class="fas fa-chevron-right chevron"></i>
-            </a>
+        <!-- Menu Section -->
+        <div class="menu-section">
+            <div class="section-label" style="padding: 0 0 12px;">Quick Actions</div>
+            <div class="menu-card">
+                <a href="/history" class="menu-item">
+                    <div class="menu-left">
+                        <div class="menu-icon blue"><i class="fas fa-chart-pie"></i></div>
+                        <span class="menu-text">Detailed Analytics</span>
+                    </div>
+                    <i class="fas fa-chevron-right menu-chevron"></i>
+                </a>
+                <a href="/logout" class="menu-item danger">
+                    <div class="menu-left">
+                        <div class="menu-icon red"><i class="fas fa-power-off"></i></div>
+                        <span class="menu-text">Sign Out</span>
+                    </div>
+                    <i class="fas fa-chevron-right menu-chevron"></i>
+                </a>
+            </div>
         </div>
 
+        <!-- Bottom Navigation -->
         <nav class="bottom-nav">
             <a href="/dashboard" class="nav-link">
                 <i class="fas fa-home"></i>
@@ -213,9 +400,7 @@
                 <i class="fas fa-chart-bar"></i>
                 <span>Stats</span>
             </a>
-            
             <a href="/setup-test" class="nav-center-btn"><i class="fas fa-plus"></i></a>
-            
             <a href="/notifications" class="nav-link">
                 <i class="fas fa-bell"></i>
                 <span>Alerts</span>
@@ -225,6 +410,7 @@
                 <span>Profile</span>
             </a>
         </nav>
+
     </div>
 
 </body>

@@ -461,6 +461,87 @@
         .mini-delete:hover { color: #ef4444; }
         .mini-empty { text-align: center; padding: 30px 0; color: #a3aed0; }
         .mini-empty i { font-size: 2rem; margin-bottom: 8px; display: block; opacity: 0.3; }
+
+        /* === Community Chat Section === */
+        .community-section { margin: 0 16px 100px; }
+        .community-section .section-header { padding: 0; margin-bottom: 12px; }
+        .community-section .section-header h2 { font-size: 1.1rem; font-weight: 800; }
+
+        .chat-tabs { display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; scrollbar-width: none; }
+        .chat-tabs::-webkit-scrollbar { display: none; }
+        .chat-tab { flex-shrink: 0; padding: 8px 16px; border-radius: 12px; border: 1.5px solid var(--border); background: white; font-size: 0.78rem; font-weight: 700; cursor: pointer; color: var(--text-sub); transition: var(--transition); }
+        .chat-tab.active { background: var(--brand); color: white; border-color: var(--brand); }
+
+        .chat-panel { display: none; }
+        .chat-panel.active { display: flex; flex-direction: column; }
+
+        .chat-box { background: white; border: 1.5px solid var(--border); border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; }
+        .chat-messages { height: 320px; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; scroll-behavior: smooth; }
+        .chat-messages::-webkit-scrollbar { width: 3px; }
+        .chat-messages::-webkit-scrollbar-thumb { background: rgba(0,98,255,0.2); border-radius: 10px; }
+
+        .chat-row { display: flex; flex-direction: column; max-width: 85%; }
+        .chat-row.me { align-self: flex-end; align-items: flex-end; }
+        .chat-row.them { align-self: flex-start; align-items: flex-start; }
+
+        .chat-sender { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; flex-wrap: wrap; }
+        .sender-name { font-size: 0.72rem; font-weight: 700; color: var(--text-dark); }
+        .sender-dept { font-size: 0.65rem; color: var(--text-sub); }
+        .connect-btn { background: var(--brand); color: white; border: none; padding: 3px 8px; border-radius: 8px; font-size: 0.65rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; }
+        .connect-btn:active { transform: scale(0.95); }
+
+        .bubble { padding: 10px 14px; border-radius: 16px; font-size: 0.82rem; line-height: 1.45; word-break: break-word; }
+        .chat-row.me .bubble { background: var(--brand-gradient); color: white; border-bottom-right-radius: 4px; }
+        .chat-row.them .bubble { background: #f1f5f9; color: var(--text-dark); border-bottom-left-radius: 4px; }
+        .bubble-meta { display: flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 0.6rem; opacity: 0.5; }
+        .tick-icon { font-size: 0.55rem; }
+
+        .chat-input-bar { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid #f1f5f9; background: rgba(255,255,255,0.7); }
+        .chat-input-bar input { flex: 1; border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 0.82rem; font-family: inherit; outline: none; }
+        .chat-input-bar input:focus { border-color: var(--brand); }
+        .send-btn { width: 40px; height: 40px; background: var(--brand); color: white; border: none; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0; }
+        .send-btn:active { transform: scale(0.9); }
+
+        /* DM List */
+        .dm-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: var(--transition); }
+        .dm-item:hover { background: rgba(0,98,255,0.03); }
+        .dm-item:last-child { border-bottom: none; }
+        .dm-avatar { width: 42px; height: 42px; border-radius: 14px; background: linear-gradient(135deg, rgba(0,98,255,0.1), rgba(79,70,229,0.1)); color: var(--brand); display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800; flex-shrink: 0; border: 1px solid rgba(0,98,255,0.1); }
+        .dm-info { flex: 1; min-width: 0; }
+        .dm-info strong { display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-dark); }
+        .dm-info span { display: block; font-size: 0.72rem; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .dm-chevron { color: #cbd5e1; font-size: 0.7rem; flex-shrink: 0; }
+        .dm-empty { padding: 36px 20px; text-align: center; color: var(--text-sub); }
+        .dm-empty i { font-size: 2.2rem; color: rgba(0,98,255,0.12); margin-bottom: 10px; display: block; }
+        .dm-empty p { font-size: 0.78rem; line-height: 1.5; }
+
+        /* Network */
+        .network-section { padding: 0; }
+        .network-label { font-size: 0.72rem; font-weight: 800; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 14px 6px; display: flex; align-items: center; gap: 6px; }
+        .network-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid #f1f5f9; transition: var(--transition); }
+        .network-card:hover { background: rgba(255,255,255,0.5); }
+        .network-card:last-child { border-bottom: none; }
+        .net-avatar { width: 42px; height: 42px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800; flex-shrink: 0; }
+        .net-avatar.pending { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.15); color: #d97706; }
+        .net-avatar.connected { background: rgba(0,98,255,0.08); border: 1px solid rgba(0,98,255,0.1); color: var(--brand); }
+        .net-info { flex: 1; min-width: 0; }
+        .net-info strong { display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-dark); }
+        .net-info span { display: block; font-size: 0.72rem; color: var(--text-sub); }
+        .accept-btn { width: 36px; height: 36px; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; flex-shrink: 0; }
+        .accept-btn:active { transform: scale(0.9); }
+        .connected-badge { font-size: 0.68rem; color: var(--brand); font-weight: 700; background: rgba(0,98,255,0.08); border: 1px solid rgba(0,98,255,0.1); padding: 5px 10px; border-radius: 10px; display: flex; align-items: center; gap: 5px; }
+        .network-empty { padding: 36px 20px; text-align: center; color: var(--text-sub); }
+        .network-empty i { font-size: 2.2rem; color: rgba(0,98,255,0.12); margin-bottom: 10px; display: block; }
+        .network-empty p { font-size: 0.78rem; line-height: 1.5; }
+
+        /* DM Overlay */
+        .dm-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 9999; display: none; flex-direction: column; justify-content: center; align-items: center; }
+        .dm-overlay-header { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #f1f5f9; width: 100%; max-width: 430px; background: white; }
+        .dm-overlay-back { background: none; border: none; font-size: 1.1rem; color: var(--text-dark); cursor: pointer; padding: 6px; }
+        .dm-overlay-avatar { width: 38px; height: 38px; border-radius: 12px; background: linear-gradient(135deg, rgba(0,98,255,0.1), rgba(79,70,229,0.1)); color: var(--brand); display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800; border: 1px solid rgba(0,98,255,0.1); }
+        .dm-overlay-name { font-size: 0.9rem; font-weight: 700; flex: 1; }
+        .dm-overlay .chat-messages { height: calc(100vh - 120px); max-width: 430px; width: 100%; }
+        .dm-overlay .chat-input-bar { max-width: 430px; width: 100%; border-top: 1px solid #f1f5f9; }
     </style>
 </head>
 <body>
@@ -575,36 +656,99 @@
                 </a>
 
             </div>
+    </div>
+
+    <!-- Community Chat Section -->
+    <div class="community-section">
+        <div class="section-header">
+            <h2><i class="fas fa-comments" style="color: var(--brand); margin-right: 6px;"></i> Community</h2>
         </div>
 
-        <!-- Floating Deadline Tracker Button -->
-        <% if (user.has_paid) { %>
-        <button class="deadline-fab" id="deadline-fab" onclick="openDeadlineOverlay()">
-            <i class="fas fa-hourglass-half"></i>
-            <% if (typeof upcomingDeadlines !== 'undefined' && upcomingDeadlines > 0) { %>
-            <div class="fab-badge"><%= upcomingDeadlines %></div>
-            <% } %>
-        </button>
-        <% } %>
+        <div class="chat-tabs">
+            <button class="chat-tab active" onclick="switchChatTab('gen-panel', 'General Lounge', this)">General</button>
+            <button class="chat-tab" onclick="switchChatTab('school-panel', 'School Lounge', this)">My School</button>
+            <button class="chat-tab" onclick="switchChatTab('dm-panel', 'Direct Messages', this)">DMs</button>
+            <button class="chat-tab" onclick="switchChatTab('net-panel', 'Academic Network', this)">Network</button>
+        </div>
 
-        <!-- Deadline Tracker Overlay -->
-        <div class="deadline-overlay" id="deadline-overlay">
-            <div class="deadline-sheet">
-                <div class="sheet-handle"></div>
-                <div class="sheet-header">
-                    <h3><i class="fas fa-hourglass-half" style="color:#ef4444;"></i> Arena Tracker</h3>
-                    <button class="sheet-close" onclick="closeDeadlineOverlay()"><i class="fas fa-times"></i></button>
+        <!-- General Chat -->
+        <div id="gen-panel" class="chat-panel active">
+            <div class="chat-box">
+                <div class="chat-messages" id="dash-general-chat"></div>
+                <form onsubmit="sendDashGroupMsg(event, 'general', 'dash-gen-input')" class="chat-input-bar">
+                    <input type="text" id="dash-gen-input" placeholder="Message the General group..." autocomplete="off" required>
+                    <button type="submit" class="send-btn"><i class="fas fa-paper-plane"></i></button>
+                </form>
+            </div>
+        </div>
+
+        <!-- School Chat -->
+        <div id="school-panel" class="chat-panel">
+            <div class="chat-box">
+                <div class="chat-messages" id="dash-school-chat"></div>
+                <form onsubmit="sendDashGroupMsg(event, 'school', 'dash-school-input')" class="chat-input-bar">
+                    <input type="text" id="dash-school-input" placeholder="Message your school group..." autocomplete="off" required>
+                    <button type="submit" class="send-btn"><i class="fas fa-paper-plane"></i></button>
+                </form>
+            </div>
+        </div>
+
+        <!-- DM Conversations -->
+        <div id="dm-panel" class="chat-panel">
+            <div class="chat-box" id="dash-dm-list"></div>
+        </div>
+
+        <!-- Network Panel -->
+        <div id="net-panel" class="chat-panel">
+            <div class="chat-box">
+                <div class="network-section">
+                    <div id="dash-pending-reqs"></div>
+                    <div id="dash-active-network"></div>
                 </div>
-                <div class="sheet-body">
-                    <form class="quick-add-form" id="quick-deadline-form" onsubmit="submitQuickDeadline(event)">
-                        <div class="qa-group full">
-                            <label>Task Title</label>
-                            <input type="text" name="title" required placeholder="e.g. GST 101 Assignment" maxlength="40">
-                        </div>
-                        <div class="qa-group">
-                            <label>Date</label>
-                            <input type="date" name="due_date" id="qa-date" required>
-                        </div>
+            </div>
+        </div>
+
+        <!-- DM Overlay -->
+        <div id="dash-dm-overlay" class="dm-overlay">
+            <div class="dm-overlay-header">
+                <button onclick="closeDashDmOverlay()" class="dm-overlay-back"><i class="fas fa-arrow-left"></i></button>
+                <div class="dm-overlay-avatar" id="dash-dm-avatar">??</div>
+                <span class="dm-overlay-name" id="dash-dm-name">Student</span>
+            </div>
+            <div class="chat-messages" id="dash-dm-chatbox"></div>
+            <form onsubmit="sendDashDm(event)" class="chat-input-bar">
+                <input type="text" id="dash-dm-input" placeholder="Type a message..." autocomplete="off" required>
+                <button type="submit" class="send-btn"><i class="fas fa-paper-plane"></i></button>
+            </form>
+        </div>
+    </div>
+
+    <% if (user.has_paid) { %>
+    <button class="deadline-fab" id="deadline-fab" onclick="openDeadlineOverlay()">
+        <i class="fas fa-hourglass-half"></i>
+        <% if (typeof upcomingDeadlines !== 'undefined' && upcomingDeadlines > 0) { %>
+        <div class="fab-badge"><%= upcomingDeadlines %></div>
+        <% } %>
+    </button>
+    <% } %>
+
+    <div class="deadline-overlay" id="deadline-overlay">
+        <div class="deadline-sheet">
+            <div class="sheet-handle"></div>
+            <div class="sheet-header">
+                <h3><i class="fas fa-hourglass-half" style="color:#ef4444;"></i> Arena Tracker</h3>
+                <button class="sheet-close" onclick="closeDeadlineOverlay()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="sheet-body">
+                <form class="quick-add-form" id="quick-deadline-form" onsubmit="submitQuickDeadline(event)">
+                    <div class="qa-group full">
+                        <label>Task Title</label>
+                        <input type="text" name="title" required placeholder="e.g. GST 101 Assignment" maxlength="40">
+                    </div>
+                    <div class="qa-group">
+                        <label>Date</label>
+                        <input type="date" name="due_date" id="qa-date" required>
+                    </div>
                         <div class="qa-group">
                             <label>Time</label>
                             <input type="time" name="due_time" id="qa-time" required>
@@ -859,6 +1003,224 @@
                 console.error('Failed to delete:', err);
             }
         }
+
+        // === Community Chat on Dashboard ===
+        let dashCurrentUserId = null;
+        let dashActiveDmPartnerId = null;
+        let dashScrollLock = true;
+
+        function switchChatTab(panelId, title, btn) {
+            document.querySelectorAll('.chat-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.chat-tab').forEach(b => b.classList.remove('active'));
+            document.getElementById(panelId).classList.add('active');
+            btn.classList.add('active');
+            closeDashDmOverlay();
+        }
+
+        async function syncDashboardChat() {
+            try {
+                const res = await fetch('/api/community/sync');
+                const data = await res.json();
+                if (!data.success) return;
+
+                dashCurrentUserId = data.user.id;
+
+                renderDashChatMessages(data.generalFeed, 'dash-general-chat');
+                renderDashChatMessages(data.schoolFeed, 'dash-school-chat');
+                renderDashDmList(data.friends, data.directMessages);
+                renderDashNetwork(data.friends, data.pendingRequests);
+
+                if (dashActiveDmPartnerId) {
+                    renderDashDmChat(data.directMessages);
+                }
+            } catch (err) { console.error('Dashboard chat sync error:', err); }
+        }
+
+        function renderDashChatMessages(messages, containerId) {
+            const target = document.getElementById(containerId);
+            if (!target) return;
+            const wasAtBottom = (target.scrollTop + target.clientHeight >= target.scrollHeight - 60);
+
+            target.innerHTML = '';
+            messages.forEach(msg => {
+                const isMe = msg.sender_id === dashCurrentUserId;
+                const row = document.createElement('div');
+                row.className = `chat-row ${isMe ? 'me' : 'them'}`;
+
+                let headerHTML = '';
+                if (!isMe) {
+                    const showConnect = !msg.is_friend;
+                    headerHTML = `<div class="chat-sender">
+                        <strong class="sender-name">${msg.sender_name}</strong>
+                        <span class="sender-dept">• ${msg.sender_department || 'General'}</span>
+                        ${showConnect ? `<button class="connect-btn" onclick="sendDashConnect('${msg.sender_id}', this)"><i class="fas fa-plus"></i> Connect</button>` : ''}
+                    </div>`;
+                }
+
+                const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                row.innerHTML = `${headerHTML}<div class="bubble">${msg.message}<div class="bubble-meta"><span>${time}</span><i class="fas fa-check-double tick-icon"></i></div></div>`;
+                target.appendChild(row);
+            });
+
+            if (wasAtBottom || dashScrollLock) {
+                target.scrollTop = target.scrollHeight;
+            }
+        }
+
+        function renderDashDmList(friends, dms) {
+            const target = document.getElementById('dash-dm-list');
+            if (!target) return;
+            target.innerHTML = '';
+
+            if (friends.length === 0) {
+                target.innerHTML = '<div class="dm-empty"><i class="fas fa-comments"></i><p>No active connections yet.<br>Connect with peers in group chats to start chatting.</p></div>';
+                return;
+            }
+
+            friends.forEach(f => {
+                const msgs = dms.filter(m => m.sender_id === f.id || m.user_one === f.id || m.user_two === f.id);
+                const last = msgs.length > 0 ? msgs[msgs.length - 1].message : 'Tap to start chatting';
+
+                const row = document.createElement('div');
+                row.className = 'dm-item';
+                row.onclick = () => openDashDm(f.id, f.display_name);
+                row.innerHTML = `<div class="dm-avatar">${f.display_name.substring(0,2).toUpperCase()}</div>
+                    <div class="dm-info"><strong>${f.display_name}</strong><span>${last.substring(0, 45)}</span></div>
+                    <i class="fas fa-chevron-right dm-chevron"></i>`;
+                target.appendChild(row);
+            });
+        }
+
+        function renderDashNetwork(friends, pending) {
+            const pendingBox = document.getElementById('dash-pending-reqs');
+            const activeBox = document.getElementById('dash-active-network');
+            if (!pendingBox || !activeBox) return;
+
+            pendingBox.innerHTML = '';
+            if (pending.length > 0) {
+                pendingBox.innerHTML = '<div class="network-label"><i class="fas fa-clock"></i> Incoming Requests</div>';
+                pending.forEach(p => {
+                    const row = document.createElement('div');
+                    row.className = 'network-card';
+                    row.innerHTML = `<div class="net-avatar pending">${p.display_name.substring(0,2).toUpperCase()}</div>
+                        <div class="net-info"><strong>${p.display_name}</strong><span>${p.department || 'General'}</span></div>
+                        <button class="accept-btn" onclick="acceptDashInvite(${p.request_row_id})"><i class="fas fa-check"></i></button>`;
+                    pendingBox.appendChild(row);
+                });
+            }
+
+            activeBox.innerHTML = '<div class="network-label"><i class="fas fa-link"></i> Connected Peers</div>';
+            if (friends.length === 0) {
+                activeBox.innerHTML += '<div class="network-empty"><i class="fas fa-network-wired"></i><p>Your network is empty.<br>Connect with peers to build your academic network.</p></div>';
+                return;
+            }
+            friends.forEach(f => {
+                const row = document.createElement('div');
+                row.className = 'network-card';
+                row.innerHTML = `<div class="net-avatar connected">${f.display_name.substring(0,2).toUpperCase()}</div>
+                    <div class="net-info"><strong>${f.display_name}</strong><span>${f.department || 'General'} • ${f.school_name || 'Institution'}</span></div>
+                    <div class="connected-badge"><i class="fas fa-circle-check"></i> Connected</div>`;
+                activeBox.appendChild(row);
+            });
+        }
+
+        function openDashDm(partnerId, partnerName) {
+            dashActiveDmPartnerId = partnerId;
+            document.getElementById('dash-dm-avatar').innerText = partnerName.substring(0,2).toUpperCase();
+            document.getElementById('dash-dm-name').innerText = partnerName;
+            document.getElementById('dash-dm-overlay').style.display = 'flex';
+            dashScrollLock = true;
+            syncDashboardChat();
+        }
+
+        function closeDashDmOverlay() {
+            dashActiveDmPartnerId = null;
+            document.getElementById('dash-dm-overlay').style.display = 'none';
+        }
+
+        function renderDashDmChat(allDms) {
+            const target = document.getElementById('dash-dm-chatbox');
+            if (!target) return;
+            target.innerHTML = '';
+
+            const filtered = allDms.filter(m =>
+                (m.sender_id === dashCurrentUserId && (m.user_one === dashActiveDmPartnerId || m.user_two === dashActiveDmPartnerId)) ||
+                m.sender_id === dashActiveDmPartnerId
+            );
+
+            filtered.forEach(msg => {
+                const isMe = msg.sender_id === dashCurrentUserId;
+                const row = document.createElement('div');
+                row.className = `chat-row ${isMe ? 'me' : 'them'}`;
+                const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                row.innerHTML = `<div class="bubble">${msg.message}<div class="bubble-meta"><span>${time}</span><i class="fas fa-check-double tick-icon"></i></div></div>`;
+                target.appendChild(row);
+            });
+
+            if (dashScrollLock) {
+                target.scrollTop = target.scrollHeight;
+                dashScrollLock = false;
+            }
+        }
+
+        async function sendDashGroupMsg(e, channelType, inputId) {
+            e.preventDefault();
+            const input = document.getElementById(inputId);
+            const message = input.value.trim();
+            if (!message) return;
+            input.value = '';
+            dashScrollLock = true;
+            await fetch('/api/group-chat/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message, channel_type: channelType })
+            });
+            syncDashboardChat();
+        }
+
+        async function sendDashDm(e) {
+            e.preventDefault();
+            const input = document.getElementById('dash-dm-input');
+            const message = input.value.trim();
+            if (!message || !dashActiveDmPartnerId) return;
+            input.value = '';
+            dashScrollLock = true;
+            await fetch('/chat/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ partnerId: dashActiveDmPartnerId, message })
+            });
+            syncDashboardChat();
+        }
+
+        async function sendDashConnect(receiverId, btn) {
+            const res = await fetch('/connect/request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ receiver_id: receiverId })
+            });
+            const data = await res.json();
+            if (data.success) {
+                btn.innerHTML = "<i class='fas fa-check'></i> Sent";
+                btn.disabled = true;
+                btn.style.color = "var(--text-sub)";
+            }
+        }
+
+        async function acceptDashInvite(reqId) {
+            await fetch('/connect/accept', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ request_id: reqId })
+            });
+            syncDashboardChat();
+        }
+
+        // Start dashboard chat sync
+        document.addEventListener('DOMContentLoaded', () => {
+            syncDashboardChat();
+            setInterval(syncDashboardChat, 3000);
+        });
     </script>
     <%- include('partials/pomodoro-overlay') %>
 </body>
