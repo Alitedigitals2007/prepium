@@ -4,212 +4,683 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prepium Admin | Universities</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root { 
-            --brand: #0062ff; 
+        :root {
+            --brand: #0062ff;
             --brand-light: #eef4ff;
-            --bg: #f4f7fe; 
-            --sidebar: #0b1437; 
-            --danger: #ff4d4f; 
+            --brand-glow: rgba(0, 98, 255, 0.15);
+            --bg: #f0f4ff;
+            --sidebar: #0b1437;
+            --sidebar-hover: rgba(255, 255, 255, 0.08);
+            --sidebar-active: #0062ff;
+            --danger: #ff4d4f;
+            --success: #22c55e;
             --text-main: #1b2559;
             --text-muted: #a3aed0;
-            --border: #e0e5f2;
+            --border: rgba(224, 229, 242, 0.6);
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 8px 32px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.08);
+            --radius: 20px;
+            --radius-sm: 14px;
         }
 
-        body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: var(--bg); 
-            margin: 0; 
-            display: flex; 
-            color: var(--text-main);
-        }
-
-        /* Sidebar - Consistent with Subjects Page */
-        .sidebar { 
-            width: 280px; 
-            background: var(--sidebar); 
-            height: 100vh; 
-            color: white; 
-            padding: 2.5rem 1.5rem; 
-            position: fixed;
-        }
-
-        .logo { 
-            font-size: 1.6rem; 
-            font-weight: 800; 
-            margin-bottom: 3.5rem; 
-            color: white; 
-            text-decoration: none; 
-            display: flex;
-            letter-spacing: -1px;
-        }
-
-        .nav-item { 
-            display: flex;
-            align-items: center;
-            color: #a3aed0; 
-            text-decoration: none; 
-            padding: 16px 20px; 
-            border-radius: 16px; 
-            margin-bottom: 8px; 
-            font-weight: 700; 
-            transition: 0.3s;
-        }
-
-        .nav-item:hover, .nav-item.active { 
-            background: rgba(255, 255, 255, 0.1); 
-            color: white; 
-        }
-
-        /* Main Content */
-        .main { 
-            margin-left: 280px; 
-            padding: 2.5rem 4rem; 
-            width: 100%; 
-            box-sizing: border-box; 
-        }
-
-        .header-flex {
-            margin-bottom: 2.5rem;
-        }
-
-        .header-flex h1 { font-size: 1.8rem; font-weight: 800; margin: 0; }
-
-        /* Add University Card */
-        .add-card { 
-            background: white; 
-            padding: 2rem; 
-            border-radius: 24px; 
-            box-shadow: 0 10px 40px rgba(0,0,0,0.03); 
-            margin-bottom: 3rem;
-            border: 1px solid #fff;
-        }
-
-        .add-grid { 
-            display: grid; 
-            grid-template-columns: 1.5fr 1fr auto; 
-            gap: 20px; 
-            align-items: end; 
-        }
-
-        .form-group label { 
-            font-size: 0.75rem; 
-            font-weight: 800; 
-            color: var(--text-muted); 
-            text-transform: uppercase; 
-            margin-bottom: 10px;
-            display: block;
-        }
-
-        input { 
-            width: 100%;
-            background: #f4f7fe;
-            border: 1px solid var(--border);
-            padding: 16px; 
-            border-radius: 16px; 
-            font-family: inherit;
-            font-weight: 600;
-            color: var(--text-main);
+        * {
+            margin: 0;
+            padding: 0;
             box-sizing: border-box;
         }
 
-        input:focus { outline: none; border-color: var(--brand); background: white; }
-
-        .btn-primary { 
-            background: var(--brand); 
-            color: white; 
-            padding: 16px 30px; 
-            border: none; 
-            border-radius: 16px; 
-            font-weight: 800; 
-            cursor: pointer;
-            transition: 0.3s;
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            min-height: 100vh;
+            color: var(--text-main);
+            overflow-x: hidden;
         }
 
-        .btn-primary:hover { transform: translateY(-2px); }
+        /* Background decorative elements */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -200px;
+            right: -200px;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0, 98, 255, 0.06) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
 
-        /* University List */
-        .uni-list {
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: -150px;
+            left: 300px;
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0, 98, 255, 0.04) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ===================== SIDEBAR ===================== */
+        .sidebar {
+            width: 280px;
+            min-height: 100vh;
+            background: var(--sidebar);
+            position: fixed;
+            top: 0;
+            left: 0;
+            padding: 2rem 1.25rem;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+            overflow-y: auto;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 99;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .mobile-toggle {
+            display: none;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 101;
+            background: var(--sidebar);
+            color: white;
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(11, 20, 55, 0.3);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: white;
+            text-decoration: none;
+            letter-spacing: -0.5px;
+            margin-bottom: 2.5rem;
+            padding: 0 8px;
+        }
+
+        .logo-icon {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, var(--brand), #4d94ff);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .nav-section {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: rgba(163, 174, 208, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            padding: 0 20px;
+            margin-bottom: 8px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            color: #8a94b8;
+            text-decoration: none;
+            padding: 13px 20px;
+            border-radius: 14px;
+            margin-bottom: 4px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .nav-item:hover {
+            background: var(--sidebar-hover);
+            color: #d0d6e8;
+        }
+
+        .nav-item.active {
+            background: linear-gradient(135deg, var(--brand), #3d85ff);
+            color: white;
+            box-shadow: 0 4px 16px rgba(0, 98, 255, 0.35);
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .sidebar-footer .nav-item {
+            color: #ff6b6b;
+        }
+
+        .sidebar-footer .nav-item:hover {
+            background: rgba(255, 77, 79, 0.12);
+            color: #ff8585;
+        }
+
+        /* ===================== MAIN CONTENT ===================== */
+        .main {
+            margin-left: 280px;
+            padding: 2.5rem 3rem;
+            flex: 1;
+            min-height: 100vh;
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+        }
+
+        .page-header h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 6px;
+        }
+
+        .page-header p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        /* ===================== GLASSMORPHISM CARDS ===================== */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-md);
+            transition: box-shadow 0.3s, transform 0.3s;
+        }
+
+        .glass-card:hover {
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* ===================== ADD UNIVERSITY FORM ===================== */
+        .add-card {
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .add-card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 1.5rem;
+        }
+
+        .add-card-header .icon-box {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, var(--brand), #4d94ff);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1rem;
+        }
+
+        .add-card-header h2 {
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 20px;
+            align-items: end;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 10px;
+        }
+
+        .form-group input {
+            width: 100%;
+            background: #f0f4ff;
+            border: 2px solid transparent;
+            padding: 14px 18px;
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 0.92rem;
+            color: var(--text-main);
+            transition: all 0.25s;
+        }
+
+        .form-group input::placeholder {
+            color: #c4cceb;
+            font-weight: 500;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--brand);
             background: white;
-            border-radius: 24px;
+            box-shadow: 0 0 0 4px var(--brand-glow);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 28px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--brand), #3d85ff);
+            color: white;
+            box-shadow: 0 4px 16px rgba(0, 98, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 98, 255, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        /* ===================== UNIVERSITY LIST ===================== */
+        .list-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .list-section-header h2 {
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+
+        .uni-count-badge {
+            background: var(--brand-light);
+            color: var(--brand);
+            padding: 6px 14px;
+            border-radius: 10px;
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+
+        .uni-list {
             overflow: hidden;
-            border: 1px solid var(--border);
         }
 
         .uni-item {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            padding: 20px 30px;
-            border-bottom: 1px solid #f4f7fe;
+            justify-content: space-between;
+            padding: 18px 24px;
+            border-bottom: 1px solid rgba(224, 229, 242, 0.4);
+            transition: background 0.2s;
         }
 
-        .uni-item:last-child { border-bottom: none; }
+        .uni-item:last-child {
+            border-bottom: none;
+        }
 
-        .uni-info h3 { margin: 0; font-size: 1.1rem; font-weight: 800; }
-        .uni-info span { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; }
+        .uni-item:hover {
+            background: rgba(0, 98, 255, 0.02);
+        }
 
-        .badge-count {
+        .uni-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .uni-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--brand-light), #dce8ff);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--brand);
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .uni-details h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 3px;
+        }
+
+        .uni-details .uni-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .uni-details .uni-meta span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .uni-details .uni-meta .dot {
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background: var(--text-muted);
+        }
+
+        .uni-id-badge {
             background: var(--brand-light);
             color: var(--brand);
-            padding: 5px 12px;
-            border-radius: 8px;
-            font-weight: 800;
+            padding: 6px 14px;
+            border-radius: 10px;
             font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+
+        /* ===================== EMPTY STATE ===================== */
+        .empty-state {
+            padding: 60px 20px;
+            text-align: center;
+        }
+
+        .empty-state .empty-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--brand-light);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 2rem;
+            color: var(--brand);
+        }
+
+        .empty-state h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .empty-state p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* ===================== RESPONSIVE ===================== */
+        @media (max-width: 1024px) {
+            .main {
+                padding: 2rem;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .form-grid .btn {
+                grid-column: 1 / -1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .sidebar-overlay.active {
+                display: block;
+                opacity: 1;
+            }
+
+            .mobile-toggle {
+                display: flex;
+            }
+
+            .main {
+                margin-left: 0;
+                padding: 4.5rem 1.25rem 1.5rem;
+            }
+
+            .page-header h1 {
+                font-size: 1.5rem;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .uni-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+                padding: 16px 20px;
+            }
+
+            .uni-item .uni-id-badge {
+                align-self: flex-start;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .main {
+                padding: 4.5rem 1rem 1rem;
+            }
+
+            .add-card {
+                padding: 1.25rem;
+            }
         }
     </style>
 </head>
 <body>
 
-    <div class="sidebar">
-        <a href="/admin/dashboard" class="logo">PREPIUM</a>
-        <a href="/admin/dashboard" class="nav-item">🏠 Dashboard</a>
-        <a href="/admin/universities" class="nav-item active">🏛️ Universities</a>
-        <a href="/admin/subjects" class="nav-item">📚 Subjects</a>
-        <a href="/admin/notifications" class="nav-item">🔔 Notifications</a>
+    <button class="mobile-toggle" onclick="toggleSidebar()">
+        <i class="fas fa-bars"></i>
+    </button>
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <a href="/admin/dashboard" class="logo">
+                <div class="logo-icon">P</div>
+                PREPIUM
+            </a>
+
+            <div class="nav-section">
+                <div class="nav-label">Main</div>
+                <a href="/admin/dashboard" class="nav-item">
+                    <i class="fas fa-th-large"></i> Dashboard
+                </a>
+                <a href="/admin/analytics" class="nav-item">
+                    <i class="fas fa-chart-line"></i> Analytics
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-label">Management</div>
+                <a href="/admin/universities" class="nav-item active">
+                    <i class="fas fa-building-columns"></i> Universities
+                </a>
+                <a href="/admin/subjects" class="nav-item">
+                    <i class="fas fa-book-open"></i> Subjects
+                </a>
+                <a href="/admin/students" class="nav-item">
+                    <i class="fas fa-user-graduate"></i> Students
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-label">System</div>
+                <a href="/admin/notifications" class="nav-item">
+                    <i class="fas fa-bell"></i> Notifications
+                </a>
+            </div>
+
+            <div class="sidebar-footer">
+                <a href="/logout" class="nav-item">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main">
+            <div class="page-header">
+                <h1>Institution Management</h1>
+                <p>Add and manage universities currently supported by Prepium.</p>
+            </div>
+
+            <!-- Add University Card -->
+            <div class="add-card glass-card">
+                <div class="add-card-header">
+                    <div class="icon-box">
+                        <i class="fas fa-plus"></i>
+                    </div>
+                    <h2>Add New University</h2>
+                </div>
+                <form action="/admin/universities/add" method="POST" class="form-grid">
+                    <div class="form-group">
+                        <label>University Name</label>
+                        <input type="text" name="name" placeholder="e.g. University of Ibadan" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Slug (Shortcode)</label>
+                        <input type="text" name="slug" placeholder="e.g. ui" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add Institution
+                    </button>
+                </form>
+            </div>
+
+            <!-- University List -->
+            <div class="list-section-header">
+                <h2>All Universities</h2>
+                <% if (universities && universities.length > 0) { %>
+                    <span class="uni-count-badge"><%= universities.length %> total</span>
+                <% } %>
+            </div>
+
+            <div class="uni-list glass-card">
+                <% if (universities && universities.length > 0) { %>
+                    <% universities.forEach(uni => { %>
+                        <div class="uni-item">
+                            <div class="uni-left">
+                                <div class="uni-icon">
+                                    <i class="fas fa-building-columns"></i>
+                                </div>
+                                <div class="uni-details">
+                                    <h3><%= uni.name %></h3>
+                                    <div class="uni-meta">
+                                        <span><i class="fas fa-code"></i> <%= uni.slug.toUpperCase() %></span>
+                                        <span class="dot"></span>
+                                        <span><i class="fas fa-fingerprint"></i> ID: <%= uni.id %></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <span class="uni-id-badge">ID: <%= uni.id %></span>
+                        </div>
+                    <% }) %>
+                <% } else { %>
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-building-columns"></i>
+                        </div>
+                        <h3>No Universities Yet</h3>
+                        <p>Start by adding your first university above.</p>
+                    </div>
+                <% } %>
+            </div>
+        </main>
     </div>
 
-    <main class="main">
-        <div class="header-flex">
-            <h1>Institution Management</h1>
-            <p style="color: var(--text-muted); margin-top: 5px;">Add and manage universities currently supported by Prepium.</p>
-        </div>
-        
-        <div class="add-card">
-            <!-- Form to Add University -->
-            <form action="/admin/universities/add" method="POST" class="add-grid">
-                <div class="form-group">
-                    <label>University Name</label>
-                    <input type="text" name="name" placeholder="e.g. University of Ibadan" required>
-                </div>
-                <div class="form-group">
-                    <label>Slug (Shortcode)</label>
-                    <input type="text" name="slug" placeholder="e.g. ui" required>
-                </div>
-                <button type="submit" class="btn-primary">Add Institution</button>
-            </form>
-        </div>
-
-        <div class="uni-list">
-            <% if (universities && universities.length > 0) { %>
-                <% universities.forEach(uni => { %>
-                    <div class="uni-item">
-                        <div class="uni-info">
-                            <h3><%= uni.name %></h3>
-                            <span>Code: <%= uni.slug.toUpperCase() %></span>
-                        </div>
-                        <!-- You can later pass the subject count from your SQL query -->
-                        <div class="badge-count">ID: <%= uni.id %></div>
-                    </div>
-                <% }) %>
-            <% } else { %>
-                <div style="padding: 40px; text-align: center; color: var(--text-muted);">
-                    No universities added yet.
-                </div>
-            <% } %>
-        </div>
-    </main>
+    <script>
+        function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('open');
+            document.querySelector('.sidebar-overlay').classList.toggle('active');
+        }
+    </script>
 
 </body>
 </html>

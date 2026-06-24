@@ -2,73 +2,514 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prepium | Students</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { --brand: #0062ff; --brand-light: #e6f0ff; --bg: #f4f7fe; --text: #1b2559; --sidebar-width: 260px; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; }
+        :root {
+            --brand: #0062ff;
+            --brand-light: rgba(0, 98, 255, 0.1);
+            --brand-glow: rgba(0, 98, 255, 0.25);
+            --sidebar: #0b1437;
+            --sidebar-hover: rgba(255, 255, 255, 0.06);
+            --sidebar-active: rgba(0, 98, 255, 0.18);
+            --bg: #f0f4f8;
+            --card-bg: rgba(255, 255, 255, 0.72);
+            --card-border: rgba(255, 255, 255, 0.5);
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --border: rgba(226, 232, 240, 0.6);
+            --border-solid: #e2e8f0;
+            --green: #10b981;
+            --green-bg: rgba(16, 185, 129, 0.1);
+            --amber: #f59e0b;
+            --amber-bg: rgba(245, 158, 11, 0.1);
+            --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.04);
+            --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.06);
+            --shadow-lg: 0 8px 32px rgba(15, 23, 42, 0.08);
+            --shadow-glass: 0 8px 32px rgba(15, 23, 42, 0.07), inset 0 1px 0 rgba(255,255,255,0.6);
+            --radius: 20px;
+            --radius-sm: 14px;
+        }
 
-        .sidebar { width: var(--sidebar-width); height: 100vh; background: white; border-right: 1px solid #e0e5f2; position: fixed; padding: 40px 20px; box-sizing: border-box; display: flex; flex-direction: column; }
-        .logo { font-size: 1.5rem; font-weight: 800; color: var(--brand); text-decoration: none; margin-bottom: 50px; display: block; }
-        .nav-link { text-decoration: none; color: #a3aed0; font-weight: 700; padding: 15px 20px; border-radius: 12px; margin-bottom: 10px; display: flex; align-items: center; }
-        .nav-link:hover, .nav-link.active { background: var(--brand-light); color: var(--brand); }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        .main-content { margin-left: var(--sidebar-width); width: calc(100% - var(--sidebar-width)); min-height: 100vh; }
-        .header { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); padding: 20px 40px; border-bottom: 1px solid #e0e5f2; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
-        
-        .container { padding: 40px; }
-        .table-card { background: white; border-radius: 24px; padding: 30px; border: 1px solid #e0e5f2; box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
-        
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            display: flex;
+            background: var(--bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width: 264px;
+            background: var(--sidebar);
+            height: 100vh;
+            color: white;
+            padding: 28px 16px;
+            position: fixed;
+            left: 0;
+            top: 0;
+            display: flex;
+            flex-direction: column;
+            z-index: 200;
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+        .sidebar::-webkit-scrollbar { display: none; }
+
+        .logo {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            letter-spacing: -0.5px;
+            padding: 0 12px;
+            margin-bottom: 8px;
+        }
+        .logo .dot { color: var(--brand); }
+
+        .sidebar-section {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: rgba(255,255,255,0.3);
+            padding: 0 12px;
+            margin-top: 28px;
+            margin-bottom: 10px;
+        }
+
+        .nav-group {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            flex: 1;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: rgba(255,255,255,0.5);
+            text-decoration: none;
+            padding: 11px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 0.84rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+            font-size: 0.92rem;
+        }
+        .nav-item:hover {
+            background: var(--sidebar-hover);
+            color: rgba(255,255,255,0.9);
+        }
+        .nav-item.active {
+            background: var(--sidebar-active);
+            color: white;
+        }
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 20px;
+            background: var(--brand);
+            border-radius: 0 3px 3px 0;
+        }
+        .nav-item.logout {
+            color: rgba(244, 63, 94, 0.7);
+            margin-top: 6px;
+        }
+        .nav-item.logout:hover {
+            background: rgba(244, 63, 94, 0.1);
+            color: #f43f5e;
+        }
+
+        /* ── Main Content ── */
+        .main {
+            margin-left: 264px;
+            width: calc(100% - 264px);
+            min-height: 100vh;
+            padding: 32px 40px;
+        }
+
+        /* ── Header ── */
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 32px;
+        }
+        .page-header-left {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .breadcrumb {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .page-title {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+        .student-count-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            padding: 10px 20px;
+            border-radius: 50px;
+            box-shadow: var(--shadow-glass);
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+        }
+        .student-count-badge i {
+            color: var(--brand);
+            font-size: 0.95rem;
+        }
+        .student-count-badge .count {
+            color: var(--brand);
+            font-weight: 800;
+        }
+
+        /* ── Table Card ── */
+        .table-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-glass);
+            overflow: hidden;
+        }
+
+        .table-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 24px 28px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .table-header h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .search-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(15, 23, 42, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px 14px;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            min-width: 220px;
+            transition: all 0.2s ease;
+        }
+        .search-box:focus-within {
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3px var(--brand-light);
+        }
+        .search-box input {
+            border: none;
+            background: transparent;
+            outline: none;
+            font-family: inherit;
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            width: 100%;
+        }
+        .search-box input::placeholder { color: var(--text-muted); }
+        .search-box i { font-size: 0.82rem; }
+
+        /* ── Table ── */
         table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; color: #a3aed0; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; padding: 15px; border-bottom: 1px solid #f4f7fe; }
-        td { padding: 20px 15px; font-weight: 700; font-size: 0.9rem; border-bottom: 1px solid #f4f7fe; }
-        
-        .status-badge { padding: 6px 12px; border-radius: 10px; font-size: 0.75rem; background: #dcfce7; color: #15803d; }
+
+        thead th {
+            text-align: left;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-muted);
+            padding: 14px 28px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(15, 23, 42, 0.015);
+        }
+
+        tbody tr {
+            transition: background 0.15s ease;
+        }
+        tbody tr:hover {
+            background: rgba(0, 98, 255, 0.03);
+        }
+        tbody td {
+            padding: 18px 28px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        .student-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .student-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 0.8rem;
+            color: white;
+            flex-shrink: 0;
+        }
+        .avatar-1 { background: linear-gradient(135deg, #6366f1, #818cf8); }
+        .avatar-2 { background: linear-gradient(135deg, #0062ff, #3b82f6); }
+        .avatar-3 { background: linear-gradient(135deg, #10b981, #34d399); }
+        .avatar-4 { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
+        .avatar-5 { background: linear-gradient(135deg, #f43f5e, #fb7185); }
+        .student-name { font-weight: 700; }
+
+        .email-text {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* ── Status Badges ── */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .status-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+        .status-active {
+            background: var(--green-bg);
+            color: var(--green);
+        }
+        .status-active::before { background: var(--green); }
+        .status-inactive {
+            background: var(--amber-bg);
+            color: var(--amber);
+        }
+        .status-inactive::before { background: var(--amber); }
+
+        .date-text {
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 0.82rem;
+        }
+
+        /* ── Empty State ── */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+        .empty-state i {
+            font-size: 2.5rem;
+            margin-bottom: 16px;
+            display: block;
+            opacity: 0.4;
+        }
+        .empty-state p {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 1200px) {
+            .main { padding: 24px; }
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 72px;
+                padding: 20px 8px;
+            }
+            .logo { justify-content: center; padding: 0; }
+            .logo .logo-text { display: none; }
+            .sidebar-section { display: none; }
+            .nav-item span { display: none; }
+            .nav-item { justify-content: center; padding: 12px; }
+            .nav-item i { margin: 0; }
+            .main {
+                margin-left: 72px;
+                width: calc(100% - 72px);
+                padding: 20px 16px;
+            }
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+            }
+            .search-box { min-width: 100%; }
+            .table-card { overflow-x: auto; }
+            table { min-width: 600px; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="sidebar">
-        <a href="/admin/dashboard" class="logo">PREPIUM</a>
-        <nav>
-            <a href="/admin/dashboard" class="nav-link">📊 Dashboard</a>
-            <a href="/admin/subjects" class="nav-link">📚 Subjects</a>
-            <a href="/admin/users" class="nav-link active">👥 Students</a>
-            <a href="/admin/notifications" class="nav-link">🔔 Notifications</a>
-        </nav>
-        <div style="margin-top: auto;"><a href="/logout" class="nav-link" style="color: #ee5d50;">🚪 Logout</a></div>
-    </div>
+    <nav class="sidebar">
+        <a href="/admin/dashboard" class="logo">PREPIUM<span class="dot">.</span></a>
 
-    <div class="main-content">
-        <header class="header">
-            <div><div style="font-size:0.8rem; color:#a3aed0;">Admin / Management</div><h2 style="margin:0;">User Database</h2></div>
-            <div style="background:white; padding:8px 16px; border-radius:50px; border:1px solid #e0e5f2; font-weight:700;"><%= users.length %> Total Students</div>
-        </header>
+        <div class="nav-group">
+            <span class="sidebar-section">Main</span>
+            <a href="/admin/dashboard" class="nav-item">
+                <i class="fas fa-th-large"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="/admin/analytics" class="nav-item">
+                <i class="fas fa-chart-line"></i>
+                <span>Analytics</span>
+            </a>
 
-        <div class="container">
-            <div class="table-card">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Student Name</th>
-                            <th>Email Address</th>
-                            <th>Status</th>
-                            <th>Joined Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% users.forEach(user => { %>
-                            <tr>
-                                <td><%= user.username %></td>
-                                <td style="color: #707eae;"><%= user.email %></td>
-                                <td><span class="status-badge">Active Student</span></td>
-                                <td style="color: #a3aed0;"><%= new Date(user.created_at).toLocaleDateString('en-GB') %></td>
-                            </tr>
-                        <% }) %>
-                    </tbody>
-                </table>
+            <span class="sidebar-section">Manage</span>
+            <a href="/admin/universities" class="nav-item">
+                <i class="fas fa-building-columns"></i>
+                <span>Universities</span>
+            </a>
+            <a href="/admin/subjects" class="nav-item">
+                <i class="fas fa-book-open"></i>
+                <span>Subjects</span>
+            </a>
+
+            <span class="sidebar-section">People</span>
+            <a href="/admin/users" class="nav-item active">
+                <i class="fas fa-user-graduate"></i>
+                <span>Students</span>
+            </a>
+
+            <span class="sidebar-section">System</span>
+            <a href="/admin/notifications" class="nav-item">
+                <i class="fas fa-bell"></i>
+                <span>Notifications</span>
+            </a>
+        </div>
+
+        <a href="/logout" class="nav-item logout">
+            <i class="fas fa-right-from-bracket"></i>
+            <span>Logout</span>
+        </a>
+    </nav>
+
+    <main class="main">
+        <div class="page-header">
+            <div class="page-header-left">
+                <span class="breadcrumb">Admin / People</span>
+                <h1 class="page-title">Students</h1>
+            </div>
+            <div class="student-count-badge">
+                <i class="fas fa-user-graduate"></i>
+                <span class="count"><%= users.length %></span> Total Students
             </div>
         </div>
-    </div>
+
+        <div class="table-card">
+            <div class="table-header">
+                <h3>All Registered Students</h3>
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Search students..." id="searchInput">
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student Name</th>
+                        <th>Email Address</th>
+                        <th>Status</th>
+                        <th>Joined Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (users.length === 0) { %>
+                        <tr>
+                            <td colspan="4">
+                                <div class="empty-state">
+                                    <i class="fas fa-user-slash"></i>
+                                    <p>No students found</p>
+                                </div>
+                            </td>
+                        </tr>
+                    <% } else { %>
+                        <% users.forEach((user, index) => { %>
+                            <tr class="student-row">
+                                <td>
+                                    <div class="student-cell">
+                                        <div class="student-avatar avatar-<%= (index % 5) + 1 %>">
+                                            <%= user.username.charAt(0).toUpperCase() %>
+                                        </div>
+                                        <span class="student-name"><%= user.username %></span>
+                                    </div>
+                                </td>
+                                <td><span class="email-text"><%= user.email %></span></td>
+                                <td><span class="status-badge status-active">Active Student</span></td>
+                                <td><span class="date-text"><%= new Date(user.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) %></span></td>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script>
+        const searchInput = document.getElementById('searchInput');
+        searchInput.addEventListener('input', function () {
+            const query = this.value.toLowerCase();
+            document.querySelectorAll('.student-row').forEach(row => {
+                const name = row.querySelector('.student-name').textContent.toLowerCase();
+                const email = row.querySelector('.email-text').textContent.toLowerCase();
+                row.style.display = (name.includes(query) || email.includes(query)) ? '' : 'none';
+            });
+        });
+    </script>
 </body>
 </html>

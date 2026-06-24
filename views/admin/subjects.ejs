@@ -4,120 +4,757 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prepium Admin | Subjects</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { 
-            --brand: #0062ff; --brand-light: #eef4ff; --bg: #f4f7fe; 
-            --sidebar: #0b1437; --danger: #ff4d4f; --success: #05cd99;
-            --text-main: #1b2559; --text-muted: #a3aed0; --border: #e0e5f2;
+        :root {
+            --brand: #0062ff;
+            --brand-light: rgba(0, 98, 255, 0.08);
+            --brand-glow: rgba(0, 98, 255, 0.25);
+            --sidebar: #0b1437;
+            --sidebar-hover: rgba(255, 255, 255, 0.06);
+            --sidebar-active: rgba(0, 98, 255, 0.18);
+            --bg: #f0f4f8;
+            --card: rgba(255, 255, 255, 0.72);
+            --card-solid: #ffffff;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --border: rgba(226, 232, 240, 0.6);
+            --border-solid: #e2e8f0;
+            --green: #16a34a;
+            --green-bg: #dcfce7;
+            --red: #f43f5e;
+            --red-bg: #ffe4e6;
+            --amber: #f59e0b;
+            --amber-bg: #fef3c7;
+            --radius: 20px;
+            --radius-sm: 14px;
+            --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
+            --shadow: 0 4px 24px rgba(15, 23, 42, 0.06), 0 1px 4px rgba(15, 23, 42, 0.03);
+            --shadow-lg: 0 12px 40px rgba(15, 23, 42, 0.08);
+            --shadow-glass: 0 8px 32px rgba(15, 23, 42, 0.07), inset 0 1px 0 rgba(255,255,255,0.6);
         }
 
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; display: flex; color: var(--text-main); }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        .sidebar { width: 280px; background: var(--sidebar); height: 100vh; color: white; padding: 2.5rem 1.5rem; position: fixed; }
-        .logo { font-size: 1.6rem; font-weight: 800; margin-bottom: 3.5rem; color: white; text-decoration: none; display: flex; letter-spacing: -1px; }
-        .nav-item { display: flex; align-items: center; color: #a3aed0; text-decoration: none; padding: 16px 20px; border-radius: 16px; margin-bottom: 8px; font-weight: 700; transition: 0.3s; }
-        .nav-item:hover, .nav-item.active { background: rgba(255, 255, 255, 0.1); color: white; }
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            display: flex;
+            background: var(--bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
 
-        .main { margin-left: 280px; padding: 2.5rem 4rem; width: 100%; box-sizing: border-box; }
-        .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem; }
-        .header-flex h1 { font-size: 1.8rem; font-weight: 800; margin: 0; }
+        /* ── Sidebar ── */
+        .sidebar {
+            width: 264px;
+            background: var(--sidebar);
+            height: 100vh;
+            color: white;
+            padding: 28px 16px;
+            position: fixed;
+            left: 0;
+            top: 0;
+            display: flex;
+            flex-direction: column;
+            z-index: 200;
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+        .sidebar::-webkit-scrollbar { display: none; }
 
-        .add-card { background: white; padding: 2rem; border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.03); margin-bottom: 3rem; border: 1px solid #fff; }
-        .add-grid { display: grid; grid-template-columns: 1fr 1fr 0.8fr 1.5fr auto; gap: 15px; align-items: end; }
+        .logo {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            letter-spacing: -0.5px;
+            padding: 0 12px;
+            margin-bottom: 8px;
+        }
+        .logo .dot { color: var(--brand); }
 
-        .form-group label { font-size: 0.75rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; display: block; }
-        input, select { width: 100%; background: #f4f7fe; border: 1px solid var(--border); padding: 16px; border-radius: 16px; font-family: inherit; font-weight: 600; color: var(--text-main); box-sizing: border-box; transition: 0.2s; }
-        input:focus, select:focus { outline: none; border-color: var(--brand); background: white; }
+        .sidebar-section {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: rgba(255,255,255,0.3);
+            padding: 0 12px;
+            margin-top: 28px;
+            margin-bottom: 10px;
+        }
 
-        .btn-primary { background: var(--brand); color: white; padding: 16px 25px; border: none; border-radius: 16px; font-weight: 800; cursor: pointer; box-shadow: 0 10px 20px rgba(0, 98, 255, 0.2); transition: 0.3s; }
-        
-        .subjects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 25px; }
-        .subject-card { background: white; padding: 24px; border-radius: 24px; border: 1px solid var(--border); transition: 0.3s; position: relative; display: flex; flex-direction: column; }
-        .uni-badge { background: #0b1437; color: white; padding: 4px 10px; border-radius: 8px; font-size: 0.65rem; font-weight: 800; position: absolute; top: 24px; right: 24px; }
-        .category-tag { background: var(--brand-light); color: var(--brand); padding: 6px 12px; border-radius: 10px; font-size: 0.7rem; font-weight: 800; align-self: flex-start; }
-        .subject-name { font-size: 1.25rem; font-weight: 800; margin: 15px 0 5px; display: block; }
+        .nav-group {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            flex: 1;
+        }
 
-        .drive-status { font-size: 0.75rem; font-weight: 600; margin-bottom: 20px; display: flex; align-items: center; gap: 5px; }
-        .card-actions { display: flex; gap: 8px; border-top: 1px solid #f4f7fe; padding-top: 20px; margin-top: auto; }
-        .action-btn { flex: 1; text-align: center; text-decoration: none; font-weight: 700; font-size: 0.75rem; padding: 10px 5px; border-radius: 12px; }
-        .btn-q { background: var(--brand); color: white; }
-        .btn-edit { background: #f4f7fe; color: var(--text-main); }
-        .btn-del { background: #fff1f0; color: var(--danger); }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: rgba(255,255,255,0.5);
+            text-decoration: none;
+            padding: 11px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 0.84rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+            font-size: 0.92rem;
+        }
+        .nav-item:hover {
+            background: var(--sidebar-hover);
+            color: rgba(255,255,255,0.9);
+        }
+        .nav-item.active {
+            background: var(--sidebar-active);
+            color: white;
+        }
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 20px;
+            background: var(--brand);
+            border-radius: 0 3px 3px 0;
+        }
+        .nav-item.logout {
+            color: rgba(244, 63, 94, 0.7);
+            margin-top: 6px;
+        }
+        .nav-item.logout:hover {
+            background: rgba(244, 63, 94, 0.1);
+            color: var(--red);
+        }
+
+        /* ── Main Content ── */
+        .main {
+            margin-left: 264px;
+            padding: 32px;
+            width: calc(100% - 264px);
+            min-height: 100vh;
+        }
+
+        /* ── Header ── */
+        .page-header {
+            margin-bottom: 28px;
+        }
+        .page-header h1 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin: 0 0 6px 0;
+        }
+        .page-header p {
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+            font-weight: 500;
+        }
+
+        /* ── Glass Card ── */
+        .glass {
+            background: var(--card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-glass);
+        }
+
+        /* ── Add Form Card ── */
+        .form-card {
+            padding: 28px;
+            margin-bottom: 28px;
+        }
+        .form-card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 22px;
+        }
+        .form-card-header .icon-circle {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: var(--brand-light);
+            color: var(--brand);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+        }
+        .form-card-header h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr 0.7fr 1.4fr auto;
+            gap: 16px;
+            align-items: end;
+        }
+
+        .form-group label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .form-control {
+            width: 100%;
+            background: #f8fafc;
+            border: 1.5px solid var(--border);
+            padding: 13px 16px;
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 0.84rem;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: var(--brand);
+            background: white;
+            box-shadow: 0 0 0 3px var(--brand-light);
+        }
+        .form-control::placeholder {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        select.form-control {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 36px;
+        }
+
+        .btn-create {
+            background: var(--brand);
+            color: white;
+            padding: 13px 28px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-weight: 700;
+            font-size: 0.84rem;
+            font-family: inherit;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 14px rgba(0, 98, 255, 0.3);
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .btn-create:hover {
+            background: #0052d6;
+            box-shadow: 0 6px 20px rgba(0, 98, 255, 0.35);
+            transform: translateY(-1px);
+        }
+
+        /* ── Stats Row ── */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+            margin-bottom: 28px;
+        }
+        .mini-stat {
+            padding: 20px 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        .mini-stat::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            border-radius: 20px 20px 0 0;
+        }
+        .mini-stat.blue::before { background: var(--brand); }
+        .mini-stat.green::before { background: var(--green); }
+        .mini-stat.amber::before { background: var(--amber); }
+
+        .mini-stat .stat-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .mini-stat .stat-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .mini-stat .stat-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.82rem;
+        }
+        .mini-stat.blue .stat-icon { background: var(--brand-light); color: var(--brand); }
+        .mini-stat.green .stat-icon { background: rgba(22,163,74,0.1); color: var(--green); }
+        .mini-stat.amber .stat-icon { background: rgba(245,158,11,0.1); color: var(--amber); }
+
+        .mini-stat .stat-value {
+            font-size: 1.7rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        /* ── Subjects Grid ── */
+        .grid-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .grid-header h3 {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+        .grid-header .badge {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--brand);
+            background: var(--brand-light);
+            padding: 5px 12px;
+            border-radius: 20px;
+        }
+
+        .subjects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+
+        .subject-card {
+            padding: 24px;
+            transition: all 0.25s ease;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .subject-card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-3px);
+        }
+        .subject-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--brand);
+            border-radius: 20px 20px 0 0;
+            opacity: 0;
+            transition: opacity 0.25s;
+        }
+        .subject-card:hover::before { opacity: 1; }
+
+        .card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 14px;
+        }
+
+        .uni-badge {
+            background: var(--sidebar);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+        }
+
+        .category-tag {
+            background: var(--brand-light);
+            color: var(--brand);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .subject-name {
+            font-size: 1.15rem;
+            font-weight: 800;
+            margin: 0 0 12px 0;
+            color: var(--text-primary);
+            letter-spacing: -0.3px;
+        }
+
+        .drive-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            align-self: flex-start;
+        }
+        .drive-status.linked {
+            background: var(--green-bg);
+            color: var(--green);
+        }
+        .drive-status.none {
+            background: #f1f5f9;
+            color: var(--text-muted);
+        }
+        .drive-status a {
+            color: inherit;
+            text-decoration: none;
+        }
+        .drive-status a:hover { text-decoration: underline; }
+        .drive-status i { font-size: 0.7rem; }
+
+        .card-actions {
+            display: flex;
+            gap: 8px;
+            border-top: 1px solid rgba(226, 232, 240, 0.6);
+            padding-top: 16px;
+            margin-top: auto;
+        }
+
+        .action-btn {
+            flex: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.74rem;
+            padding: 10px 8px;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .action-btn i { font-size: 0.7rem; }
+
+        .btn-q {
+            background: var(--brand);
+            color: white;
+            box-shadow: 0 2px 8px rgba(0, 98, 255, 0.2);
+        }
+        .btn-q:hover {
+            background: #0052d6;
+            box-shadow: 0 4px 12px rgba(0, 98, 255, 0.3);
+        }
+
+        .btn-edit {
+            background: #f1f5f9;
+            color: var(--text-primary);
+        }
+        .btn-edit:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-del {
+            background: var(--red-bg);
+            color: var(--red);
+        }
+        .btn-del:hover {
+            background: #ffd0d5;
+        }
+
+        /* ── Empty State ── */
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+        .empty-state i {
+            font-size: 2.5rem;
+            display: block;
+            margin-bottom: 14px;
+            opacity: 0.3;
+        }
+        .empty-state p {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        /* ── Mobile Toggle ── */
+        .mobile-toggle {
+            display: none;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 300;
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            background: white;
+            border: 1px solid var(--border);
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            font-size: 1rem;
+            color: var(--text-primary);
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(11, 20, 55, 0.5);
+            z-index: 190;
+        }
+        .overlay.show { display: block; }
+
+        /* ── Responsive ── */
+        @media (max-width: 1200px) {
+            .form-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .form-grid .btn-create {
+                grid-column: 1 / -1;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            .sidebar.open { transform: translateX(0); }
+
+            .main {
+                margin-left: 0;
+                width: 100%;
+                padding: 20px;
+                padding-top: 60px;
+            }
+
+            .mobile-toggle { display: flex; }
+
+            .stats-row { grid-template-columns: 1fr; }
+            .form-grid { grid-template-columns: 1fr; }
+            .form-grid .btn-create { grid-column: auto; justify-self: start; }
+        }
+
+        @media (max-width: 600px) {
+            .subjects-grid { grid-template-columns: 1fr; }
+            .page-header h1 { font-size: 1.3rem; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="sidebar">
-        <a href="/admin/dashboard" class="logo">PREPIUM</a>
-        <a href="/admin/dashboard" class="nav-item">🏠 Dashboard</a>
-        <a href="/admin/universities" class="nav-item">🏛️ Universities</a>
-        <a href="/admin/subjects" class="nav-item active">📚 Subjects</a>
-        <a href="/admin/notifications" class="nav-item">🔔 Notifications</a>
-    </div>
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+    <button class="mobile-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+
+    <nav class="sidebar" id="sidebar">
+        <a href="/admin/dashboard" class="logo">PREPIUM<span class="dot">.</span></a>
+
+        <div class="nav-group">
+            <span class="sidebar-section">Main</span>
+            <a href="/admin/dashboard" class="nav-item">
+                <i class="fas fa-th-large"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="/admin/analytics" class="nav-item">
+                <i class="fas fa-chart-line"></i>
+                <span>Analytics</span>
+            </a>
+
+            <span class="sidebar-section">Manage</span>
+            <a href="/admin/universities" class="nav-item">
+                <i class="fas fa-building-columns"></i>
+                <span>Universities</span>
+            </a>
+            <a href="/admin/subjects" class="nav-item active">
+                <i class="fas fa-book-open"></i>
+                <span>Subjects</span>
+            </a>
+
+            <span class="sidebar-section">People</span>
+            <a href="/admin/students" class="nav-item">
+                <i class="fas fa-user-graduate"></i>
+                <span>Students</span>
+            </a>
+
+            <span class="sidebar-section">System</span>
+            <a href="/admin/notifications" class="nav-item">
+                <i class="fas fa-bell"></i>
+                <span>Notifications</span>
+            </a>
+        </div>
+
+        <a href="/logout" class="nav-item logout">
+            <i class="fas fa-right-from-bracket"></i>
+            <span>Logout</span>
+        </a>
+    </nav>
 
     <main class="main">
-        <div class="header-flex">
-            <div>
-                <h1>Subject Curriculum</h1>
-                <p style="color: var(--text-muted); margin-top: 5px;">Manage courses and study resources.</p>
+        <div class="page-header">
+            <h1>Subject Curriculum</h1>
+            <p>Manage courses and study resources across universities.</p>
+        </div>
+
+        <div class="stats-row">
+            <div class="mini-stat glass blue">
+                <div class="stat-head">
+                    <span class="stat-label">Total Subjects</span>
+                    <div class="stat-icon"><i class="fas fa-book-open"></i></div>
+                </div>
+                <span class="stat-value" style="color: var(--brand);"><%= subjects.length %></span>
+            </div>
+            <div class="mini-stat glass green">
+                <div class="stat-head">
+                    <span class="stat-label">With Drive Link</span>
+                    <div class="stat-icon"><i class="fas fa-link"></i></div>
+                </div>
+                <span class="stat-value" style="color: var(--green);"><%= subjects.filter(s => s.drive_link).length %></span>
+            </div>
+            <div class="mini-stat glass amber">
+                <div class="stat-head">
+                    <span class="stat-label">Universities</span>
+                    <div class="stat-icon"><i class="fas fa-building-columns"></i></div>
+                </div>
+                <span class="stat-value" style="color: var(--amber);"><%= universities.length %></span>
             </div>
         </div>
-        
-        <div class="add-card">
-            <form action="/admin/subjects/add" method="POST" class="add-grid">
-                <div class="form-group">
-                    <label>University</label>
-                    <select name="university_id" required>
-                        <option value="" disabled selected>Select School</option>
-                        <% universities.forEach(uni => { %>
-                            <option value="<%= uni.id %>"><%= uni.name %></option>
-                        <% }) %>
-                    </select>
+
+        <div class="form-card glass">
+            <div class="form-card-header">
+                <div class="icon-circle"><i class="fas fa-plus"></i></div>
+                <h3>Add New Subject</h3>
+            </div>
+            <form action="/admin/subjects/add" method="POST">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>University</label>
+                        <select name="university_id" class="form-control" required>
+                            <option value="" disabled selected>Select university</option>
+                            <% universities.forEach(uni => { %>
+                                <option value="<%= uni.id %>"><%= uni.name %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Course Title</label>
+                        <input type="text" name="name" class="form-control" placeholder="e.g. PHY 301" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Level</label>
+                        <input type="text" name="category" class="form-control" placeholder="300L" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Drive Link</label>
+                        <input type="url" name="drive_link" class="form-control" placeholder="https://drive.google.com/...">
+                    </div>
+                    <button type="submit" class="btn-create">
+                        <i class="fas fa-plus"></i> Create
+                    </button>
                 </div>
-                <div class="form-group">
-                    <label>Course Title</label>
-                    <input type="text" name="name" placeholder="e.g. PHY 301" required>
-                </div>
-                <div class="form-group">
-                    <label>Level</label>
-                    <input type="text" name="category" placeholder="300L" required>
-                </div>
-                <div class="form-group">
-                    <label>Drive Link</label>
-                    <input type="url" name="drive_link" placeholder="https://drive.google.com/...">
-                </div>
-                <button type="submit" class="btn-primary">Create</button>
             </form>
         </div>
 
-        <div class="subjects-grid">
-            <% subjects.forEach(sub => { %>
-            <div class="subject-card">
-                <span class="uni-badge"><%= sub.university_name || 'General' %></span>
-                <span class="category-tag"><%= sub.category %></span>
-                <span class="subject-name"><%= sub.name %></span>
+        <div class="grid-header">
+            <h3>All Subjects</h3>
+            <span class="badge"><%= subjects.length %> total</span>
+        </div>
 
-                <div class="drive-status">
+        <div class="subjects-grid">
+            <% if (subjects.length === 0) { %>
+                <div class="empty-state glass">
+                    <i class="fas fa-book-open"></i>
+                    <p>No subjects found. Add your first subject above.</p>
+                </div>
+            <% } else { %>
+                <% subjects.forEach(sub => { %>
+                <div class="subject-card glass">
+                    <div class="card-top">
+                        <span class="category-tag"><%= sub.category %></span>
+                        <span class="uni-badge"><%= sub.university_name || 'General' %></span>
+                    </div>
+
+                    <h4 class="subject-name"><%= sub.name %></h4>
+
                     <% if (sub.drive_link) { %>
-                        <span style="color: var(--success)">●</span> 
-                        <a href="<%= sub.drive_link %>" target="_blank" style="color: var(--text-muted); text-decoration: none;">Drive Linked</a>
+                        <div class="drive-status linked">
+                            <i class="fas fa-check-circle"></i>
+                            <a href="<%= sub.drive_link %>" target="_blank" rel="noopener">Drive Linked</a>
+                        </div>
                     <% } else { %>
-                        <span style="color: var(--danger)">○</span> 
-                        <span style="color: var(--text-muted)">No Link</span>
+                        <div class="drive-status none">
+                            <i class="fas fa-circle-xmark"></i>
+                            <span>No Link</span>
+                        </div>
                     <% } %>
+
+                    <div class="card-actions">
+                        <a href="/admin/questions/manage/<%= sub.id %>" class="action-btn btn-q">
+                            <i class="fas fa-circle-question"></i> Questions
+                        </a>
+                        <a href="/admin/subjects/edit/<%= sub.id %>" class="action-btn btn-edit">
+                            <i class="fas fa-pen"></i> Edit
+                        </a>
+                        <form action="/admin/subjects/delete/<%= sub.id %>" method="POST" style="display:inline;flex:1" onsubmit="return confirm('Delete this subject?')">
+                            <button type="submit" class="action-btn btn-del" style="width:100%">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </form>
+                    </div>
                 </div>
-                
-                <div class="card-actions">
-                    <a href="/admin/questions/manage/<%= sub.id %>" class="action-btn btn-q">Questions</a>
-                    <a href="/admin/subjects/edit/<%= sub.id %>" class="action-btn btn-edit">Edit</a>
-                    <form action="/admin/subjects/delete/<%= sub.id %>" method="POST" style="display:inline" onsubmit="return confirm('Delete this subject?')">
-                        <button type="submit" class="action-btn btn-del">Delete</button>
-                    </form>
-                </div>
-            </div>
-            <% }) %>
+                <% }) %>
+            <% } %>
         </div>
     </main>
+
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('show');
+        }
+    </script>
 </body>
 </html>
