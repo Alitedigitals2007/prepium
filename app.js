@@ -3146,10 +3146,6 @@ function formatUsernameFallback(rawName) {
     return `@${cleanName.toLowerCase().substring(0, 12)}`;
 }
 
-// GET INITIAL COMMUNITY PAGE FRAMEWORK
-app.get('/community', isAuth, (req, res) => {
-    res.render('community');
-});
 // POST: DISPATCH NEW GROUP MESSAGE (GENERAL OR SCHOOL)
 app.post('/api/group-chat/send', isAuth, async (req, res) => {
     try {
