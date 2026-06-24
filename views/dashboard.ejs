@@ -81,11 +81,19 @@
 
         /* Header UI */
         .header-nav { 
-            padding: 1.75rem 1.5rem 0.5rem; 
+            padding: 1.5rem 1.5rem 0.75rem; 
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--glass-border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
+        body.crazy-active .header-nav { background: rgba(15, 23, 42, 0.4); }
         .logo { 
             font-weight: 800; 
             font-size: 1.4rem; 
@@ -113,68 +121,86 @@
 
         .profile-trigger {
             width: 42px; height: 42px; 
-            background: rgba(255, 255, 255, 0.8); border: 1px solid var(--glass-border);
+            background: var(--brand-gradient); border: none;
             border-radius: 14px; display: flex; align-items: center; justify-content: center;
-            font-weight: 700; color: var(--brand); text-decoration: none;
-            box-shadow: var(--shadow-sm);
+            font-weight: 700; color: white; text-decoration: none;
+            box-shadow: 0 4px 12px rgba(0, 98, 255, 0.25);
         }
         body.crazy-active .profile-trigger {
-            background: rgba(30, 27, 75, 0.8); border-color: var(--crazy-glass-border); color: #6366f1;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6); box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
         }
 
         /* Status Pills */
-        .meta-status-row { padding: 0 1.5rem 1rem; display: flex; gap: 10px; align-items: center; }
+        .meta-status-row { padding: 0.75rem 1.5rem 0.5rem; display: flex; gap: 10px; align-items: center; }
         .live-pill {
-            background: rgba(0, 98, 255, 0.1); border: 1px solid rgba(0, 98, 255, 0.15);
-            padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700;
+            background: rgba(0, 98, 255, 0.08); border: 1px solid rgba(0, 98, 255, 0.12);
+            padding: 6px 14px; border-radius: 20px; font-size: 0.72rem; font-weight: 700;
             color: var(--brand); display: flex; align-items: center; gap: 6px;
         }
         body.crazy-active .live-pill { background: rgba(99, 102, 241, 0.2); border-color: rgba(99, 102, 241, 0.3); color: #818cf8; }
 
         /* Typography */
-        .hero-section { padding: 0.5rem 1.5rem 1rem; }
-        .hero-section h1 { font-size: 1.65rem; font-weight: 800; letter-spacing: -0.5px; color: var(--text-dark); }
+        .hero-section { padding: 0.75rem 1.5rem 1rem; }
+        .hero-section h1 { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.8px; color: var(--text-dark); line-height: 1.2; }
         body.crazy-active .hero-section h1 { color: var(--crazy-text); }
         
         .quote-box {
-            margin: 0 1.5rem 1.5rem; padding: 14px 18px;
-            background: rgba(255, 255, 255, 0.5); border: 1px solid var(--glass-border); border-radius: 18px;
-            display: flex; gap: 10px;
+            margin: 0 1.5rem 1.5rem; padding: 16px 18px;
+            background: linear-gradient(135deg, rgba(0, 98, 255, 0.04) 0%, rgba(79, 70, 229, 0.04) 100%); 
+            border: 1px solid rgba(0, 98, 255, 0.08); border-radius: 18px;
+            display: flex; gap: 12px;
         }
         body.crazy-active .quote-box { background: rgba(15, 23, 42, 0.4); border-color: var(--crazy-glass-border); }
-        .quote-box i { color: var(--brand); font-size: 0.85rem; margin-top: 3px; opacity: 0.7; }
+        .quote-box i { color: var(--brand); font-size: 0.9rem; margin-top: 2px; opacity: 0.6; }
         body.crazy-active .quote-box i { color: #6366f1; }
-        .quote-text { font-size: 0.78rem; color: var(--text-sub); font-weight: 600; line-height: 1.4; }
+        .quote-text { font-size: 0.8rem; color: var(--text-sub); font-weight: 600; line-height: 1.5; }
         body.crazy-active .quote-text { color: #94a3b8; }
 
         /* Premium Gate Banners */
         <% if (!user.has_paid) { %>
         .premium-card {
-            margin: 0 1.5rem 1.5rem; padding: 24px; 
-            background: var(--brand-gradient); border-radius: 24px; color: white; 
-            box-shadow: 0 12px 25px rgba(0, 98, 255, 0.15);
+            margin: 0 1.5rem 1.5rem; padding: 28px 24px; 
+            background: linear-gradient(135deg, #0062ff 0%, #4f46e5 50%, #7c3aed 100%); 
+            border-radius: 24px; color: white; 
+            box-shadow: 0 12px 32px rgba(0, 98, 255, 0.2), 0 4px 12px rgba(79, 70, 229, 0.1);
+            position: relative; overflow: hidden;
         }
-        body.crazy-active .premium-card { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); }
-        .premium-card h3 { font-size: 1.15rem; font-weight: 800; }
-        .premium-card p { font-size: 0.85rem; opacity: 0.9; margin: 6px 0 16px; font-weight: 500; }
+        .premium-card::before {
+            content: ''; position: absolute; top: -50%; right: -30%; 
+            width: 200px; height: 200px; border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        body.crazy-active .premium-card { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%); }
+        .premium-card h3 { font-size: 1.2rem; font-weight: 800; position: relative; }
+        .premium-card p { font-size: 0.85rem; opacity: 0.92; margin: 8px 0 18px; font-weight: 500; line-height: 1.5; position: relative; }
         .upgrade-btn {
-            background: #ffffff; color: var(--brand); border: none; padding: 12px 22px; 
-            border-radius: 14px; font-weight: 800; font-size: 0.85rem; cursor: pointer; transition: var(--transition);
+            background: #ffffff; color: var(--brand); border: none; padding: 14px 26px; 
+            border-radius: 14px; font-weight: 800; font-size: 0.88rem; cursor: pointer; 
+            transition: var(--transition); position: relative;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
+        .upgrade-btn:active { transform: scale(0.96); }
         body.crazy-active .upgrade-btn { color: #4f46e5; }
         <% } %>
 
         .challenge-hub {
-            margin: 0 1.5rem 1.75rem; padding: 20px;
-            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 24px; 
+            margin: 0 1.5rem 1.75rem; padding: 20px 22px;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #1e40af 100%); border-radius: 22px; 
             display: flex; align-items: center; justify-content: space-between; color: white; text-decoration: none;
+            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.2);
+            position: relative; overflow: hidden;
         }
-        body.crazy-active .challenge-hub { background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); }
-        .challenge-icon-box { width: 44px; height: 44px; background: rgba(255, 255, 255, 0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .challenge-hub::before {
+            content: ''; position: absolute; top: -40%; right: -20%; 
+            width: 160px; height: 160px; border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        body.crazy-active .challenge-hub { background: linear-gradient(135deg, #06b6d4 0%, #0891b2 50%, #0e7490 100%); box-shadow: 0 8px 24px rgba(6, 182, 212, 0.2); }
+        .challenge-icon-box { width: 46px; height: 46px; background: rgba(255, 255, 255, 0.2); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; position: relative; }
 
         /* Titles Headers */
         .section-header { padding: 0.5rem 1.5rem 0.75rem; display: flex; justify-content: space-between; align-items: center; }
-        .section-header h2 { font-size: 1.05rem; font-weight: 800; color: var(--text-dark); letter-spacing: -0.3px; }
+        .section-header h2 { font-size: 1.1rem; font-weight: 800; color: var(--text-dark); letter-spacing: -0.3px; }
         body.crazy-active .section-header h2 { color: var(--crazy-text); }
 
         /* SPACIOUS UNIFIED GRID SYSTEM CODES */
@@ -182,38 +208,39 @@
         .clean-dashboard-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
+            gap: 14px;
         }
 
         /* Glass Cards Components Layout */
         .glass-card {
-            background: var(--surface);
+            background: rgba(255, 255, 255, 0.7);
             backdrop-filter: blur(20px) saturate(140%);
             -webkit-backdrop-filter: blur(20px) saturate(140%);
-            border: 1px solid var(--glass-border);
-            padding: 20px 16px; border-radius: 24px; text-decoration: none;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            padding: 20px 16px; border-radius: 20px; text-decoration: none;
             display: flex; flex-direction: column; position: relative;
-            box-shadow: 0 8px 24px rgba(148, 163, 184, 0.06);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03), 0 1px 4px rgba(0, 0, 0, 0.02);
             transition: var(--transition);
         }
         body.crazy-active .glass-card { background: var(--crazy-surface); border-color: var(--crazy-border); }
-        .glass-card:not(.locked):active { transform: scale(0.96); background: rgba(255, 255, 255, 0.75); }
+        .glass-card:not(.locked):active { transform: scale(0.96); }
 
         .highlight-border { border-left: 3px solid var(--brand); }
         body.crazy-active .highlight-border { border-left-color: #6366f1; }
 
         .item-icon {
-            width: 42px; height: 42px; border-radius: 14px;
+            width: 44px; height: 44px; border-radius: 14px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 1.1rem; margin-bottom: 14px;
-            background: #ffffff; color: var(--brand);
-            border: 1px solid var(--border); flex-shrink: 0;
+            font-size: 1.15rem; margin-bottom: 14px;
+            background: linear-gradient(135deg, rgba(0, 98, 255, 0.08) 0%, rgba(0, 98, 255, 0.03) 100%); 
+            color: var(--brand);
+            border: 1px solid rgba(0, 98, 255, 0.08); flex-shrink: 0;
         }
-        body.crazy-active .item-icon { background: #1e1b4b; color: #818cf8; border-color: var(--crazy-border); }
+        body.crazy-active .item-icon { background: rgba(30, 27, 75, 0.6); color: #818cf8; border-color: var(--crazy-border); }
 
-        .glass-card b { font-size: 0.92rem; font-weight: 800; color: var(--text-dark); letter-spacing: -0.1px; line-height: 1.2; }
+        .glass-card b { font-size: 0.9rem; font-weight: 800; color: var(--text-dark); letter-spacing: -0.1px; line-height: 1.2; }
         body.crazy-active .glass-card b { color: var(--crazy-text); }
-        .glass-card span { font-size: 0.72rem; color: var(--text-sub); font-weight: 600; margin-top: 5px; line-height: 1.3; }
+        .glass-card span { font-size: 0.7rem; color: var(--text-sub); font-weight: 600; margin-top: 6px; line-height: 1.35; }
         body.crazy-active .glass-card span { color: #94a3b8; }
 
         /* Global Security Locks Design Overlay */
@@ -232,9 +259,9 @@
         .bottom-nav {
             position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
             width: calc(100% - 32px); max-width: 398px;
-            background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+            background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
             height: 74px; border-radius: 24px; display: flex; align-items: center;
-            box-shadow: 0 16px 35px rgba(0, 98, 255, 0.08); border: 1px solid var(--glass-border); z-index: 1000;
+            box-shadow: 0 8px 32px rgba(0, 98, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04); border: 1px solid var(--glass-border); z-index: 1000;
             transition: background 0.5s ease, border 0.5s ease;
         }
         body.crazy-active .bottom-nav { background: rgba(15, 23, 42, 0.75); border-color: var(--crazy-border); }
@@ -592,29 +619,30 @@
             </div>
         </div>
 
-        <nav class="bottom-nav">
-            <a href="/dashboard" class="nav-link active">
-                <i class="fas fa-home"></i>
-                <span>Home</span>
-            </a>
-            <a href="/history" class="nav-link">
-                <i class="fas fa-chart-bar"></i>
-                <span>Stats</span>
-            </a>
-            <a href="/setup-test" class="nav-center-btn"><i class="fas fa-plus"></i></a>
-            <a href="/notifications" class="nav-link" id="trigger-notifications">
-                <% if (unreadNotifs > 0) { %>
-                <div class="notification-dot"><%= unreadNotifs %></div>
-                <% } %>
-                <i class="fas fa-bell"></i>
-                <span>Notification</span>
-            </a>
-            <a href="/profile" class="nav-link">
-                <i class="fas fa-user-circle"></i>
-                <span>Profile</span>
-            </a>
-        </nav>
     </div>
+
+    <nav class="bottom-nav">
+        <a href="/dashboard" class="nav-link active">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+        <a href="/history" class="nav-link">
+            <i class="fas fa-chart-bar"></i>
+            <span>Stats</span>
+        </a>
+        <a href="/setup-test" class="nav-center-btn"><i class="fas fa-plus"></i></a>
+        <a href="/notifications" class="nav-link" id="trigger-notifications">
+            <% if (unreadNotifs > 0) { %>
+            <div class="notification-dot"><%= unreadNotifs %></div>
+            <% } %>
+            <i class="fas fa-bell"></i>
+            <span>Notification</span>
+        </a>
+        <a href="/profile" class="nav-link">
+            <i class="fas fa-user-circle"></i>
+            <span>Profile</span>
+        </a>
+    </nav>
 
     <div class="master-navigator" id="navigator-overlay">
         <div class="navigator-content">
@@ -686,6 +714,7 @@
         });
 
         const overlay = document.getElementById('navigator-overlay');
+        const notifLink = document.getElementById('trigger-notifications');
        
         notifLink.addEventListener('click', (e) => { 
             e.preventDefault(); 
