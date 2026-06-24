@@ -38,13 +38,18 @@
             position: relative;
             box-shadow: 0 0 40px rgba(0,0,0,0.03);
             overflow-x: hidden;
-            padding-bottom: 140px; 
+            padding-bottom: 140px;
+            padding-top: 60px;
         }
 
         /* Nav Bar */
         .nav-bar {
-            position: sticky;
+            position: fixed;
             top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 430px;
             background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
