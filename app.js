@@ -19,8 +19,19 @@ const pdfToText = require('pdf-to-text');
 
 const upload = multer({ 
     storage: multer.memoryStorage(),
-    limits: { fileSize: 10 * 1024 * 1024 }
+    limits: { fileSize: 50 * 1024 * 1024 }
 });
+
+// Multer error handler - return JSON instead of HTML
+function handleUploadError(err, req, res, next) {
+    if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({ success: false, message: 'File too large. Maximum size is 50MB.' });
+        }
+        return res.status(400).json({ success: false, message: err.message });
+    }
+    next(err);
+}
 
 const pgSession = require('connect-pg-simple')(session);
 
@@ -1005,7 +1016,7 @@ app.get('/subjects', isStudent, async (req, res) => {
 });
 
 // API: Upload a study material
-app.post('/api/materials/upload', isAuth, upload.single('file'), async (req, res) => {
+app.post('/api/materials/upload', isAuth, upload.single('file'), handleUploadError, async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: 'No file uploaded' });
@@ -2442,7 +2453,7 @@ app.get('/ai-quiz', isAuth, (req, res) => {
 });
 
 
-app.post('/upload-pdf', upload.single('lecture_note'), async (req, res) => {
+app.post('/upload-pdf', upload.single('lecture_note'), handleUploadError, async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: "No file uploaded." });
@@ -2468,7 +2479,7 @@ app.post('/upload-pdf', upload.single('lecture_note'), async (req, res) => {
 });
 
 // POST: Process and Generate Contextual Quizzes from PDFs with Gemini and OpenRouter Backup
-app.post('/generate-ai-quiz', isStudent, upload.single('lecture_note'), async (req, res) => {
+app.post('/generate-ai-quiz', isStudent, upload.single('lecture_note'), handleUploadError, async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: "No file uploaded." });

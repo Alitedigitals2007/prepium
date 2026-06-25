@@ -530,7 +530,7 @@
                     method: 'POST',
                     body: formData
                 });
-                const data = await res.json();
+                const data = await res.json().catch(() => ({ success: false, message: 'Server returned an invalid response. The file may be too large.' }));
 
                 if (data.success) {
                     closeUploadModal();
