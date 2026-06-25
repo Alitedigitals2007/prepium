@@ -18,7 +18,17 @@ const ai = new GoogleGenerativeAI(apiKeys[0] || '');
 const pdfToText = require('pdf-to-text');
 
 const upload = multer({ 
-    storage: multer.memoryStorage(),
+    storage: multer.diskStorage({
+        destination: (req, file, cb) => {
+            const dir = path.join(__dirname, 'uploads', 'materials');
+            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+            cb(null, dir);
+        },
+        filename: (req, file, cb) => {
+            const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname);
+            cb(null, uniqueName);
+        }
+    }),
     limits: { fileSize: 50 * 1024 * 1024 }
 });
 
@@ -79,9 +89,17 @@ pool.on('error', (err) => {
                 description TEXT DEFAULT '',
                 file_type VARCHAR(100),
                 file_size INTEGER,
+                file_path TEXT,
                 file_data BYTEA,
                 created_at TIMESTAMP DEFAULT NOW()
             )
+        `);
+        // Add file_path column to existing tables if missing
+        await pool.query(`
+            DO $$ BEGIN
+                ALTER TABLE student_materials ADD COLUMN IF NOT EXISTS file_path TEXT;
+            EXCEPTION WHEN duplicate_column THEN null;
+            END $$;
         `);
         console.log('[DB] student_materials table ready');
     } catch (err) {
@@ -142,7 +160,7 @@ app.use(session({
 // Middleware to check if user is logged in
 const isAuth = (req, res, next) => {
     if (req.session.user) return next();
-    if (req.xhr || (req.headers.accept && req.headers.accept.includes('application/json'))) {
+    if (req.xhr || req.headers.accept?.includes('json') || req.headers['content-type']?.includes('multipart') || req.headers['content-type']?.includes('json') || req.path.startsWith('/api/')) {
         return res.status(401).json({ success: false, message: 'Not authenticated' });
     }
     res.redirect('/login');
@@ -1018,9 +1036,8 @@ app.post('/api/materials/upload', isAuth, upload.single('file'), async (req, res
         const userId = req.session.user.id;
         const file = req.file;
 
-        // Store file info in database (file stays in memory buffer)
         await pool.query(`
-            INSERT INTO student_materials (user_id, name, description, file_type, file_size, file_data)
+            INSERT INTO student_materials (user_id, name, description, file_type, file_size, file_path)
             VALUES ($1, $2, $3, $4, $5, $6)
         `, [
             userId,
@@ -1028,13 +1045,14 @@ app.post('/api/materials/upload', isAuth, upload.single('file'), async (req, res
             description || '',
             file.mimetype,
             file.size,
-            file.buffer
+            file.path
         ]);
 
         res.json({ success: true, message: 'Material uploaded successfully' });
     } catch (err) {
         console.error('Material upload error:', err);
-        res.status(500).json({ success: false, message: 'Upload failed' });
+        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        res.status(500).json({ success: false, message: 'Upload failed: ' + err.message });
     }
 });
 
@@ -1058,30 +1076,42 @@ app.get('/api/materials', isAuth, async (req, res) => {
 app.get('/api/materials/:id/view', isAuth, async (req, res) => {
     try {
         const result = await pool.query(
-            'SELECT file_data, file_type, name FROM student_materials WHERE id = $1 AND user_id = $2',
+            'SELECT file_path, file_type, name FROM student_materials WHERE id = $1 AND user_id = $2',
             [req.params.id, req.session.user.id]
         );
         if (result.rows.length === 0) {
-            return res.status(404).send('Material not found');
+            return res.status(404).json({ error: 'Material not found' });
         }
         const file = result.rows[0];
+        if (!file.file_path || !fs.existsSync(file.file_path)) {
+            return res.status(404).json({ error: 'File not found on disk' });
+        }
         res.setHeader('Content-Type', file.file_type);
         res.setHeader('Content-Disposition', `inline; filename="${file.name}"`);
-        res.send(file.file_data);
+        res.sendFile(file.file_path);
     } catch (err) {
-        res.status(500).send('Error loading file');
+        console.error('View file error:', err);
+        res.status(500).json({ error: 'Error loading file' });
     }
 });
 
 // API: Delete a material
 app.post('/api/materials/:id/delete', isAuth, async (req, res) => {
     try {
+        const result = await pool.query(
+            'SELECT file_path FROM student_materials WHERE id = $1 AND user_id = $2',
+            [req.params.id, req.session.user.id]
+        );
+        if (result.rows.length > 0 && result.rows[0].file_path && fs.existsSync(result.rows[0].file_path)) {
+            fs.unlinkSync(result.rows[0].file_path);
+        }
         await pool.query(
             'DELETE FROM student_materials WHERE id = $1 AND user_id = $2',
             [req.params.id, req.session.user.id]
         );
         res.json({ success: true });
     } catch (err) {
+        console.error('Delete file error:', err);
         res.status(500).json({ error: 'Delete failed' });
     }
 });
