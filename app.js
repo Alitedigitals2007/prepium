@@ -22,17 +22,6 @@ const upload = multer({
     limits: { fileSize: 50 * 1024 * 1024 }
 });
 
-// Multer error handler - return JSON instead of HTML
-function handleUploadError(err, req, res, next) {
-    if (err instanceof multer.MulterError) {
-        if (err.code === 'LIMIT_FILE_SIZE') {
-            return res.status(400).json({ success: false, message: 'File too large. Maximum size is 50MB.' });
-        }
-        return res.status(400).json({ success: false, message: err.message });
-    }
-    next(err);
-}
-
 const pgSession = require('connect-pg-simple')(session);
 
 // Simple in-memory rate limiter
@@ -127,8 +116,8 @@ const transporter = nodemailer.createTransport({
 });
 
 app.set('view engine', 'ejs');
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.static('public'));
 
 // Add this line directly ABOVE your app.use(session({...})) middleware declaration
@@ -153,6 +142,9 @@ app.use(session({
 // Middleware to check if user is logged in
 const isAuth = (req, res, next) => {
     if (req.session.user) return next();
+    if (req.xhr || (req.headers.accept && req.headers.accept.includes('application/json'))) {
+        return res.status(401).json({ success: false, message: 'Not authenticated' });
+    }
     res.redirect('/login');
 };
 
@@ -1016,7 +1008,7 @@ app.get('/subjects', isStudent, async (req, res) => {
 });
 
 // API: Upload a study material
-app.post('/api/materials/upload', isAuth, upload.single('file'), handleUploadError, async (req, res) => {
+app.post('/api/materials/upload', isAuth, upload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: 'No file uploaded' });
@@ -2453,7 +2445,7 @@ app.get('/ai-quiz', isAuth, (req, res) => {
 });
 
 
-app.post('/upload-pdf', upload.single('lecture_note'), handleUploadError, async (req, res) => {
+app.post('/upload-pdf', upload.single('lecture_note'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: "No file uploaded." });
@@ -2479,7 +2471,7 @@ app.post('/upload-pdf', upload.single('lecture_note'), handleUploadError, async 
 });
 
 // POST: Process and Generate Contextual Quizzes from PDFs with Gemini and OpenRouter Backup
-app.post('/generate-ai-quiz', isStudent, upload.single('lecture_note'), handleUploadError, async (req, res) => {
+app.post('/generate-ai-quiz', isStudent, upload.single('lecture_note'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: "No file uploaded." });
@@ -3098,6 +3090,21 @@ async function checkDeadlineNotifications() {
 setInterval(checkDeadlineNotifications, 5 * 60 * 1000);
 // Also run once on startup (after a short delay to let the server fully start)
 setTimeout(checkDeadlineNotifications, 10000);
+
+// Global error handler - catches multer and other errors, returns JSON
+app.use((err, req, res, next) => {
+    console.error('Global error handler:', err);
+    if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({ success: false, message: 'File too large. Maximum size is 50MB.' });
+        }
+        return res.status(400).json({ success: false, message: err.message });
+    }
+    if (err.type === 'entity.too.large') {
+        return res.status(400).json({ success: false, message: 'File too large. Maximum size is 50MB.' });
+    }
+    res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
+});
 
 const config = {
     maxDuration: 60,
