@@ -7,32 +7,10 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
 
     <style>
-        :root { 
-            --brand: #0062ff; 
-            --brand-gradient: linear-gradient(135deg, #0062ff 0%, #0045b5 100%);
-            --bg: #f8fafc; 
-            --text-dark: #0b1437; 
-            --text-sub: #a3aed0;
-            --border: #eef2f6;
-            --danger: #ff4d4f;
-            --success: #05cd99;
-        }
-
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; transition: all 0.2s ease; }
-        
-        body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: var(--bg); margin: 0; color: var(--text-dark); 
-            display: flex; justify-content: center; 
-        }
-
         .app-shell { 
-            width: 100%; max-width: 430px; 
-            background: #ffffff; min-height: 100vh; 
-            position: relative; padding-bottom: 110px;
-            box-shadow: 0 0 40px rgba(0,0,0,0.02);
             display: flex; flex-direction: column;
         }
 
@@ -94,26 +72,6 @@
         .input-field { width: 100%; background: #f8fafc; border: 1px solid var(--border); border-radius: 16px; padding: 14px; font-family: inherit; font-weight: 600; margin-bottom: 15px; }
         .input-field:focus { border-color: var(--brand); outline: none; background: white; }
 
-        /* Bottom Floating Navbar */
-        .bottom-nav {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            width: calc(100% - 40px); max-width: 390px;
-            background: #0b1437; height: 75px; border-radius: 24px;
-            display: flex; justify-content: space-around; align-items: center;
-            box-shadow: 0 12px 30px rgba(11, 20, 55, 0.3); z-index: 1000;
-        }
-        .nav-link { text-decoration: none; color: #a3aed0; text-align: center; }
-        .nav-link.active { color: white; }
-        .nav-link i { font-size: 1.25rem; display: block; margin-bottom: 3px; }
-        .nav-link span { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
-        
-        .nav-center-btn {
-            width: 60px; height: 60px; background: var(--brand); border-radius: 20px;
-            display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 1.6rem; transform: translateY(-28px);
-            border: 5px solid #ffffff; box-shadow: 0 8px 15px rgba(0, 98, 255, 0.4);
-            text-decoration: none;
-        }
     </style>
 </head>
 <body>

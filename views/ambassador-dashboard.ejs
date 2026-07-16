@@ -5,25 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ambassador Console | Prepium</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
     <style>
         :root { 
-            --brand: #0062ff; 
-            --bg: #f8fafc; 
             --text: #1e293b; 
-            --success: #10b981; 
         }
-        * { box-sizing: border-box; }
         body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: var(--bg); 
-            color: var(--text); 
-            margin: 0; 
             padding: 2rem 1rem; 
         }
         
         .container { max-width: 950px; margin: 0 auto; }
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem; }
-        .logo { color: var(--brand); font-weight: 800; font-size: 1.3rem; text-decoration: none; }
         .logout { color: #ef4444; font-weight: 700; text-decoration: none; font-size: 0.9rem; }
 
         .code-banner {
@@ -40,10 +32,10 @@
         .card.active-balance .val { color: var(--success); }
         .card.withdrawn .val { color: #64748b; }
 
-        .section-title { font-size: 1.2rem; font-weight: 800; margin-bottom: 1rem; }
+
         .action-box { background: white; padding: 1.8rem; border-radius: 24px; border: 1px solid #f1f5f9; margin-bottom: 2.5rem; }
         
-        textarea { width: 100%; padding: 1.1rem; border-radius: 16px; border: 2px solid #e2e8f0; background: #f8fafc; font-family: inherit; font-size: 1rem; resize: none; outline: none; margin-bottom: 1rem; }
+        textarea { width: 100%; resize: none; margin-bottom: 1rem; }
         textarea:focus { border-color: var(--brand); background: white; }
         .btn-action { background: var(--text); color: white; border: none; padding: 1rem 2rem; border-radius: 14px; font-weight: 700; cursor: pointer; transition: 0.2s; }
         .btn-action:hover { transform: translateY(-2px); opacity: 0.95; }

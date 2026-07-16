@@ -5,27 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Prepium | Smart Exam Mastery</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
     <style>
         :root {
-            --brand: #0062ff;
-            --brand-soft: #eef4ff;
-            --success: #00c853;
-            --text-dark: #0a0c10;
-            --text-muted: #5f6672;
-            --surface: #ffffff;
             --bg-light: #f4f7fa;
-            --border: #edf2f7;
         }
-
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
 
         body {
             background-color: var(--bg-light);
-            color: var(--text-dark);
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            margin: 0;
-            display: flex;
-            justify-content: center;
         }
 
         .app-container {
@@ -193,15 +180,6 @@
             letter-spacing: 0.3px;
         }
 
-        .section-title {
-            padding: 2.2rem 1.5rem 0.6rem;
-            font-size: 0.82rem;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            color: var(--text-muted);
-            font-weight: 800;
-        }
-
         .features-grid { padding: 0.4rem 1.5rem; display: grid; gap: 0.85rem; }
         .card {
             background: var(--surface);
@@ -255,15 +233,6 @@
             border-top: 1px solid var(--border);
             z-index: 1000;
         }
-        .btn {
-            display: block; width: 100%; padding: 1.15rem; border-radius: 20px;
-            text-decoration: none; font-weight: 800; text-align: center; font-size: 0.95rem;
-        }
-        .btn-primary { background: var(--brand); color: white; margin-bottom: 10px; box-shadow: 0 8px 24px rgba(0, 98, 255, 0.2); }
-        .btn-outline { color: var(--brand); background: var(--brand-soft); }
-
-        .reveal { opacity: 0; transform: translateY(20px); transition: 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
-        .reveal.visible { opacity: 1; transform: translateY(0); }
         
         /* Custom Keyframe for smooth infinite loops */
         @keyframes scrollMarquee {

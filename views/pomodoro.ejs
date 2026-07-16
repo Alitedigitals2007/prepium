@@ -6,50 +6,12 @@
     <title>Focus Engine | Prepium</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
 
     <style>
-        :root { 
-            --brand: #0062ff; 
-            --brand-gradient: linear-gradient(135deg, #0062ff 0%, #0045b5 100%);
-            --bg: #f8fafc; 
-            --text-dark: #0b1437; 
-            --text-sub: #64748b;
-            --border: #e2e8f0;
-            --surface: #ffffff;
-        }
-
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
-        body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: radial-gradient(circle at top right, #eff6ff 0%, #dbeafe 40%, #e2e8f0 100%);
-            background-attachment: fixed;
-            margin: 0; color: var(--text-dark); 
-            display: flex; justify-content: center; overflow-x: hidden;
-            min-height: 100vh;
-        }
-
-        .app-shell { 
-            width: 100%; max-width: 430px; 
-            background: rgba(248, 250, 252, 0.6); 
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            min-height: 100vh; 
-            position: relative; display: flex; flex-direction: column;
-            border-left: 1px solid rgba(255,255,255,0.7);
-            border-right: 1px solid rgba(255,255,255,0.7);
-            padding-bottom: 110px;
-        }
-
         /* Header */
         .header-nav { 
             padding: 1.5rem 1.5rem 1rem; 
-            display: flex; justify-content: space-between; align-items: center; 
-            background: rgba(255,255,255,0.4);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border-bottom: 1px solid rgba(255,255,255,0.7);
-            position: sticky; top: 0; z-index: 100;
         }
         .logo { font-weight: 800; font-size: 1.2rem; letter-spacing: -1px; color: var(--text-dark); text-decoration: none; }
         .logo span { color: var(--brand); }
@@ -293,26 +255,6 @@
             font-size: 0.85rem; font-weight: 800;
         }
 
-        /* Navigation */
-        .bottom-nav {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            width: calc(100% - 40px); max-width: 390px; 
-            background: rgba(255, 255, 255, 0.85); 
-            backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
-            height: 70px; border-radius: 24px; 
-            display: flex; justify-content: space-around; 
-            align-items: center; z-index: 1000;
-            border: 1px solid rgba(255,255,255,0.7);
-            box-shadow: 0 8px 32px rgba(0, 98, 255, 0.08);
-        }
-        .nav-link { 
-            text-decoration: none; color: var(--text-sub); text-align: center; 
-            font-size: 0.58rem; font-weight: 700; text-transform: uppercase;
-            letter-spacing: 0.3px;
-            display: flex; flex-direction: column; align-items: center; gap: 4px;
-        }
-        .nav-link i { font-size: 1.1rem; }
-        .nav-link.active { color: var(--brand); }
     </style>
 </head>
 <body>

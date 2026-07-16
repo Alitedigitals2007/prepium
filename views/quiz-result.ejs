@@ -22,67 +22,23 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
     <style>
-        :root { 
-            --brand: #0062ff; 
+        :root {
             --brand-gradient: linear-gradient(135deg, #0062ff 0%, #4f46e5 100%);
-            --success: #10b981; 
-            --danger: #ef4444; 
-            --text-dark: #0f172a; 
+            --success: #10b981;
+            --danger: #ef4444;
+            --text-dark: #0f172a;
             --text-sub: #64748b;
-            --border: #e2e8f0;
-        }
-        
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
-        body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: radial-gradient(circle at top right, #eff6ff 0%, #dbeafe 40%, #e2e8f0 100%);
-            background-attachment: fixed;
-            margin: 0; color: var(--text-dark); 
-            display: flex; justify-content: center;
-            min-height: 100vh;
-            padding: 0;
         }
 
-        .app-shell {
-            width: 100%; max-width: 430px;
-            background: rgba(248, 250, 252, 0.6);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            min-height: 100vh;
-            border-left: 1px solid rgba(255,255,255,0.7);
-            border-right: 1px solid rgba(255,255,255,0.7);
-            padding-bottom: 100px;
-        }
-
-        /* Sticky Header */
-        .header-glass {
-            padding: 1.25rem 1.5rem;
-            background: rgba(255,255,255,0.5);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            position: sticky; top: 0; z-index: 100;
-            border-bottom: 1px solid rgba(255,255,255,0.7);
-            display: flex; align-items: center; justify-content: space-between;
-        }
-        .back-circle { 
-            width: 42px; height: 42px; 
-            background: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.9);
-            border-radius: 14px;
-            display: flex; align-items: center; justify-content: center;
-            text-decoration: none; color: var(--text-dark);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-        }
-        .header-title { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.5px; }
-        .session-tag { 
+        .session-tag {
             background: linear-gradient(135deg, rgba(0, 98, 255, 0.08), rgba(79, 70, 229, 0.08));
-            color: var(--brand); padding: 6px 14px; border-radius: 10px; 
+            color: var(--brand); padding: 6px 14px; border-radius: 10px;
             font-weight: 800; font-size: 0.65rem; text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
-        /* Score Hero Card */
         .score-hero {
             margin: 1.25rem 1.5rem;
             padding: 32px 24px;
@@ -112,9 +68,9 @@
         }
         .score-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
         .score-ring-bg { fill: none; stroke: #e2e8f0; stroke-width: 10; }
-        .score-ring-fill { 
+        .score-ring-fill {
             fill: none; stroke-width: 10; stroke-linecap: round;
-            stroke-dasharray: 440; 
+            stroke-dasharray: 440;
             transition: stroke-dashoffset 1.5s ease;
         }
         .score-ring-fill.good { stroke: url(#successGrad); }
@@ -138,7 +94,6 @@
         }
         .score-summary strong { color: var(--text-dark); font-weight: 800; }
 
-        /* Stats Row */
         .result-stats {
             display: flex; gap: 10px; margin-top: 20px; position: relative;
         }
@@ -152,7 +107,6 @@
         .wrong-color { color: var(--danger); }
         .total-color { color: var(--brand); }
 
-        /* Performance Message */
         .perf-msg {
             margin: 0 1.5rem 1rem; padding: 16px 18px;
             border-radius: 18px;
@@ -171,7 +125,6 @@
         .perf-msg.poor .perf-icon { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
         .perf-text { font-size: 0.8rem; font-weight: 600; color: var(--text-sub); line-height: 1.4; }
 
-        /* Breakdown */
         .breakdown {
             margin: 0 1.5rem 1.5rem;
             background: rgba(255,255,255,0.7);
@@ -179,37 +132,29 @@
             border-radius: 20px; overflow: hidden;
             box-shadow: 0 2px 12px rgba(0,0,0,0.02);
         }
-        .breakdown summary { 
-            padding: 16px 18px; font-weight: 800; font-size: 0.85rem; 
-            cursor: pointer; list-style: none; 
+        .breakdown summary {
+            padding: 16px 18px; font-weight: 800; font-size: 0.85rem;
+            cursor: pointer; list-style: none;
             display: flex; justify-content: space-between; align-items: center;
         }
-        .breakdown summary::after { 
-            content: 'View Details'; font-size: 0.65rem; color: var(--brand); 
+        .breakdown summary::after {
+            content: 'View Details'; font-size: 0.65rem; color: var(--brand);
             font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
         }
         .breakdown[open] summary::after { content: 'Hide Details'; }
         .breakdown-inner { padding: 0 18px 18px; border-top: 1px solid rgba(226,232,240,0.5); }
-        .subj-row { 
+        .subj-row {
             display: flex; justify-content: space-between; align-items: center;
             padding: 12px 0; border-bottom: 1px solid rgba(248,250,252,0.8);
         }
         .subj-row:last-child { border-bottom: none; }
         .subj-name { font-weight: 700; font-size: 0.82rem; color: var(--text-dark); }
-        .subj-score { 
+        .subj-score {
             font-weight: 800; font-size: 0.82rem; color: var(--brand);
             background: rgba(0, 98, 255, 0.06);
             padding: 4px 12px; border-radius: 8px;
         }
 
-        /* Section Title */
-        .section-header {
-            padding: 0.5rem 1.5rem 0.75rem;
-            font-size: 0.75rem; font-weight: 800; color: var(--text-dark);
-            letter-spacing: -0.2px;
-        }
-
-        /* Question Cards */
         .q-card {
             margin: 0 1.5rem 1rem;
             background: rgba(255,255,255,0.7);
@@ -226,9 +171,9 @@
         .q-card-top.skipped { background: linear-gradient(90deg, #94a3b8, #cbd5e1); }
 
         .q-card-body { padding: 18px; }
-        .q-num { 
-            font-size: 0.6rem; font-weight: 800; color: var(--text-sub); 
-            text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; 
+        .q-num {
+            font-size: 0.6rem; font-weight: 800; color: var(--text-sub);
+            text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
             display: flex; align-items: center; gap: 8px;
         }
         .q-badge {
@@ -237,68 +182,63 @@
         .q-badge.correct { background: rgba(16,185,129,0.1); color: var(--success); }
         .q-badge.wrong { background: rgba(239,68,68,0.1); color: var(--danger); }
 
-        .q-text { 
-            font-weight: 700; font-size: 0.95rem; color: var(--text-dark); 
+        .q-text {
+            font-weight: 700; font-size: 0.95rem; color: var(--text-dark);
             margin-bottom: 20px; line-height: 1.5;
         }
 
-        /* Options */
         .opt-list { display: flex; flex-direction: column; gap: 10px; }
-        .opt-item { 
-            padding: 14px 16px; border-radius: 14px; 
-            border: 1.5px solid rgba(226,232,240,0.6); 
+        .opt-item {
+            padding: 14px 16px; border-radius: 14px;
+            border: 1.5px solid rgba(226,232,240,0.6);
             font-weight: 600; font-size: 0.85rem;
             display: flex; align-items: center; gap: 12px;
             background: rgba(255,255,255,0.6);
             transition: all 0.2s ease;
         }
-        .opt-prefix { 
-            width: 30px; height: 30px; background: rgba(241,245,249,0.8); 
-            border-radius: 10px; display: flex; align-items: center; 
+        .opt-prefix {
+            width: 30px; height: 30px; background: rgba(241,245,249,0.8);
+            border-radius: 10px; display: flex; align-items: center;
             justify-content: center; font-weight: 800; color: var(--text-sub);
             font-size: 0.75rem; flex-shrink: 0;
         }
         .opt-text { flex: 1; line-height: 1.4; }
 
-        /* Correct Option */
-        .opt-item.is-correct { 
-            border-color: var(--success); background: rgba(16,185,129,0.04); 
+        .opt-item.is-correct {
+            border-color: var(--success); background: rgba(16,185,129,0.04);
         }
         .opt-item.is-correct .opt-prefix { background: var(--success); color: white; }
-        .opt-item.is-correct::after { 
+        .opt-item.is-correct::after {
             content: '\f00c'; font-family: 'Font Awesome 6 Free'; font-weight: 900;
             color: var(--success); font-size: 0.75rem;
         }
 
-        /* Wrong Option */
-        .opt-item.is-wrong { 
-            border-color: var(--danger); background: rgba(239,68,68,0.04); 
+        .opt-item.is-wrong {
+            border-color: var(--danger); background: rgba(239,68,68,0.04);
         }
         .opt-item.is-wrong .opt-prefix { background: var(--danger); color: white; }
-        .opt-item.is-wrong::after { 
+        .opt-item.is-wrong::after {
             content: '\f00d'; font-family: 'Font Awesome 6 Free'; font-weight: 900;
             color: var(--danger); font-size: 0.75rem;
         }
 
-        /* Solution */
         .sol-details {
             margin-top: 16px; border-radius: 14px;
             background: rgba(248,250,252,0.8);
             border: 1px solid rgba(226,232,240,0.5);
             overflow: hidden;
         }
-        .sol-details summary { 
-            padding: 12px 14px; font-size: 0.7rem; font-weight: 800; 
+        .sol-details summary {
+            padding: 12px 14px; font-size: 0.7rem; font-weight: 800;
             text-align: center; color: var(--brand); list-style: none;
             cursor: pointer;
         }
-        .sol-text { 
-            padding: 14px; font-size: 0.82rem; line-height: 1.6; 
+        .sol-text {
+            padding: 14px; font-size: 0.82rem; line-height: 1.6;
             color: var(--text-sub); border-top: 1px solid rgba(226,232,240,0.5);
         }
         .sol-text b { color: var(--text-dark); }
 
-        /* Action Buttons */
         .action-bar {
             display: flex; gap: 10px; padding: 0 1.5rem; margin-top: 1.5rem;
         }
@@ -308,35 +248,15 @@
             display: flex; align-items: center; justify-content: center; gap: 8px;
             transition: all 0.3s ease;
         }
-        .btn-primary { 
+        .btn-action.btn-primary {
             background: var(--brand-gradient); color: white;
             box-shadow: 0 6px 20px rgba(0, 98, 255, 0.2);
         }
-        .btn-secondary { 
+        .btn-action.btn-secondary {
             background: rgba(255,255,255,0.8); color: var(--text-dark);
             border: 1px solid rgba(226,232,240,0.6);
         }
         .btn-action:active { transform: scale(0.97); }
-
-        /* Bottom Nav */
-        .bottom-nav {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            width: calc(100% - 40px); max-width: 390px; 
-            background: rgba(255,255,255,0.85); 
-            backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
-            height: 70px; border-radius: 24px; 
-            display: flex; justify-content: space-around; 
-            align-items: center; z-index: 1000;
-            border: 1px solid rgba(255,255,255,0.7);
-            box-shadow: 0 8px 32px rgba(0, 98, 255, 0.08);
-        }
-        .nav-link { 
-            text-decoration: none; color: var(--text-sub); text-align: center; 
-            font-size: 0.58rem; font-weight: 700; text-transform: uppercase;
-            display: flex; flex-direction: column; align-items: center; gap: 4px;
-        }
-        .nav-link i { font-size: 1.1rem; }
-        .nav-link.active { color: var(--brand); }
     </style>
 </head>
 <body>

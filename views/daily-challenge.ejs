@@ -7,38 +7,20 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
 
     <style>
-        :root { 
-            --brand: #0062ff; 
-            --brand-gradient: linear-gradient(135deg, #0062ff 0%, #0045b5 100%);
-            --accent: #7c3aed;
-            --bg: #f8fafc; 
-            --text-dark: #0b1437; 
-            --text-sub: #a3aed0;
-            --border: #eef2f6;
-            --success: #10b981;
-        }
-
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; transition: all 0.2s ease; outline: none; }
-        
         body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: var(--bg); margin: 0; color: var(--text-dark); 
-            display: flex; justify-content: center; overflow: hidden;
+            overflow: hidden;
         }
 
         .app-shell { 
-            width: 100%; max-width: 430px; 
-            background: #ffffff; height: 100vh; 
-            position: relative; display: flex; flex-direction: column;
-            box-shadow: 0 0 40px rgba(0,0,0,0.02);
+            height: 100vh; 
+            display: flex; flex-direction: column;
         }
 
         /* Fixed Header */
-        .header-nav { padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; background: white; z-index: 10; }
-        .logo { font-weight: 800; font-size: 1.2rem; letter-spacing: -1px; color: var(--text-dark); text-decoration: none; }
-        .logo span { color: var(--brand); }
+        .header-nav { padding: 1.5rem; }
 
         /* Slide Tabs */
         .tab-switcher {
@@ -107,15 +89,6 @@
             box-shadow: 0 8px 20px rgba(0, 98, 255, 0.2);
         }
 
-        /* Floating Nav */
-        .bottom-nav {
-            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-            width: calc(100% - 40px); background: #0b1437; height: 70px; 
-            border-radius: 24px; display: flex; justify-content: space-around; 
-            align-items: center; z-index: 1000;
-        }
-        .nav-link { text-decoration: none; color: #a3aed0; text-align: center; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
-        .nav-link i { font-size: 1.2rem; display: block; margin-bottom: 4px; }
     </style>
 </head>
 <body>

@@ -169,7 +169,7 @@ const isAuth = (req, res, next) => {
 // Middleware to check payment status
 const hasPaid = (req, res, next) => {
     if (req.session.user.has_paid) return next();
-    res.redirect('/payment');
+    res.redirect('/dashboard');
 };
 
 const isAdmin = (req, res, next) => {
@@ -269,70 +269,7 @@ app.post('/auth/signup', rateLimit(5, 60000), async (req, res) => {
 });
 
 
-app.post('/dashboard/verify-payment', rateLimit(5, 300000), async (req, res) => {
-    if (!req.session.user) return res.redirect('/login');
-    const userEmail = req.session.user.email;
-
-    try {
-        // 1. Fetch user status and their ambassador code
-        const userQuery = await pool.query(
-            'SELECT unique_code, has_paid FROM users WHERE email = $1', 
-            [userEmail]
-        );
-
-        if (userQuery.rows.length === 0) {
-            return res.send("User profile not found.");
-        }
-
-        const user = userQuery.rows[0];
-
-        // Exit if user has already activated to prevent double charging/crediting
-        if (user.has_paid === true) {
-            return res.send("Your account has already been activated.");
-        }
-
-        // 2. Activate the user's account status
-        await pool.query('UPDATE users SET has_paid = true WHERE email = $1', [userEmail]);
-        console.log(`[Database] Success: User ${userEmail} marked as paid.`);
-
-        // 3. Process Ambassador credit if a code exists
-        if (user.unique_code) {
-            const codeClean = user.unique_code.trim().toLowerCase();
-            console.log(`[Lookup] Attempting to match code: "${codeClean}"`);
-
-            const ambCheck = await pool.query(
-                'SELECT id, name FROM ambassadors WHERE LOWER(TRIM(unique_code)) = $1',
-                [codeClean]
-            );
-
-            if (ambCheck.rows.length > 0) {
-                const ambassador = ambCheck.rows[0];
-                console.log(`[Match Found] Adding ₦150 to Ambassador: ${ambassador.name}`);
-
-                // Force casting inside the SQL math operation
-                const updateResult = await pool.query(
-                    `UPDATE ambassadors 
-                     SET total_earned = CAST(COALESCE(total_earned, 0) AS INTEGER) + 150, 
-                         total_referrals = CAST(COALESCE(total_referrals, 0) AS INTEGER) + 1 
-                     WHERE id = $1 
-                     RETURNING total_earned, total_referrals`,
-                    [ambassador.id]
-                );
-
-                console.log('[System Output] New Dashboard Stats:', updateResult.rows[0]);
-            } else {
-                console.log(`[No Ambassador Found] The code "${codeClean}" did not match any unique_code.`);
-            }
-        }
-
-        req.session.user.has_paid = true;
-        res.redirect('/dashboard?msg=Account activated successfully!');
-
-    } catch (err) {
-        console.error("Payment Processing Error:", err);
-        res.status(500).send("Database error occurred.");
-    }
-});
+// Payment verification handled via GET /verify-payment (Paystack callback)
 
 // --- GET Login Page ---
 app.get('/login', (req, res) => {
@@ -1143,7 +1080,9 @@ app.get('/setup-test', isStudent, async (req, res) => {
         if (!userStatus.has_paid && userStatus.quiz_attempts >= 2) {
             return res.render('quiz-locked', {
                 user: { ...req.session.user, ...userStatus },
-                message: "You've used up your 2 free quiz attempts. Upgrade to Prepium Pro for unlimited practice tests!"
+                message: "You've used up your 2 free quiz attempts. Upgrade to Prepium Pro for unlimited practice tests!",
+                paystack_key: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_your_key',
+                userEmail: req.session.user.email
             });
         }
 
@@ -1187,7 +1126,9 @@ app.post('/start-quiz', isStudent, async (req, res) => {
         if (!userStatus.has_paid && userStatus.quiz_attempts >= 2) {
             return res.render('quiz-locked', {
                 user: { ...req.session.user, ...userStatus },
-                message: "You've used up your 2 free quiz attempts. Upgrade to Prepium Pro for unlimited practice tests!"
+                message: "You've used up your 2 free quiz attempts. Upgrade to Prepium Pro for unlimited practice tests!",
+                paystack_key: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_your_key',
+                userEmail: req.session.user.email
             });
         }
 

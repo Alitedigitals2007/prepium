@@ -8,6 +8,7 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         window.MathJax = {
@@ -19,28 +20,8 @@
 
     <style>
         :root {
-            --brand: #7c3aed;
             --brand-light: #f5f3ff;
-            --bg: #f8fafc;
-            --surface: #ffffff;
-            --border: #eef2f6;
-            --text: #0b1437;
             --muted: #a3aed0;
-            --success: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-        }
-
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
-        body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); 
-            margin: 0; color: var(--text); display: flex; justify-content: center;
-        }
-
-        .app-shell { 
-            width: 100%; max-width: 430px; background: var(--surface); 
-            min-height: 100vh; position: relative; padding-bottom: 100px;
         }
 
         header { 
@@ -49,8 +30,6 @@
             backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             z-index: 100; border-bottom: 1px solid rgba(0,0,0,0.03);
         }
-        .logo { font-weight: 800; font-size: 1.3rem; letter-spacing: -1px; color: var(--text); text-decoration: none; }
-        .logo span { color: var(--brand); }
 
         .main { padding: 0 1.5rem; }
 
@@ -232,23 +211,6 @@
             padding: 12px; border-radius: 10px; margin-top: 8px; line-height: 1.5;
         }
 
-        /* Bottom Nav */
-        .bottom-nav {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            width: calc(100% - 32px); max-width: 398px;
-            background: rgba(255,255,255,0.85); backdrop-filter: blur(30px);
-            height: 72px; border-radius: 22px; display: flex; align-items: center;
-            box-shadow: 0 12px 30px rgba(0,0,0,0.08); border: 1px solid rgba(255,255,255,0.7);
-            z-index: 1000;
-        }
-        .nav-link { 
-            text-decoration: none; color: var(--muted); text-align: center; 
-            flex: 1; font-weight: 700; cursor: pointer;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-        }
-        .nav-link.active { color: var(--brand); }
-        .nav-link i { font-size: 1.1rem; display: block; margin-bottom: 3px; }
-        .nav-link span { font-size: 0.56rem; text-transform: uppercase; letter-spacing: 0.3px; }
     </style>
 </head>
 <body>

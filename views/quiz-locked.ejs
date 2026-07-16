@@ -6,33 +6,21 @@
     <title>Prepium | Quiz Limit Reached</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://js.paystack.co/v1/inline.js"></script>
     <style>
         :root { 
-            --brand: #0062ff; 
             --brand-light: #e6efff;
-            --bg: #f8fafc; 
-            --text: #0f172a; 
             --sub: #64748b;
-            --border: #edf2f7;
             --white: #ffffff;
         }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
         body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: var(--bg); 
-            color: var(--text); 
-            display: flex; 
-            justify-content: center;
             align-items: center;
-            min-height: 100vh;
             padding: 1.5rem;
         }
 
         .app-shell { 
-            width: 100%; 
-            max-width: 430px; 
             background: var(--white); 
             border-radius: 32px;
             border: 1px solid var(--border);
@@ -95,9 +83,24 @@
         <h1>Test Limit Reached</h1>
         <p class="desc"><%= message %></p>
 
-        <a href="/pricing" class="btn-action">Unlock Unlimited Access ➔</a>
+        <a href="/dashboard" id="pay-link" class="btn-action">Unlock Unlimited Access ➔</a>
         <a href="/dashboard" class="btn-secondary">Return to Dashboard</a>
     </div>
 
+    <script>
+        document.getElementById('pay-link').addEventListener('click', function(e) {
+            e.preventDefault();
+            const handler = PaystackPop.setup({
+                key: '<%= paystack_key %>',
+                email: '<%= userEmail %>',
+                amount: 1000 * 100,
+                currency: 'NGN',
+                callback: function(response) {
+                    window.location.href = "/verify-payment?reference=" + response.reference;
+                }
+            });
+            handler.openIframe();
+        });
+    </script>
 </body>
 </html>
