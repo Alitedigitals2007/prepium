@@ -194,26 +194,10 @@
             box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
         }
 
-        /* Fixed Navigation */
-        .nav-bar { 
-            position: fixed; bottom: 0; width: 100%; max-width: 430px; 
-            background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(8px);
-            height: 85px; display: flex; justify-content: space-around; align-items: center; 
-            border-top: 1px solid #f1f5f9; z-index: 1000; padding-bottom: 12px;
-        }
-        .nav-item { text-decoration: none; color: #94a3b8; font-size: 0.65rem; font-weight: 800; text-align: center; }
-        .nav-item.active { color: var(--brand); }
-        .nav-item i { display: block; font-size: 1.35rem; margin-bottom: 4px; font-style: normal; }
-
-        .center-fab { 
-            width: 58px; height: 58px; background: var(--brand); border-radius: 20px; display: flex; 
-            align-items: center; justify-content: center; color: white; font-size: 1.8rem; 
-            transform: translateY(-22px); border: 5px solid white; box-shadow: 0 10px 20px rgba(0, 98, 255, 0.3);
-            text-decoration: none;
-        }
     </style>
 </head>
 <body>
+<%- include('partials/sidebar') %>
 
     <div class="app-shell">
         <header class="header-main">
@@ -394,12 +378,24 @@
             </div>
         </div>
 
-        <nav class="nav-bar">
-            <a href="/dashboard" class="nav-item"><i>🏠</i>Home</a>
-            <a href="/history" class="nav-item"><i>📊</i>Stats</a>
-            <a href="/setup-test" class="center-fab">+</a>
-            <a href="/notifications" class="nav-item"><i>🔔</i>Alerts</a>
-            <a href="/profile" class="nav-item"><i>👤</i>Profile</a>
+        <nav class="bottom-nav">
+            <a href="/dashboard" class="nav-link">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </a>
+            <a href="/history" class="nav-link">
+                <i class="fas fa-chart-bar"></i>
+                <span>Stats</span>
+            </a>
+            <a href="/setup-test" class="nav-center-btn"><i class="fas fa-plus"></i></a>
+            <a href="/notifications" class="nav-link">
+                <i class="fas fa-bell"></i>
+                <span>Notification</span>
+            </a>
+            <a href="/profile" class="nav-link">
+                <i class="fas fa-user-circle"></i>
+                <span>Profile</span>
+            </a>
         </nav>
     </div>
 

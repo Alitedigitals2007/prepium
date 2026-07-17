@@ -169,6 +169,7 @@
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
         .deadline-fab:active { transform: scale(0.92); }
+        @media (min-width: 1024px) { .deadline-fab { left: 240px; } }
         .deadline-fab .fab-badge {
             position: absolute; top: -4px; right: -4px;
             background: #1e1b4b; color: white;
@@ -281,6 +282,7 @@
     </style>
 </head>
 <body>
+<%- include('partials/sidebar') %>
 
     <div class="app-shell">
         <header class="header-nav">

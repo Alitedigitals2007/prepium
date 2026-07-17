@@ -6,6 +6,7 @@
     <title>Prepium | My Timetable</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/style.css">
     <style>
         :root { 
@@ -120,26 +121,10 @@
         .pdf-brand-head h2 span { color: var(--brand); }
         .pdf-brand-head p { font-size: 0.8rem; font-weight: 600; color: var(--sub); margin: 4px 0 0; }
 
-        /* App Fixed Footer Menu */
-        .nav-bar { 
-            position: fixed; bottom: 0; width: 100%; max-width: 430px; 
-            background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(8px);
-            height: 85px; display: flex; justify-content: space-around; align-items: center; 
-            border-top: 1px solid #f1f5f9; z-index: 1000; padding-bottom: 12px;
-        }
-        .nav-item { text-decoration: none; color: #94a3b8; font-size: 0.65rem; font-weight: 800; text-align: center; }
-        .nav-item.active { color: var(--brand); }
-        .nav-item i { display: block; font-size: 1.35rem; margin-bottom: 4px; font-style: normal; }
-        .center-fab { 
-            width: 58px; height: 58px; background: var(--brand); border-radius: 20px; display: flex; 
-            align-items: center; justify-content: center; color: white; font-size: 1.8rem; 
-            transform: translateY(-22px); border: 5px solid white; box-shadow: 0 10px 20px rgba(0, 98, 255, 0.3);
-            text-decoration: none;
-        }
-        .dot { height: 8px; width: 8px; background: #ef4444; border-radius: 50%; position: absolute; top: 0; right: 0; border: 2px solid white; }
     </style>
 </head>
 <body>
+<%- include('partials/sidebar') %>
 
     <div class="app-shell" id="full-schedule">
         <header class="header-main">
@@ -235,15 +220,24 @@
             </div>
         </div>
 
-        <nav class="nav-bar">
-            <a href="/dashboard" class="nav-item"><i>🏠</i>Home</a>
-            <a href="/history" class="nav-item"><i>📊</i>Stats</a>
-            <a href="/setup-test" class="center-fab">+</a>
-            <a href="/notifications" class="nav-item" style="position: relative;">
-                <i>🔔</i>Alerts
-                <% if (locals.hasNewNotifs) { %><span class="dot"></span><% } %>
+        <nav class="bottom-nav">
+            <a href="/dashboard" class="nav-link">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
             </a>
-            <a href="/profile" class="nav-item"><i>👤</i>Profile</a>
+            <a href="/history" class="nav-link">
+                <i class="fas fa-chart-bar"></i>
+                <span>Stats</span>
+            </a>
+            <a href="/setup-test" class="nav-center-btn"><i class="fas fa-plus"></i></a>
+            <a href="/notifications" class="nav-link">
+                <i class="fas fa-bell"></i>
+                <span>Notification</span>
+            </a>
+            <a href="/profile" class="nav-link">
+                <i class="fas fa-user-circle"></i>
+                <span>Profile</span>
+            </a>
         </nav>
     </div>
 

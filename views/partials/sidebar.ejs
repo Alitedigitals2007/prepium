@@ -1,0 +1,69 @@
+<aside class="sidebar">
+  <a href="/dashboard" class="sidebar-logo">PREPIUM<span>.</span></a>
+  <nav class="sidebar-nav">
+    <a href="/dashboard" class="sidebar-link active">
+      <i class="fas fa-home"></i> Dashboard
+    </a>
+    <a href="/setup-test" class="sidebar-link">
+      <i class="fas fa-bolt"></i> Take a Quiz
+    </a>
+    <a href="/history" class="sidebar-link">
+      <i class="fas fa-chart-bar"></i> History
+    </a>
+    <a href="/cgpa" class="sidebar-link">
+      <i class="fas fa-graduation-cap"></i> CGPA Tracker
+    </a>
+    <a href="/suggestions" class="sidebar-link">
+      <i class="fas fa-lightbulb"></i> Suggestions
+    </a>
+    <a href="/timetable" class="sidebar-link">
+      <i class="fas fa-calendar-alt"></i> Timetable
+    </a>
+    <a href="/pomodoro" class="sidebar-link">
+      <i class="fas fa-clock"></i> Pomodoro
+    </a>
+    <a href="/competition" class="sidebar-link">
+      <i class="fas fa-trophy"></i> Competition
+    </a>
+    <a href="/daily-challenge" class="sidebar-link">
+      <i class="fas fa-calendar-check"></i> Daily Challenge
+    </a>
+    <a href="/deadlines" class="sidebar-link">
+      <i class="fas fa-flag"></i> Deadlines
+    </a>
+    <a href="/notifications" class="sidebar-link">
+      <i class="fas fa-bell"></i> Notifications
+      <% if (typeof unreadNotifs !== 'undefined' && unreadNotifs > 0) { %>
+        <span class="notification-dot" style="position:static;display:inline-flex;margin-left:auto;"><%= unreadNotifs %></span>
+      <% } %>
+    </a>
+    <a href="/subjects" class="sidebar-link">
+      <i class="fas fa-book"></i> Study Library
+    </a>
+    <a href="/ai-quiz" class="sidebar-link">
+      <i class="fas fa-robot"></i> AI Quiz
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="sidebar-avatar">
+        <% if (typeof user !== 'undefined' && user.fullname) { %>
+          <%= user.fullname.charAt(0).toUpperCase() %>
+        <% } else { %>
+          <i class="fas fa-user"></i>
+        <% } %>
+      </div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name">
+          <%= typeof user !== 'undefined' && user.fullname ? user.fullname : 'User' %>
+        </div>
+        <div class="sidebar-user-email">
+          <%= typeof user !== 'undefined' && user.email ? user.email : '' %>
+        </div>
+      </div>
+    </div>
+    <a href="/logout" class="sidebar-logout">
+      <i class="fas fa-right-from-bracket"></i> Sign Out
+    </a>
+  </div>
+</aside>
