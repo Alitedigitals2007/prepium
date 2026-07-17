@@ -1699,10 +1699,6 @@ app.get('/pomodoro', isAuth, (req, res) => {
 
 // GET: Render the Timetable page with stored data
 app.get('/timetable', isAuth, async (req, res) => {
-    if (!req.session.user.has_paid) {
-        return res.redirect('/dashboard?msg=Upgrade to access the Day Planner');
-    }
-
     try {
         // Fetch saved timetable slots for this specific user from your PostgreSQL database
         const result = await pool.query(
