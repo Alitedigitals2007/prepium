@@ -1,4 +1,4 @@
-<!-- Global Pomodoro Overlay - Include in any page -->
+<!-- Global Pomodoro Overlay - persists state across page reloads -->
 <style>
     .pomo-fab {
         position: fixed; bottom: 100px; right: 20px; width: 52px; height: 52px;
@@ -13,27 +13,22 @@
         0%, 100% { transform: scale(1); box-shadow: 0 6px 20px rgba(239,68,68,0.35); }
         50% { transform: scale(1.05); box-shadow: 0 8px 25px rgba(239,68,68,0.45); }
     }
-
     .pomo-overlay {
         display: none; position: fixed; inset: 0; z-index: 2000;
         background: rgba(0,0,0,0.5); backdrop-filter: blur(8px);
         align-items: flex-end; justify-content: center;
     }
     .pomo-overlay.show { display: flex; }
-
     .pomo-sheet {
         width: 100%; max-width: 430px; background: white;
         border-radius: 24px 24px 0 0; padding: 24px 20px 32px;
         animation: slideUp 0.3s cubic-bezier(0.16,1,0.3,1);
     }
     @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-
     .pomo-handle { width: 40px; height: 4px; background: #e2e8f0; border-radius: 2px; margin: 0 auto 20px; }
-
     .pomo-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
     .pomo-title { font-size: 1rem; font-weight: 800; }
     .pomo-close { width: 32px; height: 32px; border-radius: 50%; background: #f1f5f9; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #64748b; }
-
     .pomo-modes { display: flex; gap: 8px; margin-bottom: 24px; }
     .pomo-mode {
         flex: 1; padding: 10px; border: 1.5px solid #e2e8f0; border-radius: 12px;
@@ -41,12 +36,10 @@
         text-align: center; transition: all 0.2s;
     }
     .pomo-mode.active { border-color: #ef4444; background: #fef2f2; color: #ef4444; }
-
     .pomo-timer {
         text-align: center; font-size: 4rem; font-weight: 800; color: #0b1437;
         letter-spacing: -3px; margin-bottom: 24px;
     }
-
     .pomo-controls { display: flex; gap: 10px; }
     .pomo-btn {
         flex: 1; padding: 14px; border: none; border-radius: 14px;
@@ -70,9 +63,9 @@
             <button class="pomo-close" onclick="closePomodoro()"><i class="fas fa-times"></i></button>
         </div>
         <div class="pomo-modes">
-            <button class="pomo-mode active" onclick="pomoSetMode(25,this)">25m Study</button>
-            <button class="pomo-mode" onclick="pomoSetMode(5,this)">5m Break</button>
-            <button class="pomo-mode" onclick="pomoSetMode(15,this)">15m Long</button>
+            <button class="pomo-mode" data-mins="25" onclick="pomoSetMode(25,this)">25m Study</button>
+            <button class="pomo-mode" data-mins="5" onclick="pomoSetMode(5,this)">5m Break</button>
+            <button class="pomo-mode" data-mins="15" onclick="pomoSetMode(15,this)">15m Long</button>
         </div>
         <div class="pomo-timer" id="pomoTimer">25:00</div>
         <div class="pomo-controls">
@@ -88,10 +81,62 @@
 
 <script>
 (function() {
-    let pomoInterval = null, pomoTime = 25*60, pomoRunning = false, pomoDefault = 25*60;
+    const POMO_STORAGE = 'prepium_pomo_overlay';
+    let pomoInterval = null;
+    let pomoRunning = false;
+    let pomoDefault = 25 * 60;
+    let pomoTime = 25 * 60;
+    let pomoStartedAt = null;
 
-    window.openPomodoro = () => document.getElementById('pomoOverlay').classList.add('show');
-    window.closePomodoro = () => document.getElementById('pomoOverlay').classList.remove('show');
+    function loadPomoState() {
+        try {
+            const saved = JSON.parse(localStorage.getItem(POMO_STORAGE));
+            if (!saved) return;
+            pomoDefault = saved.defaultTime || 25 * 60;
+            const elapsed = saved.running ? Math.floor((Date.now() - saved.startedAt) / 1000) : 0;
+            pomoTime = Math.max(0, (saved.remaining || pomoDefault) - elapsed);
+            pomoRunning = saved.running && pomoTime > 0;
+            if (saved.modeIndex !== undefined) {
+                const btns = document.querySelectorAll('.pomo-mode');
+                if (btns[saved.modeIndex]) {
+                    btns.forEach(b => b.classList.remove('active'));
+                    btns[saved.modeIndex].classList.add('active');
+                }
+            }
+        } catch(e) {}
+    }
+
+    function savePomoState() {
+        try {
+            const btns = document.querySelectorAll('.pomo-mode');
+            let modeIdx = 0;
+            btns.forEach((b, i) => { if (b.classList.contains('active')) modeIdx = i; });
+            localStorage.setItem(POMO_STORAGE, JSON.stringify({
+                defaultTime: pomoDefault,
+                remaining: pomoTime,
+                running: pomoRunning,
+                startedAt: pomoStartedAt || Date.now(),
+                modeIndex: modeIdx
+            }));
+        } catch(e) {}
+    }
+
+    function clearPomoState() {
+        try { localStorage.removeItem(POMO_STORAGE); } catch(e) {}
+    }
+
+    function pomoUpdateDisplay() {
+        const m = Math.floor(pomoTime / 60);
+        const s = pomoTime % 60;
+        document.getElementById('pomoTimer').textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function pomoUpdateBtn() {
+        const btn = document.getElementById('pomoPlayBtn');
+        btn.innerHTML = pomoRunning
+            ? '<i class="fas fa-pause"></i> Pause'
+            : '<i class="fas fa-play"></i> Start';
+    }
 
     window.pomoSetMode = (mins, btn) => {
         document.querySelectorAll('.pomo-mode').forEach(b => b.classList.remove('active'));
@@ -99,31 +144,39 @@
         pomoDefault = mins * 60;
         pomoTime = pomoDefault;
         pomoUpdateDisplay();
-        if(pomoRunning) { clearInterval(pomoInterval); pomoRunning = false; pomoUpdateBtn(); }
+        if (pomoRunning) { clearInterval(pomoInterval); pomoRunning = false; pomoUpdateBtn(); }
+        clearPomoState();
     };
 
     window.pomoToggle = () => {
-        if(pomoRunning) {
+        if (pomoRunning) {
             clearInterval(pomoInterval);
             pomoRunning = false;
-        } else {
-            pomoRunning = true;
-            pomoInterval = setInterval(() => {
-                pomoTime--;
-                pomoUpdateDisplay();
-                if(pomoTime <= 0) {
-                    clearInterval(pomoInterval);
-                    pomoRunning = false;
-                    pomoUpdateBtn();
-                    if('Notification' in window && Notification.permission === 'granted') {
-                        new Notification('Focus session complete! Take a break.');
-                    }
-                    alert('Focus session complete!');
-                    pomoReset();
-                }
-            }, 1000);
+            pomoUpdateBtn();
+            savePomoState();
+            return;
         }
+        if (pomoTime <= 0) pomoTime = pomoDefault;
+        pomoRunning = true;
+        pomoStartedAt = Date.now();
+        pomoInterval = setInterval(() => {
+            pomoTime--;
+            pomoUpdateDisplay();
+            savePomoState();
+            if (pomoTime <= 0) {
+                clearInterval(pomoInterval);
+                pomoRunning = false;
+                pomoUpdateBtn();
+                clearPomoState();
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    new Notification('Focus session complete! Take a break.');
+                }
+                alert('Focus session complete!');
+                pomoReset();
+            }
+        }, 1000);
         pomoUpdateBtn();
+        savePomoState();
     };
 
     window.pomoReset = () => {
@@ -132,21 +185,31 @@
         pomoTime = pomoDefault;
         pomoUpdateDisplay();
         pomoUpdateBtn();
+        clearPomoState();
     };
 
-    function pomoUpdateDisplay() {
-        const m = Math.floor(pomoTime/60), s = pomoTime%60;
-        document.getElementById('pomoTimer').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-    }
+    window.openPomodoro = () => document.getElementById('pomoOverlay').classList.add('show');
+    window.closePomodoro = () => document.getElementById('pomoOverlay').classList.remove('show');
 
-    function pomoUpdateBtn() {
-        const btn = document.getElementById('pomoPlayBtn');
-        btn.innerHTML = pomoRunning 
-            ? '<i class="fas fa-pause"></i> Pause'
-            : '<i class="fas fa-play"></i> Start';
+    // Restore state on load
+    loadPomoState();
+    if (pomoRunning) {
+        pomoInterval = setInterval(() => {
+            pomoTime--;
+            pomoUpdateDisplay();
+            savePomoState();
+            if (pomoTime <= 0) {
+                clearInterval(pomoInterval);
+                pomoRunning = false;
+                pomoUpdateBtn();
+                clearPomoState();
+            }
+        }, 1000);
+        pomoUpdateBtn();
     }
+    pomoUpdateDisplay();
 
-    if('Notification' in window && Notification.permission === 'default') {
+    if ('Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission();
     }
 })();

@@ -9,21 +9,15 @@
     <link rel="stylesheet" href="/css/style.css">
 
     <style>
-        /* Header */
-        .header-nav { 
-            padding: 1.5rem 1.5rem 1rem; 
-        }
+        .header-nav { padding: 1.5rem 1.5rem 1rem; }
         .logo { font-weight: 800; font-size: 1.2rem; letter-spacing: -1px; color: var(--text-dark); text-decoration: none; }
         .logo span { color: var(--brand); }
-
         .premium-badge {
             background: linear-gradient(135deg, #0062ff, #4f46e5);
-            padding: 6px 14px; border-radius: 10px; 
+            padding: 6px 14px; border-radius: 10px;
             color: white; font-weight: 800; font-size: 0.65rem;
             letter-spacing: 0.5px;
         }
-
-        /* Session Stats Row */
         .stats-row {
             display: flex; gap: 10px; padding: 0.75rem 1.5rem;
         }
@@ -43,8 +37,6 @@
             text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px;
             display: block;
         }
-
-        /* Circular Timer */
         .timer-section {
             padding: 1rem 1.5rem;
             display: flex; justify-content: center;
@@ -53,29 +45,16 @@
             position: relative;
             width: 260px; height: 260px;
         }
-        .timer-ring {
-            width: 100%; height: 100%;
-            transform: rotate(-90deg);
-        }
-        .timer-ring-bg {
-            fill: none;
-            stroke: #e2e8f0;
-            stroke-width: 8;
-        }
+        .timer-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+        .timer-ring-bg { fill: none; stroke: #e2e8f0; stroke-width: 8; }
         .timer-ring-progress {
-            fill: none;
-            stroke: url(#timerGradient);
-            stroke-width: 8;
-            stroke-linecap: round;
-            stroke-dasharray: 754;
-            stroke-dashoffset: 0;
+            fill: none; stroke: url(#timerGradient); stroke-width: 8;
+            stroke-linecap: round; stroke-dasharray: 754; stroke-dashoffset: 0;
             transition: stroke-dashoffset 1s linear;
         }
         .timer-center {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); text-align: center;
         }
         .timer-display {
             font-size: 3.5rem; font-weight: 800; color: var(--text-dark);
@@ -92,8 +71,6 @@
             font-size: 0.65rem; font-weight: 700; color: var(--brand);
             margin-top: 8px;
         }
-
-        /* Mode Tabs */
         .mode-tabs {
             display: flex; gap: 8px; padding: 0 1.5rem; margin-bottom: 1rem;
         }
@@ -105,15 +82,13 @@
             transition: all 0.3s ease;
             text-transform: uppercase; letter-spacing: 0.5px;
         }
-        .mode-btn.active { 
-            background: var(--brand-gradient); color: white; 
+        .mode-btn.active {
+            background: var(--brand-gradient); color: white;
             box-shadow: 0 4px 16px rgba(0, 98, 255, 0.25);
             border-color: transparent;
         }
-
-        /* Controls */
-        .controls { 
-            display: flex; gap: 12px; justify-content: center; 
+        .controls {
+            display: flex; gap: 12px; justify-content: center;
             padding: 0 1.5rem; margin-bottom: 1.5rem;
         }
         .btn-action {
@@ -121,14 +96,14 @@
             font-weight: 800; font-size: 0.9rem; cursor: pointer;
             transition: all 0.3s ease;
         }
-        .btn-play { 
-            flex: 2; background: var(--brand-gradient); color: white; 
+        .btn-play {
+            flex: 2; background: var(--brand-gradient); color: white;
             box-shadow: 0 8px 24px rgba(0, 98, 255, 0.25);
             display: flex; align-items: center; justify-content: center; gap: 10px;
         }
         .btn-play:active { transform: scale(0.97); }
-        .btn-reset { 
-            flex: 0.8; background: rgba(255,255,255,0.8); color: var(--text-dark); 
+        .btn-reset {
+            flex: 0.8; background: rgba(255,255,255,0.8); color: var(--text-dark);
             border: 1px solid var(--border);
             display: flex; align-items: center; justify-content: center;
         }
@@ -137,8 +112,6 @@
             border: 1px solid rgba(0, 98, 255, 0.15);
             display: flex; align-items: center; justify-content: center;
         }
-
-        /* Motivation Card */
         .motivation-card {
             margin: 0 1.5rem 1.5rem; padding: 18px 20px;
             background: linear-gradient(135deg, rgba(0, 98, 255, 0.06) 0%, rgba(79, 70, 229, 0.06) 100%);
@@ -155,14 +128,9 @@
         .motivation-text {
             font-size: 0.78rem; color: var(--text-sub); font-weight: 600; line-height: 1.4;
         }
-
-        /* Volume Control */
-        .volume-section {
-            padding: 0 1.5rem; margin-bottom: 1.5rem;
-        }
+        .volume-section { padding: 0 1.5rem; margin-bottom: 1.5rem; }
         .volume-header {
-            display: flex; align-items: center; justify-content: space-between;
-            margin-bottom: 10px;
+            display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
         }
         .volume-title {
             font-size: 0.75rem; font-weight: 700; color: var(--text-dark);
@@ -181,59 +149,46 @@
         .volume-slider::-webkit-slider-thumb {
             -webkit-appearance: none; appearance: none;
             width: 20px; height: 20px; border-radius: 50%;
-            background: var(--brand-gradient);
-            cursor: pointer;
+            background: var(--brand-gradient); cursor: pointer;
             box-shadow: 0 2px 8px rgba(0, 98, 255, 0.3);
         }
-
-        /* Soundscape Engine */
         .sound-engine { padding: 0 1.5rem; }
-        .section-title { 
-            font-weight: 800; font-size: 0.8rem; margin-bottom: 12px; 
-            display: flex; align-items: center; gap: 8px; color: var(--text-dark); 
+        .section-title {
+            font-weight: 800; font-size: 0.8rem; margin-bottom: 12px;
+            display: flex; align-items: center; gap: 8px; color: var(--text-dark);
         }
         .section-title i { color: var(--brand); }
-        
-        .sound-grid {
-            display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
-        }
+        .sound-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
         .sound-item {
-            padding: 14px; 
+            padding: 14px;
             background: rgba(255,255,255,0.7);
             border: 1px solid rgba(255,255,255,0.8);
-            border-radius: 18px; display: flex; align-items: center; gap: 12px; 
+            border-radius: 18px; display: flex; align-items: center; gap: 12px;
             cursor: pointer; position: relative; overflow: hidden;
             box-shadow: 0 2px 8px rgba(0,0,0,0.02);
             transition: all 0.3s ease;
         }
-        .sound-item i { 
-            font-size: 1rem; color: var(--text-sub); 
+        .sound-item i {
+            font-size: 1rem; color: var(--text-sub);
             width: 20px; text-align: center; transition: color 0.3s;
         }
-        .sound-item span { 
-            font-size: 0.68rem; font-weight: 700; color: var(--text-dark); 
-            line-height: 1.2; 
+        .sound-item span {
+            font-size: 0.68rem; font-weight: 700; color: var(--text-dark); line-height: 1.2;
         }
-        
-        .sound-item.active { 
-            border-color: var(--brand); 
+        .sound-item.active {
+            border-color: var(--brand);
             background: rgba(0, 98, 255, 0.06);
             box-shadow: 0 4px 16px rgba(0, 98, 255, 0.1);
         }
         .sound-item.active i { color: var(--brand); }
-        
         .active-dot {
             position: absolute; top: 8px; right: 8px; width: 6px; height: 6px;
             background: var(--brand); border-radius: 50%; display: none;
             box-shadow: 0 0 6px rgba(0, 98, 255, 0.4);
         }
         .sound-item.active .active-dot { display: block; }
-
-        /* Session History */
         .history-section { padding: 0 1.5rem; margin-top: 1.5rem; }
-        .history-grid {
-            display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;
-        }
+        .history-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
         .history-day {
             aspect-ratio: 1; border-radius: 10px;
             background: rgba(255,255,255,0.7);
@@ -251,10 +206,7 @@
             border-color: var(--brand);
             box-shadow: 0 0 0 2px rgba(0, 98, 255, 0.15);
         }
-        .history-day .day-count {
-            font-size: 0.85rem; font-weight: 800;
-        }
-
+        .history-day .day-count { font-size: 0.85rem; font-weight: 800; }
     </style>
 </head>
 <body>
@@ -305,13 +257,13 @@
         </section>
 
         <div class="mode-tabs">
-            <button class="mode-btn active" onclick="setMode('work', 25, this, 'Study Session', 'Deep Focus')">
+            <button class="mode-btn active" data-mode="work" data-mins="25" onclick="setMode('work', 25, this)">
                 <i class="fas fa-book"></i> Study
             </button>
-            <button class="mode-btn" onclick="setMode('short', 5, this, 'Short Break', 'Recharge')">
+            <button class="mode-btn" data-mode="short" data-mins="5" onclick="setMode('short', 5, this)">
                 <i class="fas fa-coffee"></i> Short
             </button>
-            <button class="mode-btn" onclick="setMode('long', 15, this, 'Long Break', 'Full Restore')">
+            <button class="mode-btn" data-mode="long" data-mins="15" onclick="setMode('long', 15, this)">
                 <i class="fas fa-couch"></i> Long
             </button>
         </div>
@@ -347,10 +299,9 @@
 
         <div class="sound-engine">
             <div class="section-title">
-                <i class="fas fa-headphones"></i> 
-                Focus Soundscapes
+                <i class="fas fa-headphones"></i>
+                Focus Soundscapes <span style="font-size:0.55rem;color:var(--text-sub);font-weight:600;">(generated, no internet needed)</span>
             </div>
-            
             <div class="sound-grid">
                 <div class="sound-item active" onclick="switchSound('none', this)">
                     <div class="active-dot"></div>
@@ -361,6 +312,11 @@
                     <div class="active-dot"></div>
                     <i class="fas fa-wind"></i>
                     <span>Brown Noise</span>
+                </div>
+                <div class="sound-item" onclick="switchSound('white_noise', this)">
+                    <div class="active-dot"></div>
+                    <i class="fas fa-broadcast-tower"></i>
+                    <span>White Noise</span>
                 </div>
                 <div class="sound-item" onclick="switchSound('rain', this)">
                     <div class="active-dot"></div>
@@ -385,12 +341,7 @@
                 <div class="sound-item" onclick="switchSound('lofi', this)">
                     <div class="active-dot"></div>
                     <i class="fas fa-music"></i>
-                    <span>Lo-Fi Beats</span>
-                </div>
-                <div class="sound-item" onclick="switchSound('white_noise', this)">
-                    <div class="active-dot"></div>
-                    <i class="fas fa-broadcast-tower"></i>
-                    <span>White Noise</span>
+                    <span>Lo-Fi Study</span>
                 </div>
             </div>
         </div>
@@ -401,8 +352,6 @@
             </div>
             <div class="history-grid" id="week-history"></div>
         </div>
-
-        <audio id="audio-player" loop></audio>
 
         <nav class="bottom-nav">
             <a href="/dashboard" class="nav-link">
@@ -424,124 +373,387 @@
     </div>
 
     <script>
-        let timerInterval;
-        let timeLeft = 25 * 60;
-        let isRunning = false;
-        let currentModeTime = 25 * 60;
-        let sessionsToday = parseInt(localStorage.getItem('pomodoro_sessions') || '0');
-        let totalMinutes = parseInt(localStorage.getItem('pomodoro_minutes') || '0');
-        let currentMode = 'work';
+        // ─── Web Audio API Sound Engine ───
+        let audioCtx = null;
+        let activeNodes = [];
 
-        const timerEl = document.getElementById('timer');
-        const mainBtn = document.getElementById('main-btn');
-        const audio = document.getElementById('audio-player');
-        const progressRing = document.getElementById('progress-ring');
-        const circumference = 2 * Math.PI * 120;
-
-        progressRing.style.strokeDasharray = circumference;
-        progressRing.style.strokeDashoffset = 0;
-
-        const motivations = [
-            "Deep focus is the gateway to flow state. Stay locked in.",
-            "Your brain grows stronger with every focused minute.",
-            "Consistency beats intensity. Keep showing up.",
-            "You're building a skill that compounds over time.",
-            "Every session rewires your brain for better focus.",
-            "Distractions are temporary. Mastery is permanent.",
-            "The work you do now shapes your future self.",
-            "Stay present. The future is built in this moment."
-        ];
-
-        const soundLibrary = {
-            'none': '',
-            'brown_noise': 'https://cdn.freesound.org/previews/659/659604_11861866-lq.mp3',
-            'rain': 'https://cdn.freesound.org/previews/458/458922_9497060-lq.mp3',
-            'forest': 'https://cdn.freesound.org/previews/530/530743_6252751-lq.mp3',
-            'ocean': 'https://cdn.freesound.org/previews/467/467813_9497060-lq.mp3',
-            'cafe': 'https://cdn.freesound.org/previews/434/434895_3905081-lq.mp3',
-            'lofi': 'https://cdn.freesound.org/previews/521/521733_11689989-lq.mp3',
-            'white_noise': 'https://cdn.freesound.org/previews/175/175481_2437358-lq.mp3'
-        };
-
-        function updateStats() {
-            document.getElementById('sessions-today').textContent = sessionsToday;
-            document.getElementById('total-minutes').textContent = totalMinutes;
-            
-            const streak = parseInt(localStorage.getItem('pomodoro_streak') || '0');
-            document.getElementById('streak-count').textContent = streak;
+        function getAudioCtx() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            return audioCtx;
         }
 
-        function updateProgress() {
-            const progress = (currentModeTime - timeLeft) / currentModeTime;
-            const offset = circumference - (progress * circumference);
-            progressRing.style.strokeDashoffset = offset;
+        function stopAllSounds() {
+            activeNodes.forEach(n => { try { n.stop(); n.disconnect(); } catch(e) {} });
+            activeNodes = [];
+        }
+
+        function createNoiseBuffer(ctx, duration) {
+            const sr = ctx.sampleRate;
+            const len = sr * (duration || 4);
+            const buf = ctx.createBuffer(1, len, sr);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+            return buf;
+        }
+
+        function playBrownNoise(ctx, vol) {
+            const buf = createNoiseBuffer(ctx);
+            const src = ctx.createBufferSource();
+            src.buffer = buf; src.loop = true;
+            const lp = ctx.createBiquadFilter();
+            lp.type = 'lowpass'; lp.frequency.value = 200;
+            const hp = ctx.createBiquadFilter();
+            hp.type = 'highpass'; hp.frequency.value = 40;
+            const gain = ctx.createGain();
+            gain.gain.value = vol * 0.4;
+            src.connect(lp); lp.connect(hp); hp.connect(gain); gain.connect(ctx.destination);
+            src.start();
+            activeNodes.push(src);
+            return src;
+        }
+
+        function playWhiteNoise(ctx, vol) {
+            const buf = createNoiseBuffer(ctx);
+            const src = ctx.createBufferSource();
+            src.buffer = buf; src.loop = true;
+            const gain = ctx.createGain();
+            gain.gain.value = vol * 0.3;
+            src.connect(gain); gain.connect(ctx.destination);
+            src.start();
+            activeNodes.push(src);
+            return src;
+        }
+
+        function playRain(ctx, vol) {
+            const buf = createNoiseBuffer(ctx);
+            const src = ctx.createBufferSource();
+            src.buffer = buf; src.loop = true;
+            const bp = ctx.createBiquadFilter();
+            bp.type = 'bandpass'; bp.frequency.value = 1000; bp.Q.value = 0.5;
+            const gain = ctx.createGain();
+            gain.gain.value = vol * 0.35;
+            // Slow modulation for realism
+            const lfo = ctx.createOscillator();
+            lfo.frequency.value = 0.3;
+            const lfoGain = ctx.createGain();
+            lfoGain.gain.value = vol * 0.1;
+            lfo.connect(lfoGain); lfoGain.connect(gain.gain);
+            lfo.start();
+            src.connect(bp); bp.connect(gain); gain.connect(ctx.destination);
+            src.start();
+            activeNodes.push(src, lfo);
+            return src;
+        }
+
+        function playForest(ctx, vol) {
+            const buf = createNoiseBuffer(ctx);
+            const src = ctx.createBufferSource();
+            src.buffer = buf; src.loop = true;
+            const bp = ctx.createBiquadFilter();
+            bp.type = 'bandpass'; bp.frequency.value = 800; bp.Q.value = 0.8;
+            const gain = ctx.createGain();
+            gain.gain.value = vol * 0.25;
+            src.connect(bp); bp.connect(gain); gain.connect(ctx.destination);
+            src.start();
+            // Occasional chirps
+            let chirpCount = 0;
+            const chirpInt = setInterval(() => {
+                if (gain.gain.value === 0) { clearInterval(chirpInt); return; }
+                if (chirpCount++ % 3 === 0) {
+                    const osc = ctx.createOscillator();
+                    osc.type = 'sine';
+                    osc.frequency.value = 2000 + Math.random() * 1500;
+                    const cGain = ctx.createGain();
+                    cGain.gain.setValueAtTime(vol * 0.08, ctx.currentTime);
+                    cGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+                    osc.connect(cGain); cGain.connect(ctx.destination);
+                    osc.start(); osc.stop(ctx.currentTime + 0.15);
+                }
+            }, 2000);
+            activeNodes.push(src);
+            src._chirpInt = chirpInt;
+            return src;
+        }
+
+        function playOcean(ctx, vol) {
+            const buf = createNoiseBuffer(ctx, 8);
+            const src = ctx.createBufferSource();
+            src.buffer = buf; src.loop = true;
+            const lp = ctx.createBiquadFilter();
+            lp.type = 'lowpass'; lp.frequency.value = 400;
+            const gain = ctx.createGain();
+            gain.gain.value = vol * 0.3;
+            // Slow wave modulation
+            const lfo = ctx.createOscillator();
+            lfo.frequency.value = 0.1;
+            const lfoGain = ctx.createGain();
+            lfoGain.gain.value = vol * 0.15;
+            lfo.connect(lfoGain); lfoGain.connect(gain.gain);
+            lfo.start();
+            src.connect(lp); lp.connect(gain); gain.connect(ctx.destination);
+            src.start();
+            activeNodes.push(src, lfo);
+            return src;
+        }
+
+        function playCafe(ctx, vol) {
+            const buf = createNoiseBuffer(ctx);
+            const src = ctx.createBufferSource();
+            src.buffer = buf; src.loop = true;
+            const bp = ctx.createBiquadFilter();
+            bp.type = 'bandpass'; bp.frequency.value = 1500; bp.Q.value = 0.3;
+            const gain = ctx.createGain();
+            gain.gain.value = vol * 0.2;
+            src.connect(bp); bp.connect(gain); gain.connect(ctx.destination);
+            src.start();
+            // Occasional clatter
+            let clatterCount = 0;
+            const clatterInt = setInterval(() => {
+                if (gain.gain.value === 0) { clearInterval(clatterInt); return; }
+                if (clatterCount++ % 4 === 0) {
+                    const osc = ctx.createOscillator();
+                    osc.type = 'square';
+                    osc.frequency.value = 800 + Math.random() * 400;
+                    const cGain = ctx.createGain();
+                    cGain.gain.setValueAtTime(vol * 0.04, ctx.currentTime);
+                    cGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+                    osc.connect(cGain); cGain.connect(ctx.destination);
+                    osc.start(); osc.stop(ctx.currentTime + 0.08);
+                }
+            }, 3000);
+            activeNodes.push(src);
+            src._clatterInt = clatterInt;
+            return src;
+        }
+
+        function playLofi(ctx, vol) {
+            const notes = [261.63, 329.63, 392.00, 349.23, 293.66, 440.00, 523.25, 392.00];
+            const gains = [];
+            for (let i = 0; i < 3; i++) {
+                const osc = ctx.createOscillator();
+                osc.type = i === 0 ? 'sawtooth' : 'sine';
+                osc.frequency.value = notes[i % 4] * (i === 2 ? 0.5 : 1);
+                const gain = ctx.createGain();
+                gain.gain.value = vol * (i === 0 ? 0.04 : 0.03);
+                const lp = ctx.createBiquadFilter();
+                lp.type = 'lowpass'; lp.frequency.value = 800;
+                osc.connect(lp); lp.connect(gain); gain.connect(ctx.destination);
+                osc.start();
+                gains.push({ gain, osc });
+                activeNodes.push(osc);
+            }
+            // Slow wobble for tape feel
+            const lfo = ctx.createOscillator();
+            lfo.frequency.value = 0.15;
+            const lfoGain = ctx.createGain();
+            lfoGain.gain.value = 2;
+            lfo.connect(lfoGain);
+            gains.forEach((g, i) => {
+                if (i === 0) lfoGain.connect(g.gain.frequency);
+            });
+            lfo.start();
+            activeNodes.push(lfo);
+            // Chord progression timer
+            let noteIdx = 0;
+            const progInt = setInterval(() => {
+                if (!gains[0]) { clearInterval(progInt); return; }
+                noteIdx = (noteIdx + 1) % notes.length;
+                gains.forEach((g, i) => {
+                    const base = notes[(noteIdx + i * 2) % notes.length];
+                    g.osc.frequency.setTargetAtTime(base * (i === 2 ? 0.5 : 1), ctx.currentTime, 0.5);
+                });
+            }, 4000);
+            activeNodes.push({ _progInt: progInt });
+            return gains[0]?.osc;
+        }
+
+        const soundGenerators = {
+            'none': null,
+            'brown_noise': playBrownNoise,
+            'white_noise': playWhiteNoise,
+            'rain': playRain,
+            'forest': playForest,
+            'ocean': playOcean,
+            'cafe': playCafe,
+            'lofi': playLofi
+        };
+
+        let currentSound = 'none';
+        let masterVolume = 0.7;
+        let activeSoundRef = null;
+
+        function changeVolume(val) {
+            masterVolume = val / 100;
+            document.getElementById('volume-display').textContent = val + '%';
+            if (currentSound !== 'none') {
+                switchSound(currentSound, document.querySelector('.sound-item.active'));
+            }
+        }
+
+        function switchSound(type, btn) {
+            stopAllSounds();
+            document.querySelectorAll('.sound-item').forEach(i => i.classList.remove('active'));
+            btn.classList.add('active');
+            currentSound = type;
+            if (type === 'none') return;
+            const gen = soundGenerators[type];
+            if (gen) {
+                const ctx = getAudioCtx();
+                activeSoundRef = gen(ctx, masterVolume);
+            }
+        }
+
+        // ─── Timer Engine with Persistence ───
+        const STORAGE_KEY = 'prepium_pomo';
+        let timerInterval = null;
+        let isRunning = false;
+        let currentMode = 'work';
+        let currentModeTime = 25 * 60;
+        let timeLeft = 25 * 60;
+        let sessionStartTime = null;
+
+        function loadState() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+                if (!saved) return;
+                currentMode = saved.mode || 'work';
+                currentModeTime = saved.modeTime || 25 * 60;
+                const elapsed = saved.running ? Math.floor((Date.now() - saved.startedAt) / 1000) : 0;
+                timeLeft = Math.max(0, (saved.remaining || currentModeTime) - elapsed);
+                isRunning = saved.running && timeLeft > 0;
+                if (saved.soundType && saved.soundType !== 'none') {
+                    currentSound = saved.soundType;
+                }
+            } catch(e) { /* defaults */ }
+        }
+
+        function saveState() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                    mode: currentMode,
+                    modeTime: currentModeTime,
+                    remaining: timeLeft,
+                    running: isRunning,
+                    startedAt: sessionStartTime || Date.now(),
+                    soundType: currentSound
+                }));
+            } catch(e) {}
+        }
+
+        function clearSavedState() {
+            try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
         }
 
         function updateDisplay() {
             const mins = Math.floor(timeLeft / 60);
             const secs = timeLeft % 60;
-            timerEl.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-            updateProgress();
+            document.getElementById('timer').innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            const progress = currentModeTime > 0 ? (currentModeTime - timeLeft) / currentModeTime : 0;
+            const offset = 754 - (progress * 754);
+            document.getElementById('progress-ring').style.strokeDashoffset = offset;
         }
 
-        function setMode(mode, mins, btn, label, sublabel) {
+        function updateStats() {
+            const sessionsToday = parseInt(localStorage.getItem('pomo_sessions') || '0');
+            const totalMinutes = parseInt(localStorage.getItem('pomo_minutes') || '0');
+            const streak = parseInt(localStorage.getItem('pomo_streak') || '0');
+            document.getElementById('sessions-today').textContent = sessionsToday;
+            document.getElementById('total-minutes').textContent = totalMinutes;
+            document.getElementById('streak-count').textContent = streak;
+        }
+
+        function setModeLabel() {
+            const labels = { work: ['Study Session', 'Deep Focus'], short: ['Short Break', 'Recharge'], long: ['Long Break', 'Full Restore'] };
+            const l = labels[currentMode] || labels.work;
+            document.getElementById('timer-mode-label').textContent = l[0];
+            document.getElementById('current-mode-text').textContent = l[1];
+            document.querySelectorAll('.mode-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.mode === currentMode);
+            });
+        }
+
+        function setMode(mode, mins, btn) {
+            if (isRunning) {
+                clearInterval(timerInterval);
+                isRunning = false;
+                document.getElementById('main-btn').innerHTML = '<i class="fas fa-play"></i> START SESSION';
+            }
             document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
+            if (btn) btn.classList.add('active');
             currentMode = mode;
             currentModeTime = mins * 60;
             timeLeft = currentModeTime;
-            document.getElementById('timer-mode-label').textContent = label;
-            document.getElementById('current-mode-text').textContent = sublabel;
-            resetTimer();
+            setModeLabel();
+            updateDisplay();
+            clearSavedState();
         }
 
         function toggleTimer() {
             if (isRunning) {
                 clearInterval(timerInterval);
-                mainBtn.innerHTML = '<i class="fas fa-play"></i> RESUME';
                 isRunning = false;
-            } else {
-                isRunning = true;
-                mainBtn.innerHTML = '<i class="fas fa-pause"></i> PAUSE';
-                timerInterval = setInterval(() => {
-                    timeLeft--;
-                    updateDisplay();
-                    if (timeLeft <= 0) {
-                        clearInterval(timerInterval);
-                        sessionComplete();
-                    }
-                }, 1000);
+                document.getElementById('main-btn').innerHTML = '<i class="fas fa-play"></i> RESUME';
+                saveState();
+                return;
             }
+            if (timeLeft <= 0) {
+                timeLeft = currentModeTime;
+            }
+            isRunning = true;
+            sessionStartTime = Date.now();
+            document.getElementById('main-btn').innerHTML = '<i class="fas fa-pause"></i> PAUSE';
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateDisplay();
+                saveState();
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    isRunning = false;
+                    sessionComplete();
+                }
+            }, 1000);
+            saveState();
         }
 
         function sessionComplete() {
             isRunning = false;
-            mainBtn.innerHTML = '<i class="fas fa-play"></i> START SESSION';
+            document.getElementById('main-btn').innerHTML = '<i class="fas fa-play"></i> START SESSION';
+            clearSavedState();
 
             if (currentMode === 'work') {
-                sessionsToday++;
-                totalMinutes += currentModeTime / 60;
-                localStorage.setItem('pomodoro_sessions', sessionsToday);
-                localStorage.setItem('pomodoro_minutes', totalMinutes);
-                
-                const streak = parseInt(localStorage.getItem('pomodoro_streak') || '0');
-                localStorage.setItem('pomodoro_streak', streak + 1);
-                
+                let sessions = parseInt(localStorage.getItem('pomo_sessions') || '0');
+                let minutes = parseInt(localStorage.getItem('pomo_minutes') || '0');
+                let streak = parseInt(localStorage.getItem('pomo_streak') || '0');
+                sessions++;
+                minutes += Math.round(currentModeTime / 60);
+                streak++;
+                localStorage.setItem('pomo_sessions', sessions);
+                localStorage.setItem('pomo_minutes', minutes);
+                localStorage.setItem('pomo_streak', streak);
                 updateStats();
-                
-                const msg = motivations[Math.floor(Math.random() * motivations.length)];
-                document.getElementById('motivation-text').textContent = msg;
-                
-                alert(`Session Complete! You focused for ${currentModeTime / 60} minutes. Great work!`);
-                
-                if (sessionsToday % 4 === 0) {
-                    setMode('long', 15, document.querySelectorAll('.mode-btn')[2], 'Long Break', 'Full Restore');
+
+                const msgs = [
+                    "Deep focus is the gateway to flow state. Stay locked in.",
+                    "Your brain grows stronger with every focused minute.",
+                    "Consistency beats intensity. Keep showing up.",
+                    "You're building a skill that compounds over time.",
+                    "Every session rewires your brain for better focus.",
+                    "Distractions are temporary. Mastery is permanent.",
+                    "The work you do now shapes your future self.",
+                    "Stay present. The future is built in this moment."
+                ];
+                document.getElementById('motivation-text').textContent = msgs[Math.floor(Math.random() * msgs.length)];
+
+                if (sessions % 4 === 0) {
+                    setMode('long', 15, document.querySelector('[data-mode="long"]'));
                 } else {
-                    setMode('short', 5, document.querySelectorAll('.mode-btn')[1], 'Short Break', 'Recharge');
+                    setMode('short', 5, document.querySelector('[data-mode="short"]'));
                 }
+                setTimeout(() => alert(`Session Complete! You focused for ${Math.round(currentModeTime / 60)} minutes. Great work!`), 100);
             } else {
-                alert('Break is over! Ready for the next study session?');
-                setMode('work', 25, document.querySelectorAll('.mode-btn')[0], 'Study Session', 'Deep Focus');
+                setMode('work', 25, document.querySelector('[data-mode="work"]'));
+                setTimeout(() => alert('Break is over! Ready for the next study session?'), 100);
             }
         }
 
@@ -549,61 +761,61 @@
             clearInterval(timerInterval);
             isRunning = false;
             timeLeft = currentModeTime;
-            mainBtn.innerHTML = '<i class="fas fa-play"></i> START SESSION';
+            document.getElementById('main-btn').innerHTML = '<i class="fas fa-play"></i> START SESSION';
+            clearSavedState();
             updateDisplay();
         }
 
         function skipSession() {
             if (currentMode === 'work') {
-                setMode('short', 5, document.querySelectorAll('.mode-btn')[1], 'Short Break', 'Recharge');
+                setMode('short', 5, document.querySelector('[data-mode="short"]'));
             } else {
-                setMode('work', 25, document.querySelectorAll('.mode-btn')[0], 'Study Session', 'Deep Focus');
+                setMode('work', 25, document.querySelector('[data-mode="work"]'));
             }
-        }
-
-        function changeVolume(val) {
-            audio.volume = val / 100;
-            document.getElementById('volume-display').textContent = val + '%';
-        }
-
-        function switchSound(type, btn) {
-            document.querySelectorAll('.sound-item').forEach(i => i.classList.remove('active'));
-            btn.classList.add('active');
-
-            if (type === 'none') {
-                audio.pause();
-                return;
-            }
-
-            audio.src = soundLibrary[type];
-            audio.volume = document.getElementById('volume-slider').value / 100;
-            audio.play().catch(e => console.warn("Audio needs user interaction first."));
         }
 
         function renderWeekHistory() {
             const container = document.getElementById('week-history');
             const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             const today = new Date().getDay();
+            const sessionsToday = parseInt(localStorage.getItem('pomo_sessions') || '0');
             let html = '';
-
             for (let i = 0; i < 7; i++) {
                 const isToday = i === today;
                 const daySessions = isToday ? sessionsToday : Math.floor(Math.random() * 3);
-                const completed = daySessions > 0;
-                html += `
-                    <div class="history-day ${completed ? 'completed' : ''} ${isToday ? 'today' : ''}">
-                        <span style="font-size:0.5rem;">${days[i]}</span>
-                        <span class="day-count">${daySessions}</span>
-                    </div>
-                `;
+                html += `<div class="history-day ${daySessions > 0 ? 'completed' : ''} ${isToday ? 'today' : ''}">
+                    <span style="font-size:0.5rem;">${days[i]}</span>
+                    <span class="day-count">${daySessions}</span>
+                </div>`;
             }
             container.innerHTML = html;
         }
 
-        updateStats();
+        // ─── Init ───
+        loadState();
+        if (isRunning) {
+            document.getElementById('main-btn').innerHTML = '<i class="fas fa-pause"></i> PAUSE';
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateDisplay();
+                saveState();
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    isRunning = false;
+                    sessionComplete();
+                }
+            }, 1000);
+        }
+        if (currentSound && currentSound !== 'none') {
+            const btn = document.querySelector(`.sound-item:nth-child(${['none','brown_noise','white_noise','rain','forest','ocean','cafe','lofi'].indexOf(currentSound) + 1})`);
+            if (btn) { btn.classList.add('active'); btn.querySelector('.active-dot').style.display = 'block'; }
+            const gen = soundGenerators[currentSound];
+            if (gen) gen(getAudioCtx(), masterVolume);
+        }
+        setModeLabel();
         updateDisplay();
+        updateStats();
         renderWeekHistory();
-        audio.volume = 0.7;
     </script>
 </body>
 </html>
