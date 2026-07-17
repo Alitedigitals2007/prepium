@@ -115,6 +115,29 @@
         .slot-info b { font-size: 0.92rem; font-weight: 800; color: var(--text); display: block; }
         .slot-info p { font-size: 0.72rem; color: var(--sub); margin: 3px 0 0; font-weight: 600; }
 
+        /* Extracted Course Edit Cards */
+        .extracted-card {
+            background: #f8fafc; border-radius: 16px; padding: 14px; margin-bottom: 10px;
+            border: 1px solid #e2e8f0; position: relative; display: flex; gap: 10px; align-items: flex-start;
+        }
+        .extracted-fields { flex: 1; min-width: 0; }
+        .ef-row { display: flex; gap: 8px; margin-bottom: 6px; }
+        .ef-group { display: flex; flex-direction: column; gap: 2px; }
+        .ef-group label { font-size: 0.6rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; }
+        .ef-input {
+            width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #e2e8f0;
+            font-size: 0.78rem; font-family: inherit; font-weight: 600; background: white;
+            box-sizing: border-box; transition: border-color 0.2s;
+        }
+        .ef-input:focus { outline: none; border-color: var(--brand); }
+        .ef-remove {
+            background: #fef2f2; border: 1px solid #fecaca; color: #ef4444;
+            width: 36px; height: 36px; border-radius: 10px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            transition: 0.2s;
+        }
+        .ef-remove:active { transform: scale(0.9); }
+
         /* PDF Preview & Printable Section Header */
         #pdf-preview { padding: 1rem 0; }
         .pdf-brand-head { display: none; text-align: center; border-bottom: 2px dashed #e2e8f0; padding-bottom: 15px; margin-bottom: 20px; }
@@ -300,10 +323,13 @@
                     </div>
                     <div id="extractedCourses" style="display:none; margin-bottom:1rem;">
                         <p style="font-size:0.85rem; font-weight:700; margin-bottom:0.5rem;">Extracted Courses (<span id="extractedCount">0</span>)</p>
-                        <div id="extractedList" style="max-height:250px; overflow-y:auto;"></div>
-                        <div class="modal-actions" style="margin-top:1rem;">
-                            <button type="button" class="btn-action btn-print" onclick="closeExtractModal()">Cancel</button>
-                            <button class="btn-action btn-add" onclick="saveExtractedCourses()">Save All to Timetable</button>
+                        <div id="extractedList" style="max-height:300px; overflow-y:auto;"></div>
+                        <div class="modal-actions" style="margin-top:1rem; flex-direction:column; gap:8px;">
+                            <button class="btn-action btn-add" onclick="saveExtractedCourses()" style="width:100%;"><i class="fas fa-check"></i> Save All to Timetable</button>
+                            <div style="display:flex; gap:8px;">
+                                <button type="button" class="btn-action btn-print" onclick="closeExtractModal()" style="flex:1;">Cancel</button>
+                                <button class="btn-action btn-extract" onclick="retryExtraction()" style="flex:1;"><i class="fas fa-redo"></i> Retry</button>
+                            </div>
                         </div>
                     </div>
 
@@ -509,24 +535,7 @@
                 if (data.success && data.courses && data.courses.length > 0) {
                     extractedCourses = data.courses;
                     document.getElementById('extractedCount').textContent = data.courses.length;
-                    
-                    const list = document.getElementById('extractedList');
-                    list.innerHTML = data.courses.map((c, i) => `
-                        <div style="background:#f8fafc; border-radius:12px; padding:12px; margin-bottom:8px; border:1px solid #f1f5f9;">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <div>
-                                    <strong style="font-size:0.9rem;">${c.course_code || c.course_name || 'Course ' + (i+1)}</strong>
-                                    <span style="font-size:0.75rem; color:#64748b; margin-left:6px;">${c.course_name || ''}</span>
-                                </div>
-                                <span style="font-size:0.72rem; background:#e0f2fe; color:var(--brand); padding:2px 8px; border-radius:8px; font-weight:700;">${c.unit || 3} Credits</span>
-                            </div>
-                            <div style="font-size:0.78rem; color:#64748b; margin-top:6px;">
-                                ${c.day || 'Monday'} · ${c.start_time || '09:00'} - ${c.end_time || '10:00'}
-                                ${c.venue ? ' · 📍 ' + c.venue : ''}
-                            </div>
-                        </div>
-                    `).join('');
-
+                    renderExtractedCourses();
                     document.getElementById('extractedCourses').style.display = 'block';
                     document.getElementById('dropZone').style.display = 'block';
                 } else {
@@ -540,6 +549,81 @@
                 alert('Upload failed. Please try again.');
                 console.error(err);
             });
+        }
+
+        function renderExtractedCourses() {
+            const list = document.getElementById('extractedList');
+            list.innerHTML = extractedCourses.map((c, i) => `
+                <div class="extracted-card" data-index="${i}">
+                    <div class="extracted-fields">
+                        <div class="ef-row">
+                            <div class="ef-group" style="flex:1;">
+                                <label>Course</label>
+                                <input type="text" value="${escapeHtml(c.course_name || '')}" onchange="updateExtractedCourse(${i},'course_name',this.value)" class="ef-input">
+                            </div>
+                            <div class="ef-group" style="flex:0.6;">
+                                <label>Code</label>
+                                <input type="text" value="${escapeHtml(c.course_code || '')}" onchange="updateExtractedCourse(${i},'course_code',this.value)" class="ef-input">
+                            </div>
+                            <div class="ef-group" style="flex:0.3;">
+                                <label>Unit</label>
+                                <input type="number" value="${c.unit || 3}" onchange="updateExtractedCourse(${i},'unit',this.value)" class="ef-input" min="1" max="6">
+                            </div>
+                        </div>
+                        <div class="ef-row">
+                            <div class="ef-group" style="flex:1.2;">
+                                <label>Day</label>
+                                <select onchange="updateExtractedCourse(${i},'day',this.value)" class="ef-input">
+                                    ${['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map(d => 
+                                        `<option ${d === c.day ? 'selected' : ''}>${d}</option>`
+                                    ).join('')}
+                                </select>
+                            </div>
+                            <div class="ef-group" style="flex:0.6;">
+                                <label>Start</label>
+                                <input type="time" value="${c.start_time || '09:00'}" onchange="updateExtractedCourse(${i},'start_time',this.value)" class="ef-input">
+                            </div>
+                            <div class="ef-group" style="flex:0.6;">
+                                <label>End</label>
+                                <input type="time" value="${c.end_time || '10:00'}" onchange="updateExtractedCourse(${i},'end_time',this.value)" class="ef-input">
+                            </div>
+                        </div>
+                        <div class="ef-row">
+                            <div class="ef-group" style="flex:1;">
+                                <label>Venue</label>
+                                <input type="text" value="${escapeHtml(c.venue || '')}" onchange="updateExtractedCourse(${i},'venue',this.value)" class="ef-input" placeholder="Room / Hall">
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="removeExtractedCourse(${i})" class="ef-remove" title="Remove"><i class="fas fa-trash"></i></button>
+                </div>
+            `).join('');
+        }
+
+        function updateExtractedCourse(index, field, value) {
+            if (field === 'unit') value = parseInt(value) || 3;
+            extractedCourses[index][field] = value;
+        }
+
+        function removeExtractedCourse(index) {
+            extractedCourses.splice(index, 1);
+            document.getElementById('extractedCount').textContent = extractedCourses.length;
+            if (extractedCourses.length === 0) {
+                document.getElementById('extractedCourses').style.display = 'none';
+                document.getElementById('dropZone').style.display = 'block';
+                return;
+            }
+            renderExtractedCourses();
+        }
+
+        function retryExtraction() {
+            document.getElementById('extractedCourses').style.display = 'none';
+            document.getElementById('dropZone').style.display = 'block';
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         }
 
         function saveExtractedCourses() {
