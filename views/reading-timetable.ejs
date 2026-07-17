@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Prepium | Reading Timetable</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        :root { --sub: #64748b; }
+        .app-shell { padding-bottom: 110px; }
+        .header-main {
+            padding: 2.5rem 1.5rem 1.5rem;
+            background: linear-gradient(180deg, #fef2f2 0%, #ffffff 100%);
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .user-profile { display: flex; align-items: center; justify-content: space-between; }
+        .profile-left { display: flex; align-items: center; gap: 15px; }
+        .avatar-circle {
+            width: 52px; height: 52px;
+            background: #f1f5f9; color: var(--brand); border: 2px solid #e2e8f0;
+            border-radius: 18px; display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 1.3rem;
+        }
+        .welcome-msg h1 { margin: 0; font-size: 1.35rem; font-weight: 800; letter-spacing: -0.5px; }
+        .brand-subtitle { font-size: 0.72rem; font-weight: 700; color: var(--brand); text-transform: uppercase; margin-top: 3px; display: block; }
+
+        .section-card {
+            margin: 16px;
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid #f1f5f9;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        }
+        .section-title {
+            font-size: 0.95rem;
+            font-weight: 800;
+            margin: 0 0 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-title i { color: var(--brand); font-size: 0.85rem; width: 24px; text-align: center; }
+
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 5px; }
+        .form-input {
+            width: 100%; padding: 12px 14px; border-radius: 12px; border: 1.5px solid #e2e8f0;
+            font-size: 0.9rem; font-family: inherit; font-weight: 600; box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+        .form-input:focus { outline: none; border-color: var(--brand); }
+
+        .mode-toggle {
+            display: flex; gap: 8px; margin-bottom: 16px;
+        }
+        .mode-option {
+            flex: 1; padding: 14px; border: 1.5px solid #e2e8f0; border-radius: 14px;
+            text-align: center; cursor: pointer; font-weight: 700; font-size: 0.8rem;
+            transition: all 0.2s; background: white;
+        }
+        .mode-option.active { border-color: var(--brand); background: #f0f7ff; color: var(--brand); }
+        .mode-option i { display: block; font-size: 1.3rem; margin-bottom: 4px; }
+
+        .btn-primary {
+            width: 100%; padding: 16px; border: none; border-radius: 16px;
+            background: linear-gradient(135deg, var(--brand), #2563eb);
+            color: white; font-size: 1rem; font-weight: 800; cursor: pointer;
+            transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-secondary {
+            width: 100%; padding: 14px; border: 1.5px solid #e2e8f0; border-radius: 14px;
+            background: white; color: #0b1437; font-size: 0.9rem; font-weight: 700; cursor: pointer;
+            transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .btn-danger {
+            background: #fef2f2; color: #ef4444; border: 1px solid #fecaca;
+            padding: 10px 16px; border-radius: 12px; font-weight: 700; font-size: 0.8rem;
+            cursor: pointer; transition: 0.2s;
+        }
+
+        .course-chip {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: #f1f5f9; padding: 6px 12px; border-radius: 20px;
+            font-size: 0.78rem; font-weight: 600; margin: 4px;
+        }
+        .course-chip .remove { cursor: pointer; color: #ef4444; font-size: 0.85rem; }
+
+        .reading-day { margin-bottom: 16px; }
+        .reading-day-header {
+            font-size: 0.85rem; font-weight: 800; color: var(--text);
+            padding: 8px 0; margin-bottom: 8px;
+            border-bottom: 2px solid var(--brand); display: inline-block;
+        }
+        .reading-slot {
+            background: #f8fafc; border: 1px solid #f1f5f9;
+            padding: 12px 14px; border-radius: 14px; margin-bottom: 8px;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .reading-slot .time { font-size: 0.78rem; font-weight: 800; color: var(--brand); min-width: 65px; }
+        .reading-slot .info { flex: 1; }
+        .reading-slot .info b { font-size: 0.85rem; display: block; }
+        .reading-slot .info small { font-size: 0.7rem; color: var(--sub); }
+
+        .checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+        .checkbox-label {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 0.8rem; font-weight: 600; cursor: pointer;
+            padding: 6px 12px; background: #f8fafc; border-radius: 10px;
+            border: 1px solid #e2e8f0;
+        }
+        .checkbox-label input:checked + span { color: #ef4444; }
+
+        .empty-state { text-align: center; padding: 2rem 1rem; color: var(--sub); }
+        .empty-state i { font-size: 2.5rem; color: #e2e8f0; margin-bottom: 1rem; display: block; }
+
+        .range-row { display: flex; gap: 12px; }
+        .range-row .form-group { flex: 1; }
+
+        .manual-course-row {
+            display: flex; gap: 8px; align-items: center; margin-bottom: 8px;
+        }
+        .manual-course-row input { flex: 1; padding: 10px 12px; border-radius: 10px; border: 1px solid #e2e8f0; font-size: 0.8rem; font-family: inherit; }
+
+        .loader { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 0.6s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+<%- include('partials/sidebar') %>
+
+    <div class="app-shell">
+        <header class="header-main">
+            <div class="user-profile">
+                <div class="profile-left">
+                    <div class="avatar-circle">
+                        <%= user.fullname ? user.fullname.charAt(0).toUpperCase() : 'U' %>
+                    </div>
+                    <div class="welcome-msg">
+                        <h1>Reading Timetable</h1>
+                        <span class="brand-subtitle">AI-Powered Study Scheduler</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Settings Card -->
+        <div class="section-card" id="settingsCard">
+            <div class="section-title"><i class="fas fa-cog"></i> Setup Wizard</div>
+
+            <!-- Mode Toggle -->
+            <div class="mode-toggle" id="modeToggle">
+                <div class="mode-option active" data-mode="school" onclick="setMode('school')">
+                    <i class="fas fa-school"></i> Use School Timetable
+                </div>
+                <div class="mode-option" data-mode="manual" onclick="setMode('manual')">
+                    <i class="fas fa-pen"></i> Manual Entry
+                </div>
+            </div>
+
+            <!-- Manual courses (hidden by default) -->
+            <div id="manualSection" style="display:none;">
+                <p style="font-size:0.78rem; color:var(--sub); margin-bottom:10px;">Add the courses you want to include in your reading timetable.</p>
+                <div id="manualCourses">
+                    <div class="manual-course-row">
+                        <input type="text" class="manual-code" placeholder="Code (e.g. PHY 302)" style="flex:1;">
+                        <input type="text" class="manual-name" placeholder="Course name" style="flex:2;">
+                        <input type="number" class="manual-unit" placeholder="Unit" style="width:60px;" value="3" min="1" max="6">
+                    </div>
+                </div>
+                <button class="btn-secondary" onclick="addManualRow()" style="margin-bottom:16px; padding:10px; font-size:0.8rem;">
+                    <i class="fas fa-plus"></i> Add Another Course
+                </button>
+            </div>
+
+            <!-- Course exclusions (for school timetable mode) -->
+            <div id="exclusionSection">
+                <div class="form-group">
+                    <label>Exclude Courses (tap to exclude from reading)</label>
+                    <div class="checkbox-group" id="exclusionList">
+                        <% if (courses && courses.length > 0) {
+                            const excluded = settings && settings.excluded_courses ? settings.excluded_courses : [];
+                            courses.forEach(c => {
+                                const isExcluded = excluded.includes(c.course) || excluded.includes(c.course_code);
+                        %>
+                            <label class="checkbox-label">
+                                <input type="checkbox" value="<%= c.course %>" <%= isExcluded ? 'checked' : '' %> onchange="toggleExcluded(this)">
+                                <span><%= c.course_code ? c.course_code + ' - ' : '' %><%= c.course %></span>
+                            </label>
+                        <% }); } else { %>
+                            <p style="font-size:0.78rem; color:#94a3b8; width:100%;">
+                                <% if (settings && settings.use_school_timetable) { %>
+                                    No courses found in your school timetable. <a href="/timetable" style="color:var(--brand);">Add courses first</a> or switch to Manual Entry.
+                                <% } %>
+                            </p>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reading Preferences -->
+            <div style="margin-top:16px; padding-top:16px; border-top:1px solid #f1f5f9;">
+                <p style="font-size:0.85rem; font-weight:700; margin-bottom:12px;">Reading Preferences</p>
+                <div class="range-row">
+                    <div class="form-group">
+                        <label>Hours per Day</label>
+                        <input type="number" class="form-input" id="dailyHours" value="<%= settings ? settings.daily_hours : 3 %>" min="1" max="12" step="0.5">
+                    </div>
+                    <div class="form-group">
+                        <label>Minutes per Session</label>
+                        <input type="number" class="form-input" id="sessionMinutes" value="<%= settings ? settings.session_minutes : 45 %>" min="15" max="180" step="5">
+                    </div>
+                </div>
+                <div class="range-row">
+                    <div class="form-group">
+                        <label>Sessions per Course / Week</label>
+                        <input type="number" class="form-input" id="sessionsPerCourse" value="<%= settings ? settings.sessions_per_course : 2 %>" min="1" max="7">
+                    </div>
+                </div>
+                <div class="range-row">
+                    <div class="form-group">
+                        <label>Preferred Start Time</label>
+                        <input type="time" class="form-input" id="prefStart" value="<%= settings ? settings.preferred_time_start : '09:00' %>">
+                    </div>
+                    <div class="form-group">
+                        <label>Preferred End Time</label>
+                        <input type="time" class="form-input" id="prefEnd" value="<%= settings ? settings.preferred_time_end : '21:00' %>">
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-primary" onclick="generateReadingTimetable()" id="generateBtn" style="margin-top:16px;">
+                <i class="fas fa-wand-magic-sparkles"></i> Generate Reading Timetable
+            </button>
+        </div>
+
+        <!-- Generated Reading Timetable -->
+        <div class="section-card" id="readingResult" style="<%= readingSlots && readingSlots.length > 0 ? '' : 'display:none;' %>">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <div class="section-title" style="margin:0;"><i class="fas fa-book-open"></i> Your Reading Schedule</div>
+                <button class="btn-danger" onclick="resetReadingTimetable()" style="padding:8px 12px; font-size:0.75rem;">
+                    <i class="fas fa-trash"></i> Clear
+                </button>
+            </div>
+            <div id="readingTimetableDisplay">
+                <% if (readingSlots && readingSlots.length > 0) {
+                    const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                    weekDays.forEach(day => {
+                        const daySlots = readingSlots.filter(s => s.day === day);
+                        if (daySlots.length > 0) { %>
+                            <div class="reading-day">
+                                <div class="reading-day-header"><%= day %></div>
+                                <% daySlots.forEach(slot => { %>
+                                    <div class="reading-slot">
+                                        <div class="time"><%= slot.start_time %> - <%= slot.end_time %></div>
+                                        <div class="info">
+                                            <b><%= slot.course %></b>
+                                            <small><%= slot.course_code ? slot.course_code + ' · ' : '' %><%= slot.unit %> Credits</small>
+                                        </div>
+                                        <form action="/reading-timetable/delete/<%= slot.id %>" method="POST" style="margin:0;" onsubmit="return deleteReadingSlot(event, this)">
+                                            <button type="submit" style="background:none; border:none; color:#ef4444; cursor:pointer; padding:4px;"><i class="fas fa-times"></i></button>
+                                        </form>
+                                    </div>
+                                <% }); %>
+                            </div>
+                        <% }
+                    });
+                } %>
+            </div>
+            <button class="btn-secondary" onclick="generateReadingTimetable()" style="margin-top:12px;">
+                <i class="fas fa-sync"></i> Regenerate
+            </button>
+        </div>
+
+        <!-- Empty state -->
+        <% if (!readingSlots || readingSlots.length === 0) { %>
+        <div class="empty-state" id="emptyState">
+            <i class="fas fa-calendar-alt"></i>
+            <p style="font-weight:700; color:#64748b;">No reading timetable yet</p>
+            <p style="font-size:0.78rem; color:#94a3b8;">Set your preferences above and click Generate</p>
+        </div>
+        <% } %>
+
+        <%- include('partials/pomodoro-overlay') %>
+        <%- include('partials/install-banner') %>
+
+        <nav class="bottom-nav">
+            <a href="/dashboard" class="nav-link">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </a>
+            <a href="/timetable" class="nav-link">
+                <i class="fas fa-table"></i>
+                <span>Timetable</span>
+            </a>
+            <a href="/setup-test" class="nav-center-btn"><i class="fas fa-plus"></i></a>
+            <a href="/reading-timetable" class="nav-link active">
+                <i class="fas fa-book-open"></i>
+                <span>Reading</span>
+            </a>
+            <a href="/profile" class="nav-link">
+                <i class="fas fa-user-circle"></i>
+                <span>Profile</span>
+            </a>
+        </nav>
+    </div>
+
+    <script>
+        let currentMode = 'school';
+        let excludedCourses = <%= JSON.stringify(settings && settings.excluded_courses ? settings.excluded_courses : []) %>;
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-option').forEach(el => el.classList.remove('active'));
+            document.querySelector(`.mode-option[data-mode="${mode}"]`).classList.add('active');
+            document.getElementById('manualSection').style.display = mode === 'manual' ? 'block' : 'none';
+            document.getElementById('exclusionSection').style.display = mode === 'school' ? 'block' : 'none';
+        }
+
+        function addManualRow() {
+            const container = document.getElementById('manualCourses');
+            const row = document.createElement('div');
+            row.className = 'manual-course-row';
+            row.innerHTML = `
+                <input type="text" class="manual-code" placeholder="Code" style="flex:1;">
+                <input type="text" class="manual-name" placeholder="Course name" style="flex:2;">
+                <input type="number" class="manual-unit" placeholder="Unit" style="width:60px;" value="3" min="1" max="6">
+                <button onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer; padding:4px 8px;">
+                    <i class="fas fa-trash"></i>
+                </button>
+            `;
+            container.appendChild(row);
+        }
+
+        function toggleExcluded(cb) {
+            if (cb.checked) {
+                if (!excludedCourses.includes(cb.value)) excludedCourses.push(cb.value);
+            } else {
+                excludedCourses = excludedCourses.filter(c => c !== cb.value);
+            }
+        }
+
+        function deleteReadingSlot(e, form) {
+            e.preventDefault();
+            fetch(form.action, { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        form.closest('.reading-slot').remove();
+                        const remaining = document.querySelectorAll('.reading-slot').length;
+                        if (remaining === 0) {
+                            document.getElementById('readingResult').style.display = 'none';
+                            document.getElementById('emptyState').style.display = 'block';
+                        }
+                    }
+                })
+                .catch(err => console.error(err));
+        }
+
+        function generateReadingTimetable() {
+            const btn = document.getElementById('generateBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loader"></span> Generating...';
+
+            // Gather manual courses if in manual mode
+            let manualCourses = [];
+            if (currentMode === 'manual') {
+                document.querySelectorAll('.manual-course-row').forEach(row => {
+                    const code = row.querySelector('.manual-code').value.trim();
+                    const name = row.querySelector('.manual-name').value.trim();
+                    const unit = row.querySelector('.manual-unit').value;
+                    if (name || code) {
+                        manualCourses.push({
+                            course_code: code,
+                            course_name: name || code,
+                            course: name || code,
+                            unit: parseInt(unit) || 3
+                        });
+                    }
+                });
+            }
+
+            const body = {
+                use_school_timetable: currentMode === 'school',
+                daily_hours: document.getElementById('dailyHours').value,
+                session_minutes: document.getElementById('sessionMinutes').value,
+                sessions_per_course: document.getElementById('sessionsPerCourse').value,
+                preferred_time_start: document.getElementById('prefStart').value,
+                preferred_time_end: document.getElementById('prefEnd').value,
+                excluded_courses: excludedCourses,
+                manual_courses: manualCourses
+            };
+
+            fetch('/reading-timetable/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            })
+            .then(r => r.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Generate Reading Timetable';
+
+                if (data.success) {
+                    renderReadingTimetable(data.readingSlots);
+                    document.getElementById('readingResult').style.display = 'block';
+                    document.getElementById('emptyState').style.display = 'none';
+                } else {
+                    alert(data.message || 'Failed to generate. Check your settings.');
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Generate Reading Timetable';
+                alert('Error generating timetable.');
+                console.error(err);
+            });
+        }
+
+        function renderReadingTimetable(slots) {
+            if (!slots || slots.length === 0) {
+                document.getElementById('readingTimetableDisplay').innerHTML = '<p style="text-align:center;color:var(--sub);">No reading sessions generated.</p>';
+                return;
+            }
+
+            const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            const dayMap = {};
+
+            slots.forEach(s => {
+                if (!dayMap[s.day]) dayMap[s.day] = [];
+                dayMap[s.day].push(s);
+            });
+
+            let html = '';
+            weekDays.forEach(day => {
+                if (dayMap[day] && dayMap[day].length > 0) {
+                    html += `<div class="reading-day"><div class="reading-day-header">${day}</div>`;
+                    dayMap[day].forEach(slot => {
+                        html += `
+                            <div class="reading-slot">
+                                <div class="time">${slot.start_time} - ${slot.end_time}</div>
+                                <div class="info">
+                                    <b>${slot.course}</b>
+                                    <small>${slot.course_code ? slot.course_code + ' · ' : ''}${slot.unit} Credits</small>
+                                </div>
+                                <form action="/reading-timetable/delete/${slot.id}" method="POST" style="margin:0;" onsubmit="return deleteReadingSlot(event, this)">
+                                    <button type="submit" style="background:none; border:none; color:#ef4444; cursor:pointer; padding:4px;"><i class="fas fa-times"></i></button>
+                                </form>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                }
+            });
+
+            document.getElementById('readingTimetableDisplay').innerHTML = html;
+        }
+
+        function resetReadingTimetable() {
+            if (!confirm('Clear your entire reading timetable?')) return;
+            fetch('/reading-timetable/reset', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('readingResult').style.display = 'none';
+                        document.getElementById('emptyState').style.display = 'block';
+                        document.getElementById('readingTimetableDisplay').innerHTML = '';
+                    }
+                })
+                .catch(err => console.error(err));
+        }
+
+        // Save settings when generate is clicked (already sends in body)
+        // Auto-save settings on generate
+        const originalGenerate = generateReadingTimetable;
+        generateReadingTimetable = function() {
+            const body = {
+                use_school_timetable: currentMode === 'school',
+                daily_hours: document.getElementById('dailyHours').value,
+                session_minutes: document.getElementById('sessionMinutes').value,
+                sessions_per_course: document.getElementById('sessionsPerCourse').value,
+                preferred_time_start: document.getElementById('prefStart').value,
+                preferred_time_end: document.getElementById('prefEnd').value,
+                excluded_courses: excludedCourses
+            };
+
+            fetch('/reading-timetable/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            }).catch(() => {});
+
+            originalGenerate();
+        };
+    </script>
+</body>
+</html>

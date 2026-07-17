@@ -32,6 +32,12 @@ const upload = multer({
     limits: { fileSize: 50 * 1024 * 1024 }
 });
 
+// Memory storage for timetable extraction (need buffer)
+const uploadMemory = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 50 * 1024 * 1024 }
+});
+
 const pgSession = require('connect-pg-simple')(session);
 
 // Simple in-memory rate limiter
@@ -122,6 +128,57 @@ pool.on('error', (err) => {
         console.log('[DB] user_sessions table ready');
     } catch (err) {
         console.error('[DB] user_sessions table setup:', err.message);
+    }
+})();
+
+// Auto-create reading_timetables and reading_settings tables
+(async () => {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS reading_timetables (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                course VARCHAR(255) NOT NULL,
+                course_code VARCHAR(50) DEFAULT '',
+                unit INTEGER DEFAULT 3,
+                day VARCHAR(20) NOT NULL,
+                start_time TIME NOT NULL,
+                end_time TIME NOT NULL,
+                source VARCHAR(20) DEFAULT 'school',
+                week_start DATE DEFAULT CURRENT_DATE,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS reading_settings (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER UNIQUE NOT NULL,
+                use_school_timetable BOOLEAN DEFAULT true,
+                daily_hours DECIMAL(4,1) DEFAULT 3.0,
+                session_minutes INTEGER DEFAULT 45,
+                sessions_per_course INTEGER DEFAULT 2,
+                preferred_time_start TIME DEFAULT '09:00',
+                preferred_time_end TIME DEFAULT '21:00',
+                excluded_courses TEXT[] DEFAULT '{}',
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        await pool.query(`
+            DO $$ BEGIN
+                ALTER TABLE timetables ADD COLUMN IF NOT EXISTS course_code VARCHAR(50) DEFAULT '';
+            EXCEPTION WHEN duplicate_column THEN null;
+            END $$;
+        `);
+        await pool.query(`
+            DO $$ BEGIN
+                ALTER TABLE timetables ADD COLUMN IF NOT EXISTS unit INTEGER DEFAULT 3;
+            EXCEPTION WHEN duplicate_column THEN null;
+            END $$;
+        `);
+        console.log('[DB] reading_timetables & reading_settings tables ready');
+    } catch (err) {
+        console.error('[DB] reading tables setup:', err.message);
     }
 })();
 
@@ -1666,12 +1723,12 @@ app.get('/timetable', isAuth, async (req, res) => {
 
 // POST: Save a new course slot to the user's timetable
 app.post('/timetable/add', isAuth, async (req, res) => {
-    const { course, day, start_time, end_time, venue } = req.body;
+    const { course, course_code, unit, day, start_time, end_time, venue } = req.body;
     
     try {
         await pool.query(
-            'INSERT INTO timetables (user_id, course, day, start_time, end_time, venue) VALUES ($1, $2, $3, $4, $5, $6)',
-            [req.session.user.id, course, day, start_time, end_time, venue]
+            'INSERT INTO timetables (user_id, course, course_code, unit, day, start_time, end_time, venue) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+            [req.session.user.id, course, course_code || '', parseInt(unit) || 3, day, start_time, end_time, venue]
         );
         res.redirect('/timetable');
     } catch (err) {
@@ -1679,6 +1736,582 @@ app.post('/timetable/add', isAuth, async (req, res) => {
         res.redirect('/timetable?error=Failed to add slot');
     }
 });
+
+// ==========================================
+// TIMETABLE EXTRACTION ROUTES (AI-powered)
+// ==========================================
+
+// POST: Upload and extract timetable from image/PDF/document
+app.post('/timetable/extract', isAuth, uploadMemory.single('timetable_file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No file uploaded.' });
+        }
+
+        const fileExt = path.extname(req.file.originalname).toLowerCase();
+        const imageExts = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp'];
+        const pdfExts = ['.pdf'];
+        const docExts = ['.doc', '.docx', '.txt', '.rtf'];
+
+        const fileBase64 = req.file.buffer.toString('base64');
+        const mimeType = req.file.mimetype;
+        let rawText = '';
+        let usedProvider = '';
+
+        // File-type-based routing with fallback chain
+        if (imageExts.includes(fileExt)) {
+            // Images → Gemini Vision (best at image understanding)
+            const prompt = `Extract the school timetable from this image. Return a JSON array of courses with: course_code (e.g. PHY 302), course_name, day (Monday-Sunday), start_time (HH:MM), end_time (HH:MM), venue, unit (credit units, default 3). Only return valid JSON, no markdown.`;
+
+            const result = await callGeminiWithImage(prompt, fileBase64, mimeType);
+            if (result.success) {
+                rawText = result.text;
+                usedProvider = 'Gemini Vision';
+            }
+        } else if (pdfExts.includes(fileExt)) {
+            // PDFs → try LlamaParse first, fallback Gemini
+            if (process.env.LLAMAPARSE_API_KEY) {
+                try {
+                    const lpResult = await callLlamaParse(req.file.buffer, req.file.originalname);
+                    if (lpResult.success) {
+                        // Parse the markdown result through Gemini for structured JSON
+                        const structPrompt = `Extract the school timetable from this text. Return ONLY a JSON array of courses with: course_code, course_name, day (Monday-Sunday), start_time (HH:MM), end_time (HH:MM), venue, unit. If start_time/end_time not clear, use "09:00"/"10:00". If venue not found, use "". Only return valid JSON array, no markdown.`;
+                        const structResult = await callGeminiWithText(structPrompt, lpResult.text);
+                        if (structResult.success) {
+                            rawText = structResult.text;
+                            usedProvider = 'LlamaParse → Gemini';
+                        }
+                    }
+                } catch (e) { console.error('LlamaParse failed:', e.message); }
+            }
+            
+            if (!rawText) {
+                // Fallback to Gemini for PDF
+                const prompt = `Extract the school timetable from this PDF. Return a JSON array of courses with: course_code (e.g. PHY 302), course_name, day (Monday-Sunday), start_time (HH:MM), end_time (HH:MM), venue, unit. Only return valid JSON, no markdown.`;
+                const result = await callGeminiWithImage(prompt, fileBase64, mimeType);
+                if (result.success) { rawText = result.text; usedProvider = 'Gemini PDF'; }
+            }
+        } else if (docExts.includes(fileExt)) {
+            // Documents → try Unstructured.io first, fallback Gemini
+            if (process.env.UNSTRUCTURED_API_KEY) {
+                try {
+                    const usResult = await callUnstructured(req.file.buffer, req.file.originalname);
+                    if (usResult.success) {
+                        const structPrompt = `Extract the school timetable from this text. Return ONLY a JSON array of courses with: course_code, course_name, day (Monday-Sunday), start_time (HH:MM), end_time (HH:MM), venue, unit. Only return valid JSON array, no markdown.`;
+                        const structResult = await callGeminiWithText(structPrompt, usResult.text);
+                        if (structResult.success) {
+                            rawText = structResult.text;
+                            usedProvider = 'Unstructured → Gemini';
+                        }
+                    }
+                } catch (e) { console.error('Unstructured failed:', e.message); }
+            }
+
+            if (!rawText) {
+                // Fallback: extract text via Gemini
+                const prompt = `Extract the school timetable from this document. Return a JSON array of courses with: course_code, course_name, day, start_time, end_time, venue, unit. Only return valid JSON, no markdown.`;
+                const result = await callGeminiWithImage(prompt, fileBase64, mimeType);
+                if (result.success) { rawText = result.text; usedProvider = 'Gemini Doc'; }
+            }
+        } else {
+            return res.status(400).json({ success: false, message: 'Unsupported file type. Upload an image, PDF, or document.' });
+        }
+
+        if (!rawText) {
+            return res.status(500).json({ success: false, message: 'All AI models failed to extract timetable. Try a clearer file.' });
+        }
+
+        // Clean response: remove markdown fences
+        let cleanJson = rawText;
+        if (cleanJson.startsWith('```json')) cleanJson = cleanJson.replace(/^```json\n?/, '').replace(/\n?```$/, '');
+        if (cleanJson.startsWith('```')) cleanJson = cleanJson.replace(/^```\n?/, '').replace(/\n?```$/, '');
+        cleanJson = cleanJson.trim();
+
+        let courses;
+        try {
+            courses = JSON.parse(cleanJson);
+            if (!Array.isArray(courses)) courses = [courses];
+        } catch (e) {
+            console.error('JSON parse failed, raw:', cleanJson);
+            return res.status(500).json({ success: false, message: 'Failed to parse extracted timetable. Try again.' });
+        }
+
+        res.json({
+            success: true,
+            provider: usedProvider,
+            courses: courses
+        });
+
+    } catch (err) {
+        console.error('Extraction error:', err);
+        res.status(500).json({ success: false, message: 'Internal server error.' });
+    }
+});
+
+// POST: Delete a timetable slot
+app.post('/timetable/delete/:id', isAuth, async (req, res) => {
+    try {
+        await pool.query('DELETE FROM timetables WHERE id = $1 AND user_id = $2', [req.params.id, req.session.user.id]);
+        res.redirect('/timetable');
+    } catch (err) {
+        console.error(err);
+        res.redirect('/timetable?error=Failed to delete');
+    }
+});
+
+// POST: Update timetable slot (add course_code, unit)
+app.post('/timetable/update/:id', isAuth, async (req, res) => {
+    const { course_code, unit } = req.body;
+    try {
+        await pool.query(
+            'UPDATE timetables SET course_code = $1, unit = $2 WHERE id = $3 AND user_id = $4',
+            [course_code || '', parseInt(unit) || 3, req.params.id, req.session.user.id]
+        );
+        res.redirect('/timetable');
+    } catch (err) {
+        console.error(err);
+        res.redirect('/timetable?error=Failed to update');
+    }
+});
+
+// POST: Save extracted courses as timetable slots
+app.post('/timetable/save-extracted', isAuth, async (req, res) => {
+    const { courses } = req.body;
+    if (!Array.isArray(courses) || courses.length === 0) {
+        return res.status(400).json({ success: false, message: 'No courses to save.' });
+    }
+
+    try {
+        for (const c of courses) {
+            await pool.query(
+                `INSERT INTO timetables (user_id, course, course_code, day, start_time, end_time, venue, unit)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                 ON CONFLICT DO NOTHING`,
+                [req.session.user.id, c.course_name || c.course || '', c.course_code || '',
+                 c.day || 'Monday', c.start_time || '09:00', c.end_time || '10:00',
+                 c.venue || '', parseInt(c.unit) || 3]
+            );
+        }
+        res.json({ success: true, message: `${courses.length} courses saved to your timetable.` });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: 'Failed to save courses.' });
+    }
+});
+
+// ==========================================
+// READING TIMETABLE ROUTES
+// ==========================================
+
+// GET: Show reading timetable page with settings
+app.get('/reading-timetable', isAuth, async (req, res) => {
+    if (!req.session.user.has_paid) {
+        return res.redirect('/dashboard?msg=Upgrade to access Reading Timetable');
+    }
+
+    try {
+        // Get reading settings
+        const settingsResult = await pool.query(
+            'SELECT * FROM reading_settings WHERE user_id = $1', [req.session.user.id]
+        );
+        let settings = settingsResult.rows[0] || null;
+
+        // Get school timetable slots
+        const slotsResult = await pool.query(
+            'SELECT * FROM timetables WHERE user_id = $1 ORDER BY day, start_time',
+            [req.session.user.id]
+        );
+
+        // Get reading timetable
+        const readingResult = await pool.query(
+            'SELECT * FROM reading_timetables WHERE user_id = $1 ORDER BY day, start_time',
+            [req.session.user.id]
+        );
+
+        // Get distinct courses from school timetable
+        const coursesResult = await pool.query(
+            'SELECT DISTINCT course, course_code, unit FROM timetables WHERE user_id = $1 ORDER BY course',
+            [req.session.user.id]
+        );
+
+        res.render('reading-timetable', {
+            user: req.session.user,
+            settings: settings,
+            slots: slotsResult.rows || [],
+            readingSlots: readingResult.rows || [],
+            courses: coursesResult.rows || [],
+            hasNewNotifs: req.session.hasNewNotifs || false
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.render('reading-timetable', {
+            user: req.session.user, settings: null, slots: [],
+            readingSlots: [], courses: [], hasNewNotifs: false
+        });
+    }
+});
+
+// POST: Save reading settings
+app.post('/reading-timetable/settings', isAuth, async (req, res) => {
+    const {
+        use_school_timetable, daily_hours, session_minutes,
+        sessions_per_course, preferred_time_start, preferred_time_end, excluded_courses
+    } = req.body;
+
+    try {
+        await pool.query(`
+            INSERT INTO reading_settings (user_id, use_school_timetable, daily_hours, session_minutes,
+                sessions_per_course, preferred_time_start, preferred_time_end, excluded_courses, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+            ON CONFLICT (user_id)
+            DO UPDATE SET
+                use_school_timetable = EXCLUDED.use_school_timetable,
+                daily_hours = EXCLUDED.daily_hours,
+                session_minutes = EXCLUDED.session_minutes,
+                sessions_per_course = EXCLUDED.sessions_per_course,
+                preferred_time_start = EXCLUDED.preferred_time_start,
+                preferred_time_end = EXCLUDED.preferred_time_end,
+                excluded_courses = EXCLUDED.excluded_courses,
+                updated_at = NOW()
+        `, [
+            req.session.user.id,
+            use_school_timetable === 'true' || use_school_timetable === true,
+            parseFloat(daily_hours) || 3,
+            parseInt(session_minutes) || 45,
+            parseInt(sessions_per_course) || 2,
+            preferred_time_start || '09:00',
+            preferred_time_end || '21:00',
+            Array.isArray(excluded_courses) ? excluded_courses : []
+        ]);
+
+        res.json({ success: true, message: 'Settings saved!' });
+    } catch (err) {
+        console.error('Save settings error:', err);
+        res.status(500).json({ success: false, message: 'Failed to save settings.' });
+    }
+});
+
+// POST: Generate reading timetable
+app.post('/reading-timetable/generate', isAuth, async (req, res) => {
+    try {
+        // Get user settings
+        const settingsResult = await pool.query(
+            'SELECT * FROM reading_settings WHERE user_id = $1', [req.session.user.id]
+        );
+        let settings = settingsResult.rows[0];
+
+        // If no settings saved, use defaults from request body
+        const useSchool = settings ? settings.use_school_timetable : (req.body.use_school_timetable === 'true');
+        const dailyHours = settings ? parseFloat(settings.daily_hours) : (parseFloat(req.body.daily_hours) || 3);
+        const sessionMin = settings ? parseInt(settings.session_minutes) : (parseInt(req.body.session_minutes) || 45);
+        const sessionsPerCourse = settings ? parseInt(settings.sessions_per_course) : (parseInt(req.body.sessions_per_course) || 2);
+        const prefStart = settings ? settings.preferred_time_start : (req.body.preferred_time_start || '09:00');
+        const prefEnd = settings ? settings.preferred_time_end : (req.body.preferred_time_end || '21:00');
+        const excluded = settings ? (settings.excluded_courses || []) : (req.body.excluded_courses ? (Array.isArray(req.body.excluded_courses) ? req.body.excluded_courses : [req.body.excluded_courses]) : []);
+
+        // Get courses
+        let courses = [];
+        if (useSchool) {
+            const schoolResult = await pool.query(
+                'SELECT DISTINCT course, course_code, unit FROM timetables WHERE user_id = $1',
+                [req.session.user.id]
+            );
+            courses = schoolResult.rows.filter(c => !excluded.includes(c.course) && !excluded.includes(c.course_code));
+        } else {
+            // Manual courses from request
+            courses = req.body.manual_courses || [];
+            if (typeof courses === 'string') {
+                try { courses = JSON.parse(courses); } catch(e) { courses = []; }
+            }
+        }
+
+        if (courses.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: useSchool
+                    ? 'No courses found in your school timetable. Add courses first or choose manual entry.'
+                    : 'No courses provided. Add at least one course.'
+            });
+        }
+
+        // Clear existing reading timetable
+        await pool.query('DELETE FROM reading_timetables WHERE user_id = $1', [req.session.user.id]);
+
+        // Generate reading timetable
+        const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        const sessionsPerDay = Math.floor((dailyHours * 60) / sessionMin);
+        const totalSessionsNeeded = courses.length * sessionsPerCourse;
+        const totalDaysNeeded = Math.ceil(totalSessionsNeeded / sessionsPerDay);
+        const activeDays = weekDays.slice(0, Math.min(totalDaysNeeded, 7));
+
+        // Distribute sessions across days
+        let allSessions = [];
+        courses.forEach(course => {
+            for (let i = 0; i < sessionsPerCourse; i++) {
+                allSessions.push(course);
+            }
+        });
+
+        // Shuffle for fair distribution
+        for (let i = allSessions.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [allSessions[i], allSessions[j]] = [allSessions[j], allSessions[i]];
+        }
+
+        // Assign to time slots
+        let dayIndex = 0;
+        let sessionIndex = 0;
+
+        for (let d = 0; d < activeDays.length && sessionIndex < allSessions.length; d++) {
+            const day = activeDays[d];
+            // Calculate time slots for this day
+            const prefStartMinutes = timeToMinutes(prefStart);
+            const prefEndMinutes = timeToMinutes(prefEnd);
+            const availableMinutes = prefEndMinutes - prefStartMinutes;
+            const slotsForDay = Math.min(sessionsPerDay, Math.ceil(availableMinutes / sessionMin));
+
+            for (let s = 0; s < slotsForDay && sessionIndex < allSessions.length; s++) {
+                const course = allSessions[sessionIndex];
+                const slotStartMinutes = prefStartMinutes + (s * sessionMin);
+                const slotEndMinutes = slotStartMinutes + sessionMin;
+
+                if (slotEndMinutes > prefEndMinutes) break;
+
+                const startTime = minutesToTime(slotStartMinutes);
+                const endTime = minutesToTime(slotEndMinutes);
+
+                await pool.query(
+                    `INSERT INTO reading_timetables (user_id, course, course_code, unit, day, start_time, end_time, source)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                    [req.session.user.id, course.course || course.course_name || course.course_code || 'Course',
+                     course.course_code || '', parseInt(course.unit) || 3,
+                     day, startTime, endTime, 'generated']
+                );
+
+                sessionIndex++;
+            }
+            dayIndex++;
+        }
+
+        // Fetch and return the generated timetable
+        const result = await pool.query(
+            'SELECT * FROM reading_timetables WHERE user_id = $1 ORDER BY day, start_time',
+            [req.session.user.id]
+        );
+
+        res.json({
+            success: true,
+            message: `Reading timetable generated with ${result.rows.length} sessions across ${activeDays.length} days!`,
+            readingSlots: result.rows
+        });
+
+    } catch (err) {
+        console.error('Generate error:', err);
+        res.status(500).json({ success: false, message: 'Failed to generate reading timetable.' });
+    }
+});
+
+// POST: Delete a reading slot
+app.post('/reading-timetable/delete/:id', isAuth, async (req, res) => {
+    try {
+        await pool.query('DELETE FROM reading_timetables WHERE id = $1 AND user_id = $2',
+            [req.params.id, req.session.user.id]);
+        res.json({ success: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false });
+    }
+});
+
+// POST: Reset reading timetable
+app.post('/reading-timetable/reset', isAuth, async (req, res) => {
+    try {
+        await pool.query('DELETE FROM reading_timetables WHERE user_id = $1', [req.session.user.id]);
+        res.json({ success: true, message: 'Reading timetable cleared.' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false });
+    }
+});
+
+// ==========================================
+// HELPER FUNCTIONS FOR AI EXTRACTION
+// ==========================================
+
+// Call Gemini with image/file data
+async function callGeminiWithImage(prompt, base64Data, mimeType) {
+    const endpoints = [
+        { url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', key: process.env.GEMINI_API_KEY_PRIMARY },
+        { url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', key: process.env.GEMINI_API_KEY_SECONDARY }
+    ].filter(e => e.key);
+
+    for (const ep of endpoints) {
+        try {
+            const body = {
+                contents: [{
+                    parts: [
+                        { text: prompt },
+                        { inlineData: { mimeType: mimeType || 'application/octet-stream', data: base64Data } }
+                    ]
+                }],
+                generationConfig: { temperature: 0.1, maxOutputTokens: 8192 }
+            };
+
+            const resp = await fetch(`${ep.url}?key=${ep.key}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+                signal: AbortSignal.timeout(30000)
+            });
+
+            if (resp.ok) {
+                const data = await resp.json();
+                const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+                if (text) return { success: true, text };
+            }
+        } catch (e) {
+            console.error('Gemini image call failed:', e.message);
+        }
+    }
+    return { success: false, text: '' };
+}
+
+// Call Gemini with text prompt + text content
+async function callGeminiWithText(prompt, textContent) {
+    const endpoints = [
+        { url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', key: process.env.GEMINI_API_KEY_PRIMARY },
+        { url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', key: process.env.GEMINI_API_KEY_SECONDARY }
+    ].filter(e => e.key);
+
+    for (const ep of endpoints) {
+        try {
+            const body = {
+                contents: [{
+                    parts: [
+                        { text: prompt },
+                        { text: textContent }
+                    ]
+                }],
+                generationConfig: { temperature: 0.1, maxOutputTokens: 8192 }
+            };
+
+            const resp = await fetch(`${ep.url}?key=${ep.key}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+                signal: AbortSignal.timeout(30000)
+            });
+
+            if (resp.ok) {
+                const data = await resp.json();
+                const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+                if (text) return { success: true, text };
+            }
+        } catch (e) {
+            console.error('Gemini text call failed:', e.message);
+        }
+    }
+    return { success: false, text: '' };
+}
+
+// Call LlamaParse API for PDFs
+async function callLlamaParse(fileBuffer, fileName) {
+    const apiKey = process.env.LLAMAPARSE_API_KEY;
+    if (!apiKey) return { success: false, text: '' };
+
+    try {
+        // Upload file to LlamaParse
+        const formData = new FormData();
+        const blob = new Blob([fileBuffer]);
+        formData.append('file', blob, fileName);
+        formData.append('premium_mode', 'false');
+
+        const uploadResp = await fetch('https://api.cloud.llamaindex.ai/api/v1/parsing/upload', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${apiKey}` },
+            body: formData
+        });
+
+        if (!uploadResp.ok) {
+            const errText = await uploadResp.text();
+            console.error('LlamaParse upload failed:', errText);
+            return { success: false, text: '' };
+        }
+
+        const uploadData = await uploadResp.json();
+        const jobId = uploadData.id;
+        if (!jobId) return { success: false, text: '' };
+
+        // Poll for result
+        for (let attempt = 0; attempt < 30; attempt++) {
+            await new Promise(r => setTimeout(r, 2000));
+
+            const pollResp = await fetch(`https://api.cloud.llamaindex.ai/api/v1/parsing/job/${jobId}`, {
+                headers: { 'Authorization': `Bearer ${apiKey}` }
+            });
+
+            if (!pollResp.ok) continue;
+
+            const pollData = await pollResp.json();
+            if (pollData.status === 'completed') {
+                const markdown = pollData.result?.markdown || pollData.result?.text || '';
+                if (markdown) return { success: true, text: markdown };
+            }
+        }
+
+        return { success: false, text: '' };
+    } catch (e) {
+        console.error('LlamaParse error:', e.message);
+        return { success: false, text: '' };
+    }
+}
+
+// Call Unstructured.io API for documents
+async function callUnstructured(fileBuffer, fileName) {
+    const apiKey = process.env.UNSTRUCTURED_API_KEY;
+    if (!apiKey) return { success: false, text: '' };
+
+    try {
+        const formData = new FormData();
+        const blob = new Blob([fileBuffer]);
+        formData.append('files', blob, fileName);
+        formData.append('strategy', 'hi_res');
+
+        const resp = await fetch('https://api.unstructured.io/general/v0/general', {
+            method: 'POST',
+            headers: { 'api-key': apiKey },
+            body: formData,
+            signal: AbortSignal.timeout(60000)
+        });
+
+        if (!resp.ok) {
+            const errText = await resp.text();
+            console.error('Unstructured failed:', errText);
+            return { success: false, text: '' };
+        }
+
+        const elements = await resp.json();
+        const fullText = elements.map(el => el.text || '').filter(Boolean).join('\n');
+        return fullText ? { success: true, text: fullText } : { success: false, text: '' };
+    } catch (e) {
+        console.error('Unstructured error:', e.message);
+        return { success: false, text: '' };
+    }
+}
+
+// Convert time string (HH:MM) to minutes
+function timeToMinutes(timeStr) {
+    const [h, m] = (timeStr || '09:00').split(':').map(Number);
+    return (h || 0) * 60 + (m || 0);
+}
+
+// Convert minutes to time string (HH:MM)
+function minutesToTime(minutes) {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
 
 // GET: Render the How It Works Guide
 app.get('/how-it-works', isAuth, (req, res) => {

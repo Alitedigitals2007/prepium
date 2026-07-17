@@ -57,6 +57,7 @@
             gap: 6px;
         }
         .btn-add { background: var(--brand); color: white; }
+        .btn-extract { background: #fef3c7; color: #d97706; }
         .btn-print { background: #e0f2fe; color: var(--brand); }
 
         /* Modal Overlay for inputting dynamic schedules */
@@ -143,6 +144,9 @@
 
         <div class="action-row">
             <button class="btn-action btn-add" onclick="openModal()"><i>➕</i> Add Course</button>
+            <button class="btn-action btn-extract" onclick="openExtractModal()">
+                <i class="fas fa-magic"></i> AI Extract
+            </button>
             <button class="btn-action btn-print" onclick="printTimetable()"><i>📥</i> Download PDF</button>
         </div>
 
@@ -165,8 +169,16 @@
                             <span class="slot-hour"><%= slot.start_time %></span>
                             <div class="slot-info">
                                 <b><%= slot.course %></b>
-                                <p>📍 Venue: <%= slot.venue %> | Time: <%= slot.start_time %> - <%= slot.end_time %></p>
+                                <p>
+                                    <% if (slot.course_code) { %><%= slot.course_code %> · <% } %>
+                                    <%= slot.unit %> Credits
+                                    · 📍 <%= slot.venue %>
+                                    · <%= slot.start_time %>-<%= slot.end_time %>
+                                </p>
                             </div>
+                            <form action="/timetable/delete/<%= slot.id %>" method="POST" style="margin:0;" onsubmit="return confirm('Delete this slot?')">
+                                <button type="submit" style="background:none; border:none; color:#ef4444; font-size:1rem; cursor:pointer; padding:4px;"><i class="fas fa-trash"></i></button>
+                            </form>
                         </div>
                     <% }); %>
                 </div>
@@ -182,8 +194,18 @@
                 <h3 style="margin-top:0; margin-bottom:1.2rem; font-size:1.15rem; font-weight:800;">Register New Course Slot</h3>
                 <form action="/timetable/add" method="POST">
                     <div class="form-group">
-                        <label>Course Title / Code</label>
-                        <input type="text" name="course" class="form-input" placeholder="e.g. PHY 302" required>
+                        <label>Course Title</label>
+                        <input type="text" name="course" class="form-input" placeholder="e.g. Physics" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Course Code</label>
+                        <input type="text" name="course_code" class="form-input" placeholder="e.g. PHY 302">
+                    </div>
+                    <div class="form-group" style="display:flex; gap:12px;">
+                        <div style="flex:1;">
+                            <label>Credit Unit</label>
+                            <input type="number" name="unit" class="form-input" value="3" min="1" max="6">
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Day of the Week</label>
@@ -217,6 +239,37 @@
                         <button type="submit" class="btn-action btn-add">Save Class</button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <!-- Extract Timetable Modal -->
+        <div class="modal-overlay" id="extract-modal" onclick="if(event.target===this)closeExtractModal()">
+            <div class="modal-body" onclick="event.stopPropagation()">
+                <h3 style="margin-top:0; margin-bottom:1.2rem; font-size:1.15rem; font-weight:800;">AI Timetable Extraction</h3>
+                <p style="font-size:0.8rem; color:#64748b; margin-bottom:1rem;">
+                    Upload an image, PDF, or document of your school timetable. The AI will extract all courses automatically.
+                </p>
+                <div style="border:2px dashed #e2e8f0; border-radius:16px; padding:2rem; text-align:center; margin-bottom:1rem; background:#fafafa;" id="dropZone">
+                    <i class="fas fa-cloud-upload-alt" style="font-size:2rem; color:#94a3b8; display:block; margin-bottom:0.5rem;"></i>
+                    <p style="font-size:0.85rem; color:#64748b; margin:0;">Drop your timetable file here</p>
+                    <p style="font-size:0.72rem; color:#94a3b8; margin:4px 0 12px;">or click to browse (JPG, PNG, PDF, DOC)</p>
+                    <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.txt" style="display:none;" onchange="uploadForExtraction(this.files[0])">
+                    <button class="btn-action btn-extract" onclick="document.getElementById('fileInput').click()" style="display:inline-flex; width:auto; padding:10px 24px;">
+                        <i class="fas fa-folder-open"></i> Browse Files
+                    </button>
+                </div>
+                <div id="extractStatus" style="display:none; padding:1rem; text-align:center; color:#64748b;">
+                    <i class="fas fa-spinner fa-spin" style="font-size:1.5rem; display:block; margin-bottom:0.5rem;"></i>
+                    <span id="extractStatusText">Processing with AI...</span>
+                </div>
+                <div id="extractedCourses" style="display:none; margin-bottom:1rem;">
+                    <p style="font-size:0.85rem; font-weight:700; margin-bottom:0.5rem;">Extracted Courses (<span id="extractedCount">0</span>)</p>
+                    <div id="extractedList" style="max-height:250px; overflow-y:auto;"></div>
+                    <div class="modal-actions" style="margin-top:1rem;">
+                        <button type="button" class="btn-action btn-print" onclick="closeExtractModal()">Cancel</button>
+                        <button class="btn-action btn-add" onclick="saveExtractedCourses()">Save All to Timetable</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -268,10 +321,126 @@
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            // Run conversion
             html2pdf().set(opt).from(element).save().then(() => {
-                // Restore original state
                 pdfHeader.style.display = 'none';
+            });
+        }
+
+        // ===== AI EXTRACTION FUNCTIONS =====
+        let extractedCourses = [];
+
+        function openExtractModal() {
+            document.getElementById('extract-modal').classList.add('open');
+            document.getElementById('extractedCourses').style.display = 'none';
+            document.getElementById('extractStatus').style.display = 'none';
+            extractedCourses = [];
+        }
+
+        function closeExtractModal() {
+            document.getElementById('extract-modal').classList.remove('open');
+        }
+
+        // Drag and drop support
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropZone = document.getElementById('dropZone');
+            if (dropZone) {
+                dropZone.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    this.style.borderColor = 'var(--brand)';
+                    this.style.background = '#f0f7ff';
+                });
+                dropZone.addEventListener('dragleave', function(e) {
+                    e.preventDefault();
+                    this.style.borderColor = '#e2e8f0';
+                    this.style.background = '#fafafa';
+                });
+                dropZone.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    this.style.borderColor = '#e2e8f0';
+                    this.style.background = '#fafafa';
+                    if (e.dataTransfer.files.length > 0) {
+                        uploadForExtraction(e.dataTransfer.files[0]);
+                    }
+                });
+            }
+        });
+
+        function uploadForExtraction(file) {
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('timetable_file', file);
+
+            document.getElementById('extractStatus').style.display = 'block';
+            document.getElementById('extractStatusText').textContent = 'Processing with AI models...';
+            document.getElementById('dropZone').style.display = 'none';
+            document.getElementById('extractedCourses').style.display = 'none';
+
+            fetch('/timetable/extract', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('extractStatus').style.display = 'none';
+
+                if (data.success && data.courses && data.courses.length > 0) {
+                    extractedCourses = data.courses;
+                    document.getElementById('extractedCount').textContent = data.courses.length;
+                    
+                    const list = document.getElementById('extractedList');
+                    list.innerHTML = data.courses.map((c, i) => `
+                        <div style="background:#f8fafc; border-radius:12px; padding:12px; margin-bottom:8px; border:1px solid #f1f5f9;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div>
+                                    <strong style="font-size:0.9rem;">${c.course_code || c.course_name || 'Course ' + (i+1)}</strong>
+                                    <span style="font-size:0.75rem; color:#64748b; margin-left:6px;">${c.course_name || ''}</span>
+                                </div>
+                                <span style="font-size:0.72rem; background:#e0f2fe; color:var(--brand); padding:2px 8px; border-radius:8px; font-weight:700;">${c.unit || 3} Credits</span>
+                            </div>
+                            <div style="font-size:0.78rem; color:#64748b; margin-top:6px;">
+                                ${c.day || 'Monday'} · ${c.start_time || '09:00'} - ${c.end_time || '10:00'}
+                                ${c.venue ? ' · 📍 ' + c.venue : ''}
+                            </div>
+                        </div>
+                    `).join('');
+
+                    document.getElementById('extractedCourses').style.display = 'block';
+                    document.getElementById('dropZone').style.display = 'block';
+                } else {
+                    alert('AI could not extract any courses. Try a clearer image or PDF.\n' + (data.message || ''));
+                    document.getElementById('dropZone').style.display = 'block';
+                }
+            })
+            .catch(err => {
+                document.getElementById('extractStatus').style.display = 'none';
+                document.getElementById('dropZone').style.display = 'block';
+                alert('Upload failed. Please try again.');
+                console.error(err);
+            });
+        }
+
+        function saveExtractedCourses() {
+            if (extractedCourses.length === 0) return;
+
+            fetch('/timetable/save-extracted', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ courses: extractedCourses })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    closeExtractModal();
+                    window.location.reload();
+                } else {
+                    alert('Failed to save: ' + (data.message || ''));
+                }
+            })
+            .catch(err => {
+                alert('Error saving courses.');
+                console.error(err);
             });
         }
     </script>
