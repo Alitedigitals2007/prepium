@@ -182,6 +182,25 @@ pool.on('error', (err) => {
     }
 })();
 
+// Auto-create user_courses table
+(async () => {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS user_courses (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                course_name VARCHAR(255) NOT NULL,
+                course_code VARCHAR(50) DEFAULT '',
+                unit INTEGER DEFAULT 3,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        console.log('[DB] user_courses table ready');
+    } catch (err) {
+        console.error('[DB] user_courses setup:', err.message);
+    }
+})();
+
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -1697,6 +1716,72 @@ app.get('/pomodoro', isAuth, (req, res) => {
     });
 });
 
+// ─── User Courses API (for AI Extract Wizard) ───
+
+// GET: Fetch user's courses
+app.get('/api/user-courses', isAuth, async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM user_courses WHERE user_id = $1 ORDER BY course_name',
+            [req.session.user.id]
+        );
+        res.json({ courses: result.rows });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+// POST: Add a course
+app.post('/api/user-courses/add', isAuth, async (req, res) => {
+    const { course_name, course_code, unit } = req.body;
+    if (!course_name) return res.status(400).json({ error: 'Course name required' });
+    try {
+        const result = await pool.query(
+            'INSERT INTO user_courses (user_id, course_name, course_code, unit) VALUES ($1, $2, $3, $4) RETURNING *',
+            [req.session.user.id, course_name, course_code || '', parseInt(unit) || 3]
+        );
+        res.json({ success: true, course: result.rows[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to add course' });
+    }
+});
+
+// POST: Delete a course
+app.post('/api/user-courses/delete/:id', isAuth, async (req, res) => {
+    try {
+        await pool.query(
+            'DELETE FROM user_courses WHERE id = $1 AND user_id = $2',
+            [req.params.id, req.session.user.id]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to delete' });
+    }
+});
+
+// POST: Add multiple courses at once (bulk from wizard)
+app.post('/api/user-courses/bulk', isAuth, async (req, res) => {
+    const { courses } = req.body;
+    if (!courses || !Array.isArray(courses) || courses.length === 0) {
+        return res.status(400).json({ error: 'No courses provided' });
+    }
+    try {
+        for (const c of courses) {
+            await pool.query(
+                'INSERT INTO user_courses (user_id, course_name, course_code, unit) VALUES ($1, $2, $3, $4)',
+                [req.session.user.id, c.course_name, c.course_code || '', parseInt(c.unit) || 3]
+            );
+        }
+        res.json({ success: true, count: courses.length });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to save courses' });
+    }
+});
+
 // GET: Render the Timetable page with stored data
 app.get('/timetable', isAuth, async (req, res) => {
     try {
@@ -1749,30 +1834,40 @@ app.post('/timetable/extract', isAuth, uploadMemory.single('timetable_file'), as
         const pdfExts = ['.pdf'];
         const docExts = ['.doc', '.docx', '.txt', '.rtf'];
 
+        // Parse known courses from request body
+        let knownCoursesContext = '';
+        try {
+            const known = typeof req.body.knownCourses === 'string' 
+                ? JSON.parse(req.body.knownCourses) 
+                : req.body.knownCourses || [];
+            if (Array.isArray(known) && known.length > 0) {
+                knownCoursesContext = '\n\nThe student is enrolled in these courses: ' + 
+                    known.map(c => `${c.course_code || ''} ${c.course_name}`.trim()).join(', ') + 
+                    '. Match extracted courses to these where possible and use the correct course_code and unit from this list.\n';
+            }
+        } catch (e) {}
+
         const fileBase64 = req.file.buffer.toString('base64');
         const mimeType = req.file.mimetype;
         let rawText = '';
         let usedProvider = '';
 
+        const basePrompt = `Extract the school timetable from this document. Return a JSON array of courses with: course_code (e.g. PHY 302), course_name, day (Monday-Sunday), start_time (HH:MM), end_time (HH:MM), venue, unit (credit units, default 3). Only return valid JSON, no markdown.${knownCoursesContext}`;
+        const structBasePrompt = `Extract the school timetable from this text. Return ONLY a JSON array of courses with: course_code, course_name, day (Monday-Sunday), start_time (HH:MM), end_time (HH:MM), venue, unit. If start_time/end_time not clear, use "09:00"/"10:00". If venue not found, use "". Only return valid JSON array, no markdown.${knownCoursesContext}`;
+
         // File-type-based routing with fallback chain
         if (imageExts.includes(fileExt)) {
-            // Images → Gemini Vision (best at image understanding)
-            const prompt = `Extract the school timetable from this image. Return a JSON array of courses with: course_code (e.g. PHY 302), course_name, day (Monday-Sunday), start_time (HH:MM), end_time (HH:MM), venue, unit (credit units, default 3). Only return valid JSON, no markdown.`;
-
-            const result = await callGeminiWithImage(prompt, fileBase64, mimeType);
+            const result = await callGeminiWithImage(basePrompt, fileBase64, mimeType);
             if (result.success) {
                 rawText = result.text;
                 usedProvider = 'Gemini Vision';
             }
         } else if (pdfExts.includes(fileExt)) {
-            // PDFs → try LlamaParse first, fallback Gemini
             if (process.env.LLAMAPARSE_API_KEY) {
                 try {
                     const lpResult = await callLlamaParse(req.file.buffer, req.file.originalname);
                     if (lpResult.success) {
-                        // Parse the markdown result through Gemini for structured JSON
-                        const structPrompt = `Extract the school timetable from this text. Return ONLY a JSON array of courses with: course_code, course_name, day (Monday-Sunday), start_time (HH:MM), end_time (HH:MM), venue, unit. If start_time/end_time not clear, use "09:00"/"10:00". If venue not found, use "". Only return valid JSON array, no markdown.`;
-                        const structResult = await callGeminiWithText(structPrompt, lpResult.text);
+                        const structResult = await callGeminiWithText(structBasePrompt, lpResult.text);
                         if (structResult.success) {
                             rawText = structResult.text;
                             usedProvider = 'LlamaParse → Gemini';
@@ -1782,19 +1877,15 @@ app.post('/timetable/extract', isAuth, uploadMemory.single('timetable_file'), as
             }
             
             if (!rawText) {
-                // Fallback to Gemini for PDF
-                const prompt = `Extract the school timetable from this PDF. Return a JSON array of courses with: course_code (e.g. PHY 302), course_name, day (Monday-Sunday), start_time (HH:MM), end_time (HH:MM), venue, unit. Only return valid JSON, no markdown.`;
-                const result = await callGeminiWithImage(prompt, fileBase64, mimeType);
+                const result = await callGeminiWithImage(basePrompt, fileBase64, mimeType);
                 if (result.success) { rawText = result.text; usedProvider = 'Gemini PDF'; }
             }
         } else if (docExts.includes(fileExt)) {
-            // Documents → try Unstructured.io first, fallback Gemini
             if (process.env.UNSTRUCTURED_API_KEY) {
                 try {
                     const usResult = await callUnstructured(req.file.buffer, req.file.originalname);
                     if (usResult.success) {
-                        const structPrompt = `Extract the school timetable from this text. Return ONLY a JSON array of courses with: course_code, course_name, day (Monday-Sunday), start_time (HH:MM), end_time (HH:MM), venue, unit. Only return valid JSON array, no markdown.`;
-                        const structResult = await callGeminiWithText(structPrompt, usResult.text);
+                        const structResult = await callGeminiWithText(structBasePrompt, usResult.text);
                         if (structResult.success) {
                             rawText = structResult.text;
                             usedProvider = 'Unstructured → Gemini';
@@ -1804,9 +1895,7 @@ app.post('/timetable/extract', isAuth, uploadMemory.single('timetable_file'), as
             }
 
             if (!rawText) {
-                // Fallback: extract text via Gemini
-                const prompt = `Extract the school timetable from this document. Return a JSON array of courses with: course_code, course_name, day, start_time, end_time, venue, unit. Only return valid JSON, no markdown.`;
-                const result = await callGeminiWithImage(prompt, fileBase64, mimeType);
+                const result = await callGeminiWithImage(basePrompt, fileBase64, mimeType);
                 if (result.success) { rawText = result.text; usedProvider = 'Gemini Doc'; }
             }
         } else {

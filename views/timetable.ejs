@@ -242,32 +242,75 @@
             </div>
         </div>
 
-        <!-- Extract Timetable Modal -->
+        <!-- Extract Timetable Modal (with Course Wizard) -->
         <div class="modal-overlay" id="extract-modal" onclick="if(event.target===this)closeExtractModal()">
             <div class="modal-body" onclick="event.stopPropagation()">
-                <h3 style="margin-top:0; margin-bottom:1.2rem; font-size:1.15rem; font-weight:800;">AI Timetable Extraction</h3>
-                <p style="font-size:0.8rem; color:#64748b; margin-bottom:1rem;">
-                    Upload an image, PDF, or document of your school timetable. The AI will extract all courses automatically.
-                </p>
-                <div style="border:2px dashed #e2e8f0; border-radius:16px; padding:2rem; text-align:center; margin-bottom:1rem; background:#fafafa;" id="dropZone">
-                    <i class="fas fa-cloud-upload-alt" style="font-size:2rem; color:#94a3b8; display:block; margin-bottom:0.5rem;"></i>
-                    <p style="font-size:0.85rem; color:#64748b; margin:0;">Drop your timetable file here</p>
-                    <p style="font-size:0.72rem; color:#94a3b8; margin:4px 0 12px;">or click to browse (JPG, PNG, PDF, DOC)</p>
-                    <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.txt" style="display:none;" onchange="uploadForExtraction(this.files[0])">
-                    <button class="btn-action btn-extract" onclick="document.getElementById('fileInput').click()" style="display:inline-flex; width:auto; padding:10px 24px;">
-                        <i class="fas fa-folder-open"></i> Browse Files
-                    </button>
+                <!-- Step indicator -->
+                <div style="display:flex; gap:8px; margin-bottom:1.2rem;">
+                    <div id="wizStep1Dot" style="flex:1; height:4px; background:var(--brand); border-radius:4px;"></div>
+                    <div id="wizStep2Dot" style="flex:1; height:4px; background:#e2e8f0; border-radius:4px;"></div>
                 </div>
-                <div id="extractStatus" style="display:none; padding:1rem; text-align:center; color:#64748b;">
-                    <i class="fas fa-spinner fa-spin" style="font-size:1.5rem; display:block; margin-bottom:0.5rem;"></i>
-                    <span id="extractStatusText">Processing with AI...</span>
-                </div>
-                <div id="extractedCourses" style="display:none; margin-bottom:1rem;">
-                    <p style="font-size:0.85rem; font-weight:700; margin-bottom:0.5rem;">Extracted Courses (<span id="extractedCount">0</span>)</p>
-                    <div id="extractedList" style="max-height:250px; overflow-y:auto;"></div>
-                    <div class="modal-actions" style="margin-top:1rem;">
+
+                <!-- Step 1: Course Setup Wizard -->
+                <div id="wizardStep1">
+                    <h3 style="margin-top:0; margin-bottom:0.5rem; font-size:1.15rem; font-weight:800;">Set Up Your Courses</h3>
+                    <p style="font-size:0.8rem; color:#64748b; margin-bottom:1rem;">
+                        Add the courses you're taking this semester so the AI can match them accurately.
+                    </p>
+
+                    <div style="display:flex; gap:8px; margin-bottom:12px;">
+                        <input type="text" id="wizCourseName" class="form-input" placeholder="Course name (e.g. Physics)" style="flex:2;">
+                        <input type="text" id="wizCourseCode" class="form-input" placeholder="Code (e.g. PHY 302)" style="flex:1;">
+                        <input type="number" id="wizCourseUnit" class="form-input" placeholder="Unit" value="3" min="1" max="6" style="flex:0.5;">
+                        <button class="btn-action btn-add" onclick="addWizardCourse()" style="flex:0; padding:12px 16px;">+</button>
+                    </div>
+
+                    <div id="wizardCourseList" style="max-height:180px; overflow-y:auto; margin-bottom:1rem;">
+                        <p style="font-size:0.8rem; color:#94a3b8; text-align:center; padding:1rem;" id="wizEmptyMsg">No courses added yet. Add at least one course above.</p>
+                    </div>
+
+                    <div class="modal-actions">
                         <button type="button" class="btn-action btn-print" onclick="closeExtractModal()">Cancel</button>
-                        <button class="btn-action btn-add" onclick="saveExtractedCourses()">Save All to Timetable</button>
+                        <button class="btn-action btn-add" onclick="wizardNextStep()" id="wizNextBtn" disabled>Continue to Upload</button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Upload & Extract -->
+                <div id="wizardStep2" style="display:none;">
+                    <h3 style="margin-top:0; margin-bottom:0.5rem; font-size:1.15rem; font-weight:800;">AI Timetable Extraction</h3>
+                    <p style="font-size:0.8rem; color:#64748b; margin-bottom:0.5rem;">
+                        Upload your timetable file. The AI will use your <strong id="wizCourseCount">0</strong> courses for accurate matching.
+                    </p>
+                    <p style="font-size:0.72rem; color:#94a3b8; margin-bottom:1rem;">
+                        <span id="wizCourseTags" style="display:flex; gap:4px; flex-wrap:wrap;"></span>
+                    </p>
+
+                    <div style="border:2px dashed #e2e8f0; border-radius:16px; padding:2rem; text-align:center; margin-bottom:1rem; background:#fafafa;" id="dropZone">
+                        <i class="fas fa-cloud-upload-alt" style="font-size:2rem; color:#94a3b8; display:block; margin-bottom:0.5rem;"></i>
+                        <p style="font-size:0.85rem; color:#64748b; margin:0;">Drop your timetable file here</p>
+                        <p style="font-size:0.72rem; color:#94a3b8; margin:4px 0 12px;">or click to browse (JPG, PNG, PDF, DOC)</p>
+                        <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.txt" style="display:none;" onchange="uploadForExtraction(this.files[0])">
+                        <button class="btn-action btn-extract" onclick="document.getElementById('fileInput').click()" style="display:inline-flex; width:auto; padding:10px 24px;">
+                            <i class="fas fa-folder-open"></i> Browse Files
+                        </button>
+                    </div>
+                    <div id="extractStatus" style="display:none; padding:1rem; text-align:center; color:#64748b;">
+                        <i class="fas fa-spinner fa-spin" style="font-size:1.5rem; display:block; margin-bottom:0.5rem;"></i>
+                        <span id="extractStatusText">Processing with AI...</span>
+                    </div>
+                    <div id="extractedCourses" style="display:none; margin-bottom:1rem;">
+                        <p style="font-size:0.85rem; font-weight:700; margin-bottom:0.5rem;">Extracted Courses (<span id="extractedCount">0</span>)</p>
+                        <div id="extractedList" style="max-height:250px; overflow-y:auto;"></div>
+                        <div class="modal-actions" style="margin-top:1rem;">
+                            <button type="button" class="btn-action btn-print" onclick="closeExtractModal()">Cancel</button>
+                            <button class="btn-action btn-add" onclick="saveExtractedCourses()">Save All to Timetable</button>
+                        </div>
+                    </div>
+
+                    <div style="text-align:center; margin-top:0.5rem;">
+                        <button class="btn-action btn-print" onclick="wizardPrevStep()" style="display:inline-flex; width:auto; padding:8px 16px; font-size:0.75rem;">
+                            <i class="fas fa-arrow-left"></i> Back to Courses
+                        </button>
                     </div>
                 </div>
             </div>
@@ -326,18 +369,91 @@
             });
         }
 
-        // ===== AI EXTRACTION FUNCTIONS =====
+        // ===== COURSE WIZARD + AI EXTRACTION =====
         let extractedCourses = [];
+        let wizardCourses = [];
 
         function openExtractModal() {
             document.getElementById('extract-modal').classList.add('open');
             document.getElementById('extractedCourses').style.display = 'none';
             document.getElementById('extractStatus').style.display = 'none';
+            document.getElementById('wizardStep1').style.display = 'block';
+            document.getElementById('wizardStep2').style.display = 'none';
+            document.getElementById('wizStep1Dot').style.background = 'var(--brand)';
+            document.getElementById('wizStep2Dot').style.background = '#e2e8f0';
             extractedCourses = [];
+            wizardCourses = [];
+            renderWizardCourses();
+            document.getElementById('wizNextBtn').disabled = true;
         }
 
         function closeExtractModal() {
             document.getElementById('extract-modal').classList.remove('open');
+        }
+
+        // ─── Wizard Step 1: Course Management ───
+        function addWizardCourse() {
+            const name = document.getElementById('wizCourseName').value.trim();
+            const code = document.getElementById('wizCourseCode').value.trim();
+            const unit = parseInt(document.getElementById('wizCourseUnit').value) || 3;
+            if (!name) { alert('Enter a course name'); return; }
+            wizardCourses.push({ course_name: name, course_code: code, unit: unit });
+            document.getElementById('wizCourseName').value = '';
+            document.getElementById('wizCourseCode').value = '';
+            document.getElementById('wizCourseUnit').value = '3';
+            renderWizardCourses();
+        }
+
+        function removeWizardCourse(index) {
+            wizardCourses.splice(index, 1);
+            renderWizardCourses();
+        }
+
+        function renderWizardCourses() {
+            const list = document.getElementById('wizardCourseList');
+            const empty = document.getElementById('wizEmptyMsg');
+            const nextBtn = document.getElementById('wizNextBtn');
+            if (wizardCourses.length === 0) {
+                list.innerHTML = '<p style="font-size:0.8rem; color:#94a3b8; text-align:center; padding:1rem;" id="wizEmptyMsg">No courses added yet. Add at least one course above.</p>';
+                nextBtn.disabled = true;
+            } else {
+                list.innerHTML = wizardCourses.map((c, i) => `
+                    <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:#f8fafc; border-radius:12px; margin-bottom:6px; border:1px solid #f1f5f9;">
+                        <div>
+                            <strong style="font-size:0.85rem;">${c.course_name}</strong>
+                            <span style="font-size:0.72rem; color:#64748b; margin-left:6px;">${c.course_code} · ${c.unit} Credits</span>
+                        </div>
+                        <button onclick="removeWizardCourse(${i})" style="background:none; border:none; color:#ef4444; cursor:pointer; padding:4px 8px;"><i class="fas fa-times"></i></button>
+                    </div>
+                `).join('');
+                nextBtn.disabled = false;
+            }
+        }
+
+        // ─── Wizard Step Navigation ───
+        function wizardNextStep() {
+            if (wizardCourses.length === 0) { alert('Add at least one course first.'); return; }
+            // Save courses to backend for persistence
+            fetch('/api/user-courses/bulk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ courses: wizardCourses })
+            }).catch(() => {});
+            document.getElementById('wizardStep1').style.display = 'none';
+            document.getElementById('wizardStep2').style.display = 'block';
+            document.getElementById('wizStep1Dot').style.background = '#22c55e';
+            document.getElementById('wizStep2Dot').style.background = 'var(--brand)';
+            document.getElementById('wizCourseCount').textContent = wizardCourses.length;
+            document.getElementById('wizCourseTags').innerHTML = wizardCourses.map(c => 
+                `<span style="background:#e0f2fe; color:var(--brand); padding:2px 10px; border-radius:10px; font-size:0.65rem; font-weight:700;">${c.course_code || c.course_name}</span>`
+            ).join('');
+        }
+
+        function wizardPrevStep() {
+            document.getElementById('wizardStep1').style.display = 'block';
+            document.getElementById('wizardStep2').style.display = 'none';
+            document.getElementById('wizStep1Dot').style.background = 'var(--brand)';
+            document.getElementById('wizStep2Dot').style.background = '#e2e8f0';
         }
 
         // Drag and drop support
@@ -363,6 +479,11 @@
                     }
                 });
             }
+
+            // Enter key to add course in wizard
+            document.getElementById('wizCourseUnit').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') { e.preventDefault(); addWizardCourse(); }
+            });
         });
 
         function uploadForExtraction(file) {
@@ -370,6 +491,7 @@
 
             const formData = new FormData();
             formData.append('timetable_file', file);
+            formData.append('knownCourses', JSON.stringify(wizardCourses));
 
             document.getElementById('extractStatus').style.display = 'block';
             document.getElementById('extractStatusText').textContent = 'Processing with AI models...';
