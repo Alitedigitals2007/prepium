@@ -125,7 +125,6 @@
     <form id="submit-form" action="/submit-exam" method="POST" style="display: none;">
         <input type="hidden" name="answers" id="answers-input">
         <input type="hidden" name="timeUsed" id="time-used-input">
-        <input type="hidden" name="quizId" value="<%= quiz.id %>">
     </form>
 
     <div class="quiz-footer">
@@ -231,10 +230,9 @@
 
         /* --- TIMER --- */
         function startTimer() {
-            const endTimeStr = "<%= quiz.endTime %>";
-            if (!endTimeStr) return;
+            const endTime = <%= quiz.endTime.getTime() %>;
+            if (!endTime) return;
             
-            const endTime = new Date(endTimeStr).getTime();
             const timerEl = document.getElementById('timer');
 
             const timerInt = setInterval(() => {
