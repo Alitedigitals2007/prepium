@@ -253,7 +253,7 @@
                 <div class="rc-title"><%= recentQuiz.subject || 'Quiz' %></div>
                 <div class="rc-meta"><%= new Date(recentQuiz.date_taken).toLocaleDateString('en-GB', { day:'numeric', month:'short' }) %></div>
             </div>
-            <div class="rc-progress"><%= recentQuiz.score %>/<%= recentQuiz.total %></div>
+            <div class="rc-progress"><%= recentQuiz.score %>/<%= recentQuiz.total_questions %></div>
         </a>
     </div>
     <% } %>

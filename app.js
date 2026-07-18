@@ -1007,7 +1007,7 @@ app.get('/dashboard', isStudent, async (req, res) => {
         const [studyStatsRes, quizCountRes, avgScoreRes, streakRes] = await Promise.all([
             pool.query('SELECT COALESCE(SUM(elapsed_seconds), 0) as t, COUNT(*) as s FROM study_sessions WHERE user_id = $1 AND status = $2', [userId, 'completed']),
             pool.query('SELECT COUNT(*) as c FROM results WHERE user_id = $1', [userId]),
-            pool.query('SELECT COALESCE(AVG(score::float/NULLIF(total,0)*100), 0) as avg FROM results WHERE user_id = $1 AND total > 0', [userId]),
+            pool.query('SELECT COALESCE(AVG(score::float/NULLIF(total_questions,0)*100), 0) as avg FROM results WHERE user_id = $1 AND total_questions > 0', [userId]),
             pool.query('SELECT current_streak FROM users WHERE id = $1', [userId])
         ]);
         const streak = streakRes.rows[0]?.current_streak || 0;
@@ -1016,7 +1016,7 @@ app.get('/dashboard', isStudent, async (req, res) => {
         const avgScore = Math.round(parseFloat(avgScoreRes.rows[0].avg) || 0);
 
         // 7. Get recent quiz
-        const recentQuizRes = await pool.query('SELECT subject, score, total, TO_CHAR(taken_at, \'YYYY-MM-DD\') as date_taken FROM results WHERE user_id = $1 ORDER BY taken_at DESC LIMIT 1', [userId]);
+        const recentQuizRes = await pool.query('SELECT subject, score, total_questions, TO_CHAR(taken_at, \'YYYY-MM-DD\') as date_taken FROM results WHERE user_id = $1 ORDER BY taken_at DESC LIMIT 1', [userId]);
 
         res.render('dashboard', { 
             user: { ...req.session.user, ...userData }, 
@@ -4374,9 +4374,11 @@ const config = {
     maxDuration: 60,
 };
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+if (require.main === module) {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+}
 
 module.exports = app;
