@@ -210,9 +210,10 @@ const transporter = nodemailer.createTransport({
 });
 
 app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Add this line directly ABOVE your app.use(session({...})) middleware declaration
 app.set('trust proxy', 1);
