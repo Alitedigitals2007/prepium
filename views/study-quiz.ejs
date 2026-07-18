@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Prepium | Quiz</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .status-bar { height: env(safe-area-inset-top, 0px); }
+        .page-content { padding: 0 1.5rem 1.5rem; }
+
+        .quiz-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; }
+        .quiz-header .q-counter { font-size: 0.72rem; font-weight: 700; color: var(--text-sub); }
+        .quiz-header .q-counter span { color: var(--brand); font-size: 1rem; }
+        .quiz-timer { font-weight: 800; font-size: 1rem; color: var(--text-dark); display: flex; align-items: center; gap: 6px; }
+
+        .question-card { background: white; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1rem; box-shadow: var(--shadow-sm); }
+        .question-card .q-num { font-size: 0.65rem; font-weight: 800; color: var(--brand); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .question-card .q-text { font-size: 0.95rem; font-weight: 700; line-height: 1.5; margin-bottom: 1rem; }
+
+        .q-options { display: flex; flex-direction: column; gap: 8px; }
+        .q-option { display: flex; align-items: center; gap: 12px; padding: 14px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; transition: var(--transition); font-weight: 600; font-size: 0.85rem; }
+        .q-option:hover { border-color: var(--brand); background: var(--brand-soft); }
+        .q-option.selected { border-color: var(--brand); background: var(--brand-soft); }
+        .q-option .radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: var(--transition); }
+        .q-option.selected .radio { border-color: var(--brand); background: var(--brand); }
+        .q-option.selected .radio::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: white; }
+        .q-option .q-letter { width: 20px; height: 20px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.7rem; color: var(--text-sub); flex-shrink: 0; }
+        .q-option.selected .q-letter { background: var(--brand); color: white; }
+
+        .theory-input { width: 100%; padding: 14px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: inherit; font-size: 0.85rem; font-weight: 500; line-height: 1.5; resize: vertical; min-height: 100px; outline: none; }
+        .theory-input:focus { border-color: var(--brand); }
+
+        .q-nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 1rem; }
+        .q-nav button { flex: 1; padding: 14px; border-radius: var(--radius-sm); border: none; font-family: inherit; font-weight: 700; font-size: 0.82rem; cursor: pointer; transition: var(--transition); }
+        .q-nav .prev-btn { background: #f1f5f9; color: var(--text-dark); }
+        .q-nav .next-btn { background: var(--brand-gradient); color: white; }
+        .q-nav .submit-btn { background: var(--success); color: white; }
+        .q-nav button:active { transform: scale(0.97); }
+        .q-nav .prev-btn:disabled { opacity: 0.4; }
+
+        .result-card { background: white; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 2rem; text-align: center; box-shadow: var(--shadow-sm); margin-bottom: 1rem; }
+        .result-card .score-circle { width: 120px; height: 120px; border-radius: 50%; margin: 0 auto 1rem; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+        .result-card .score-circle .score-num { font-size: 2.2rem; font-weight: 800; line-height: 1; }
+        .result-card .score-circle .score-total { font-size: 0.85rem; font-weight: 600; opacity: 0.7; }
+        .result-card .score-label { font-size: 0.8rem; font-weight: 700; color: var(--text-sub); margin-bottom: 4px; }
+        .result-card .score-sub { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; }
+
+        .review-item { background: white; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 10px; }
+        .review-item .r-q { font-weight: 700; font-size: 0.85rem; margin-bottom: 6px; }
+        .review-item .r-answer { font-size: 0.78rem; font-weight: 600; }
+        .review-item .r-answer.correct { color: var(--success); }
+        .review-item .r-answer.wrong { color: var(--danger); }
+        .review-item .r-explain { font-size: 0.75rem; color: var(--text-sub); font-weight: 500; margin-top: 6px; padding: 10px; background: var(--bg); border-radius: 8px; }
+        .review-item .r-correct-ans { font-size: 0.75rem; font-weight: 700; color: var(--success); margin-top: 4px; }
+
+        .hidden { display: none; }
+
+        @media (min-width: 431px) { .app-shell { border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); margin: 0 auto; } }
+    </style>
+</head>
+<body>
+<%- include('partials/sidebar') %>
+<div class="app-shell">
+    <div class="status-bar"></div>
+    
+    <div class="header-nav">
+        <a href="javascript:history.back()" class="back-circle"><i class="fas fa-arrow-left"></i></a>
+        <div class="header-title">Quiz</div>
+        <div class="quiz-timer" id="quizTimer"><i class="fas fa-clock"></i> <span id="timerDisplay">00:00</span></div>
+    </div>
+
+    <div class="page-content">
+        <div id="quizContainer">
+            <div class="quiz-header">
+                <div class="q-counter">Question <span id="currentNum">1</span> of <span id="totalNum"><%= questions ? questions.length : 0 %></span></div>
+            </div>
+
+            <div id="questionsWrapper">
+                <% if (questions && questions.length > 0) { %>
+                    <% questions.forEach(function(q, idx) { %>
+                    <div class="question-card <%= idx === 0 ? '' : 'hidden' %>" data-qid="<%= q.id %>" data-index="<%= idx %>">
+                        <div class="q-num">Question <%= idx + 1 %></div>
+                        <div class="q-text"><%= q.question %></div>
+                        <% 
+                        var opts = [];
+                        try { opts = typeof q.options === 'string' ? JSON.parse(q.options) : (q.options || []); } catch(e) {}
+                        %>
+                        <% if (opts.length > 0) { %>
+                        <div class="q-options">
+                            <% opts.forEach(function(o, oi) { %>
+                            <div class="q-option" onclick="selectOption(this, <%= q.id %>, '<%= String.fromCharCode(65 + oi) %>')">
+                                <div class="q-letter"><%= String.fromCharCode(65 + oi) %></div>
+                                <span><%= o %></span>
+                            </div>
+                            <% }); %>
+                        </div>
+                        <% } else { %>
+                        <textarea class="theory-input" placeholder="Type your answer..." oninput="setTheoryAnswer(<%= q.id %>, this.value)"></textarea>
+                        <% } %>
+                    </div>
+                    <% }); %>
+                <% } else { %>
+                    <div style="text-align:center;padding:2rem;color:var(--text-muted);font-weight:600;">No questions available</div>
+                <% } %>
+            </div>
+
+            <div class="q-nav" id="qNav">
+                <button class="prev-btn" id="prevBtn" onclick="prevQuestion()" disabled><i class="fas fa-chevron-left"></i> Previous</button>
+                <button class="next-btn" id="nextBtn" onclick="nextQuestion()">Next <i class="fas fa-chevron-right"></i></button>
+                <button class="submit-btn hidden" id="submitBtn" onclick="submitQuiz()"><i class="fas fa-check"></i> Submit</button>
+            </div>
+        </div>
+
+        <div id="resultContainer" class="hidden">
+            <div class="result-card">
+                <div class="score-circle" id="scoreCircle">
+                    <div class="score-num" id="scoreNum">0</div>
+                    <div class="score-total" id="scoreTotal">/0</div>
+                </div>
+                <div class="score-label" id="scoreLabel">Great effort!</div>
+                <div class="score-sub" id="scoreSub">Keep studying to improve</div>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:1rem;">
+                <button style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--brand-gradient);color:white;font-weight:700;cursor:pointer;" onclick="location.href='/study'"><i class="fas fa-arrow-left"></i> Back to Study</button>
+                <button style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:#f1f5f9;color:var(--text-dark);font-weight:700;cursor:pointer;" onclick="location.reload()"><i class="fas fa-redo"></i> Retry</button>
+            </div>
+            <div id="reviewContainer"></div>
+        </div>
+    </div>
+
+    <div style="height:40px"></div>
+
+    <nav class="bottom-nav">
+        <a href="/dashboard" class="nav-link"><i class="fas fa-home"></i><span>Home</span></a>
+        <a href="/history" class="nav-link"><i class="fas fa-chart-bar"></i><span>Stats</span></a>
+        <a href="/setup-test" class="nav-center-btn"><i class="fas fa-plus"></i></a>
+        <a href="/study" class="nav-link active"><i class="fas fa-book-open"></i><span>Study</span></a>
+        <a href="/profile" class="nav-link"><i class="fas fa-user-circle"></i><span>Profile</span></a>
+    </nav>
+</div>
+
+<script>
+var totalQuestions = <%= questions ? questions.length : 0 %>;
+var currentIndex = 0;
+var answers = {};
+var attemptId = <%= attempt ? attempt.id : 0 %>;
+var timeLimit = <%= attempt ? attempt.time_limit : 0 %>;
+var timerInterval = null;
+var elapsedSeconds = 0;
+var submitClicked = false;
+
+<% if (questions && questions.length > 0) { %>
+<% questions.forEach(function(q) { %>
+answers[<%= q.id %>] = { questionId: <%= q.id %>, answer: '' };
+<% }); %>
+<% } %>
+
+function initTimer() {
+    if (timeLimit > 0) {
+        timerInterval = setInterval(function() {
+            elapsedSeconds++;
+            var remaining = timeLimit * 60 - elapsedSeconds;
+            if (remaining <= 0) {
+                clearInterval(timerInterval);
+                Swal.fire({ icon: 'warning', title: 'Time Up!', text: 'Your quiz will be submitted automatically' });
+                submitQuiz();
+                return;
+            }
+            var m = Math.floor(remaining / 60);
+            var s = remaining % 60;
+            document.getElementById('timerDisplay').textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+        }, 1000);
+    }
+}
+initTimer();
+
+function selectOption(el, qId, letter) {
+    var parent = el.closest('.q-options');
+    parent.querySelectorAll('.q-option').forEach(o => o.classList.remove('selected'));
+    el.classList.add('selected');
+    answers[qId] = { questionId: qId, answer: letter };
+}
+
+function setTheoryAnswer(qId, val) {
+    answers[qId] = { questionId: qId, answer: val };
+}
+
+function showQuestion(idx) {
+    var cards = document.querySelectorAll('.question-card');
+    cards.forEach(function(c, i) {
+        c.classList.toggle('hidden', i !== idx);
+    });
+    document.getElementById('currentNum').textContent = idx + 1;
+    document.getElementById('prevBtn').disabled = idx === 0;
+    var nextBtn = document.getElementById('nextBtn');
+    var submitBtn = document.getElementById('submitBtn');
+    if (idx === totalQuestions - 1) {
+        nextBtn.classList.add('hidden');
+        submitBtn.classList.remove('hidden');
+    } else {
+        nextBtn.classList.remove('hidden');
+        submitBtn.classList.add('hidden');
+    }
+}
+
+function nextQuestion() {
+    if (currentIndex < totalQuestions - 1) { currentIndex++; showQuestion(currentIndex); }
+}
+
+function prevQuestion() {
+    if (currentIndex > 0) { currentIndex--; showQuestion(currentIndex); }
+}
+
+function submitQuiz() {
+    if (submitClicked) return;
+    submitClicked = true;
+    if (timerInterval) clearInterval(timerInterval);
+    var answerList = Object.values(answers).filter(a => a.answer && a.answer !== '');
+    Swal.fire({ title: 'Submitting...', html: 'Your answers are being marked', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    fetch('/api/study/quiz/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attemptId: attemptId, answers: answerList })
+    }).then(r => r.json()).then(d => {
+        if (d.success) {
+            document.getElementById('quizContainer').classList.add('hidden');
+            document.getElementById('resultContainer').classList.remove('hidden');
+            document.getElementById('scoreNum').textContent = d.score;
+            document.getElementById('scoreTotal').textContent = '/' + d.total;
+            var pct = Math.round((d.score / d.total) * 100);
+            var circle = document.getElementById('scoreCircle');
+            if (pct >= 70) { circle.style.background = '#d1fae5'; circle.style.color = '#065f46'; document.getElementById('scoreLabel').textContent = 'Excellent!'; document.getElementById('scoreSub').textContent = 'You mastered this topic'; }
+            else if (pct >= 50) { circle.style.background = '#fef3c7'; circle.style.color = '#92400e'; document.getElementById('scoreLabel').textContent = 'Good effort!'; document.getElementById('scoreSub').textContent = 'Review the areas you missed'; }
+            else { circle.style.background = '#fee2e2'; circle.style.color = '#991b1b'; document.getElementById('scoreLabel').textContent = 'Keep practicing!'; document.getElementById('scoreSub').textContent = 'Review the material and try again'; }
+            loadResults();
+        } else {
+            Swal.fire({ icon: 'error', text: d.error });
+            submitClicked = false;
+        }
+    });
+}
+
+function loadResults() {
+    fetch('/api/study/quiz/result/' + attemptId)
+    .then(r => r.json()).then(d => {
+        var container = document.getElementById('reviewContainer');
+        if (d.questions) {
+            d.questions.forEach(function(q) {
+                var opts = [];
+                try { opts = typeof q.options === 'string' ? JSON.parse(q.options) : (q.options || []); } catch(e) {}
+                var isCorrect = q.is_correct;
+                var statusClass = isCorrect ? 'correct' : 'wrong';
+                var statusIcon = isCorrect ? '<i class="fas fa-check-circle" style="color:var(--success)"></i>' : '<i class="fas fa-times-circle" style="color:var(--danger)"></i>';
+                container.innerHTML += '<div class="review-item">' +
+                    '<div class="r-q">' + statusIcon + ' ' + q.question + '</div>' +
+                    '<div class="r-answer ' + statusClass + '">Your answer: ' + (q.user_answer || 'Not answered') + '</div>' +
+                    (q.correct_answer ? '<div class="r-correct-ans">Correct answer: ' + q.correct_answer + '</div>' : '') +
+                    (q.explanation ? '<div class="r-explain">' + q.explanation + '</div>' : '') +
+                    '</div>';
+            });
+        }
+        Swal.close();
+    });
+}
+
+showQuestion(0);
+</script>
+</body>
+</html>

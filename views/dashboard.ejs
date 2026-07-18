@@ -3,749 +3,317 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Prepium | Advanced Premium Dashboard</title>
-    
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#0062ff">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Prepium | Dashboard</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0062ff">
     <script src="https://js.paystack.co/v1/inline.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/style.css">
-
     <style>
-        :root { 
-            --crazy-bg: radial-gradient(circle at top right, #0f172a 0%, #1e1b4b 50%, #020617 100%);
-            --crazy-surface: rgba(15, 23, 42, 0.45);
-            --crazy-border: rgba(99, 102, 241, 0.3);
-            --crazy-glass-border: rgba(255, 255, 255, 0.15);
-            --crazy-text: #f8fafc;
-            --crazy-glow: 0 0 20px rgba(99, 102, 241, 0.4);
+        :root {
+            --dash-bg: #f0f2f8;
+            --card-bg: rgba(255,255,255,0.85);
+            --card-shadow: 0 2px 12px rgba(0,0,0,0.04);
+            --accent-purple: #7c3aed;
+            --accent-rose: #f43f5e;
+            --accent-amber: #f59e0b;
+            --accent-teal: #0d9488;
+            --accent-blue: #0062ff;
         }
+        body { background: var(--dash-bg); }
+        body::before { display: none; }
+        .app-shell { background: transparent; backdrop-filter: none; border: none; padding-bottom: 100px; }
 
-        body { transition: background 0.5s ease, color 0.3s ease; }
-        body.crazy-active {
-            background: var(--crazy-bg);
-            background-attachment: fixed;
-            color: var(--crazy-text);
-        }
-        body.crazy-active .app-shell {
-            background: rgba(15, 23, 42, 0.6);
-            border-left: 1px solid var(--crazy-glass-border);
-            border-right: 1px solid var(--crazy-glass-border);
-        }
-        body.crazy-active .header-nav { background: rgba(15, 23, 42, 0.4); }
-        body.crazy-active .logo { color: var(--crazy-text); }
+        .dash-header { padding: 1.25rem 1.25rem 0.75rem; display: flex; align-items: center; justify-content: space-between; }
+        .dash-header-left { display: flex; align-items: center; gap: 12px; }
+        .dash-avatar { width: 46px; height: 46px; border-radius: 16px; background: var(--brand-gradient); color: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; box-shadow: 0 4px 14px rgba(0,98,255,0.25); }
+        .dash-greeting { font-size: 0.62rem; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.5px; }
+        .dash-name { font-size: 1.15rem; font-weight: 800; line-height: 1.2; }
+        .dash-header-right { display: flex; align-items: center; gap: 8px; }
+        .notif-bell { width: 42px; height: 42px; border-radius: 14px; background: white; border: 1px solid rgba(226,232,240,0.6); display: flex; align-items: center; justify-content: center; color: var(--text-sub); font-size: 1rem; cursor: pointer; position: relative; box-shadow: var(--card-shadow); transition: var(--transition); }
+        .notif-bell:active { transform: scale(0.92); }
+        .notif-dot { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--danger); border: 2px solid white; }
+        .streak-badge { display: flex; align-items: center; gap: 5px; padding: 8px 14px; border-radius: 12px; background: linear-gradient(135deg,#f97316,#ef4444); color: white; font-weight: 800; font-size: 0.75rem; box-shadow: 0 4px 12px rgba(239,68,68,0.25); }
+        .streak-badge i { font-size: 0.85rem; }
 
-        .crazy-toggle-btn {
-            width: 42px; height: 42px;
-            background: rgba(255, 255, 255, 0.8);
-            border: 1px solid var(--glass-border);
-            border-radius: 14px;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; color: #f59e0b; font-size: 1.1rem;
-            box-shadow: var(--shadow-sm); transition: var(--transition);
-        }
-        body.crazy-active .crazy-toggle-btn {
-            background: rgba(30, 27, 75, 0.8); border-color: var(--crazy-glass-border); color: #a855f7;
-        }
+        .hero-strip { padding: 0 1.25rem 1.25rem; display: flex; gap: 10px; }
+        .hero-stat { flex: 1; background: white; border-radius: 18px; padding: 16px 12px; border: 1px solid rgba(226,232,240,0.5); box-shadow: var(--card-shadow); }
+        .hero-stat .stat-icon { width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; margin-bottom: 8px; }
+        .hero-stat .stat-num { font-size: 1.3rem; font-weight: 800; line-height: 1; }
+        .hero-stat .stat-label { font-size: 0.6rem; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 3px; }
 
-        body.crazy-active .profile-trigger {
-            background: linear-gradient(135deg, #6366f1, #8b5cf6); box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-        }
-
-        body.crazy-active .live-pill { background: rgba(99, 102, 241, 0.2); border-color: rgba(99, 102, 241, 0.3); color: #818cf8; }
-
-        body.crazy-active .hero-section h1 { color: var(--crazy-text); }
-
-        .hero-section { padding: 0.75rem 1.5rem 1rem; }
-        .hero-section h1 { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.8px; color: var(--text-dark); line-height: 1.2; }
-
-        .quote-box {
-            margin: 0 1.5rem 1.5rem; padding: 16px 18px;
-            background: linear-gradient(135deg, rgba(0, 98, 255, 0.04) 0%, rgba(79, 70, 229, 0.04) 100%); 
-            border: 1px solid rgba(0, 98, 255, 0.08); border-radius: 18px;
-            display: flex; gap: 12px;
-        }
-        body.crazy-active .quote-box { background: rgba(15, 23, 42, 0.4); border-color: var(--crazy-glass-border); }
-        body.crazy-active .quote-box i { color: #6366f1; }
-        body.crazy-active .quote-text { color: #94a3b8; }
+        .quick-mood { padding: 0 1.25rem 1rem; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
+        .quick-mood::-webkit-scrollbar { display: none; }
+        .mood-chip { flex-shrink: 0; padding: 10px 18px; border-radius: 14px; background: white; border: 1px solid rgba(226,232,240,0.5); font-weight: 700; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--text-dark); box-shadow: var(--card-shadow); transition: var(--transition); }
+        .mood-chip:active { transform: scale(0.95); }
+        .mood-chip i { font-size: 0.85rem; }
+        .mood-chip.primary { background: var(--brand-gradient); color: white; border: none; box-shadow: 0 4px 14px rgba(0,98,255,0.25); }
 
         <% if (!user.has_paid) { %>
-        .premium-card {
-            margin: 0 1.5rem 1.5rem; padding: 28px 24px; 
-            background: linear-gradient(135deg, #0062ff 0%, #4f46e5 50%, #7c3aed 100%); 
-            border-radius: 24px; color: white; 
-            box-shadow: 0 12px 32px rgba(0, 98, 255, 0.2), 0 4px 12px rgba(79, 70, 229, 0.1);
-            position: relative; overflow: hidden;
-        }
-        .premium-card::before {
-            content: ''; position: absolute; top: -50%; right: -30%; 
-            width: 200px; height: 200px; border-radius: 50%;
-            background: rgba(255, 255, 255, 0.1);
-        }
-        body.crazy-active .premium-card { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%); }
-        .premium-card h3 { font-size: 1.2rem; font-weight: 800; position: relative; }
-        .premium-card p { font-size: 0.85rem; opacity: 0.92; margin: 8px 0 18px; font-weight: 500; line-height: 1.5; position: relative; }
-        .upgrade-btn {
-            background: #ffffff; color: var(--brand); border: none; padding: 14px 26px; 
-            border-radius: 14px; font-weight: 800; font-size: 0.88rem; cursor: pointer; 
-            transition: var(--transition); position: relative;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-        .upgrade-btn:active { transform: scale(0.96); }
-        body.crazy-active .upgrade-btn { color: #4f46e5; }
+        .upgrade-strip { margin: 0 1.25rem 1.25rem; padding: 18px 20px; border-radius: 20px; background: linear-gradient(135deg,#0f172a 0%,#1e1b4b 100%); color: white; display: flex; align-items: center; gap: 14px; position: relative; overflow: hidden; }
+        .upgrade-strip::before { content: ''; position: absolute; top: -50%; right: -20%; width: 200px; height: 200px; border-radius: 50%; background: rgba(99,102,241,0.15); }
+        .upgrade-strip .us-icon { width: 44px; height: 44px; border-radius: 14px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0; }
+        .upgrade-strip .us-content { flex: 1; }
+        .upgrade-strip .us-content h4 { font-size: 0.85rem; font-weight: 800; margin: 0; }
+        .upgrade-strip .us-content p { font-size: 0.7rem; opacity: 0.7; font-weight: 500; margin: 2px 0 0; }
+        .upgrade-strip .us-btn { padding: 10px 18px; border-radius: 12px; background: white; color: var(--brand); font-weight: 800; font-size: 0.72rem; border: none; cursor: pointer; flex-shrink: 0; }
         <% } %>
 
-        .challenge-hub {
-            margin: 0 1.5rem 1.75rem; padding: 20px 22px;
-            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #1e40af 100%); border-radius: 22px; 
-            display: flex; align-items: center; justify-content: space-between; color: white; text-decoration: none;
-            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.2);
-            position: relative; overflow: hidden;
-        }
-        .challenge-hub::before {
-            content: ''; position: absolute; top: -40%; right: -20%; 
-            width: 160px; height: 160px; border-radius: 50%;
-            background: rgba(255, 255, 255, 0.08);
-        }
-        body.crazy-active .challenge-hub { background: linear-gradient(135deg, #06b6d4 0%, #0891b2 50%, #0e7490 100%); box-shadow: 0 8px 24px rgba(6, 182, 212, 0.2); }
-        .challenge-icon-box { width: 46px; height: 46px; background: rgba(255, 255, 255, 0.2); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; position: relative; }
+        .section-head { padding: 0.5rem 1.25rem 0.75rem; display: flex; align-items: center; justify-content: space-between; }
+        .section-head h2 { font-size: 1rem; font-weight: 800; letter-spacing: -0.3px; }
+        .section-head .see-all { font-size: 0.68rem; font-weight: 700; color: var(--brand); cursor: pointer; text-decoration: none; }
 
-        body.crazy-active .section-header h2 { color: var(--crazy-text); }
-        body.crazy-active .glass-card { background: var(--crazy-surface); border-color: var(--crazy-border); }
-        body.crazy-active .highlight-border { border-left-color: #6366f1; }
-        body.crazy-active .item-icon { background: rgba(30, 27, 75, 0.6); color: #818cf8; border-color: var(--crazy-border); }
-        body.crazy-active .glass-card b { color: var(--crazy-text); }
-        body.crazy-active .glass-card span { color: #94a3b8; }
-        body.crazy-active .locked::after { background: #0f172a; border-color: var(--crazy-border); color: #64748b; }
-        body.crazy-active .bottom-nav { background: rgba(15, 23, 42, 0.75); border-color: var(--crazy-border); }
-        body.crazy-active .nav-link.active { color: #818cf8; }
-        body.crazy-active .nav-link .notification-dot { border-color: #1e1b4b; }
-        body.crazy-active .nav-center-btn { background: #6366f1; border-color: #0f172a; box-shadow: var(--crazy-glow); }
+        .feature-grid { padding: 0 1.25rem; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .feature-card { background: white; border-radius: 18px; padding: 18px 14px; border: 1px solid rgba(226,232,240,0.5); box-shadow: var(--card-shadow); text-decoration: none; color: inherit; transition: all 0.3s var(--ease-out); display: flex; flex-direction: column; }
+        .feature-card:active { transform: scale(0.96); }
+        .feature-card .fc-icon { width: 42px; height: 42px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1rem; margin-bottom: 12px; }
+        .feature-card .fc-label { font-size: 0.78rem; font-weight: 800; margin-bottom: 2px; }
+        .feature-card .fc-desc { font-size: 0.65rem; color: var(--text-sub); font-weight: 600; line-height: 1.3; }
+        .feature-card .fc-badge { display: inline-flex; align-items: center; gap: 3px; margin-top: 8px; padding: 3px 8px; border-radius: 6px; font-size: 0.58rem; font-weight: 700; }
+        .feature-card.featured { grid-column: span 2; flex-direction: row; align-items: center; gap: 16px; padding: 16px 18px; background: linear-gradient(135deg,#0062ff,#4f46e5); color: white; border: none; box-shadow: 0 6px 24px rgba(0,98,255,0.25); }
+        .feature-card.featured .fc-icon { background: rgba(255,255,255,0.2); color: white; margin-bottom: 0; }
+        .feature-card.featured .fc-body { flex: 1; }
+        .feature-card.featured .fc-label { font-size: 0.88rem; }
+        .feature-card.featured .fc-desc { color: rgba(255,255,255,0.75); }
+        .feature-card.featured .fc-arrow { width: 32px; height: 32px; border-radius: 10px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
-        /* Overlay Layout All Pages Navigator */
-        .master-navigator {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(15, 23, 42, 0.3); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
-            z-index: 9999; display: flex; justify-content: center; align-items: center;
-            opacity: 0; pointer-events: none; transition: opacity 0.4s ease; padding: 24px;
-        }
-        .master-navigator.show { opacity: 1; pointer-events: auto; }
-        .navigator-content {
-            background: rgba(255, 255, 255, 0.88); border: 1px solid rgba(255, 255, 255, 0.6);
-            width: 100%; max-width: 380px; border-radius: 32px; padding: 24px;
-            max-height: 80vh; overflow-y: auto; scrollbar-width: none;
-        }
-        .navigator-content::-webkit-scrollbar { display: none; }
-        body.crazy-active .navigator-content { background: rgba(15, 23, 42, 0.95); border-color: var(--crazy-border); }
-        .navigator-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid rgba(0,0,0,0.06); }
-        body.crazy-active .navigator-header { border-bottom-color: rgba(255,255,255,0.1); }
-        .navigator-header h3 { font-size: 1.15rem; font-weight: 800; }
-        body.crazy-active .navigator-header h3 { color: white; }
-        .close-navigator-btn { width: 32px; height: 32px; border-radius: 50%; background: rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        body.crazy-active .close-navigator-btn { background: rgba(255,255,255,0.1); color: white; }
-        .navigator-links-stack { display: flex; flex-direction: column; gap: 8px; }
-        .navigator-row-item { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 16px; text-decoration: none; color: var(--text-dark); }
-        body.crazy-active .navigator-row-item { background: rgba(30, 27, 75, 0.4); border-color: rgba(255,255,255,0.05); color: white; }
-        .navigator-row-item i { font-size: 1.05rem; color: var(--brand); width: 24px; text-align: center; }
-        body.crazy-active .navigator-row-item i { color: #818cf8; }
-        .navigator-row-item div b { font-size: 0.88rem; font-weight: 700; display: block; }
-        .navigator-row-item div span { font-size: 0.72rem; color: var(--text-sub); }
-        body.crazy-active .navigator-row-item div span { color: #94a3b8; }
-        .navigator-row-item.nav-locked { opacity: 0.55; }
+        .feature-card.locked { opacity: 0.6; }
+        .feature-card.locked .fc-icon { background: #f1f5f9; color: var(--text-muted); }
+        .feature-card.locked::after { display: none; }
+        .feature-card .lock-overlay { display: none; }
+        .feature-card.locked .lock-overlay { display: flex; align-items: center; justify-content: center; position: absolute; inset: 0; background: rgba(255,255,255,0.5); backdrop-filter: blur(2px); border-radius: 18px; font-size: 0.75rem; color: var(--text-sub); font-weight: 700; z-index: 2; cursor: pointer; }
 
-        /* Floating Deadline Tracker Button */
-        .deadline-fab {
-            position: fixed; bottom: 100px; left: 20px;
-            width: 56px; height: 56px; border-radius: 18px;
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            color: white; border: none; cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.3rem; z-index: 1001;
-            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.35);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        .deadline-fab:active { transform: scale(0.92); }
-        @media (min-width: 1024px) { .deadline-fab { left: 240px; } }
-        .deadline-fab .fab-badge {
-            position: absolute; top: -4px; right: -4px;
-            background: #1e1b4b; color: white;
-            font-size: 0.6rem; font-weight: 800;
-            width: 20px; height: 20px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            border: 2px solid white;
-        }
+        .quick-resume { padding: 0 1.25rem; }
+        .resume-card { background: white; border-radius: 18px; padding: 16px; border: 1px solid rgba(226,232,240,0.5); box-shadow: var(--card-shadow); display: flex; align-items: center; gap: 14px; text-decoration: none; color: inherit; margin-bottom: 10px; transition: var(--transition); }
+        .resume-card:active { transform: scale(0.98); }
+        .resume-card .rc-icon { width: 44px; height: 44px; border-radius: 14px; background: var(--brand-soft); display: flex; align-items: center; justify-content: center; color: var(--brand); font-size: 1rem; flex-shrink: 0; }
+        .resume-card .rc-body { flex: 1; min-width: 0; }
+        .resume-card .rc-body .rc-title { font-size: 0.82rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .resume-card .rc-body .rc-meta { font-size: 0.65rem; color: var(--text-sub); font-weight: 600; margin-top: 1px; }
+        .resume-card .rc-progress { width: 40px; text-align: right; font-size: 0.75rem; font-weight: 800; color: var(--brand); }
 
-        /* Deadline Overlay Sheet */
-        .deadline-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            z-index: 9998; display: flex; justify-content: center; align-items: flex-end;
-            opacity: 0; pointer-events: none; transition: opacity 0.35s ease;
-        }
-        .deadline-overlay.show { opacity: 1; pointer-events: auto; }
+        .daily-banner { margin: 0 1.25rem 1.25rem; padding: 18px 20px; border-radius: 20px; background: linear-gradient(135deg,#0d9488,#0891b2); color: white; display: flex; align-items: center; justify-content: space-between; text-decoration: none; box-shadow: 0 6px 20px rgba(13,148,136,0.25); position: relative; overflow: hidden; }
+        .daily-banner::before { content: ''; position: absolute; top: -40%; right: -20%; width: 160px; height: 160px; border-radius: 50%; background: rgba(255,255,255,0.08); }
+        .daily-banner .db-left { display: flex; align-items: center; gap: 12px; position: relative; }
+        .daily-banner .db-icon { width: 40px; height: 40px; border-radius: 12px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+        .daily-banner .db-text h4 { font-size: 0.88rem; font-weight: 800; margin: 0; }
+        .daily-banner .db-text p { font-size: 0.68rem; opacity: 0.85; margin: 2px 0 0; font-weight: 500; }
+        .daily-banner .db-arrow { font-size: 0.8rem; opacity: 0.7; position: relative; }
 
-        .deadline-sheet {
-            background: white; width: 100%; max-width: 430px;
-            border-radius: 28px 28px 0 0; padding: 0;
-            max-height: 85vh; overflow: hidden;
-            transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            display: flex; flex-direction: column;
-        }
-        .deadline-overlay.show .deadline-sheet { transform: translateY(0); }
-
-        .sheet-handle {
-            width: 40px; height: 4px; border-radius: 4px;
-            background: #e2e8f0; margin: 12px auto 0;
-        }
-        .sheet-header {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 16px 20px 12px; border-bottom: 1px solid #f1f5f9;
-        }
-        .sheet-header h3 { font-size: 1.05rem; font-weight: 800; margin: 0; }
-        .sheet-close {
-            width: 32px; height: 32px; border-radius: 50%;
-            background: #f1f5f9; border: none; cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            color: #64748b; font-size: 0.85rem;
-        }
-
-        .sheet-body {
-            overflow-y: auto; padding: 16px 20px 24px;
-            flex: 1; scrollbar-width: none;
-        }
-        .sheet-body::-webkit-scrollbar { display: none; }
-
-        /* Quick Add Form inside overlay */
-        .quick-add-form {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-            margin-bottom: 20px; padding: 16px;
-            background: #f8fafc; border-radius: 20px; border: 1px solid #eef2f6;
-        }
-        .quick-add-form .qa-group { margin-bottom: 0; }
-        .quick-add-form .qa-group.full { grid-column: span 2; }
-        .quick-add-form label {
-            display: block; font-size: 0.6rem; font-weight: 800;
-            color: #a3aed0; text-transform: uppercase; margin-bottom: 4px;
-        }
-        .quick-add-form input {
-            width: 100%; padding: 10px 12px; border-radius: 12px;
-            border: 1px solid #eef2f6; font-family: inherit;
-            font-weight: 600; font-size: 0.8rem; background: white;
-        }
-        .quick-add-form input:focus { border-color: var(--brand); outline: none; }
-        .quick-add-form button {
-            grid-column: span 2; padding: 12px; border-radius: 14px;
-            background: var(--brand); color: white; border: none;
-            font-weight: 800; font-size: 0.82rem; cursor: pointer;
-            margin-top: 4px;
-        }
-
-        /* Mini Deadline Cards in overlay */
-        .mini-deadline-card {
-            display: flex; align-items: center; gap: 12px;
-            padding: 14px; background: white; border: 1px solid #eef2f6;
-            border-radius: 18px; margin-bottom: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.01);
-        }
-        .mini-deadline-card.expired {
-            border-color: #fff1f0; background: #fffafb;
-        }
-        .mini-avatar {
-            width: 40px; height: 40px; border-radius: 12px;
-            background: #fef2f2; color: #ef4444;
-            display: flex; align-items: center; justify-content: center;
-            font-weight: 800; font-size: 0.95rem; flex-shrink: 0;
-        }
-        .mini-card-content { flex: 1; min-width: 0; }
-        .mini-card-title { font-size: 0.85rem; font-weight: 700; margin: 0 0 3px; }
-        .mini-card-meta { font-size: 0.65rem; color: #a3aed0; font-weight: 600; }
-        .mini-countdown {
-            display: inline-flex; align-items: center; gap: 4px;
-            background: #eef2f6; padding: 4px 10px; border-radius: 8px;
-            font-size: 0.7rem; font-weight: 800;
-        }
-        .mini-countdown.urgent { background: #fef2f2; color: #ef4444; }
-        .mini-countdown.expired { background: #ef4444; color: white; }
-        .mini-delete {
-            background: none; border: none; color: #cbd5e1;
-            padding: 8px; font-size: 0.85rem; cursor: pointer;
-        }
-        .mini-delete:hover { color: #ef4444; }
-        .mini-empty { text-align: center; padding: 30px 0; color: #a3aed0; }
-        .mini-empty i { font-size: 2rem; margin-bottom: 8px; display: block; opacity: 0.3; }
-
-
+        .bottom-spacer { height: 20px; }
     </style>
 </head>
 <body>
 <%- include('partials/sidebar') %>
-
-    <div class="app-shell">
-        <header class="header-nav">
-            <a href="/dashboard" class="logo">Prepium<span>.</span></a>
-            <div class="top-action-cluster">
-                <div class="crazy-toggle-btn" id="toggle-crazy-mode">
-                    <i class="fas fa-moon"></i>
-                </div>
-                <a href="/profile" class="profile-trigger">
-                    <%= user.fullname ? user.fullname.charAt(0).toUpperCase() : 'U' %>
-                </a>
-            </div>
-        </header>
-
-        <div class="meta-status-row">
-            <div class="live-pill"><i class="fas fa-clock"></i> <span id="live-time-display">00:00:00</span></div>
-            <div class="live-pill" style="background:rgba(79, 70, 229, 0.1); color:var(--accent); border-color:rgba(79, 70, 229, 0.15)">
-                <i class="fas fa-calendar"></i> <span id="live-date-display">Date</span>
+<div class="app-shell">
+    <div class="dash-header">
+        <div class="dash-header-left">
+            <div class="dash-avatar"><%= user.fullname ? user.fullname.charAt(0).toUpperCase() : 'U' %></div>
+            <div>
+                <div class="dash-greeting" id="greeting-text">Good morning</div>
+                <div class="dash-name"><%= user.fullname ? user.fullname.split(' ')[0] : 'Student' %></div>
             </div>
         </div>
-
-        <section class="hero-section reveal">
-            <h1 id="greeting-field">Hello, Student 👋</h1>
-        </section>
-
-        <div class="quote-box reveal">
-            <i class="fas fa-quote-left"></i>
-            <div class="quote-text" id="quote-field">"Loading strategic quotes engine..."</div>
+        <div class="dash-header-right">
+            <div class="streak-badge"><i class="fas fa-fire"></i> <%= typeof streak !== 'undefined' ? streak : 0 %></div>
+            <a href="/notifications" class="notif-bell">
+                <i class="fas fa-bell"></i>
+                <% if (typeof unreadNotifs !== 'undefined' && unreadNotifs > 0) { %><div class="notif-dot"></div><% } %>
+            </a>
         </div>
-
-        <% if (!user.has_paid) { %>
-            <div class="premium-card reveal-scale">
-                <h3>Upgrade to Premium</h3>
-                <p>Unlock Study Library, Audio Podcasts, CGPA Trackers, and AI engines for <b>₦1,000</b>.</p>
-                <button onclick="payWithPaystack()" id="pay-btn" class="upgrade-btn">Get Full Access</button>
-            </div>
-        <% } %>
-
-        <a href="/daily-challenge" class="challenge-hub reveal">
-            <div style="display: flex; align-items: center; gap: 14px;">
-                <div class="challenge-icon-box"><i class="fas fa-fire-alt"></i></div>
-                <div>
-                    <h4 style="font-weight:800; font-size: 0.95rem;">Daily Challenge</h4>
-                    <p style="font-size:0.75rem; opacity:0.9; margin-top:2px;">Compete live with peers</p>
-                </div>
-            </div>
-            <i class="fas fa-chevron-right" style="opacity: 0.8; font-size: 0.8rem;"></i>
-        </a>
-
-        <div class="section-header reveal">
-            <h2>Academic Workspace</h2>
-        </div>
-        
-        <div class="grid-wrapper">
-            <div class="clean-dashboard-grid">
-                
-                <a href="/setup-test" class="glass-card highlight-border">
-                    <div class="item-icon"><i class="fas fa-bolt"></i></div>
-                    <b>Practice Quiz</b>
-                    <span><%= user.has_paid ? 'Unlimited Mode' : (2 - user.quiz_attempts) + ' Free Left' %></span>
-                </a>
-
-                <a href="/timetable" class="glass-card">
-                    <div class="item-icon" style="color: #8b5cf6;"><i class="fas fa-table"></i></div>
-                    <b>Timetable</b>
-                    <span>Schedule & AI-powered extraction</span>
-                </a>
-
-                <a href="<%= user.has_paid ? '/reading-timetable' : '#' %>" class="glass-card <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>">
-                    <div class="item-icon" style="color: #06b6d4;"><i class="fas fa-book-open"></i></div>
-                    <b>Reading Schedule</b>
-                    <span>Smart study session planner</span>
-                </a>
-
-                <a href="<%= user.has_paid ? '/ai-quiz' : '#' %>" class="glass-card <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>">
-                    <div class="item-icon"><i class="fas fa-robot"></i></div>
-                    <b>AI Quiz Bot</b>
-                    <span>PDF parsing to CBT exam sets</span>
-                </a>
-
-                <a href="<%= user.has_paid ? '/cgpa' : '#' %>" class="glass-card <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>">
-                    <div class="item-icon" style="color: #0284c7;"><i class="fas fa-chart-line"></i></div>
-                    <b>CGPA Tracker</b>
-                    <span>Target calculation and profile analysis</span>
-                </a>
-
-                <a href="/deadlines" class="glass-card">
-                    <div class="item-icon" style="color: #ef4444;"><i class="fas fa-hourglass-half"></i></div>
-                    <b>Deadline Tracker</b>
-                    <span>Track execution milestones</span>
-                </a>
-
-                <a href="<%= user.has_paid ? '/subjects' : '#' %>" class="glass-card <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>">
-                    <div class="item-icon" style="color: #ea580c;"><i class="fas fa-book-open"></i></div>
-                    <b>Study Library</b>
-                    <span>Course notebooks and structural references</span>
-                </a>
-
-                <a href="<%= user.has_paid ? '/competition' : '#' %>" class="glass-card <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>">
-                    <div class="item-icon" style="color: #e11d48;"><i class="fas fa-trophy"></i></div>
-                    <b>Live Arena</b>
-                    <span>Realtime scores metrics ranking panels</span>
-                </a>
-
-                <a href="<%= user.has_paid ? '/pomodoro' : '#' %>" class="glass-card <%= !user.has_paid ? 'locked' : '' %>" onclick="<%= !user.has_paid ? 'payWithPaystack()' : '' %>">
-                    <div class="item-icon"><i class="fas fa-stopwatch"></i></div>
-                    <b>Pomodoro</b>
-                    <span>Structured execution focus timers</span>
-                </a>
-
-                <a href="https://alitedigitals.vercel.app/projects" target="_blank" class="glass-card">
-                    <div class="item-icon" style="color: #d97706;"><i class="fas fa-shopping-cart"></i></div>
-                    <b>Alite Store</b>
-                    <span>Utilities marketplace storefront</span>
-                </a>
-
-                <a href="/suggestions" class="glass-card">
-                    <div class="item-icon"><i class="fas fa-pen-fancy"></i></div>
-                    <b>Feedback</b>
-                    <span>Submit software enhancement advice</span>
-                </a>
-
-            </div>
     </div>
 
+    <div class="hero-strip">
+        <div class="hero-stat">
+            <div class="stat-icon" style="background:#eef4ff;color:var(--brand);"><i class="fas fa-check-circle"></i></div>
+            <div class="stat-num"><%= typeof quizCount !== 'undefined' ? quizCount : 0 %></div>
+            <div class="stat-label">Quizzes Done</div>
+        </div>
+        <div class="hero-stat">
+            <div class="stat-icon" style="background:#fef3c7;color:#f59e0b;"><i class="fas fa-trophy"></i></div>
+            <div class="stat-num"><%= typeof avgScore !== 'undefined' ? avgScore + '%' : '0%' %></div>
+            <div class="stat-label">Avg Score</div>
+        </div>
+        <div class="hero-stat">
+            <div class="stat-icon" style="background:#d1fae5;color:#10b981;"><i class="fas fa-book-open"></i></div>
+            <div class="stat-num"><%= typeof studySessions !== 'undefined' ? studySessions : 0 %></div>
+            <div class="stat-label">Study Sessions</div>
+        </div>
     </div>
 
-    <% if (user.has_paid) { %>
-    <button class="deadline-fab" id="deadline-fab" onclick="openDeadlineOverlay()">
-        <i class="fas fa-hourglass-half"></i>
-        <% if (typeof upcomingDeadlines !== 'undefined' && upcomingDeadlines > 0) { %>
-        <div class="fab-badge"><%= upcomingDeadlines %></div>
-        <% } %>
-    </button>
+    <div class="quick-mood">
+        <div class="mood-chip primary" onclick="location.href='/study'"><i class="fas fa-graduation-cap"></i> Study Hub</div>
+        <div class="mood-chip" onclick="location.href='/setup-test'"><i class="fas fa-bolt"></i> Quick Quiz</div>
+        <div class="mood-chip" onclick="location.href='/timetable'"><i class="fas fa-table"></i> Timetable</div>
+        <div class="mood-chip" onclick="location.href='/cgpa'"><i class="fas fa-chart-line"></i> CGPA</div>
+        <div class="mood-chip" onclick="location.href='/daily-challenge'"><i class="fas fa-calendar-check"></i> Challenge</div>
+    </div>
+
+    <% if (!user.has_paid) { %>
+    <div class="upgrade-strip">
+        <div class="us-icon"><i class="fas fa-crown"></i></div>
+        <div class="us-content">
+            <h4>Unlock Premium</h4>
+            <p>AI tutors, CGPA tracker & more</p>
+        </div>
+        <button class="us-btn" onclick="payWithPaystack()">₦1,000</button>
+    </div>
     <% } %>
 
-    <div class="deadline-overlay" id="deadline-overlay">
-        <div class="deadline-sheet">
-            <div class="sheet-handle"></div>
-            <div class="sheet-header">
-                <h3><i class="fas fa-hourglass-half" style="color:#ef4444;"></i> Arena Tracker</h3>
-                <button class="sheet-close" onclick="closeDeadlineOverlay()"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="sheet-body">
-                <form class="quick-add-form" id="quick-deadline-form" onsubmit="submitQuickDeadline(event)">
-                    <div class="qa-group full">
-                        <label>Task Title</label>
-                        <input type="text" name="title" required placeholder="e.g. GST 101 Assignment" maxlength="40">
-                    </div>
-                    <div class="qa-group">
-                        <label>Date</label>
-                        <input type="date" name="due_date" id="qa-date" required>
-                    </div>
-                        <div class="qa-group">
-                            <label>Time</label>
-                            <input type="time" name="due_time" id="qa-time" required>
-                        </div>
-                        <button type="submit"><i class="fas fa-plus"></i> Add Target</button>
-                    </form>
+    <div class="section-head">
+        <h2>Your Tools</h2>
+    </div>
 
-                    <div id="overlay-deadline-list">
-                        <div class="mini-empty"><i class="fas fa-hourglass-end"></i><p>Loading...</p></div>
-                    </div>
-                </div>
+    <div class="feature-grid">
+        <a href="/study" class="feature-card featured">
+            <div class="fc-icon"><i class="fas fa-graduation-cap"></i></div>
+            <div class="fc-body">
+                <div class="fc-label">Study with AI</div>
+                <div class="fc-desc">Courses, flashcards, quizzes & AI tutor</div>
             </div>
+            <div class="fc-arrow"><i class="fas fa-arrow-right"></i></div>
+        </a>
+
+        <a href="/setup-test" class="feature-card">
+            <div class="fc-icon" style="background:#eef4ff;color:var(--brand);"><i class="fas fa-bolt"></i></div>
+            <div class="fc-label">Practice Quiz</div>
+            <div class="fc-desc"><%= user.has_paid ? 'Unlimited' : (2 - (typeof quizAttempts !== 'undefined' ? quizAttempts : 0)) + ' free left' %></div>
+        </a>
+
+        <a href="/timetable" class="feature-card">
+            <div class="fc-icon" style="background:#f3e8ff;color:#7c3aed;"><i class="fas fa-table"></i></div>
+            <div class="fc-label">Timetable</div>
+            <div class="fc-desc">AI-powered schedule</div>
+        </a>
+
+        <a href="/history" class="feature-card">
+            <div class="fc-icon" style="background:#fef3c7;color:#f59e0b;"><i class="fas fa-chart-bar"></i></div>
+            <div class="fc-label">History</div>
+            <div class="fc-desc">Quiz performance</div>
+        </a>
+
+        <a href="/deadlines" class="feature-card">
+            <div class="fc-icon" style="background:#fee2e2;color:#ef4444;"><i class="fas fa-hourglass-half"></i></div>
+            <div class="fc-label">Deadlines</div>
+            <div class="fc-desc">Track milestones</div>
+        </a>
+
+        <a href="/suggestions" class="feature-card">
+            <div class="fc-icon" style="background:#e0f2fe;color:#0284c7;"><i class="fas fa-lightbulb"></i></div>
+            <div class="fc-label">Feedback</div>
+            <div class="fc-desc">Share ideas</div>
+        </a>
+
+        <a href="/daily-challenge" class="feature-card">
+            <div class="fc-icon" style="background:#d1fae5;color:#10b981;"><i class="fas fa-calendar-check"></i></div>
+            <div class="fc-label">Challenge</div>
+            <div class="fc-desc">Daily competition</div>
+        </a>
+
+        <div class="feature-card locked" onclick="<%= user.has_paid ? '' : 'payWithPaystack()' %>" style="position:relative;">
+            <div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div>
+            <a href="<%= user.has_paid ? '/competition' : '#' %>" class="feature-card <%= !user.has_paid ? 'locked' : '' %>" style="border:none;padding:0;box-shadow:none;background:transparent;">
+                <div class="fc-icon" style="background:#fce7f3;color:#ec4899;"><i class="fas fa-trophy"></i></div>
+                <div class="fc-label">Live Arena</div>
+                <div class="fc-desc">Real-time rankings</div>
+            </a>
         </div>
 
+        <div class="feature-card locked" onclick="<%= user.has_paid ? '' : 'payWithPaystack()' %>" style="position:relative;">
+            <div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div>
+            <a href="<%= user.has_paid ? '/cgpa' : '#' %>" class="feature-card <%= !user.has_paid ? 'locked' : '' %>" style="border:none;padding:0;box-shadow:none;background:transparent;">
+                <div class="fc-icon" style="background:#e0f2fe;color:#0284c7;"><i class="fas fa-graduation-cap"></i></div>
+                <div class="fc-label">CGPA Tracker</div>
+                <div class="fc-desc">Target calculator</div>
+            </a>
+        </div>
+
+        <div class="feature-card locked" onclick="<%= user.has_paid ? '' : 'payWithPaystack()' %>" style="position:relative;">
+            <div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div>
+            <a href="<%= user.has_paid ? '/pomodoro' : '#' %>" class="feature-card <%= !user.has_paid ? 'locked' : '' %>" style="border:none;padding:0;box-shadow:none;background:transparent;">
+                <div class="fc-icon" style="background:#f1f5f9;color:var(--text-sub);"><i class="fas fa-stopwatch"></i></div>
+                <div class="fc-label">Pomodoro</div>
+                <div class="fc-desc">Focus timer</div>
+            </a>
+        </div>
     </div>
+
+    <% if (typeof recentQuiz !== 'undefined' && recentQuiz) { %>
+    <div class="section-head" style="padding-top:0.75rem;">
+        <h2>Recent Activity</h2>
+    </div>
+    <div class="quick-resume">
+        <a href="/history" class="resume-card">
+            <div class="rc-icon"><i class="fas fa-bolt"></i></div>
+            <div class="rc-body">
+                <div class="rc-title"><%= recentQuiz.subject || 'Quiz' %></div>
+                <div class="rc-meta"><%= new Date(recentQuiz.date_taken).toLocaleDateString('en-GB', { day:'numeric', month:'short' }) %></div>
+            </div>
+            <div class="rc-progress"><%= recentQuiz.score %>/<%= recentQuiz.total %></div>
+        </a>
+    </div>
+    <% } %>
+
+    <div style="margin-top:1rem;">
+        <div class="section-head">
+            <h2>Daily Challenge</h2>
+            <a href="/daily-challenge" class="see-all">Join <i class="fas fa-arrow-right" style="font-size:0.6rem;"></i></a>
+        </div>
+        <a href="/daily-challenge" class="daily-banner">
+            <div class="db-left">
+                <div class="db-icon"><i class="fas fa-fire-alt"></i></div>
+                <div class="db-text">
+                    <h4>Today's Challenge</h4>
+                    <p>Compete live with peers</p>
+                </div>
+            </div>
+            <div class="db-arrow"><i class="fas fa-chevron-right"></i></div>
+        </a>
+    </div>
+
+    <div class="bottom-spacer"></div>
 
     <nav class="bottom-nav">
-        <a href="/dashboard" class="nav-link active">
-            <i class="fas fa-home"></i>
-            <span>Home</span>
-        </a>
-        <a href="/timetable" class="nav-link">
-            <i class="fas fa-table"></i>
-            <span>Timetable</span>
-        </a>
+        <a href="/dashboard" class="nav-link active"><i class="fas fa-home"></i><span>Home</span></a>
+        <a href="/history" class="nav-link"><i class="fas fa-chart-bar"></i><span>Stats</span></a>
         <a href="/setup-test" class="nav-center-btn"><i class="fas fa-plus"></i></a>
-        <a href="/notifications" class="nav-link">
-            <% if (unreadNotifs > 0) { %>
-            <div class="notification-dot"><%= unreadNotifs %></div>
-            <% } %>
-            <i class="fas fa-bell"></i>
-            <span>Notification</span>
-        </a>
-        <a href="/profile" class="nav-link">
-            <i class="fas fa-user-circle"></i>
-            <span>Profile</span>
-        </a>
+        <a href="/study" class="nav-link"><i class="fas fa-book-open"></i><span>Study</span></a>
+        <a href="/profile" class="nav-link"><i class="fas fa-user-circle"></i><span>Profile</span></a>
     </nav>
+</div>
 
-    <div class="master-navigator" id="navigator-overlay">
-        <div class="navigator-content">
-            <div class="navigator-header">
-                <h3>Notifications</h3>
-                <div class="close-navigator-btn" id="close-navigator"><i class="fas fa-times"></i></div>
-            </div>
-            <div class="navigator-links-stack">
-                <div class="navigator-row-item">
-                    <i class="fas fa-bolt" style="color: #eab308;"></i>
-                    <div><b>Quiz Performance</b><span>Your performance profile analytics are updated.</span></div>
-                </div>
-                <div class="navigator-row-item">
-                    <i class="fas fa-gift" style="color: #ec4899;"></i>
-                    <div><b>Premium Features</b><span>Access tailored mock templates dynamically instantly.</span></div>
-                </div>
-                <div class="navigator-row-item">
-                    <i class="fas fa-star" style="color: #3b82f6;"></i>
-                    <div><b>New Study Assets</b><span>Fresh physics and electronics reference kits dropped.</span></div>
-                </div>
-            </div>
-        </div>
-    </div>
+<script>
+function payWithPaystack() {
+    let handler = PaystackPop.setup({
+        key: '<%= paystack_key %>',
+        email: '<%= user.email %>',
+        amount: 1000 * 100,
+        currency: 'NGN',
+        callback: function(response) { window.location.href = "/verify-payment?reference=" + response.reference; },
+        onClose: function() {}
+    });
+    handler.openIframe();
+}
 
-    <script>
-        const userName = "<%= user.fullname ? user.fullname.split(' ')[0] : 'Student' %>";
-        
-        function updateTimeAndGreeting() {
-            const now = new Date();
-            let hours = now.getHours();
-            let minutes = now.getMinutes();
-            let seconds = now.getSeconds();
-            minutes = minutes < 10 ? '0' + minutes : minutes;
-            seconds = seconds < 10 ? '0' + seconds : seconds;
-            document.getElementById('live-time-display').innerText = `${hours}:${minutes}:${seconds}`;
-            
-            const options = { month: 'short', day: 'numeric' };
-            document.getElementById('live-date-display').innerText = now.toLocaleDateString('en-US', options);
+(function() {
+    const params = new URLSearchParams(window.location.search);
+    const payment = params.get('payment');
+    if (payment === 'success') {
+        Swal.fire({ icon: 'success', title: 'Payment Successful!', text: 'Premium unlocked!', timer: 3000, timerProgressBar: true, showConfirmButton: true }).then(() => window.history.replaceState({}, document.title, '/dashboard'));
+    } else if (payment === 'failed') {
+        Swal.fire({ icon: 'error', title: 'Payment Failed', text: 'Please try again', timer: 4000, showConfirmButton: true }).then(() => window.history.replaceState({}, document.title, '/dashboard'));
+    }
 
-            let greeting = "Good day";
-            if (hours < 12) greeting = "Good morning";
-            else if (hours < 16) greeting = "Good afternoon";
-            else greeting = "Good evening";
-            
-            document.getElementById('greeting-field').innerHTML = `${greeting}, ${userName} 👋`;
-        }
-        setInterval(updateTimeAndGreeting, 1000);
-        updateTimeAndGreeting();
-
-        const academicQuotes = [
-            "Your commitment to continuous learning builds structural momentum for future goals.",
-            "Consistency scales faster over time than sporadic intensive efforts. Keep showing up.",
-            "Excellence is an architectural pattern formed through incremental daily focus loops.",
-            "Great developers and exceptional scientists are forged by resolving complex issues.",
-            "Do not wish for lighter tasks; engineer a highly streamlined focus strategy instead.",
-            "Every practice exam completed scales your absolute error tolerance downwards."
-        ];
-        function injectRandomQuote() {
-            const randomIndex = Math.floor(Math.random() * academicQuotes.length);
-            document.getElementById('quote-field').innerText = `"${academicQuotes[randomIndex]}"`;
-        }
-        injectRandomQuote();
-
-        const toggleCrazyBtn = document.getElementById('toggle-crazy-mode');
-        toggleCrazyBtn.addEventListener('click', () => {
-            document.body.classList.toggle('crazy-active');
-            const icon = toggleCrazyBtn.querySelector('i');
-            icon.className = document.body.classList.contains('crazy-active') ? 'fas fa-sun' : 'fas fa-moon';
-        });
-
-        const overlay = document.getElementById('navigator-overlay');
-       
-        document.getElementById('close-navigator').addEventListener('click', () => { overlay.classList.remove('show'); });
-        overlay.addEventListener('click', (e) => { if(e.target === overlay) overlay.classList.remove('show'); });
-
-        function payWithPaystack() {
-            const btn = document.getElementById('pay-btn');
-            if (btn) { btn.innerHTML = "Opening Gateway..."; btn.disabled = true; }
-            let handler = PaystackPop.setup({
-                key: '<%= paystack_key %>',
-                email: '<%= user.email %>',
-                amount: 1000 * 100, 
-                currency: 'NGN',
-                callback: function(response) { window.location.href = "/verify-payment?reference=" + response.reference; },
-                onClose: function() { if (btn) { btn.innerHTML = "Get Full Access"; btn.disabled = false; } }
-            });
-            handler.openIframe();
-        }
-
-        // Payment Status Notifications
-        (function() {
-            const params = new URLSearchParams(window.location.search);
-            const payment = params.get('payment');
-            const msg = params.get('msg');
-            
-            if (payment === 'success') {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Payment Successful!',
-                    text: 'Your account has been upgraded to Premium. All features are now unlocked.',
-                    timer: 4000,
-                    timerProgressBar: true,
-                    showConfirmButton: true,
-                    confirmButtonText: 'Start Exploring',
-                    confirmButtonColor: '#0062ff'
-                }).then(() => {
-                    window.history.replaceState({}, document.title, '/dashboard');
-                });
-            } else if (payment === 'failed') {
-                const reason = params.get('reason') || 'unknown';
-                let message = 'Something went wrong with your payment. Please try again.';
-                if (reason === 'no_reference') message = 'No payment reference was provided.';
-                if (reason === 'transaction_not_successful') message = 'The transaction was not completed successfully.';
-                if (reason === 'user_not_found') message = 'User account not found. Please contact support.';
-                
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Payment Failed',
-                    text: message,
-                    timer: 5000,
-                    timerProgressBar: true,
-                    showConfirmButton: true,
-                    confirmButtonText: 'Try Again',
-                    confirmButtonColor: '#0062ff'
-                }).then(() => {
-                    window.history.replaceState({}, document.title, '/dashboard');
-                });
-            }
-            
-            if (msg) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success!',
-                    text: msg,
-                    timer: 3000,
-                    timerProgressBar: true,
-                    showConfirmButton: false
-                }).then(() => {
-                    window.history.replaceState({}, document.title, '/dashboard');
-                });
-            }
-        })();
-
-        // Deadline Overlay Functions
-        function openDeadlineOverlay() {
-            const overlay = document.getElementById('deadline-overlay');
-            overlay.classList.add('show');
-            loadOverlayDeadlines();
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('qa-date').value = today;
-            document.getElementById('qa-time').value = '12:00';
-        }
-
-        function closeDeadlineOverlay() {
-            document.getElementById('deadline-overlay').classList.remove('show');
-        }
-
-        document.getElementById('deadline-overlay').addEventListener('click', function(e) {
-            if (e.target === this) closeDeadlineOverlay();
-        });
-
-        async function loadOverlayDeadlines() {
-            try {
-                const res = await fetch('/api/deadlines');
-                const data = await res.json();
-                const list = document.getElementById('overlay-deadline-list');
-
-                if (!data.deadlines || data.deadlines.length === 0) {
-                    list.innerHTML = '<div class="mini-empty"><i class="fas fa-hourglass-end"></i><p>No active targets</p></div>';
-                    return;
-                }
-
-                list.innerHTML = data.deadlines.map(dl => {
-                    const target = new Date(dl.date_str + 'T' + dl.time_str).getTime();
-                    const now = Date.now();
-                    const diff = target - now;
-                    const isExpired = diff <= 0;
-
-                    let countdownHtml = '';
-                    if (isExpired) {
-                        countdownHtml = '<span class="mini-countdown expired"><i class="fas fa-clock"></i> Expired</span>';
-                    } else {
-                        const d = Math.floor(diff / 86400000);
-                        const h = Math.floor((diff % 86400000) / 3600000);
-                        const m = Math.floor((diff % 3600000) / 60000);
-                        const text = d > 0 ? `${d}d ${h}h ${m}m` : `${h}h ${m}m`;
-                        const urgent = diff < 3600000;
-                        countdownHtml = `<span class="mini-countdown ${urgent ? 'urgent' : ''}"><i class="fas fa-clock"></i> ${text}</span>`;
-                    }
-
-                    return `
-                        <div class="mini-deadline-card ${isExpired ? 'expired' : ''}" data-id="${dl.id}">
-                            <div class="mini-avatar">${dl.title.charAt(0).toUpperCase()}</div>
-                            <div class="mini-card-content">
-                                <p class="mini-card-title">${dl.title}</p>
-                                <div class="mini-card-meta">${dl.date_str} • ${dl.time_str}</div>
-                                ${countdownHtml}
-                            </div>
-                            <button class="mini-delete" onclick="deleteOverlayDeadline(${dl.id})" title="Delete">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                        </div>
-                    `;
-                }).join('');
-
-                // Start live countdowns in overlay
-                startOverlayTimers();
-            } catch (err) {
-                console.error('Failed to load deadlines:', err);
-            }
-        }
-
-        function startOverlayTimers() {
-            setInterval(() => {
-                const cards = document.querySelectorAll('.mini-deadline-card');
-                const now = Date.now();
-                cards.forEach(card => {
-                    const meta = card.querySelector('.mini-card-meta').textContent;
-                    const parts = meta.split(' • ');
-                    const target = new Date(parts[0] + 'T' + parts[1]).getTime();
-                    const diff = target - now;
-                    const countdown = card.querySelector('.mini-countdown');
-                    if (!countdown) return;
-
-                    if (diff <= 0) {
-                        countdown.className = 'mini-countdown expired';
-                        countdown.innerHTML = '<i class="fas fa-clock"></i> Expired';
-                        card.classList.add('expired');
-                        return;
-                    }
-                    const d = Math.floor(diff / 86400000);
-                    const h = Math.floor((diff % 86400000) / 3600000);
-                    const m = Math.floor((diff % 3600000) / 60000);
-                    const text = d > 0 ? `${d}d ${h}h ${m}m` : `${h}h ${m}m`;
-                    const urgent = diff < 3600000;
-                    countdown.className = `mini-countdown ${urgent ? 'urgent' : ''}`;
-                    countdown.innerHTML = `<i class="fas fa-clock"></i> ${text}`;
-                });
-            }, 60000);
-        }
-
-        async function submitQuickDeadline(e) {
-            e.preventDefault();
-            const form = e.target;
-            const data = Object.fromEntries(new FormData(form));
-
-            try {
-                const res = await fetch('/deadlines/add', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams(data)
-                });
-                if (res.ok) {
-                    form.reset();
-                    loadOverlayDeadlines();
-                }
-            } catch (err) {
-                console.error('Failed to add deadline:', err);
-            }
-        }
-
-        async function deleteOverlayDeadline(id) {
-            if (!confirm('Remove this target?')) return;
-            try {
-                await fetch(`/deadlines/delete/${id}`, { method: 'POST' });
-                loadOverlayDeadlines();
-            } catch (err) {
-                console.error('Failed to delete:', err);
-            }
-        }
-
-    </script>
-    <%- include('partials/pomodoro-overlay') %>
+    const hour = new Date().getHours();
+    let g = 'Good evening';
+    if (hour < 12) g = 'Good morning';
+    else if (hour < 17) g = 'Good afternoon';
+    document.getElementById('greeting-text').textContent = g;
+})();
+</script>
 </body>
 </html>

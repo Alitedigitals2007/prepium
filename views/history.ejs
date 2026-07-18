@@ -4,24 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Prepium | Quiz History</title>
-    
+    <title>Prepium | History</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
     <style>
-        .stats-row {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
-            padding: 0 1.5rem; margin-bottom: 1.5rem;
-        }
-        .stat-card {
-            background: white; border: 1.5px solid var(--border);
-            border-radius: 18px; padding: 16px 12px; text-align: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.01);
-        }
+        .status-bar { height: env(safe-area-inset-top, 0px); }
+        .page-header { padding: 1.25rem 1.5rem 0.75rem; display: flex; align-items: center; justify-content: space-between; }
+        .page-header h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; margin: 0; }
+        .page-header p { font-size: 0.72rem; color: var(--text-sub); font-weight: 600; margin: 2px 0 0; }
+
+        .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 1.5rem; margin-bottom: 1.25rem; }
+        .stat-card { background: white; border: 1.5px solid var(--border); border-radius: 18px; padding: 16px 12px; text-align: center; box-shadow: var(--shadow-sm); }
         .stat-icon { font-size: 1.2rem; margin-bottom: 6px; }
         .stat-card:nth-child(1) .stat-icon { color: var(--brand); }
         .stat-card:nth-child(2) .stat-icon { color: var(--success); }
@@ -29,231 +25,256 @@
         .stat-num { font-size: 1.4rem; font-weight: 800; display: block; }
         .stat-label { font-size: 0.6rem; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.5px; }
 
-        .chart-section {
-            margin: 0 1.5rem 1.5rem;
-            background: white; border: 1.5px solid var(--border);
-            border-radius: 22px; padding: 18px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.01);
-        }
+        .chart-section { margin: 0 1.5rem 1.25rem; background: white; border: 1.5px solid var(--border); border-radius: 22px; padding: 18px; box-shadow: var(--shadow-sm); }
         .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
         .chart-title { font-size: 0.85rem; font-weight: 800; }
         .chart-badge { font-size: 0.65rem; font-weight: 700; color: var(--brand); background: #f0f7ff; padding: 4px 10px; border-radius: 8px; }
         .chart-canvas { height: 160px; position: relative; }
 
+        .section-head { padding: 0.5rem 1.5rem 0.75rem; display: flex; align-items: center; justify-content: space-between; }
+        .section-head h2 { font-size: 0.95rem; font-weight: 800; }
+        .section-head span { font-size: 0.68rem; font-weight: 700; color: var(--text-sub); }
+
         .history-list { padding: 0 1.5rem; }
-        
-        .history-card {
-            background: white; border-radius: 20px; padding: 16px;
-            border: 1.5px solid var(--border); margin-bottom: 10px;
-            display: flex; align-items: center; gap: 14px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.01);
-            transition: transform 0.2s ease;
-        }
+        .history-card { background: white; border-radius: 18px; padding: 14px; border: 1.5px solid var(--border); margin-bottom: 10px; display: flex; align-items: center; gap: 14px; box-shadow: var(--shadow-sm); transition: transform 0.2s ease; }
         .history-card:active { transform: scale(0.98); }
-
-        .history-card.ai-session { border-left: 4px solid #7c3aed; }
-
-        .icon-circle {
-            width: 48px; height: 48px; border-radius: 14px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.1rem; flex-shrink: 0;
-        }
-        .icon-circle.standard { background: #f0f7ff; color: var(--brand); }
-        .icon-circle.ai { background: #f5f3ff; color: #7c3aed; }
-
+        .history-card.study { border-left: 4px solid #7c3aed; }
+        .icon-circle { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+        .icon-circle.standard { background: var(--brand-soft); color: var(--brand); }
+        .icon-circle.study { background: #f5f3ff; color: #7c3aed; }
         .card-content { flex: 1; min-width: 0; }
-        .card-title { font-weight: 800; font-size: 0.9rem; margin: 0 0 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .card-meta { display: flex; align-items: center; gap: 8px; }
-        .card-date { font-size: 0.7rem; color: var(--text-sub); font-weight: 600; }
-        .type-tag { font-size: 0.58rem; font-weight: 700; padding: 2px 7px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.3px; }
+        .card-title { font-weight: 800; font-size: 0.85rem; margin: 0 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .card-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .card-date { font-size: 0.65rem; color: var(--text-sub); font-weight: 600; }
+        .type-tag { font-size: 0.55rem; font-weight: 700; padding: 2px 7px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.3px; }
         .type-tag.standard { background: #e0f2fe; color: #0369a1; }
-        .type-tag.ai { background: #f3e8ff; color: #6b21a8; }
-
+        .type-tag.study { background: #f3e8ff; color: #6b21a8; }
         .score-badge { text-align: right; flex-shrink: 0; }
-        .score-num { font-size: 1.05rem; font-weight: 800; display: block; }
-        .accuracy-pill { 
-            font-size: 0.62rem; font-weight: 700; padding: 3px 8px; 
-            border-radius: 8px; display: inline-block; margin-top: 4px;
-        }
+        .score-num { font-size: 1rem; font-weight: 800; display: block; }
+        .accuracy-pill { font-size: 0.6rem; font-weight: 700; padding: 3px 8px; border-radius: 8px; display: inline-block; margin-top: 3px; }
         .accuracy-pill.high { background: #dcfce7; color: #15803d; }
         .accuracy-pill.mid { background: #fef3c7; color: #b45309; }
         .accuracy-pill.low { background: #fee2e2; color: #b91c1c; }
-
-        .progress-mini {
-            width: 100%; height: 4px; background: #f1f5f9; border-radius: 2px;
-            margin-top: 6px; overflow: hidden;
-        }
+        .progress-mini { width: 100%; height: 4px; background: #f1f5f9; border-radius: 2px; margin-top: 5px; overflow: hidden; }
         .progress-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
         .progress-fill.high { background: var(--success); }
         .progress-fill.mid { background: var(--warning); }
         .progress-fill.low { background: var(--danger); }
-
-        .empty-state .cta-btn {
-            display: inline-flex; align-items: center; gap: 6px;
-            margin-top: 16px; padding: 12px 24px; border-radius: 14px;
-            background: var(--brand-gradient); color: white; text-decoration: none;
-            font-weight: 700; font-size: 0.85rem;
-        }
+        .empty-state { text-align: center; padding: 2.5rem 1.5rem; }
+        .empty-state i { font-size: 2.2rem; color: #e2e8f0; display: block; margin-bottom: 0.8rem; }
+        .empty-state h3 { font-size: 0.85rem; font-weight: 700; color: var(--text-sub); margin: 0 0 4px; }
+        .empty-state p { font-size: 0.72rem; color: var(--text-muted); margin: 0; }
+        .empty-state .cta-btn { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; padding: 12px 24px; border-radius: 14px; background: var(--brand-gradient); color: white; text-decoration: none; font-weight: 700; font-size: 0.8rem; }
+        .tab-bar { display: flex; gap: 6px; padding: 0 1.5rem 1rem; }
+        .tab-pill { flex: 1; padding: 11px; border-radius: 12px; background: #f1f5f9; border: none; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 0.72rem; color: var(--text-sub); transition: var(--transition); }
+        .tab-pill.active { background: var(--text-dark); color: white; }
+        @media (min-width: 431px) { .app-shell { border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); margin: 0 auto; } }
     </style>
 </head>
 <body>
 <%- include('partials/sidebar') %>
-
-    <div class="app-shell">
-        <div class="status-bar"></div>
-        
-        <header>
-            <a href="/dashboard" class="logo">Prepium<span>.</span></a>
-            <div style="font-size:0.75rem; font-weight:700; color:var(--text-sub);">
-                <i class="fas fa-chart-bar"></i> Performance
-            </div>
-        </header>
-
-        <!-- Stats Overview -->
-        <div class="stats-row reveal">
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-clipboard-check"></i></div>
-                <span class="stat-num" id="totalQuizzes">0</span>
-                <span class="stat-label">Quizzes</span>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-bullseye"></i></div>
-                <span class="stat-num" id="avgScore">0%</span>
-                <span class="stat-label">Avg Score</span>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-trophy"></i></div>
-                <span class="stat-num" id="bestScore">0%</span>
-                <span class="stat-label">Best</span>
-            </div>
+<div class="app-shell">
+    <div class="status-bar"></div>
+    
+    <div class="page-header">
+        <div>
+            <h1>History</h1>
+            <p>Your quiz and study performance</p>
         </div>
-
-        <!-- Performance Chart -->
-        <div class="chart-section">
-            <div class="chart-header">
-                <div class="chart-title">Score Trend</div>
-                <div class="chart-badge">Last 10</div>
-            </div>
-            <div class="chart-canvas">
-                <canvas id="perfChart"></canvas>
-            </div>
-        </div>
-
-        <!-- History List -->
-        <div class="section-header">
-            <h2>Quiz History</h2>
-            <span id="historyCount">0 sessions</span>
-        </div>
-
-        <div class="history-list">
-            <% if (history && history.length > 0) { %>
-                <% history.forEach(item => { 
-                    const pct = item.percentage || 0;
-                    const cls = pct >= 70 ? 'high' : pct >= 45 ? 'mid' : 'low';
-                %>
-                    <div class="history-card <%= !item.subject_name ? 'ai-session' : '' %>">
-                        <div class="icon-circle <%= !item.subject_name ? 'ai' : 'standard' %>">
-                            <i class="fas <%= !item.subject_name ? 'fa-robot' : 'fa-file-invoice' %>"></i>
-                        </div>
-                        <div class="card-content">
-                            <p class="card-title"><%= item.subject_name || item.title || 'AI Engine Test' %></p>
-                            <div class="card-meta">
-                                <span class="card-date">
-                                    <%= new Date(item.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) %>
-                                </span>
-                                <span class="type-tag <%= !item.subject_name ? 'ai' : 'standard' %>">
-                                    <%= !item.subject_name ? 'AI Quiz' : 'Standard' %>
-                                </span>
-                            </div>
-                            <div class="progress-mini">
-                                <div class="progress-fill <%= cls %>" style="width: <%= pct %>%"></div>
-                            </div>
-                        </div>
-                        <div class="score-badge">
-                            <span class="score-num"><%= item.score %>/<%= item.total_questions %></span>
-                            <span class="accuracy-pill <%= cls %>"><%= pct %>%</span>
-                        </div>
-                    </div>
-                <% }) %>
-            <% } else { %>
-                <div class="empty-state">
-                    <i class="fas fa-chart-line"></i>
-                    <h3>No quizzes yet</h3>
-                    <p>Complete your first quiz to see your growth here.</p>
-                    <a href="/setup-test" class="cta-btn"><i class="fas fa-bolt"></i> Start First Quiz</a>
-                </div>
-            <% } %>
-        </div>
-
-        <nav class="bottom-nav">
-            <a href="/dashboard" class="nav-link">
-                <i class="fas fa-home"></i><span>Home</span>
-            </a>
-            <a href="/history" class="nav-link active">
-                <i class="fas fa-chart-bar"></i><span>Stats</span>
-            </a>
-            <a href="/setup-test" class="nav-center-btn"><i class="fas fa-plus"></i></a>
-            <a href="/notifications" class="nav-link">
-                <i class="fas fa-bell"></i><span>Alerts</span>
-            </a>
-            <a href="/profile" class="nav-link">
-                <i class="fas fa-user-circle"></i><span>Profile</span>
-            </a>
-        </nav>
     </div>
 
-    <script>
-        // Calculate stats from history data
-        const historyData = <%- JSON.stringify(history || []) %>;
-        
-        if (historyData.length > 0) {
-            const total = historyData.length;
-            const avgPct = Math.round(historyData.reduce((a, b) => a + (b.percentage || 0), 0) / total);
-            const bestPct = Math.max(...historyData.map(h => h.percentage || 0));
-            
-            document.getElementById('totalQuizzes').textContent = total;
-            document.getElementById('avgScore').textContent = avgPct + '%';
-            document.getElementById('bestScore').textContent = bestPct + '%';
-            document.getElementById('historyCount').textContent = total + ' session' + (total !== 1 ? 's' : '');
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-clipboard-check"></i></div>
+            <span class="stat-num" id="totalQuizzes">0</span>
+            <span class="stat-label">Total</span>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-bullseye"></i></div>
+            <span class="stat-num" id="avgScore">0%</span>
+            <span class="stat-label">Avg Score</span>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-trophy"></i></div>
+            <span class="stat-num" id="bestScore">0%</span>
+            <span class="stat-label">Best</span>
+        </div>
+    </div>
 
-            // Render performance chart
-            const recent = historyData.slice(0, 10).reverse();
-            const ctx = document.getElementById('perfChart');
-            if (ctx) {
-                new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: recent.map((h, i) => {
-                            const d = new Date(h.created_at);
-                            return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-                        }),
-                        datasets: [{
-                            data: recent.map(h => h.percentage || 0),
-                            borderColor: '#0062ff',
-                            backgroundColor: 'rgba(0,98,255,0.05)',
-                            borderWidth: 2.5,
-                            fill: true,
-                            tension: 0.4,
-                            pointBackgroundColor: '#0062ff',
-                            pointBorderColor: '#ffffff',
-                            pointBorderWidth: 2,
-                            pointRadius: 4,
-                            pointHoverRadius: 6
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            x: { grid: { display: false }, ticks: { font: { size: 10, weight: '600' }, color: '#a3aed0' } },
-                            y: { min: 0, max: 100, grid: { color: 'rgba(0,0,0,0.03)' }, ticks: { font: { size: 10 }, callback: v => v + '%' } }
-                        }
-                    }
-                });
+    <div class="chart-section">
+        <div class="chart-header">
+            <div class="chart-title">Score Trend</div>
+            <div class="chart-badge">Last 10</div>
+        </div>
+        <div class="chart-canvas">
+            <canvas id="perfChart"></canvas>
+        </div>
+    </div>
+
+    <div class="tab-bar">
+        <button class="tab-pill active" onclick="switchTab('all', this)">All Activity</button>
+        <button class="tab-pill" onclick="switchTab('quiz', this)">Quizzes</button>
+        <button class="tab-pill" onclick="switchTab('study', this)">Study</button>
+    </div>
+
+    <div class="section-head">
+        <h2>Activity</h2>
+        <span id="historyCount">0 items</span>
+    </div>
+
+    <div class="history-list" id="historyList">
+        <div class="empty-state">
+            <i class="fas fa-chart-line"></i>
+            <h3>No activity yet</h3>
+            <p>Complete quizzes and study sessions to see them here</p>
+            <a href="/study" class="cta-btn"><i class="fas fa-graduation-cap"></i> Start Studying</a>
+        </div>
+    </div>
+
+    <div style="height:40px"></div>
+
+    <nav class="bottom-nav">
+        <a href="/dashboard" class="nav-link"><i class="fas fa-home"></i><span>Home</span></a>
+        <a href="/history" class="nav-link active"><i class="fas fa-chart-bar"></i><span>Stats</span></a>
+        <a href="/setup-test" class="nav-center-btn"><i class="fas fa-plus"></i></a>
+        <a href="/study" class="nav-link"><i class="fas fa-book-open"></i><span>Study</span></a>
+        <a href="/profile" class="nav-link"><i class="fas fa-user-circle"></i><span>Profile</span></a>
+    </nav>
+</div>
+
+<script>
+var historyData = <%- JSON.stringify(history || []) %>;
+var studyHistory = <%- JSON.stringify(studyHistory || []) %>;
+var combined = [];
+
+historyData.forEach(function(h) {
+    var pct = h.percentage || 0;
+    combined.push({
+        id: 'q' + h.id,
+        title: h.subject_name || h.title || 'Quiz',
+        score: h.score || 0,
+        total: h.total_questions || h.total || 1,
+        pct: pct,
+        date: h.created_at,
+        source: 'quiz',
+        type: h.subject_name ? 'standard' : 'ai'
+    });
+});
+
+studyHistory.forEach(function(h) {
+    var pct = h.total > 0 ? Math.round((h.score / h.total) * 100) : 0;
+    combined.push({
+        id: 's' + h.id,
+        title: h.subject_name || 'Study Quiz',
+        score: h.score || 0,
+        total: h.total || 1,
+        pct: pct,
+        date: h.created_at,
+        source: 'study',
+        type: 'study'
+    });
+});
+
+combined.sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
+
+function render(filter) {
+    var filtered = filter === 'all' ? combined : combined.filter(function(i) { return i.source === filter; });
+    var list = document.getElementById('historyList');
+    var count = document.getElementById('historyCount');
+
+    if (filtered.length === 0) {
+        list.innerHTML = '<div class="empty-state"><i class="fas fa-chart-line"></i><h3>No ' + filter + ' activity yet</h3><p>' + (filter === 'study' ? 'Start a study session or take a study quiz' : 'Complete a quiz to see it here') + '</p></div>';
+        count.textContent = '0 items';
+        return;
+    }
+
+    count.textContent = filtered.length + ' item' + (filtered.length !== 1 ? 's' : '');
+
+    var html = '';
+    filtered.forEach(function(item) {
+        var cls = item.pct >= 70 ? 'high' : item.pct >= 45 ? 'mid' : 'low';
+        var date = new Date(item.date);
+        var dateStr = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+        var icon = item.source === 'study' ? 'fa-robot' : (item.type === 'ai' ? 'fa-robot' : 'fa-file-invoice');
+        html += '<div class="history-card ' + item.source + '">';
+        html += '<div class="icon-circle ' + item.source + '"><i class="fas ' + icon + '"></i></div>';
+        html += '<div class="card-content">';
+        html += '<p class="card-title">' + escapeHtml(item.title) + '</p>';
+        html += '<div class="card-meta"><span class="card-date">' + dateStr + '</span>';
+        html += '<span class="type-tag ' + item.source + '">' + (item.source === 'study' ? 'Study' : (item.type === 'ai' ? 'AI' : 'Quiz')) + '</span></div>';
+        html += '<div class="progress-mini"><div class="progress-fill ' + cls + '" style="width:' + item.pct + '%"></div></div>';
+        html += '</div><div class="score-badge">';
+        html += '<span class="score-num">' + item.score + '/' + item.total + '</span>';
+        html += '<span class="accuracy-pill ' + cls + '">' + item.pct + '%</span>';
+        html += '</div></div>';
+    });
+    list.innerHTML = html;
+}
+
+function switchTab(tab, btn) {
+    document.querySelectorAll('.tab-pill').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    render(tab);
+}
+
+function escapeHtml(text) {
+    return (text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Stats
+(function() {
+    var all = combined;
+    var total = all.length;
+    var totalScore = 0, totalMax = 0, bestPct = 0;
+    all.forEach(function(item) {
+        totalScore += item.score;
+        totalMax += item.total;
+        var pct = item.total > 0 ? (item.score / item.total * 100) : 0;
+        if (pct > bestPct) bestPct = pct;
+    });
+    var avgPct = totalMax > 0 ? Math.round((totalScore / totalMax) * 100) : 0;
+    document.getElementById('totalQuizzes').textContent = total;
+    document.getElementById('avgScore').textContent = avgPct + '%';
+    document.getElementById('bestScore').textContent = Math.round(bestPct) + '%';
+
+    // Chart
+    var sorted = all.slice().sort(function(a, b) { return new Date(a.date) - new Date(b.date); });
+    var recent = sorted.slice(-10);
+    var ctx = document.getElementById('perfChart');
+    if (ctx && recent.length > 0) {
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: recent.map(function(h) {
+                    var d = new Date(h.date);
+                    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                }),
+                datasets: [{
+                    data: recent.map(function(h) { return h.pct; }),
+                    borderColor: '#0062ff',
+                    backgroundColor: 'rgba(0,98,255,0.05)',
+                    borderWidth: 2.5,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#0062ff',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { size: 10, weight: '600' }, color: '#94a3b8' } },
+                    y: { min: 0, max: 100, grid: { color: 'rgba(0,0,0,0.03)' }, ticks: { font: { size: 10 }, callback: function(v) { return v + '%'; } } }
+                }
             }
-        }
-    </script>
-    <%- include('partials/pomodoro-overlay') %>
+        });
+    }
+})();
+
+render('all');
+</script>
 </body>
 </html>

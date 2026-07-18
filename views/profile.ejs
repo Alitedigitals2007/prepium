@@ -122,6 +122,8 @@
         }
         .stat-icon.blue { background: rgba(0, 98, 255, 0.08); color: var(--brand); border: 1px solid rgba(0, 98, 255, 0.08); }
         .stat-icon.green { background: rgba(13, 148, 136, 0.08); color: var(--green); border: 1px solid rgba(13, 148, 136, 0.08); }
+        .stat-icon.orange { background: rgba(249, 115, 22, 0.08); color: var(--orange, #f97316); border: 1px solid rgba(249, 115, 22, 0.08); }
+        .stat-icon.purple { background: rgba(139, 92, 246, 0.08); color: var(--purple, #8b5cf6); border: 1px solid rgba(139, 92, 246, 0.08); }
 
         .stat-card.cgpa-card {
             grid-column: span 2;
@@ -247,6 +249,16 @@
                     <div class="stat-icon green"><i class="fas fa-chart-line"></i></div>
                     <span class="stat-val"><%= stats.average %>%</span>
                     <span class="stat-lbl">Avg. Score</span>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange"><i class="fas fa-fire"></i></div>
+                    <span class="stat-val"><%= streak.current_streak || 0 %></span>
+                    <span class="stat-lbl">Day Streak</span>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple"><i class="fas fa-clock"></i></div>
+                    <span class="stat-val"><%= Math.floor((studyMinutes || 0) / 60) %>h</span>
+                    <span class="stat-lbl">Studied</span>
                 </div>
                 <div class="stat-card cgpa-card">
                     <div class="stat-icon"><i class="fas fa-award"></i></div>

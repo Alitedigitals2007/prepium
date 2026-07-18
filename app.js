@@ -383,13 +383,38 @@ app.post('/auth/login', rateLimit(10, 60000), async (req, res) => {
                 };
 
                 // 5. Explicitly save session before responding
-                return req.session.save((err) => {
+                return req.session.save(async (err) => {
                     if (err) {
                         console.error("Session Save Error:", err);
                         return res.status(500).json({ success: false, message: "Session setup failed" });
                     }
 
-                    // 6. Return JSON success with the redirect URL
+                    // 6. Update login streak
+                    try {
+                        const today = new Date().toISOString().split('T')[0];
+                        const streakRes = await pool.query('SELECT * FROM login_streaks WHERE user_id = $1', [user.id]);
+                        if (streakRes.rows.length === 0) {
+                            await pool.query('INSERT INTO login_streaks (user_id, current_streak, longest_streak, last_login_date) VALUES ($1, 1, 1, $2)', [user.id, today]);
+                            req.session.user.current_streak = 1;
+                        } else {
+                            const s = streakRes.rows[0];
+                            const lastDate = s.last_login_date ? new Date(s.last_login_date).toISOString().split('T')[0] : null;
+                            if (lastDate !== today) {
+                                const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+                                let newStreak = lastDate === yesterday ? (s.current_streak || 0) + 1 : 1;
+                                const newLongest = Math.max(newStreak, s.longest_streak || 0);
+                                await pool.query('UPDATE login_streaks SET current_streak = $1, longest_streak = $2, last_login_date = $3, updated_at = NOW() WHERE user_id = $4',
+                                  [newStreak, newLongest, today, user.id]);
+                                req.session.user.current_streak = newStreak;
+                            } else {
+                                req.session.user.current_streak = s.current_streak;
+                            }
+                        }
+                    } catch (streakErr) {
+                        console.error('Streak update error:', streakErr.message);
+                    }
+
+                    // 7. Return JSON success with the redirect URL
                     const redirectUrl = req.session.user.is_admin ? '/admin/dashboard' : '/dashboard';
                     return res.status(200).json({ success: true, redirect: redirectUrl });
                 });
@@ -515,6 +540,24 @@ app.get('/profile', isAuth, async (req, res) => {
         );
         const user = userRes.rows[0];
 
+        // Also update streak on profile visit if it's a new day
+        try {
+          const today = new Date().toISOString().split('T')[0];
+          const sr = await pool.query('SELECT * FROM login_streaks WHERE user_id = $1', [userId]);
+          if (sr.rows.length > 0) {
+            const s = sr.rows[0];
+            const lastDate = s.last_login_date ? new Date(s.last_login_date).toISOString().split('T')[0] : null;
+            if (lastDate && lastDate !== today) {
+              const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+              let newStreak = lastDate === yesterday ? (s.current_streak || 0) + 1 : 1;
+              let newLongest = Math.max(newStreak, s.longest_streak || 0);
+              await pool.query('UPDATE login_streaks SET current_streak = $1, longest_streak = $2, last_login_date = $3, updated_at = NOW() WHERE user_id = $4',
+                [newStreak, newLongest, today, userId]);
+              if (req.session.user) req.session.user.current_streak = newStreak;
+            }
+          }
+        } catch (e) { console.error('Profile streak update:', e.message); }
+
         // 2. Get Stats from quiz_results
         const statsRes = await pool.query(
             'SELECT COUNT(*) as total_tests, AVG(percentage) as avg_score FROM quiz_results WHERE user_id = $1',
@@ -555,10 +598,19 @@ app.get('/profile', isAuth, async (req, res) => {
 
         const calculatedCGPA = totalUnits > 0 ? parseFloat((totalPoints / totalUnits).toFixed(2)) : 0.00;
 
+        // 5. Get login streak data
+        const streakRes = await pool.query('SELECT * FROM login_streaks WHERE user_id = $1', [userId]);
+        const streak = streakRes.rows[0] || { current_streak: 0, longest_streak: 0 };
+
+        // 6. Get study stats
+        const studyRes = await pool.query('SELECT COALESCE(SUM(total_minutes), 0) as mins FROM study_progress WHERE user_id = $1', [userId]);
+
         res.render('profile', { 
             user, 
             cgpaProfile: cgpaProfile || null,
             calculatedCGPA,
+            streak,
+            studyMinutes: parseInt(studyRes.rows[0].mins),
             stats: {
                 total: parseInt(statsRow.total_tests) || 0,
                 average: Math.round(statsRow.avg_score) || 0
@@ -951,6 +1003,21 @@ app.get('/dashboard', isStudent, async (req, res) => {
         );
         const upcomingDeadlines = parseInt(deadlineCount.rows[0].count) || 0;
 
+        // 6. Get study stats for dashboard
+        const [studyStatsRes, quizCountRes, avgScoreRes, streakRes] = await Promise.all([
+            pool.query('SELECT COALESCE(SUM(elapsed_seconds), 0) as t, COUNT(*) as s FROM study_sessions WHERE user_id = $1 AND status = $2', [userId, 'completed']),
+            pool.query('SELECT COUNT(*) as c FROM results WHERE user_id = $1', [userId]),
+            pool.query('SELECT COALESCE(AVG(score::float/NULLIF(total,0)*100), 0) as avg FROM results WHERE user_id = $1 AND total > 0', [userId]),
+            pool.query('SELECT current_streak FROM users WHERE id = $1', [userId])
+        ]);
+        const streak = streakRes.rows[0]?.current_streak || 0;
+        const studySessions = parseInt(studyStatsRes.rows[0].s) || 0;
+        const quizCount = parseInt(quizCountRes.rows[0].c) || 0;
+        const avgScore = Math.round(parseFloat(avgScoreRes.rows[0].avg) || 0);
+
+        // 7. Get recent quiz
+        const recentQuizRes = await pool.query('SELECT subject, score, total, TO_CHAR(taken_at, \'YYYY-MM-DD\') as date_taken FROM results WHERE user_id = $1 ORDER BY taken_at DESC LIMIT 1', [userId]);
+
         res.render('dashboard', { 
             user: { ...req.session.user, ...userData }, 
             competition: compRes.rows[0],
@@ -958,6 +1025,11 @@ app.get('/dashboard', isStudent, async (req, res) => {
             history: historyRes.rows,
             unreadNotifs,
             upcomingDeadlines,
+            streak,
+            studySessions,
+            quizCount,
+            avgScore,
+            recentQuiz: recentQuizRes.rows[0] || null,
             paystack_key: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_your_key',
             currentTime: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })
         });
@@ -1378,13 +1450,26 @@ app.get('/history', isStudent, async (req, res) => {
         `;
         const historyData = await pool.query(query, [req.session.user.id]);
 
+        // Also fetch study quiz attempts
+        const studyQuizQuery = `
+            SELECT sqa.id, sqa.score, sqa.total_questions as total, sqa.question_type,
+                   sqa.status, sqa.created_at, sc.course_name as subject_name,
+                   'study_quiz' as source
+            FROM study_quiz_attempts sqa
+            LEFT JOIN study_courses sc ON sqa.course_id = sc.id
+            WHERE sqa.user_id = $1 AND sqa.status = 'completed'
+            ORDER BY sqa.created_at DESC
+        `;
+        const studyQuizData = await pool.query(studyQuizQuery, [req.session.user.id]);
+
         res.render('history', {
             user: req.session.user,
-            history: historyData.rows
+            history: historyData.rows,
+            studyHistory: studyQuizData.rows
         });
     } catch (err) {
         console.error("History Page Error:", err);
-        res.render('history', { user: req.session.user, history: [] });
+        res.render('history', { user: req.session.user, history: [], studyHistory: [] });
     }
 });
 
@@ -2989,7 +3074,26 @@ app.post('/forgot-password', async (req, res) => {
         }
 
         // 3. Setup Mailer
-        const transporter = nodemailer.createTransport({
+// Auto-create login streaks table
+(async () => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS login_streaks (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER UNIQUE NOT NULL,
+        current_streak INTEGER DEFAULT 0,
+        longest_streak INTEGER DEFAULT 0,
+        last_login_date DATE DEFAULT CURRENT_DATE,
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('[DB] login_streaks table ready');
+  } catch (err) {
+    console.error('[DB] login_streaks setup:', err.message);
+  }
+})();
+
+const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
         });
@@ -3779,6 +3883,477 @@ async function checkDeadlineNotifications() {
 setInterval(checkDeadlineNotifications, 5 * 60 * 1000);
 // Also run once on startup (after a short delay to let the server fully start)
 setTimeout(checkDeadlineNotifications, 10000);
+
+// ======================== STUDY HUB ROUTES ========================
+
+// Study AI helper using existing Gemini setup
+const studyModel = (() => {
+  try {
+    const gai = require('@google/generative-ai');
+    const keys = [process.env.GEMINI_API_KEY_PRIMARY, process.env.GEMINI_API_KEY_SECONDARY].filter(Boolean);
+    if (keys[0]) {
+      const ai = new gai.GoogleGenerativeAI(keys[0]);
+      return ai.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    }
+  } catch(e) {}
+  return null;
+})();
+
+function studyPromptAI(prompt) {
+  if (!studyModel) return Promise.resolve({ text: 'AI not configured' });
+  return studyModel.generateContent(prompt).then(r => ({ text: r.response.text() })).catch(e => ({ text: 'AI error: ' + e.message }));
+}
+
+// Ensure study tables exist
+(async function initStudyDB() {
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS study_courses (id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL, course_name VARCHAR(255) NOT NULL, course_code VARCHAR(50) DEFAULT '', unit INTEGER DEFAULT 3, source VARCHAR(20) DEFAULT 'manual', created_at TIMESTAMP DEFAULT NOW())`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS study_topics (id SERIAL PRIMARY KEY, course_id INTEGER NOT NULL, user_id INTEGER NOT NULL, topic_name VARCHAR(500) NOT NULL, completed BOOLEAN DEFAULT false, created_at TIMESTAMP DEFAULT NOW())`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS study_subtopics (id SERIAL PRIMARY KEY, topic_id INTEGER NOT NULL, course_id INTEGER NOT NULL, user_id INTEGER NOT NULL, subtopic_name VARCHAR(500) NOT NULL, status VARCHAR(20) DEFAULT 'pending', created_at TIMESTAMP DEFAULT NOW())`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS study_sessions (id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL, course_id INTEGER DEFAULT 0, course_name VARCHAR(255) DEFAULT '', elapsed_seconds INTEGER DEFAULT 0, status VARCHAR(20) DEFAULT 'active', notes TEXT DEFAULT '', created_at TIMESTAMP DEFAULT NOW(), completed_at TIMESTAMP)`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS study_progress (id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL, course_id INTEGER DEFAULT 0, course_name VARCHAR(255) NOT NULL, total_sessions INTEGER DEFAULT 0, total_minutes INTEGER DEFAULT 0, last_studied TIMESTAMP DEFAULT NOW())`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS study_chat_messages (id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL, course_id INTEGER DEFAULT 0, role VARCHAR(20) DEFAULT 'user', message TEXT NOT NULL, created_at TIMESTAMP DEFAULT NOW())`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS study_flashcards (id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL, course_id INTEGER DEFAULT 0, subtopic_id INTEGER DEFAULT 0, front TEXT NOT NULL, back TEXT NOT NULL, created_at TIMESTAMP DEFAULT NOW())`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS study_quiz_attempts (id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL, course_id INTEGER DEFAULT 0, subtopic_id INTEGER DEFAULT 0, question_type VARCHAR(50) DEFAULT 'multiple_choice', question_count INTEGER DEFAULT 10, time_limit INTEGER DEFAULT 0, score INTEGER DEFAULT 0, total_questions INTEGER DEFAULT 0, status VARCHAR(20) DEFAULT 'in_progress', created_at TIMESTAMP DEFAULT NOW(), completed_at TIMESTAMP)`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS study_quiz_questions (id SERIAL PRIMARY KEY, attempt_id INTEGER NOT NULL, question TEXT NOT NULL, options JSONB, correct_answer TEXT, user_answer TEXT, is_correct BOOLEAN, explanation TEXT, order_index INTEGER DEFAULT 0)`);
+    // Add unique constraint if missing
+    try { await pool.query(`ALTER TABLE study_progress ADD CONSTRAINT study_progress_user_course UNIQUE (user_id, course_name)`); } catch(e) {}
+    console.log('[Study] Tables ready');
+  } catch(e) { console.error('[Study] Table init:', e.message); }
+})();
+
+// Study Dashboard
+app.get('/study', isAuth, async (req, res) => {
+  try {
+    const uid = req.session.user.id;
+    const [coursesRes, progressRes, sessionsRes] = await Promise.all([
+      pool.query('SELECT * FROM study_courses WHERE user_id = $1 ORDER BY course_name ASC', [uid]),
+      pool.query('SELECT * FROM study_progress WHERE user_id = $1 ORDER BY last_studied DESC', [uid]),
+      pool.query('SELECT * FROM study_sessions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 10', [uid])
+    ]);
+    res.render('study', { user: req.session.user, courses: coursesRes.rows, progress: progressRes.rows, recentSessions: sessionsRes.rows, subjects: [] });
+  } catch (err) { console.error(err); res.status(500).send('Error loading study page'); }
+});
+
+// Course Detail
+app.get('/study/course/:id', isAuth, async (req, res) => {
+  try {
+    const course = await pool.query('SELECT * FROM study_courses WHERE id = $1 AND user_id = $2', [req.params.id, req.session.user.id]);
+    if (!course.rows[0]) return res.status(404).send('Course not found');
+    const [topicsRes, progressRes] = await Promise.all([
+      pool.query('SELECT t.*, (SELECT json_agg(json_build_object(\'id\', s.id, \'subtopic_name\', s.subtopic_name, \'status\', s.status)) FROM study_subtopics s WHERE s.topic_id = t.id) as subtopics FROM study_topics t WHERE t.course_id = $1 ORDER BY t.id ASC', [req.params.id]),
+      pool.query('SELECT * FROM study_progress WHERE user_id = $1 AND course_id = $2', [req.session.user.id, req.params.id])
+    ]);
+    res.render('study-course', { user: req.session.user, course: course.rows[0], topics: topicsRes.rows, progress: progressRes.rows[0] || null });
+  } catch (err) { console.error(err); res.status(500).send('Error loading course'); }
+});
+
+// Study Session
+app.get('/study/session/:id', isAuth, async (req, res) => {
+  try {
+    const sess = await pool.query('SELECT * FROM study_sessions WHERE id = $1 AND user_id = $2', [req.params.id, req.session.user.id]);
+    if (!sess.rows[0]) return res.status(404).send('Session not found');
+    res.render('study-session', { user: req.session.user, session: sess.rows[0] });
+  } catch (err) { console.error(err); res.status(500).send('Error loading session'); }
+});
+
+// Quiz Attempt
+app.get('/study/quiz/:attemptId', isAuth, async (req, res) => {
+  try {
+    const attempt = await pool.query('SELECT * FROM study_quiz_attempts WHERE id = $1 AND user_id = $2', [req.params.attemptId, req.session.user.id]);
+    if (!attempt.rows[0]) return res.status(404).send('Quiz not found');
+    const questions = await pool.query('SELECT id, question, options, order_index FROM study_quiz_questions WHERE attempt_id = $1 ORDER BY order_index ASC', [req.params.attemptId]);
+    res.render('study-quiz', { user: req.session.user, attempt: attempt.rows[0], questions: questions.rows });
+  } catch (err) { res.status(500).send('Error loading quiz'); }
+});
+
+// Flashcards Page
+app.get('/study/flashcards/:courseId', isAuth, async (req, res) => {
+  res.render('study-flashcards', { user: req.session.user, courseId: parseInt(req.params.courseId) });
+});
+
+// API: Import from timetable
+app.post('/api/study/import-timetable', isAuth, async (req, res) => {
+  try {
+    const uid = req.session.user.id;
+    const tt = await pool.query('SELECT DISTINCT course, course_code, unit FROM timetables WHERE user_id = $1', [uid]);
+    let count = 0;
+    for (const row of tt.rows) {
+      const exists = await pool.query('SELECT id FROM study_courses WHERE user_id = $1 AND course_name = $2', [uid, row.course]);
+      if (!exists.rows[0]) {
+        await pool.query('INSERT INTO study_courses (user_id, course_name, course_code, unit, source) VALUES ($1, $2, $3, $4, $5)', [uid, row.course, row.course_code || '', row.unit || 3, 'timetable']);
+        count++;
+      }
+    }
+    res.json({ success: true, imported: count });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// API: Add topic
+app.post('/api/study/topics', isAuth, async (req, res) => {
+  try {
+    const { course_id, topic_name } = req.body;
+    const r = await pool.query('INSERT INTO study_topics (course_id, user_id, topic_name) VALUES ($1, $2, $3) RETURNING *', [course_id, req.session.user.id, topic_name]);
+    res.json({ success: true, topic: r.rows[0] });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// API: Delete topic
+app.delete('/api/study/topics/:id', isAuth, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM study_subtopics WHERE topic_id = $1', [req.params.id]);
+    await pool.query('DELETE FROM study_topics WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// API: Generate topics with AI
+app.post('/api/study/generate-topics', isAuth, async (req, res) => {
+  try {
+    const { course_id } = req.body;
+    const course = await pool.query('SELECT * FROM study_courses WHERE id = $1', [course_id]);
+    if (!course.rows[0]) return res.json({ success: false, error: 'Course not found' });
+    const prompt = `Generate a list of 8-12 important topics for the university course "${course.rows[0].course_name} ${course.rows[0].course_code}". Return ONLY a JSON array of strings. Example: ["Topic 1", "Topic 2"]`;
+    const aiRes = await studyPromptAI(prompt);
+    let topics = [];
+    try { topics = JSON.parse(aiRes.text.replace(/```json/g,'').replace(/```/g,'').trim()); } catch { topics = aiRes.text.split('\n').filter(l => l.trim()).map(l => l.replace(/^[\d.\s-]+/,'').trim()).filter(Boolean); }
+    let count = 0;
+    for (const t of topics.slice(0, 15)) {
+      const exists = await pool.query('SELECT id FROM study_topics WHERE course_id = $1 AND topic_name = $2', [course_id, t]);
+      if (!exists.rows[0]) { await pool.query('INSERT INTO study_topics (course_id, user_id, topic_name) VALUES ($1, $2, $3)', [course_id, req.session.user.id, t]); count++; }
+    }
+    res.json({ success: true, count });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// API: Generate subtopics with AI
+app.post('/api/study/generate-subtopics', isAuth, async (req, res) => {
+  try {
+    const { topic_id } = req.body;
+    const topic = await pool.query('SELECT * FROM study_topics WHERE id = $1', [topic_id]);
+    if (!topic.rows[0]) return res.json({ success: false, error: 'Topic not found' });
+    const prompt = `For the topic "${topic.rows[0].topic_name}", generate 5-7 specific subtopics. Return ONLY a JSON array of strings. Example: ["Subtopic 1", "Subtopic 2"]`;
+    const aiRes = await studyPromptAI(prompt);
+    let subtopics = [];
+    try { subtopics = JSON.parse(aiRes.text.replace(/```json/g,'').replace(/```/g,'').trim()); } catch { subtopics = aiRes.text.split('\n').filter(l => l.trim()).map(l => l.replace(/^[\d.\s-]+/,'').trim()).filter(Boolean); }
+    let count = 0;
+    const uid = req.session.user.id;
+    for (const st of subtopics.slice(0, 10)) {
+      const exists = await pool.query('SELECT id FROM study_subtopics WHERE topic_id = $1 AND subtopic_name = $2', [topic_id, st]);
+      if (!exists.rows[0]) { await pool.query('INSERT INTO study_subtopics (topic_id, course_id, user_id, subtopic_name, status) VALUES ($1, $2, $3, $4, $5)', [topic_id, topic.rows[0].course_id, uid, st.replace(/^["'\s]+|["'\s]+$/g,''), 'ai-generated']); count++; }
+    }
+    res.json({ success: true, count });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// API: Accept subtopic
+app.put('/api/study/subtopics/:id/accept', isAuth, async (req, res) => {
+  try { await pool.query('UPDATE study_subtopics SET status = $1 WHERE id = $2', ['accepted', req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// API: Update subtopic
+app.put('/api/study/subtopics/:id', isAuth, async (req, res) => {
+  try { await pool.query('UPDATE study_subtopics SET subtopic_name = $1 WHERE id = $2', [req.body.subtopic_name, req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// API: Delete subtopic
+app.delete('/api/study/subtopics/:id', isAuth, async (req, res) => {
+  try { await pool.query('DELETE FROM study_subtopics WHERE id = $1', [req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// API: Create study session
+app.post('/api/study/sessions', isAuth, async (req, res) => {
+  try {
+    const { course_id } = req.body;
+    const course = await pool.query('SELECT * FROM study_courses WHERE id = $1', [course_id]);
+    const r = await pool.query('INSERT INTO study_sessions (user_id, course_id, course_name, status) VALUES ($1, $2, $3, $4) RETURNING *', [req.session.user.id, course_id, course.rows[0] ? course.rows[0].course_name : 'Study', 'active']);
+    res.json({ success: true, session_id: r.rows[0].id });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// API: End session
+app.put('/api/study/sessions/:id/end', isAuth, async (req, res) => {
+  try {
+    const { elapsed_seconds } = req.body;
+    const sid = req.params.id;
+    const uid = req.session.user.id;
+    await pool.query('UPDATE study_sessions SET status = $1, elapsed_seconds = $2, completed_at = NOW() WHERE id = $3 AND user_id = $4', ['completed', elapsed_seconds || 0, sid, uid]);
+    const s = (await pool.query('SELECT * FROM study_sessions WHERE id = $1', [sid])).rows[0];
+    if (s) {
+      const mins = Math.ceil((elapsed_seconds || 0) / 60);
+      await pool.query('INSERT INTO study_progress (user_id, course_id, course_name, total_sessions, total_minutes, last_studied) VALUES ($1, $2, $3, 1, $4, NOW()) ON CONFLICT (user_id, course_name) DO UPDATE SET total_sessions = study_progress.total_sessions + 1, total_minutes = study_progress.total_minutes + $4, last_studied = NOW()', [uid, s.course_id, s.course_name, mins]);
+    }
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// API: Get session
+app.get('/api/study/sessions/:id', isAuth, async (req, res) => {
+  try {
+    const s = await pool.query('SELECT * FROM study_sessions WHERE id = $1 AND user_id = $2', [req.params.id, req.session.user.id]);
+    res.json(s.rows[0] || {});
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// API: Save notes
+app.put('/api/study/sessions/:id/notes', isAuth, async (req, res) => {
+  try { await pool.query('UPDATE study_sessions SET notes = $1 WHERE id = $2 AND user_id = $3', [req.body.notes, req.params.id, req.session.user.id]); res.json({ success: true }); } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// API: AI Chat
+app.post('/api/study/chat', isAuth, async (req, res) => {
+  try {
+    const { message, session_id, course_name } = req.body;
+    const uid = req.session.user.id;
+    await pool.query('INSERT INTO study_chat_messages (user_id, course_id, role, message) VALUES ($1, $2, $3, $4)', [uid, 0, 'user', message]);
+    const ctx = course_name ? `Context: Student is studying "${course_name}". ` : '';
+    const prompt = `${ctx}You are a helpful university study assistant. Answer clearly with examples. Student: ${message}`;
+    const aiRes = await studyPromptAI(prompt);
+    await pool.query('INSERT INTO study_chat_messages (user_id, course_id, role, message) VALUES ($1, $2, $3, $4)', [uid, 0, 'ai', aiRes.text]);
+    res.json({ success: true, reply: aiRes.text });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// API: YouTube search (AI-generated search links)
+app.get('/api/study/youtube', isAuth, async (req, res) => {
+  try {
+    const q = req.query.q || '';
+    const prompt = `Generate 5 YouTube search queries for learning: "${q}". Return ONLY a JSON array of objects with "id" (a placeholder like "vid1"), "title" (descriptive title), "channel" (fictional channel name). Example: [{"id":"vid1","title":"...","channel":"..."}]`;
+    const aiRes = await studyPromptAI(prompt);
+    let videos = [];
+    try { videos = JSON.parse(aiRes.text.replace(/```json/g,'').replace(/```/g,'').trim()); } catch { videos = [{ id: 'vid1', title: 'Search YouTube for: ' + q, channel: 'YouTube' }]; }
+    res.json({ success: true, videos });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// API: Generate quiz
+app.post('/api/study/quiz/generate', isAuth, async (req, res) => {
+  try {
+    const { course_id, subtopic_id, question_type, question_count, timed_minutes } = req.body;
+    const count = parseInt(question_count) || 5;
+    const uid = req.session.user.id;
+    const course = await pool.query('SELECT * FROM study_courses WHERE id = $1', [course_id || 0]);
+    const courseName = course.rows[0] ? course.rows[0].course_name : 'General Study';
+    const prompt = `Generate ${count} ${question_type || 'mixed'} questions about "${courseName}" for university exam prep. For each: question, 4 options (for multiple choice) or answer (for theory), correctAnswer, explanation. Return JSON array: [{ "question": "...", "options": ["A...","B...","C...","D..."], "correctAnswer": "A", "explanation": "..." }]. For theory, use options: [].`;
+    const aiRes = await studyPromptAI(prompt);
+    let questions = [];
+    try { questions = JSON.parse(aiRes.text.replace(/```json/g,'').replace(/```/g,'').trim()); } catch { throw new Error('Failed to parse AI response'); }
+    const attempt = await pool.query('INSERT INTO study_quiz_attempts (user_id, course_id, subtopic_id, question_type, question_count, time_limit, status) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *', [uid, course_id || 0, subtopic_id || 0, question_type || 'mixed', questions.length, timed_minutes || 0, 'in_progress']);
+    const attemptId = attempt.rows[0].id;
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
+      await pool.query('INSERT INTO study_quiz_questions (attempt_id, question, options, correct_answer, explanation, order_index) VALUES ($1, $2, $3, $4, $5, $6)', [attemptId, q.question, JSON.stringify(q.options || []), q.correctAnswer, q.explanation || '', i]);
+    }
+    res.json({ success: true, quiz_id: attemptId, questions });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// API: Submit quiz
+app.post('/api/study/quiz/submit', isAuth, async (req, res) => {
+  try {
+    const { attemptId, answers } = req.body;
+    let score = 0;
+    for (const a of answers) {
+      const q = await pool.query('SELECT * FROM study_quiz_questions WHERE id = $1 AND attempt_id = $2', [a.questionId, attemptId]);
+      if (q.rows[0]) {
+        const isCorrect = String(a.answer).trim().toUpperCase() === String(q.rows[0].correct_answer).trim().toUpperCase();
+        if (isCorrect) score++;
+        await pool.query('UPDATE study_quiz_questions SET user_answer = $1, is_correct = $2 WHERE id = $3', [a.answer, isCorrect, a.questionId]);
+      }
+    }
+    const total = (await pool.query('SELECT COUNT(*) as c FROM study_quiz_questions WHERE attempt_id = $1', [attemptId])).rows[0].c;
+    await pool.query('UPDATE study_quiz_attempts SET score = $1, total_questions = $2, status = $3, completed_at = NOW() WHERE id = $4', [score, total, 'completed', attemptId]);
+
+    // Sync quiz results to study progress
+    try {
+      const attempt = await pool.query('SELECT * FROM study_quiz_attempts WHERE id = $1', [attemptId]);
+      if (attempt.rows[0] && attempt.rows[0].course_id > 0) {
+        const course = await pool.query('SELECT * FROM study_courses WHERE id = $1', [attempt.rows[0].course_id]);
+        if (course.rows[0]) {
+          const cname = course.rows[0].course_name;
+          await pool.query('INSERT INTO study_progress (user_id, course_id, course_name, total_sessions, total_minutes, last_studied) VALUES ($1, $2, $3, 1, 5, NOW()) ON CONFLICT (user_id, course_name) DO UPDATE SET total_sessions = study_progress.total_sessions + 1, total_minutes = study_progress.total_minutes + 5, last_studied = NOW()', [attempt.rows[0].user_id, attempt.rows[0].course_id, cname]);
+        }
+      }
+    } catch (syncErr) { console.error('Quiz-study sync error:', syncErr.message); }
+
+    res.json({ success: true, score, total });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// API: Quiz results
+app.get('/api/study/quiz/result/:attemptId', isAuth, async (req, res) => {
+  try {
+    const attempt = await pool.query('SELECT * FROM study_quiz_attempts WHERE id = $1 AND user_id = $2', [req.params.attemptId, req.session.user.id]);
+    const questions = await pool.query('SELECT * FROM study_quiz_questions WHERE attempt_id = $1 ORDER BY order_index ASC', [req.params.attemptId]);
+    res.json({ attempt: attempt.rows[0], questions: questions.rows });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// API: Generate flashcards
+app.post('/api/study/flashcards/generate', isAuth, async (req, res) => {
+  try {
+    const { courseId, subtopicId, course_name } = req.body;
+    const uid = req.session.user.id;
+    const course = await pool.query('SELECT * FROM study_courses WHERE id = $1', [courseId || 0]);
+    const name = course_name || (course.rows[0] ? course.rows[0].course_name : 'General');
+    const prompt = `Generate 10 flashcards for "${name}". Each: front (question/term), back (answer/definition). Return JSON array: [{ "front": "...", "back": "..." }]`;
+    const aiRes = await studyPromptAI(prompt);
+    let cards = [];
+    try { cards = JSON.parse(aiRes.text.replace(/```json/g,'').replace(/```/g,'').trim()); } catch { throw new Error('Failed to generate flashcards'); }
+    for (const c of cards) {
+      await pool.query('INSERT INTO study_flashcards (user_id, course_id, subtopic_id, front, back) VALUES ($1, $2, $3, $4, $5)', [uid, courseId || 0, subtopicId || 0, c.front, c.back]);
+    }
+    res.json({ success: true, count: cards.length, cards });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// API: Get flashcards
+app.get('/api/study/flashcards', isAuth, async (req, res) => {
+  try {
+    const { courseId } = req.query;
+    let q = 'SELECT * FROM study_flashcards WHERE user_id = $1';
+    const p = [req.session.user.id];
+    if (courseId) { q += ' AND course_id = $2'; p.push(courseId); }
+    q += ' ORDER BY created_at DESC';
+    const r = await pool.query(q, p);
+    res.json({ flashcards: r.rows });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// API: Delete flashcard
+app.post('/api/study/flashcards/delete/:id', isAuth, async (req, res) => {
+  try { await pool.query('DELETE FROM study_flashcards WHERE id = $1 AND user_id = $2', [req.params.id, req.session.user.id]); res.json({ success: true }); } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// API: CGPA sync - import study courses into CGPA
+app.post('/api/study/cgpa-sync', isAuth, async (req, res) => {
+  try {
+    const uid = req.session.user.id;
+    const courses = await pool.query('SELECT * FROM study_courses WHERE user_id = $1', [uid]);
+    const profile = await pool.query('SELECT * FROM public.cgpa_profiles WHERE user_id = $1', [uid]);
+    if (!profile.rows[0]) return res.json({ success: false, error: 'Set up CGPA profile first' });
+    let synced = 0;
+    for (const c of courses.rows) {
+      const exists = await pool.query('SELECT id FROM public.cgpa_courses WHERE user_id = $1 AND course_code = $2 AND deleted = false', [uid, c.course_code || c.course_name]);
+      if (!exists.rows[0]) {
+        const level = profile.rows[0].current_level || 300;
+        await pool.query('INSERT INTO public.cgpa_courses (user_id, course_code, title, level_scope, semester, credit_units, grade, is_hidden, deleted) VALUES ($1, $2, $3, $4, $5, $6, $7, false, false)', [uid, c.course_code || c.course_name, c.course_name, level, 1, c.unit || 3, 'A']);
+        synced++;
+      }
+    }
+    res.json({ success: true, synced });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// API: CGPA forecast / what-if analysis
+app.post('/api/cgpa/forecast', isAuth, async (req, res) => {
+  try {
+    const uid = req.session.user.id;
+    const profile = await pool.query('SELECT * FROM public.cgpa_profiles WHERE user_id = $1', [uid]);
+    if (!profile.rows[0]) return res.json({ error: 'No profile' });
+    const p = profile.rows[0];
+    const scale = p.grading_scale || 5;
+    const gpMap = scale === 5 ? { A:5, B:4, C:3, D:2, E:1, F:0 } : { A:4, B:3, C:2, D:1, F:0 };
+    const visible = await pool.query('SELECT * FROM public.cgpa_courses WHERE user_id = $1 AND deleted = false AND is_hidden = false', [uid]);
+
+    let curUnits = parseInt(p.prev_units) || 0;
+    let curPoints = parseFloat(p.prev_gp) || 0;
+    visible.rows.forEach(c => { const u = parseInt(c.credit_units)||0; curUnits += u; curPoints += (gpMap[c.grade]||0) * u; });
+    const currentCGPA = curUnits > 0 ? (curPoints / curUnits) : 0;
+
+    // Generate what-if scenarios
+    const scenarios = [];
+    const grades = scale === 5 ? ['A','B','C','D','E','F'] : ['A','B','C','D','F'];
+    const targetCourses = visible.rows.filter(c => c.grade === 'F' || c.grade === 'E' || c.grade === 'D');
+    if (targetCourses.length > 0) {
+      for (const g of ['A', 'B', 'C']) {
+        let newPoints = curPoints;
+        let newUnits = curUnits;
+        targetCourses.forEach(c => {
+          const u = parseInt(c.credit_units)||0;
+          newPoints -= (gpMap[c.grade]||0) * u;
+          newPoints += (gpMap[g]||0) * u;
+        });
+        const newCGPA = newUnits > 0 ? (newPoints / newUnits) : 0;
+        scenarios.push({ label: `If all D/E/F → ${g}`, grade: g, cgpa: newCGPA.toFixed(2), change: (newCGPA - currentCGPA).toFixed(3) });
+      }
+    }
+
+    // What CGPA if add X new courses with all A's
+    const addScenarios = [];
+    for (let extra of [3, 5, 10]) {
+      const addUnits = extra * 3;
+      const addPoints = addUnits * (gpMap['A']||5);
+      const newCGPA = (curPoints + addPoints) / (curUnits + addUnits);
+      addScenarios.push({ courses: extra, units: addUnits, cgpa: newCGPA.toFixed(2) });
+    }
+
+    // Target CGPA calculation
+    let targetData = null;
+    const { targetCGPA } = req.body;
+    if (targetCGPA && parseFloat(targetCGPA) > currentCGPA) {
+      const tgt = parseFloat(targetCGPA);
+      const neededPoints = tgt * curUnits;
+      const deficit = neededPoints - curPoints;
+      const unitsNeededA = Math.ceil(deficit / (gpMap['A']||5));
+      targetData = { target: tgt, deficit: deficit.toFixed(1), unitsNeededA, coursesNeededA: Math.ceil(unitsNeededA / 3) };
+    }
+
+    res.json({ success: true, currentCGPA: currentCGPA.toFixed(2), scenarios, addScenarios, targetData });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// API: Transcript export - structured JSON
+app.get('/api/cgpa/transcript', isAuth, async (req, res) => {
+  try {
+    const uid = req.session.user.id;
+    const user = await pool.query('SELECT fullname, email FROM users WHERE id = $1', [uid]);
+    const profile = await pool.query('SELECT * FROM public.cgpa_profiles WHERE user_id = $1', [uid]);
+    const courses = await pool.query('SELECT * FROM public.cgpa_courses WHERE user_id = $1 AND deleted = false ORDER BY level_scope ASC, semester ASC', [uid]);
+    const scale = profile.rows[0] ? (profile.rows[0].grading_scale || 5) : 5;
+    const gpMap = scale === 5 ? { A:5, B:4, C:3, D:2, E:1, F:0 } : { A:4, B:3, C:2, D:1, F:0 };
+    let totalUnits = parseInt(profile.rows[0]?.prev_units) || 0;
+    let totalPoints = parseFloat(profile.rows[0]?.prev_gp) || 0;
+    const semesterData = {};
+    courses.rows.forEach(c => {
+      const key = `L${c.level_scope} S${c.semester}`;
+      if (!semesterData[key]) semesterData[key] = { level: c.level_scope, semester: c.semester, courses: [], units: 0, points: 0 };
+      const u = parseInt(c.credit_units)||0;
+      const pts = (gpMap[c.grade]||0) * u;
+      if (!c.is_hidden) { semesterData[key].units += u; semesterData[key].points += pts; totalUnits += u; totalPoints += pts; }
+      semesterData[key].courses.push({ code: c.course_code, title: c.title, units: c.credit_units, grade: c.grade, excluded: c.is_hidden });
+    });
+    const cgpa = totalUnits > 0 ? (totalPoints / totalUnits) : 0;
+    let degreeClass = '';
+    if (scale === 5) { if (cgpa >= 4.5) degreeClass = 'First Class Honours'; else if (cgpa >= 3.5) degreeClass = 'Second Class (Upper)'; else if (cgpa >= 2.4) degreeClass = 'Second Class (Lower)'; else if (cgpa >= 1.5) degreeClass = 'Third Class'; else degreeClass = 'Pass'; }
+    else { if (cgpa >= 3.5) degreeClass = 'First Class Honours'; else if (cgpa >= 3.0) degreeClass = 'Second Class (Upper)'; else if (cgpa >= 2.0) degreeClass = 'Second Class (Lower)'; else if (cgpa >= 1.5) degreeClass = 'Third Class'; else degreeClass = 'Pass'; }
+
+    res.json({
+      student: user.rows[0] ? { name: user.rows[0].fullname, email: user.rows[0].email } : {},
+      department: profile.rows[0]?.department || '',
+      gradingScale: scale,
+      semesters: Object.values(semesterData).sort((a,b) => a.level - b.level || a.semester - b.semester),
+      totalUnits, cgpa: cgpa.toFixed(2), degreeClass,
+      generatedAt: new Date().toISOString()
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// API: Study stats
+app.get('/api/study/stats', isAuth, async (req, res) => {
+  try {
+    const uid = req.session.user.id;
+    const [ts, tm, tc, fc] = await Promise.all([
+      pool.query('SELECT COUNT(*) as c FROM study_sessions WHERE user_id = $1 AND status = $2', [uid, 'completed']),
+      pool.query('SELECT COALESCE(SUM(elapsed_seconds), 0) as t FROM study_sessions WHERE user_id = $1 AND status = $2', [uid, 'completed']),
+      pool.query('SELECT COUNT(*) as c FROM study_courses WHERE user_id = $1', [uid]),
+      pool.query('SELECT COUNT(*) as c FROM study_flashcards WHERE user_id = $1', [uid])
+    ]);
+    res.json({ totalSessions: parseInt(ts.rows[0].c), totalMinutes: Math.floor(parseInt(tm.rows[0].t) / 60), totalCourses: parseInt(tc.rows[0].c), totalFlashcards: parseInt(fc.rows[0].c) });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ======================== END STUDY HUB ROUTES ========================
 
 // Global error handler - catches multer and other errors, returns JSON
 app.use((err, req, res, next) => {

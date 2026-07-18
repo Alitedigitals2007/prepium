@@ -227,10 +227,7 @@
                 <span class="stat-num" id="total-minutes">0</span>
                 <span class="stat-label">Minutes</span>
             </div>
-            <div class="stat-chip">
-                <span class="stat-num" id="streak-count">0</span>
-                <span class="stat-label">Streak</span>
-            </div>
+
         </div>
 
         <section class="timer-section">
@@ -657,10 +654,8 @@
         function updateStats() {
             const sessionsToday = parseInt(localStorage.getItem('pomo_sessions') || '0');
             const totalMinutes = parseInt(localStorage.getItem('pomo_minutes') || '0');
-            const streak = parseInt(localStorage.getItem('pomo_streak') || '0');
             document.getElementById('sessions-today').textContent = sessionsToday;
             document.getElementById('total-minutes').textContent = totalMinutes;
-            document.getElementById('streak-count').textContent = streak;
         }
 
         function setModeLabel() {
@@ -724,13 +719,10 @@
             if (currentMode === 'work') {
                 let sessions = parseInt(localStorage.getItem('pomo_sessions') || '0');
                 let minutes = parseInt(localStorage.getItem('pomo_minutes') || '0');
-                let streak = parseInt(localStorage.getItem('pomo_streak') || '0');
                 sessions++;
                 minutes += Math.round(currentModeTime / 60);
-                streak++;
                 localStorage.setItem('pomo_sessions', sessions);
                 localStorage.setItem('pomo_minutes', minutes);
-                localStorage.setItem('pomo_streak', streak);
                 updateStats();
 
                 const msgs = [
