@@ -1639,9 +1639,6 @@ app.post('/admin/payout-complete/:id', isAdmin, async (req, res) => {
 
 // GET: Render the Admin Login Page
 app.get('/admin/login', (req, res) => {
-    if (req.session.user && req.session.user.is_admin) {
-        return res.redirect('/admin/ambassadors');
-    }
     res.render('admin-login', { error: null });
 });
 
