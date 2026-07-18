@@ -294,9 +294,6 @@ app.post('/submit-test', isAuth, async (req, res) => {
 
 // Front Page
 app.get('/', (req, res) => {
-    if (req.session.user) {
-        return res.redirect('/dashboard');
-    }
     res.render('index');
 });
 
@@ -349,10 +346,6 @@ app.post('/auth/signup', rateLimit(5, 60000), async (req, res) => {
 
 // --- GET Login Page ---
 app.get('/login', (req, res) => {
-    // Check if already logged in
-    if (req.session.user) {
-        return res.redirect(req.session.user.is_admin ? '/admin/dashboard' : '/dashboard');
-    }
     res.render('login', { error: null });
 });
 
