@@ -1,0 +1,72 @@
+<style>
+    .related-nav {
+        display: flex; gap: 8px;
+        padding: 14px 1.5rem 100px;
+        margin-top: 1rem;
+        border-top: 1px solid var(--border);
+        background: rgba(255,255,255,0.6);
+        backdrop-filter: blur(12px);
+        flex-wrap: wrap;
+    }
+    .related-nav-link {
+        flex: 1 1 calc(50% - 4px);
+        min-width: 130px;
+        display: flex; align-items: center; gap: 8px;
+        padding: 12px 14px;
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        text-decoration: none; color: inherit;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        transition: var(--transition);
+        cursor: pointer;
+    }
+    .related-nav-link:hover { border-color: var(--brand); transform: translateY(-1px); }
+    .related-nav-link:active { transform: scale(0.98); }
+    .related-nav-link .rn-icon {
+        width: 36px; height: 36px; border-radius: 10px;
+        background: var(--brand-soft); color: var(--brand);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.85rem; flex-shrink: 0;
+    }
+    .related-nav-link .rn-info { line-height: 1.2; }
+    .related-nav-link .rn-info .rn-eyebrow {
+        font-size: 0.55rem; font-weight: 700; color: var(--text-sub);
+        text-transform: uppercase; letter-spacing: 0.4px;
+    }
+    .related-nav-link .rn-info .rn-label {
+        font-size: 0.78rem; font-weight: 800;
+        display: block; margin-top: 2px;
+    }
+    .related-nav-link.brand-soft .rn-icon { background: var(--brand-soft); color: var(--brand); }
+    .related-nav-link.violet .rn-icon { background:#f3e8ff; color:#7c3aed; }
+    .related-nav-link.amber .rn-icon { background:#fef3c7; color:#f59e0b; }
+    .related-nav-link.green .rn-icon { background:#d1fae5; color:#10b981; }
+    .related-nav-link.blue .rn-icon { background:#e0f2fe; color:#0284c7; }
+    .related-nav-link.red .rn-icon { background:#fee2e2; color:#ef4444; }
+    .related-nav-link.purple .rn-icon { background:#f5f3ff; color:#8b5cf6; }
+</style>
+
+<%
+  // Defaults so pages can call <%- include('partials/related-nav', { activeNav: 'profile' }) %>
+  const _links = (typeof links !== 'undefined' && Array.isArray(links)) ? links : [
+    { href: '/dashboard', icon: 'fa-home', eyebrow: 'Back', label: 'Dashboard', tone: 'brand-soft' },
+    { href: '/study',      icon: 'fa-graduation-cap', eyebrow: 'Continue', label: 'Study Hub', tone: 'blue' },
+    { href: '/timetable',  icon: 'fa-table', eyebrow: 'Schedule', label: 'Timetable', tone: 'violet' },
+    { href: '/cgpa',       icon: 'fa-graduation-cap', eyebrow: 'Academics', label: 'CGPA Tracker', tone: 'amber' },
+    { href: '/history',    icon: 'fa-chart-bar', eyebrow: 'Performance', label: 'History', tone: 'green' },
+    { href: '/reading-timetable', icon: 'fa-book-open', eyebrow: 'Smart', label: 'Reading Schedule', tone: 'purple' }
+  ];
+%>
+
+<div class="related-nav">
+    <% _links.forEach(function(l) { %>
+        <a href="<%= l.href %>" class="related-nav-link <%= l.tone || 'brand-soft' %>">
+            <div class="rn-icon"><i class="fas <%= l.icon %>"></i></div>
+            <div class="rn-info">
+                <span class="rn-eyebrow"><%= l.eyebrow %></span>
+                <span class="rn-label"><%= l.label %></span>
+            </div>
+        </a>
+    <% }); %>
+</div>

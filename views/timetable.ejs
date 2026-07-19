@@ -342,25 +342,7 @@
             </div>
         </div>
 
-        <nav class="bottom-nav">
-            <a href="/dashboard" class="nav-link">
-                <i class="fas fa-home"></i>
-                <span>Home</span>
-            </a>
-            <a href="/timetable" class="nav-link active">
-                <i class="fas fa-table"></i>
-                <span>Timetable</span>
-            </a>
-            <a href="/setup-test" class="nav-center-btn"><i class="fas fa-plus"></i></a>
-            <a href="/reading-timetable" class="nav-link">
-                <i class="fas fa-book-open"></i>
-                <span>Reading</span>
-            </a>
-            <a href="/profile" class="nav-link">
-                <i class="fas fa-user-circle"></i>
-                <span>Profile</span>
-            </a>
-        </nav>
+        <%- include('partials/bottom-nav', { activeNav: 'dashboard' }) %>
     </div>
 
     <script>

@@ -825,29 +825,7 @@
 </div>
 
 <!-- ════ BOTTOM NAV ════ -->
-<nav class="bottom-nav">
-    <a href="/dashboard" class="nav-link">
-        <i class="fas fa-home"></i>
-        <span>Home</span>
-    </a>
-    <a href="/history" class="nav-link">
-        <i class="fas fa-chart-bar"></i>
-        <span>Stats</span>
-    </a>
-    <% if (hasProfile) { %>
-    <a class="nav-center-btn" onclick="openOv('ov-add')"><i class="fas fa-plus"></i></a>
-    <% } else { %>
-    <a href="/setup-test" class="nav-center-btn"><i class="fas fa-plus"></i></a>
-    <% } %>
-    <a href="/notifications" class="nav-link">
-        <i class="fas fa-bell"></i>
-        <span>Notification</span>
-    </a>
-    <a href="/profile" class="nav-link">
-        <i class="fas fa-user-circle"></i>
-        <span>Profile</span>
-    </a>
-</nav>
+<%- include('partials/bottom-nav', { activeNav: 'profile' }) %>
 
 
 <!-- ════ SCRIPTS ════ -->

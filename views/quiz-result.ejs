@@ -407,25 +407,7 @@
             </a>
         </div>
 
-        <nav class="bottom-nav">
-            <a href="/dashboard" class="nav-link">
-                <i class="fas fa-home"></i><span>Home</span>
-            </a>
-            <a href="/history" class="nav-link">
-                <i class="fas fa-chart-bar"></i><span>Stats</span>
-            </a>
-            <a href="/setup-test" style="text-decoration:none;">
-                <div style="width:48px;height:48px;background:var(--brand-gradient);border-radius:14px;display:flex;align-items:center;justify-content:center;color:white;font-size:1rem;transform:translateY(-10px);box-shadow:0 4px 16px rgba(0,98,255,0.25);">
-                    <i class="fas fa-plus"></i>
-                </div>
-            </a>
-            <a href="/notifications" class="nav-link">
-                <i class="fas fa-bell"></i><span>Alerts</span>
-            </a>
-            <a href="/profile" class="nav-link">
-                <i class="fas fa-user-circle"></i><span>Profile</span>
-            </a>
-        </nav>
+        <%- include('partials/bottom-nav', { activeNav: 'history' }) %>
     </div>
 
 </body>

@@ -182,6 +182,25 @@ pool.on('error', (err) => {
     }
 })();
 
+// ── Auto-create login_streaks ────────────────────────────────────────────────
+(async () => {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS login_streaks (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER UNIQUE NOT NULL,
+                current_streak INTEGER DEFAULT 0,
+                longest_streak INTEGER DEFAULT 0,
+                last_login_date DATE DEFAULT CURRENT_DATE,
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        console.log('[DB] login_streaks table ready');
+    } catch (err) {
+        console.error('[DB] login_streaks setup:', err.message);
+    }
+})();
+
 // Auto-create user_courses table
 (async () => {
     try {
@@ -201,13 +220,12 @@ pool.on('error', (err) => {
     }
 })();
 
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
-});
+const transporter = (process.env.EMAIL_USER && process.env.EMAIL_PASS)
+    ? nodemailer.createTransport({
+        service: 'gmail',
+        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+    })
+    : null;
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -249,12 +267,20 @@ const hasPaid = (req, res, next) => {
     res.redirect('/dashboard');
 };
 
+const requirePaid = (req, res, next) => {
+    if (req.session.user && req.session.user.has_paid === true) return next();
+    if (req.xhr || (req.headers.accept && req.headers.accept.includes('json')) || req.path.startsWith('/api/')) {
+        return res.status(402).json({ success: false, message: 'Premium required', premium_required: true });
+    }
+    return res.redirect('/dashboard?msg=Premium+feature.+Tap+%22Unlock+Premium%22+to+continue');
+};
+
 const isAdmin = (req, res, next) => {
     // Check if the session user exists AND the is_admin flag is true
     if (req.session.user && req.session.user.is_admin === true) {
         return next();
     }
-    
+
     // If they aren't an admin, they stay out
     res.status(403).send("Access Denied: Admins Only");
 };
@@ -1433,7 +1459,7 @@ app.post('/submit-exam', isStudent, async (req, res) => {
     }
 });
 
-app.get('/history', isStudent, async (req, res) => {
+app.get('/history', isAuth, requirePaid, async (req, res) => {
     try {
         const query = `
             SELECT qr.*, s.name as subject_name 
@@ -1859,7 +1885,7 @@ app.post('/api/user-courses/bulk', isAuth, async (req, res) => {
 });
 
 // GET: Render the Timetable page with stored data
-app.get('/timetable', isAuth, async (req, res) => {
+app.get('/timetable', isAuth, requirePaid, async (req, res) => {
     try {
         // Fetch saved timetable slots for this specific user from your PostgreSQL database
         const result = await pool.query(
@@ -1879,7 +1905,7 @@ app.get('/timetable', isAuth, async (req, res) => {
 });
 
 // POST: Save a new course slot to the user's timetable
-app.post('/timetable/add', isAuth, async (req, res) => {
+app.post('/timetable/add', isAuth, requirePaid, async (req, res) => {
     const { course, course_code, unit, day, start_time, end_time, venue } = req.body;
     
     try {
@@ -1899,7 +1925,7 @@ app.post('/timetable/add', isAuth, async (req, res) => {
 // ==========================================
 
 // POST: Upload and extract timetable from image/PDF/document
-app.post('/timetable/extract', isAuth, uploadMemory.single('timetable_file'), async (req, res) => {
+app.post('/timetable/extract', isAuth, requirePaid, uploadMemory.single('timetable_file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: 'No file uploaded.' });
@@ -2010,7 +2036,7 @@ app.post('/timetable/extract', isAuth, uploadMemory.single('timetable_file'), as
 });
 
 // POST: Delete a timetable slot
-app.post('/timetable/delete/:id', isAuth, async (req, res) => {
+app.post('/timetable/delete/:id', isAuth, requirePaid, async (req, res) => {
     try {
         await pool.query('DELETE FROM timetables WHERE id = $1 AND user_id = $2', [req.params.id, req.session.user.id]);
         res.redirect('/timetable');
@@ -2021,7 +2047,7 @@ app.post('/timetable/delete/:id', isAuth, async (req, res) => {
 });
 
 // POST: Update timetable slot (add course_code, unit)
-app.post('/timetable/update/:id', isAuth, async (req, res) => {
+app.post('/timetable/update/:id', isAuth, requirePaid, async (req, res) => {
     const { course_code, unit } = req.body;
     try {
         await pool.query(
@@ -2036,7 +2062,7 @@ app.post('/timetable/update/:id', isAuth, async (req, res) => {
 });
 
 // POST: Save extracted courses as timetable slots
-app.post('/timetable/save-extracted', isAuth, async (req, res) => {
+app.post('/timetable/save-extracted', isAuth, requirePaid, async (req, res) => {
     const { courses } = req.body;
     if (!Array.isArray(courses) || courses.length === 0) {
         return res.status(400).json({ success: false, message: 'No courses to save.' });
@@ -2065,7 +2091,7 @@ app.post('/timetable/save-extracted', isAuth, async (req, res) => {
 // ==========================================
 
 // GET: Show reading timetable page with settings
-app.get('/reading-timetable', isAuth, async (req, res) => {
+app.get('/reading-timetable', isAuth, requirePaid, async (req, res) => {
     if (!req.session.user.has_paid) {
         return res.redirect('/dashboard?msg=Upgrade to access Reading Timetable');
     }
@@ -2114,7 +2140,7 @@ app.get('/reading-timetable', isAuth, async (req, res) => {
 });
 
 // POST: Save reading settings
-app.post('/reading-timetable/settings', isAuth, async (req, res) => {
+app.post('/reading-timetable/settings', isAuth, requirePaid, async (req, res) => {
     const {
         use_school_timetable, daily_hours, session_minutes,
         sessions_per_course, preferred_time_start, preferred_time_end, excluded_courses
@@ -2154,7 +2180,7 @@ app.post('/reading-timetable/settings', isAuth, async (req, res) => {
 });
 
 // POST: Generate reading timetable
-app.post('/reading-timetable/generate', isAuth, async (req, res) => {
+app.post('/reading-timetable/generate', isAuth, requirePaid, async (req, res) => {
     try {
         // Get user settings
         const settingsResult = await pool.query(
@@ -2274,7 +2300,7 @@ app.post('/reading-timetable/generate', isAuth, async (req, res) => {
 });
 
 // POST: Delete a reading slot
-app.post('/reading-timetable/delete/:id', isAuth, async (req, res) => {
+app.post('/reading-timetable/delete/:id', isAuth, requirePaid, async (req, res) => {
     try {
         await pool.query('DELETE FROM reading_timetables WHERE id = $1 AND user_id = $2',
             [req.params.id, req.session.user.id]);
@@ -2286,7 +2312,7 @@ app.post('/reading-timetable/delete/:id', isAuth, async (req, res) => {
 });
 
 // POST: Reset reading timetable
-app.post('/reading-timetable/reset', isAuth, async (req, res) => {
+app.post('/reading-timetable/reset', isAuth, requirePaid, async (req, res) => {
     try {
         await pool.query('DELETE FROM reading_timetables WHERE user_id = $1', [req.session.user.id]);
         res.json({ success: true, message: 'Reading timetable cleared.' });
@@ -3048,13 +3074,13 @@ app.get('/admin/analytics', isAdmin, async (req, res) => {
 
 app.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
-    
-    try {
-        // 1. Generate a secure random token
-        const token = crypto.randomBytes(20).toString('hex');
-        const expires = new Date(Date.now() + 3600000); // 1 hour from now
 
-        // 2. Save token to Neon DB
+    try {
+        // 1. Generate a secure token
+        const token = crypto.randomBytes(20).toString('hex');
+        const expires = new Date(Date.now() + 3600000);
+
+        // 2. Save token to DB
         const result = await pool.query(
             'UPDATE users SET reset_password_token = $1, reset_password_expires = $2 WHERE email = $3 RETURNING *',
             [token, expires, email]
@@ -3064,49 +3090,27 @@ app.post('/forgot-password', async (req, res) => {
             return res.send("If an account exists with that email, a link has been sent.");
         }
 
-        // 3. Setup Mailer
-// Auto-create login streaks table
-(async () => {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS login_streaks (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER UNIQUE NOT NULL,
-        current_streak INTEGER DEFAULT 0,
-        longest_streak INTEGER DEFAULT 0,
-        last_login_date DATE DEFAULT CURRENT_DATE,
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-    console.log('[DB] login_streaks table ready');
-  } catch (err) {
-    console.error('[DB] login_streaks setup:', err.message);
-  }
-})();
+        if (!transporter) {
+            return res.status(500).send('Email service not configured.');
+        }
 
-const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
-        });
-
-       // Replace your old link with this dynamic one:
-const resetLink = `${req.protocol}://${req.get('host')}/reset/${token}`;
-
-const mailOptions = {
-    from: '"Prepium Support" <no-reply@prepium.com>',
-    to: email,
-    subject: 'Password Reset Request',
-    html: `
-        <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-            <h2 style="color: #0062ff;">Prepium</h2>
-            <p>You requested a password reset. Click the button below to continue:</p>
-            <a href="${resetLink}" 
-               style="background: #0062ff; color: white; padding: 12px 20px; text-decoration: none; border-radius: 8px; display: inline-block;">
-               Reset My Password
-            </a>
-            <p style="margin-top: 20px; font-size: 12px; color: #777;">This link expires in 1 hour.</p>
-        </div>`
-};
+        // 3. Send email
+        const resetLink = `${req.protocol}://${req.get('host')}/reset/${token}`;
+        const mailOptions = {
+            from: '"Prepium Support" <no-reply@prepium.com>',
+            to: email,
+            subject: 'Password Reset Request',
+            html: `
+                <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                    <h2 style="color: #0062ff;">Prepium</h2>
+                    <p>You requested a password reset. Click the button below to continue:</p>
+                    <a href="${resetLink}"
+                       style="background: #0062ff; color: white; padding: 12px 20px; text-decoration: none; border-radius: 8px; display: inline-block;">
+                       Reset My Password
+                    </a>
+                    <p style="margin-top: 20px; font-size: 12px; color: #777;">This link expires in 1 hour.</p>
+                </div>`
+        };
 
         await transporter.sendMail(mailOptions);
         res.send("Check your email for the recovery link.");
@@ -3552,7 +3556,7 @@ function buildCGPA(profile, courses) {
 }
 
 // A. GET: DASHBOARD LOADER
-app.get('/cgpa', isStudent, async (req, res) => {
+app.get('/cgpa', isAuth, requirePaid, async (req, res) => {
     try {
         if (!req.session || !req.session.user || !req.session.user.id) {
             return res.redirect('/login');
@@ -3602,7 +3606,7 @@ app.get('/cgpa', isStudent, async (req, res) => {
 });
 
 // B. POST: CONFIGURATION WIZARD SUBMIT
-app.post('/cgpa/setup', isStudent, async (req, res) => {
+app.post('/cgpa/setup', isAuth, requirePaid, async (req, res) => {
     if (!req.session || !req.session.user || !req.session.user.id) {
         return res.redirect('/login');
     }
@@ -3642,7 +3646,7 @@ app.post('/cgpa/setup', isStudent, async (req, res) => {
 });
 
 // 4. APPEND NEW MATRIX COURSE ROUTE
-app.post('/cgpa/course/add', isStudent, async (req, res) => {
+app.post('/cgpa/course/add', isAuth, requirePaid, async (req, res) => {
     try {
         if (!req.session || !req.session.user || !req.session.user.id) {
             return res.redirect('/login');
@@ -3674,7 +3678,7 @@ app.post('/cgpa/course/add', isStudent, async (req, res) => {
 });
 
 // 3. EDIT EXISTING REGISTERED COURSE PARAMETERS
-app.post('/cgpa/course/edit', isStudent, async (req, res) => {
+app.post('/cgpa/course/edit', isAuth, requirePaid, async (req, res) => {
     try {
         if (!req.session || !req.session.user || !req.session.user.id) {
             return res.redirect('/login');
@@ -3697,7 +3701,7 @@ app.post('/cgpa/course/edit', isStudent, async (req, res) => {
     }
 });
 
-app.post('/cgpa/course/toggle-visible/:id', isStudent, async (req, res) => {
+app.post('/cgpa/course/toggle-visible/:id', isAuth, requirePaid, async (req, res) => {
     const userId = req.session.user.id;
     const { id }  = req.params;
 
@@ -3717,7 +3721,7 @@ app.post('/cgpa/course/toggle-visible/:id', isStudent, async (req, res) => {
 });
 
 
-app.post('/cgpa/course/delete/:id', isStudent, async (req, res) => {
+app.post('/cgpa/course/delete/:id', isAuth, requirePaid, async (req, res) => {
     const userId = req.session.user.id;
     const { id }  = req.params;
 
@@ -3734,7 +3738,7 @@ app.post('/cgpa/course/delete/:id', isStudent, async (req, res) => {
 });
 
 
-app.post('/cgpa/reset', isStudent, async (req, res) => {
+app.post('/cgpa/reset', isAuth, requirePaid, async (req, res) => {
     const userId = req.session.user.id;
     const client = await pool.connect();
     try {
@@ -3752,7 +3756,7 @@ app.post('/cgpa/reset', isStudent, async (req, res) => {
     }
 });
 
-app.get('/cgpa/api/data', isStudent, async (req, res) => {
+app.get('/cgpa/api/data', isAuth, requirePaid, async (req, res) => {
     const userId = req.session.user.id;
     try {
         const profileRes = await pool.query('SELECT * FROM cgpa_profiles WHERE user_id = $1', [userId]);
@@ -3914,7 +3918,7 @@ function studyPromptAI(prompt) {
 })();
 
 // Study Dashboard
-app.get('/study', isAuth, async (req, res) => {
+app.get('/study', isAuth, requirePaid, async (req, res) => {
   try {
     const uid = req.session.user.id;
     const [coursesRes, progressRes, sessionsRes] = await Promise.all([
@@ -3927,7 +3931,7 @@ app.get('/study', isAuth, async (req, res) => {
 });
 
 // Course Detail
-app.get('/study/course/:id', isAuth, async (req, res) => {
+app.get('/study/course/:id', isAuth, requirePaid, async (req, res) => {
   try {
     const course = await pool.query('SELECT * FROM study_courses WHERE id = $1 AND user_id = $2', [req.params.id, req.session.user.id]);
     if (!course.rows[0]) return res.status(404).send('Course not found');
@@ -3940,7 +3944,7 @@ app.get('/study/course/:id', isAuth, async (req, res) => {
 });
 
 // Study Session
-app.get('/study/session/:id', isAuth, async (req, res) => {
+app.get('/study/session/:id', isAuth, requirePaid, async (req, res) => {
   try {
     const sess = await pool.query('SELECT * FROM study_sessions WHERE id = $1 AND user_id = $2', [req.params.id, req.session.user.id]);
     if (!sess.rows[0]) return res.status(404).send('Session not found');
@@ -3949,7 +3953,7 @@ app.get('/study/session/:id', isAuth, async (req, res) => {
 });
 
 // Quiz Attempt
-app.get('/study/quiz/:attemptId', isAuth, async (req, res) => {
+app.get('/study/quiz/:attemptId', isAuth, requirePaid, async (req, res) => {
   try {
     const attempt = await pool.query('SELECT * FROM study_quiz_attempts WHERE id = $1 AND user_id = $2', [req.params.attemptId, req.session.user.id]);
     if (!attempt.rows[0]) return res.status(404).send('Quiz not found');
@@ -3959,12 +3963,12 @@ app.get('/study/quiz/:attemptId', isAuth, async (req, res) => {
 });
 
 // Flashcards Page
-app.get('/study/flashcards/:courseId', isAuth, async (req, res) => {
+app.get('/study/flashcards/:courseId', isAuth, requirePaid, async (req, res) => {
   res.render('study-flashcards', { user: req.session.user, courseId: parseInt(req.params.courseId) });
 });
 
 // API: Import from timetable
-app.post('/api/study/import-timetable', isAuth, async (req, res) => {
+app.post('/api/study/import-timetable', isAuth, requirePaid, async (req, res) => {
   try {
     const uid = req.session.user.id;
     const tt = await pool.query('SELECT DISTINCT course, course_code, unit FROM timetables WHERE user_id = $1', [uid]);
@@ -3981,7 +3985,7 @@ app.post('/api/study/import-timetable', isAuth, async (req, res) => {
 });
 
 // API: Add topic
-app.post('/api/study/topics', isAuth, async (req, res) => {
+app.post('/api/study/topics', isAuth, requirePaid, async (req, res) => {
   try {
     const { course_id, topic_name } = req.body;
     const r = await pool.query('INSERT INTO study_topics (course_id, user_id, topic_name) VALUES ($1, $2, $3) RETURNING *', [course_id, req.session.user.id, topic_name]);
@@ -3990,7 +3994,7 @@ app.post('/api/study/topics', isAuth, async (req, res) => {
 });
 
 // API: Delete topic
-app.delete('/api/study/topics/:id', isAuth, async (req, res) => {
+app.delete('/api/study/topics/:id', isAuth, requirePaid, async (req, res) => {
   try {
     await pool.query('DELETE FROM study_subtopics WHERE topic_id = $1', [req.params.id]);
     await pool.query('DELETE FROM study_topics WHERE id = $1', [req.params.id]);
@@ -3999,7 +4003,7 @@ app.delete('/api/study/topics/:id', isAuth, async (req, res) => {
 });
 
 // API: Generate topics with AI
-app.post('/api/study/generate-topics', isAuth, async (req, res) => {
+app.post('/api/study/generate-topics', isAuth, requirePaid, async (req, res) => {
   try {
     const { course_id } = req.body;
     const course = await pool.query('SELECT * FROM study_courses WHERE id = $1', [course_id]);
@@ -4018,7 +4022,7 @@ app.post('/api/study/generate-topics', isAuth, async (req, res) => {
 });
 
 // API: Generate subtopics with AI
-app.post('/api/study/generate-subtopics', isAuth, async (req, res) => {
+app.post('/api/study/generate-subtopics', isAuth, requirePaid, async (req, res) => {
   try {
     const { topic_id } = req.body;
     const topic = await pool.query('SELECT * FROM study_topics WHERE id = $1', [topic_id]);
@@ -4038,22 +4042,22 @@ app.post('/api/study/generate-subtopics', isAuth, async (req, res) => {
 });
 
 // API: Accept subtopic
-app.put('/api/study/subtopics/:id/accept', isAuth, async (req, res) => {
+app.put('/api/study/subtopics/:id/accept', isAuth, requirePaid, async (req, res) => {
   try { await pool.query('UPDATE study_subtopics SET status = $1 WHERE id = $2', ['accepted', req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
 // API: Update subtopic
-app.put('/api/study/subtopics/:id', isAuth, async (req, res) => {
+app.put('/api/study/subtopics/:id', isAuth, requirePaid, async (req, res) => {
   try { await pool.query('UPDATE study_subtopics SET subtopic_name = $1 WHERE id = $2', [req.body.subtopic_name, req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
 // API: Delete subtopic
-app.delete('/api/study/subtopics/:id', isAuth, async (req, res) => {
+app.delete('/api/study/subtopics/:id', isAuth, requirePaid, async (req, res) => {
   try { await pool.query('DELETE FROM study_subtopics WHERE id = $1', [req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
 // API: Create study session
-app.post('/api/study/sessions', isAuth, async (req, res) => {
+app.post('/api/study/sessions', isAuth, requirePaid, async (req, res) => {
   try {
     const { course_id } = req.body;
     const course = await pool.query('SELECT * FROM study_courses WHERE id = $1', [course_id]);
@@ -4063,7 +4067,7 @@ app.post('/api/study/sessions', isAuth, async (req, res) => {
 });
 
 // API: End session
-app.put('/api/study/sessions/:id/end', isAuth, async (req, res) => {
+app.put('/api/study/sessions/:id/end', isAuth, requirePaid, async (req, res) => {
   try {
     const { elapsed_seconds } = req.body;
     const sid = req.params.id;
@@ -4087,12 +4091,12 @@ app.get('/api/study/sessions/:id', isAuth, async (req, res) => {
 });
 
 // API: Save notes
-app.put('/api/study/sessions/:id/notes', isAuth, async (req, res) => {
+app.put('/api/study/sessions/:id/notes', isAuth, requirePaid, async (req, res) => {
   try { await pool.query('UPDATE study_sessions SET notes = $1 WHERE id = $2 AND user_id = $3', [req.body.notes, req.params.id, req.session.user.id]); res.json({ success: true }); } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
 // API: AI Chat
-app.post('/api/study/chat', isAuth, async (req, res) => {
+app.post('/api/study/chat', isAuth, requirePaid, async (req, res) => {
   try {
     const { message, session_id, course_name } = req.body;
     const uid = req.session.user.id;
@@ -4118,7 +4122,7 @@ app.get('/api/study/youtube', isAuth, async (req, res) => {
 });
 
 // API: Generate quiz
-app.post('/api/study/quiz/generate', isAuth, async (req, res) => {
+app.post('/api/study/quiz/generate', isAuth, requirePaid, async (req, res) => {
   try {
     const { course_id, subtopic_id, question_type, question_count, timed_minutes } = req.body;
     const count = parseInt(question_count) || 5;
@@ -4140,7 +4144,7 @@ app.post('/api/study/quiz/generate', isAuth, async (req, res) => {
 });
 
 // API: Submit quiz
-app.post('/api/study/quiz/submit', isAuth, async (req, res) => {
+app.post('/api/study/quiz/submit', isAuth, requirePaid, async (req, res) => {
   try {
     const { attemptId, answers } = req.body;
     let score = 0;
@@ -4181,7 +4185,7 @@ app.get('/api/study/quiz/result/:attemptId', isAuth, async (req, res) => {
 });
 
 // API: Generate flashcards
-app.post('/api/study/flashcards/generate', isAuth, async (req, res) => {
+app.post('/api/study/flashcards/generate', isAuth, requirePaid, async (req, res) => {
   try {
     const { courseId, subtopicId, course_name } = req.body;
     const uid = req.session.user.id;
@@ -4212,12 +4216,12 @@ app.get('/api/study/flashcards', isAuth, async (req, res) => {
 });
 
 // API: Delete flashcard
-app.post('/api/study/flashcards/delete/:id', isAuth, async (req, res) => {
+app.post('/api/study/flashcards/delete/:id', isAuth, requirePaid, async (req, res) => {
   try { await pool.query('DELETE FROM study_flashcards WHERE id = $1 AND user_id = $2', [req.params.id, req.session.user.id]); res.json({ success: true }); } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
 // API: CGPA sync - import study courses into CGPA
-app.post('/api/study/cgpa-sync', isAuth, async (req, res) => {
+app.post('/api/study/cgpa-sync', isAuth, requirePaid, async (req, res) => {
   try {
     const uid = req.session.user.id;
     const courses = await pool.query('SELECT * FROM study_courses WHERE user_id = $1', [uid]);

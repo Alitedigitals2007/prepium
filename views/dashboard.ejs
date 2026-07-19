@@ -181,65 +181,82 @@
         <a href="/setup-test" class="feature-card">
             <div class="fc-icon" style="background:#eef4ff;color:var(--brand);"><i class="fas fa-bolt"></i></div>
             <div class="fc-label">Practice Quiz</div>
-            <div class="fc-desc"><%= user.has_paid ? 'Unlimited' : (2 - (typeof quizAttempts !== 'undefined' ? quizAttempts : 0)) + ' free left' %></div>
-        </a>
-
-        <a href="/timetable" class="feature-card">
-            <div class="fc-icon" style="background:#f3e8ff;color:#7c3aed;"><i class="fas fa-table"></i></div>
-            <div class="fc-label">Timetable</div>
-            <div class="fc-desc">AI-powered schedule</div>
-        </a>
-
-        <a href="/history" class="feature-card">
-            <div class="fc-icon" style="background:#fef3c7;color:#f59e0b;"><i class="fas fa-chart-bar"></i></div>
-            <div class="fc-label">History</div>
-            <div class="fc-desc">Quiz performance</div>
-        </a>
-
-        <a href="/deadlines" class="feature-card">
-            <div class="fc-icon" style="background:#fee2e2;color:#ef4444;"><i class="fas fa-hourglass-half"></i></div>
-            <div class="fc-label">Deadlines</div>
-            <div class="fc-desc">Track milestones</div>
+            <div class="fc-desc"><%= user.has_paid ? 'Unlimited' : Math.max(0, 2 - (typeof quizAttempts !== 'undefined' ? quizAttempts : 0)) + ' free attempts left' %></div>
         </a>
 
         <a href="/suggestions" class="feature-card">
             <div class="fc-icon" style="background:#e0f2fe;color:#0284c7;"><i class="fas fa-lightbulb"></i></div>
             <div class="fc-label">Feedback</div>
-            <div class="fc-desc">Share ideas</div>
+            <div class="fc-desc">Free for everyone</div>
         </a>
 
         <a href="/daily-challenge" class="feature-card">
             <div class="fc-icon" style="background:#d1fae5;color:#10b981;"><i class="fas fa-calendar-check"></i></div>
             <div class="fc-label">Challenge</div>
-            <div class="fc-desc">Daily competition</div>
+            <div class="fc-desc">Free daily competition</div>
         </a>
 
-        <div class="feature-card locked" onclick="<%= user.has_paid ? '' : 'payWithPaystack()' %>" style="position:relative;">
-            <div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div>
-            <a href="<%= user.has_paid ? '/competition' : '#' %>" class="feature-card <%= !user.has_paid ? 'locked' : '' %>" style="border:none;padding:0;box-shadow:none;background:transparent;">
-                <div class="fc-icon" style="background:#fce7f3;color:#ec4899;"><i class="fas fa-trophy"></i></div>
-                <div class="fc-label">Live Arena</div>
-                <div class="fc-desc">Real-time rankings</div>
-            </a>
-        </div>
+        <a href="/be-ambassador" class="feature-card">
+            <div class="fc-icon" style="background:#fef3c7;color:#f59e0b;"><i class="fas fa-store"></i></div>
+            <div class="fc-label">Store</div>
+            <div class="fc-desc">Earn as ambassador</div>
+        </a>
 
-        <div class="feature-card locked" onclick="<%= user.has_paid ? '' : 'payWithPaystack()' %>" style="position:relative;">
-            <div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div>
-            <a href="<%= user.has_paid ? '/cgpa' : '#' %>" class="feature-card <%= !user.has_paid ? 'locked' : '' %>" style="border:none;padding:0;box-shadow:none;background:transparent;">
-                <div class="fc-icon" style="background:#e0f2fe;color:#0284c7;"><i class="fas fa-graduation-cap"></i></div>
-                <div class="fc-label">CGPA Tracker</div>
-                <div class="fc-desc">Target calculator</div>
-            </a>
-        </div>
+        <a href="/timetable" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
+            <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
+            <div class="fc-icon" style="background:#f3e8ff;color:#7c3aed;"><i class="fas fa-table"></i></div>
+            <div class="fc-label">Timetable</div>
+            <div class="fc-desc">AI-powered schedule</div>
+        </a>
 
-        <div class="feature-card locked" onclick="<%= user.has_paid ? '' : 'payWithPaystack()' %>" style="position:relative;">
-            <div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div>
-            <a href="<%= user.has_paid ? '/pomodoro' : '#' %>" class="feature-card <%= !user.has_paid ? 'locked' : '' %>" style="border:none;padding:0;box-shadow:none;background:transparent;">
-                <div class="fc-icon" style="background:#f1f5f9;color:var(--text-sub);"><i class="fas fa-stopwatch"></i></div>
-                <div class="fc-label">Pomodoro</div>
-                <div class="fc-desc">Focus timer</div>
-            </a>
-        </div>
+        <a href="/reading-timetable" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
+            <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
+            <div class="fc-icon" style="background:#dbeafe;color:#0284c7;"><i class="fas fa-book-open"></i></div>
+            <div class="fc-label">Reading Schedule</div>
+            <div class="fc-desc">Smart study plan</div>
+        </a>
+
+        <a href="/cgpa" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
+            <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
+            <div class="fc-icon" style="background:#e0f2fe;color:#0284c7;"><i class="fas fa-graduation-cap"></i></div>
+            <div class="fc-label">CGPA Tracker</div>
+            <div class="fc-desc">Target calculator</div>
+        </a>
+
+        <a href="/study" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
+            <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
+            <div class="fc-icon" style="background:#eef4ff;color:var(--brand);"><i class="fas fa-graduation-cap"></i></div>
+            <div class="fc-label">Study with AI</div>
+            <div class="fc-desc">Courses, flashcards & tutor</div>
+        </a>
+
+        <a href="/history" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
+            <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
+            <div class="fc-icon" style="background:#fef3c7;color:#f59e0b;"><i class="fas fa-chart-bar"></i></div>
+            <div class="fc-label">History</div>
+            <div class="fc-desc">Quiz performance</div>
+        </a>
+
+        <a href="/deadlines" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
+            <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
+            <div class="fc-icon" style="background:#fee2e2;color:#ef4444;"><i class="fas fa-hourglass-half"></i></div>
+            <div class="fc-label">Deadlines</div>
+            <div class="fc-desc">Track milestones</div>
+        </a>
+
+        <a href="/pomodoro" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
+            <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
+            <div class="fc-icon" style="background:#f1f5f9;color:var(--text-sub);"><i class="fas fa-stopwatch"></i></div>
+            <div class="fc-label">Pomodoro</div>
+            <div class="fc-desc">Focus timer</div>
+        </a>
+
+        <a href="/competition" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
+            <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
+            <div class="fc-icon" style="background:#fce7f3;color:#ec4899;"><i class="fas fa-trophy"></i></div>
+            <div class="fc-label">Live Arena</div>
+            <div class="fc-desc">Real-time rankings</div>
+        </a>
     </div>
 
     <% if (typeof recentQuiz !== 'undefined' && recentQuiz) { %>
@@ -279,9 +296,9 @@
 
     <nav class="bottom-nav">
         <a href="/dashboard" class="nav-link active"><i class="fas fa-home"></i><span>Home</span></a>
-        <a href="/history" class="nav-link"><i class="fas fa-chart-bar"></i><span>Stats</span></a>
+        <a href="/study" class="nav-link"><i class="fas fa-graduation-cap"></i><span>Study</span></a>
         <a href="/setup-test" class="nav-center-btn"><i class="fas fa-plus"></i></a>
-        <a href="/study" class="nav-link"><i class="fas fa-book-open"></i><span>Study</span></a>
+        <a href="/history" class="nav-link"><i class="fas fa-chart-bar"></i><span>Stats</span></a>
         <a href="/profile" class="nav-link"><i class="fas fa-user-circle"></i><span>Profile</span></a>
     </nav>
 </div>

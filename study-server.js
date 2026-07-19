@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('./_envload.cjs');
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
@@ -31,13 +31,16 @@ async function initDB() {
       CREATE TABLE IF NOT EXISTS study_topics (
         id SERIAL PRIMARY KEY, course_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL, title VARCHAR(500) NOT NULL,
-        order_index INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT NOW()
+        topic_name VARCHAR(500), order_index INTEGER DEFAULT 0,
+        completed BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT NOW()
       )`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS study_subtopics (
         id SERIAL PRIMARY KEY, topic_id INTEGER NOT NULL,
         course_id INTEGER NOT NULL, user_id INTEGER NOT NULL,
-        title VARCHAR(500) NOT NULL, status VARCHAR(20) DEFAULT 'pending',
+        title VARCHAR(500) NOT NULL, subtopic_name VARCHAR(500),
+        status VARCHAR(20) DEFAULT 'pending',
         content TEXT DEFAULT '', notes TEXT DEFAULT '',
         created_at TIMESTAMP DEFAULT NOW()
       )`);
@@ -45,7 +48,7 @@ async function initDB() {
       CREATE TABLE IF NOT EXISTS study_sessions (
         id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL,
         course_id INTEGER DEFAULT 0, subtopic_id INTEGER DEFAULT 0,
-        course_name VARCHAR(255) DEFAULT '',
+        subject_id INTEGER DEFAULT 0, course_name VARCHAR(255) DEFAULT '',
         duration_minutes INTEGER DEFAULT 0, elapsed_seconds INTEGER DEFAULT 0,
         status VARCHAR(20) DEFAULT 'active', notes TEXT DEFAULT '',
         session_date DATE DEFAULT CURRENT_DATE,
@@ -80,15 +83,17 @@ async function initDB() {
         question_count INTEGER DEFAULT 10,
         time_limit INTEGER DEFAULT 0, score INTEGER DEFAULT 0,
         total_questions INTEGER DEFAULT 0, status VARCHAR(20) DEFAULT 'in_progress',
+        total INTEGER DEFAULT 0, answers JSONB,
         started_at TIMESTAMP DEFAULT NOW(), completed_at TIMESTAMP
       )`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS study_quiz_questions (
         id SERIAL PRIMARY KEY, attempt_id INTEGER NOT NULL,
-        question TEXT NOT NULL, options JSONB,
+        user_id INTEGER, question TEXT NOT NULL, options JSONB,
         correct_answer TEXT, user_answer TEXT,
-        is_correct BOOLEAN, explanation TEXT,
-        order_index INTEGER DEFAULT 0
+        is_correct BOOLEAN, explanation TEXT, question_type VARCHAR(50),
+        order_index INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
       )`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS study_youtube_videos (
@@ -97,6 +102,44 @@ async function initDB() {
         url VARCHAR(500), thumbnail VARCHAR(500),
         channel VARCHAR(255), created_at TIMESTAMP DEFAULT NOW()
       )`);
+
+    // Compatibility migration: ensure columns exist on legacy tables
+    const adds = [
+      ['study_courses', 'unit', 'INTEGER DEFAULT 3'],
+      ['study_courses', 'source', "VARCHAR(20) DEFAULT 'manual'"],
+      ['study_courses', 'updated_at', 'TIMESTAMP DEFAULT NOW()'],
+      ['study_topics', 'topic_name', 'VARCHAR(500)'],
+      ['study_topics', 'order_index', 'INTEGER DEFAULT 0'],
+      ['study_topics', 'completed', 'BOOLEAN DEFAULT false'],
+      ['study_subtopics', 'subtopic_name', 'VARCHAR(500)'],
+      ['study_subtopics', 'course_id', 'INTEGER DEFAULT 0'],
+      ['study_subtopics', 'content', "TEXT DEFAULT ''"],
+      ['study_subtopics', 'notes', "TEXT DEFAULT ''"],
+      ['study_sessions', 'subtopic_id', 'INTEGER DEFAULT 0'],
+      ['study_sessions', 'subject_id', 'INTEGER DEFAULT 0'],
+      ['study_sessions', 'duration_minutes', 'INTEGER DEFAULT 0'],
+      ['study_sessions', 'session_date', 'DATE DEFAULT CURRENT_DATE'],
+      ['study_chat_messages', 'subtopic_id', 'INTEGER DEFAULT 0'],
+      ['study_flashcards', 'course_id', 'INTEGER DEFAULT 0'],
+      ['study_quiz_attempts', 'course_id', 'INTEGER DEFAULT 0'],
+      ['study_quiz_attempts', 'question_type', "VARCHAR(50) DEFAULT 'multiple_choice'"],
+      ['study_quiz_attempts', 'question_count', 'INTEGER DEFAULT 10'],
+      ['study_quiz_attempts', 'time_limit', 'INTEGER DEFAULT 0'],
+      ['study_quiz_attempts', 'total_questions', 'INTEGER DEFAULT 0'],
+      ['study_quiz_attempts', 'status', "VARCHAR(20) DEFAULT 'in_progress'"],
+      ['study_quiz_attempts', 'started_at', 'TIMESTAMP DEFAULT NOW()'],
+      ['study_quiz_questions', 'attempt_id', 'INTEGER DEFAULT 0'],
+      ['study_quiz_questions', 'user_answer', 'TEXT'],
+      ['study_quiz_questions', 'is_correct', 'BOOLEAN'],
+      ['study_quiz_questions', 'order_index', 'INTEGER DEFAULT 0'],
+    ];
+    for (const [t, c, d] of adds) {
+      try { await pool.query(`ALTER TABLE ${t} ADD COLUMN IF NOT EXISTS ${c} ${d}`); } catch(e) {}
+    }
+    await pool.query(`UPDATE study_topics SET topic_name = COALESCE(topic_name, title) WHERE topic_name IS NULL`).catch(()=>{});
+    await pool.query(`UPDATE study_subtopics SET subtopic_name = COALESCE(subtopic_name, title) WHERE subtopic_name IS NULL`).catch(()=>{});
+    try { await pool.query(`ALTER TABLE study_progress DROP CONSTRAINT IF EXISTS study_progress_user_course`); } catch(e) {}
+    try { await pool.query(`ALTER TABLE study_progress ADD CONSTRAINT study_progress_user_course UNIQUE (user_id, course_name)`); } catch(e) {}
     console.log('[DB] All study tables ready');
   } catch (err) {
     console.error('[DB] Study tables setup:', err.message);
@@ -670,17 +713,24 @@ app.post('/api/study/cgpa-sync', isAuth, async (req, res) => {
   try {
     const uid = req.session.user.id;
     const courses = await pool.query('SELECT * FROM study_courses WHERE user_id = $1', [uid]);
+    const profile = await pool.query('SELECT * FROM cgpa_profiles WHERE user_id = $1', [uid]);
+    if (!profile.rows[0]) {
+      return res.json({ success: false, error: 'Set up CGPA profile first (visit /cgpa).' });
+    }
     let synced = 0;
+    const level = parseInt(profile.rows[0].current_level) || 300;
     for (const c of courses.rows) {
+      const courseKey = (c.course_code || c.course_name || '').trim();
+      if (!courseKey) continue;
       const exists = await pool.query(
         'SELECT id FROM cgpa_courses WHERE user_id = $1 AND course_code = $2 AND deleted = false',
-        [uid, c.course_code]
+        [uid, courseKey]
       );
-      if (exists.rows.length === 0 && c.course_code) {
+      if (exists.rows.length === 0) {
         await pool.query(
           `INSERT INTO cgpa_courses (user_id, course_code, title, level_scope, semester, credit_units, grade, is_hidden, deleted)
            VALUES ($1, $2, $3, $4, $5, $6, $7, false, false)`,
-          [uid, c.course_code, c.course_name, 100, 1, c.unit || 3, 'A']
+          [uid, courseKey, c.course_name, level, 1, parseInt(c.unit) || 3, 'A']
         );
         synced++;
       }
