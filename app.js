@@ -4408,10 +4408,10 @@ app.post('/api/study/topics', isAuth, requirePaid, async (req, res) => {
     const { course_id, topic_name } = req.body;
     const name = (topic_name || '').trim();
     if (!name) return res.status(400).json({ success: false, error: 'Topic name required' });
-    const max = await pool.query('SELECT COALESCE(MAX(order_index), 0) as n FROM study_topics WHERE course_id = $1', [course_id]);
+    const max = await pool.query('SELECT COALESCE(MAX(order_index), 0) as n FROM study_topics WHERE course_id = $1::integer', [course_id]);
     const orderIdx = parseInt(max.rows[0]?.n || 0, 10) + 1;
     const r = await pool.query(
-      'INSERT INTO study_topics (course_id, user_id, topic_name, title, order_index) VALUES ($1, $2, $3, $3, $4) RETURNING *',
+      'INSERT INTO study_topics (course_id, user_id, topic_name, title, order_index) VALUES ($1::integer, $2::integer, $3::text, $3::text, $4::integer) RETURNING *',
       [course_id, req.session.user.id, name, orderIdx]
     );
     res.json({ success: true, topic: r.rows[0] });
@@ -4431,16 +4431,17 @@ app.delete('/api/study/topics/:id', isAuth, requirePaid, async (req, res) => {
 app.post('/api/study/generate-topics', isAuth, requirePaid, async (req, res) => {
   try {
     const { course_id } = req.body;
-    const course = await pool.query('SELECT * FROM study_courses WHERE id = $1', [course_id]);
+    const course = await pool.query('SELECT * FROM study_courses WHERE id = $1::integer', [course_id]);
     if (!course.rows[0]) return res.json({ success: false, error: 'Course not found' });
     const prompt = `Generate a list of 8-12 important topics for the university course "${course.rows[0].course_name} ${course.rows[0].course_code}". Return ONLY a JSON array of strings. Example: ["Topic 1", "Topic 2"]`;
     const aiRes = await studyPromptAI(prompt);
+    if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
     let topics = [];
     try { topics = JSON.parse(aiRes.text.replace(/```json/g,'').replace(/```/g,'').trim()); } catch { topics = aiRes.text.split('\n').filter(l => l.trim()).map(l => l.replace(/^[\d.\s-]+/,'').trim()).filter(Boolean); }
     let count = 0;
     for (const t of topics.slice(0, 15)) {
-      const exists = await pool.query('SELECT id FROM study_topics WHERE course_id = $1 AND (topic_name = $2 OR title = $2)', [course_id, t]);
-      if (!exists.rows[0]) { await pool.query('INSERT INTO study_topics (course_id, user_id, topic_name, title) VALUES ($1, $2, $3, $3)', [course_id, req.session.user.id, t]); count++; }
+      const exists = await pool.query('SELECT id FROM study_topics WHERE course_id = $1::integer AND (topic_name = $2::text OR title = $2::text)', [course_id, t]);
+      if (!exists.rows[0]) { await pool.query('INSERT INTO study_topics (course_id, user_id, topic_name, title) VALUES ($1::integer, $2::integer, $3::text, $3::text)', [course_id, req.session.user.id, t]); count++; }
     }
     res.json({ success: true, count });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
@@ -4450,11 +4451,12 @@ app.post('/api/study/generate-topics', isAuth, requirePaid, async (req, res) => 
 app.post('/api/study/generate-subtopics', isAuth, requirePaid, async (req, res) => {
   try {
     const { topic_id } = req.body;
-    const topic = await pool.query('SELECT * FROM study_topics WHERE id = $1', [topic_id]);
+    const topic = await pool.query('SELECT * FROM study_topics WHERE id = $1::integer', [topic_id]);
     if (!topic.rows[0]) return res.json({ success: false, error: 'Topic not found' });
     const topicName = topic.rows[0].topic_name || topic.rows[0].title;
     const prompt = `For the topic "${topicName}", generate 5-7 specific subtopics. Return ONLY a JSON array of strings. Example: ["Subtopic 1", "Subtopic 2"]`;
     const aiRes = await studyPromptAI(prompt);
+    if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
     let subtopics = [];
     try { subtopics = JSON.parse(aiRes.text.replace(/```json/g,'').replace(/```/g,'').trim()); } catch { subtopics = aiRes.text.split('\n').filter(l => l.trim()).map(l => l.replace(/^[\d.\s-]+/,'').trim()).filter(Boolean); }
     let count = 0;
@@ -4462,10 +4464,8 @@ app.post('/api/study/generate-subtopics', isAuth, requirePaid, async (req, res) 
     for (const st of subtopics.slice(0, 10)) {
       const clean = (st || '').replace(/^["'\s]+|["'\s]+$/g,'').trim();
       if (!clean) continue;
-      const exists = await pool.query('SELECT id FROM study_subtopics WHERE topic_id = $1 AND (subtopic_name = $2 OR title = $2)', [topic_id, clean]);
-      if (!exists.rows[0]) { const cid = parseInt(topic.rows[0].course_id) || 0; const tid = parseInt(topic_id) || 0; await pool.query('INSERT INTO study_subtopics (topic_id, course_id, user_id, subtopic_name, title, status) VALUES ($1, $2, $3, $4, $5, $6)', [tid, cid, parseInt(uid) || 0, clean, clean, 'ai-generated']); count++; }
-
-
+      const exists = await pool.query('SELECT id FROM study_subtopics WHERE topic_id = $1::integer AND (subtopic_name = $2::text OR title = $2::text)', [topic_id, clean]);
+      if (!exists.rows[0]) { const cid = parseInt(topic.rows[0].course_id) || 0; const tid = parseInt(topic_id) || 0; await pool.query('INSERT INTO study_subtopics (topic_id, course_id, user_id, subtopic_name, title, status) VALUES ($1::integer, $2::integer, $3::integer, $4::text, $5::text, $6::text)', [tid, cid, parseInt(uid) || 0, clean, clean, 'ai-generated']); count++; }
     }
     res.json({ success: true, count });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }

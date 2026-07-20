@@ -291,9 +291,9 @@ app.post('/api/study/import-timetable', isAuth, async (req, res) => {
 app.post('/api/study/topics/add', isAuth, async (req, res) => {
   try {
     const { courseId, title } = req.body;
-    const max = await pool.query('SELECT COALESCE(MAX(order_index), -1) + 1 as n FROM study_topics WHERE course_id = $1', [courseId]);
+    const max = await pool.query('SELECT COALESCE(MAX(order_index), -1) + 1 as n FROM study_topics WHERE course_id = $1::integer', [courseId]);
     const r = await pool.query(
-      'INSERT INTO study_topics (course_id, user_id, title, order_index) VALUES ($1, $2, $3, $4) RETURNING *',
+      'INSERT INTO study_topics (course_id, user_id, title, order_index) VALUES ($1::integer, $2::integer, $3::text, $4::integer) RETURNING *',
       [courseId, req.session.user.id, title, max.rows[0].n]
     );
     res.json({ success: true, topic: r.rows[0] });
@@ -318,6 +318,7 @@ app.post('/api/study/subtopics/ai-generate', isAuth, async (req, res) => {
     const prompt = `For the topic "${topicTitle}" in the course "${courseName}", generate a list of 5-8 specific subtopics that should be studied. 
 Return ONLY a JSON array of strings, nothing else. Example: ["Subtopic 1", "Subtopic 2", "Subtopic 3"]`;
     const aiRes = await promptAI(prompt);
+    if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
     let subtopics = [];
     try {
       const cleaned = aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -331,7 +332,7 @@ Return ONLY a JSON array of strings, nothing else. Example: ["Subtopic 1", "Subt
       const cleanName = st.replace(/^["'\s]+|["'\s]+$/g, '').trim();
       if (!cleanName) continue;
       const r = await pool.query(
-        'INSERT INTO study_subtopics (topic_id, course_id, user_id, subtopic_name, title, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+        'INSERT INTO study_subtopics (topic_id, course_id, user_id, subtopic_name, title, status) VALUES ($1::integer, $2::integer, $3::integer, $4::text, $5::text, $6::text) RETURNING *',
         [parseInt(topicId) || 0, parseInt(courseId) || 0, parseInt(uid) || 0, cleanName, cleanName, 'pending']
       );
       results.push(r.rows[0]);
