@@ -4249,6 +4249,30 @@ setTimeout(checkDeadlineNotifications, 10000);
 // ======================== STUDY HUB ROUTES ========================
 
 // Study AI helper — uses OpenRouter
+function cleanLatex(t) {
+  if (!t) return t;
+  return t
+    .replace(/\\\(/g, '').replace(/\\\)/g, '')
+    .replace(/\\\[/g, '').replace(/\\\]/g, '')
+    .replace(/\$\$/g, '').replace(/\$(?!\d)/g, '')
+    .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '$1/$2')
+    .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
+    .replace(/\\alpha/g, 'α').replace(/\\beta/g, 'β').replace(/\\gamma/g, 'γ')
+    .replace(/\\delta/g, 'δ').replace(/\\epsilon/g, 'ε').replace(/\\theta/g, 'θ')
+    .replace(/\\lambda/g, 'λ').replace(/\\mu/g, 'μ').replace(/\\sigma/g, 'σ')
+    .replace(/\\omega/g, 'ω').replace(/\\pi/g, 'π').replace(/\\phi/g, 'φ')
+    .replace(/\\rightarrow/g, '→').replace(/\\Rightarrow/g, '⇒')
+    .replace(/\\leftarrow/g, '←').replace(/\\Leftarrow/g, '⇐')
+    .replace(/\\times/g, '×').replace(/\\cdot/g, '·').replace(/\\div/g, '÷')
+    .replace(/\\approx/g, '≈').replace(/\\neq/g, '≠').replace(/\\leq/g, '≤').replace(/\\geq/g, '≥')
+    .replace(/\\infty/g, '∞').replace(/\\partial/g, '∂').replace(/\\nabla/g, '∇')
+    .replace(/\\sum/g, '∑').replace(/\\prod/g, '∏').replace(/\\int/g, '∫')
+    .replace(/\\text\{([^}]+)\}/g, '$1')
+    .replace(/\\[a-zA-Z]+\{[^}]*\}/g, '')
+    .replace(/\\[a-zA-Z]+/g, '')
+    .replace(/\s+/g, ' ').trim();
+}
+
 async function studyPromptAI(prompt) {
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) return { text: 'AI not configured. Set OPENROUTER_API_KEY in .env' };
@@ -4261,7 +4285,7 @@ async function studyPromptAI(prompt) {
     });
     if (!res.ok) { const t = await res.text().catch(()=>''); return { text: `AI error: ${res.status} ${t}` }; }
     const data = await res.json();
-    return { text: data.choices?.[0]?.message?.content?.trim() || 'AI returned empty response' };
+    return { text: cleanLatex(data.choices?.[0]?.message?.content) || 'AI returned empty response' };
   } catch (e) { return { text: `AI error: ${e.message}` }; }
 }
 
@@ -4350,8 +4374,13 @@ app.get('/study/quiz/:attemptId', isAuth, requirePaid, async (req, res) => {
   try {
     const attempt = await pool.query('SELECT * FROM study_quiz_attempts WHERE id = $1 AND user_id = $2', [req.params.attemptId, req.session.user.id]);
     if (!attempt.rows[0]) return res.status(404).send('Quiz not found');
-    const questions = await pool.query('SELECT id, question, options, order_index FROM study_quiz_questions WHERE attempt_id = $1 ORDER BY order_index ASC', [req.params.attemptId]);
-    res.render('study-quiz', { user: req.session.user, attempt: attempt.rows[0], questions: questions.rows });
+    let questions = (await pool.query('SELECT id, question, options, order_index FROM study_quiz_questions WHERE attempt_id = $1 ORDER BY order_index ASC', [req.params.attemptId])).rows;
+    questions = questions.map(function(q) {
+      q.question = cleanLatex(q.question);
+      if (q.options && Array.isArray(q.options)) q.options = q.options.map(function(o) { return cleanLatex(o); });
+      return q;
+    });
+    res.render('study-quiz', { user: req.session.user, attempt: attempt.rows[0], questions: questions });
   } catch (err) { res.status(500).send('Error loading quiz'); }
 });
 
@@ -4369,6 +4398,7 @@ app.get('/study/subtopic/:id', isAuth, requirePaid, async (req, res) => {
     const st = await pool.query('SELECT * FROM study_subtopics WHERE id = $1', [req.params.id]);
     if (!st.rows[0]) return res.status(404).send('Subtopic not found');
     const s = st.rows[0];
+    if (s.content) s.content = cleanLatex(s.content);
     const topic = await pool.query('SELECT * FROM study_topics WHERE id = $1', [s.topic_id]).catch(() => ({ rows: [] }));
     const course = await pool.query('SELECT * FROM study_courses WHERE id = $1', [s.course_id || 0]).catch(() => ({ rows: [] }));
     res.render('study-subtopic', { user: req.session.user, subtopic: s, topic: topic.rows[0] || null, course: course.rows[0] || null });
@@ -4553,7 +4583,8 @@ app.get('/api/study/chat/history', isAuth, async (req, res) => {
     if (subtopicId) { q += ` AND subtopic_id = $${p.length + 1}`; p.push(parseInt(subtopicId)); }
     q += ' ORDER BY created_at ASC LIMIT 100';
     const r = await pool.query(q, p);
-    res.json({ messages: r.rows });
+    const messages = r.rows.map(function(m) { m.message = cleanLatex(m.message); return m; });
+    res.json({ messages });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -4624,8 +4655,14 @@ app.post('/api/study/quiz/submit', isAuth, requirePaid, async (req, res) => {
 app.get('/api/study/quiz/result/:attemptId', isAuth, async (req, res) => {
   try {
     const attempt = await pool.query('SELECT * FROM study_quiz_attempts WHERE id = $1 AND user_id = $2', [req.params.attemptId, req.session.user.id]);
-    const questions = await pool.query('SELECT * FROM study_quiz_questions WHERE attempt_id = $1 ORDER BY order_index ASC', [req.params.attemptId]);
-    res.json({ attempt: attempt.rows[0], questions: questions.rows });
+    let questions = (await pool.query('SELECT * FROM study_quiz_questions WHERE attempt_id = $1 ORDER BY order_index ASC', [req.params.attemptId])).rows;
+    questions = questions.map(function(q) {
+      q.question = cleanLatex(q.question);
+      q.explanation = cleanLatex(q.explanation || '');
+      q.correct_answer = cleanLatex(q.correct_answer || '');
+      return q;
+    });
+    res.json({ attempt: attempt.rows[0], questions: questions });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -4651,7 +4688,8 @@ app.get('/api/study/flashcards', isAuth, async (req, res) => {
     if (courseId) { q += ' AND course_id = $2'; p.push(courseId); }
     q += ' ORDER BY created_at DESC';
     const r = await pool.query(q, p);
-    res.json({ flashcards: r.rows });
+    const flashcards = r.rows.map(function(f) { f.front = cleanLatex(f.front); f.back = cleanLatex(f.back); return f; });
+    res.json({ flashcards });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
