@@ -4613,7 +4613,9 @@ app.post('/api/study/quiz/generate', isAuth, requirePaid, async (req, res) => {
     const { courseId, subtopicId, topicTitle, questionType, questionCount, timeLimit } = req.body;
     const count = parseInt(questionCount) || 10;
     const uid = req.session.user.id;
-    const prompt = `Generate ${count} ${questionType || 'multiple_choice'} questions about "${topicTitle || 'General Study'}" for university exam preparation. For each question include: - The question text - 4 answer options (for multiple choice) or a short answer (for theory) - The correct answer - A detailed explanation. Return as JSON array: [{ "question": "...", "options": ["A...", "B...", "C...", "D..."], "correctAnswer": "A", "explanation": "..." }] For theory questions, use options: [] and correctAnswer as the expected answer.`;
+    var qType = questionType || 'multiple_choice';
+    var typeGuide = qType === 'mixed' ? 'Mix of multiple choice (with 4 options) and theory questions (options: [])' : (qType === 'theory' ? 'All theory questions (options: [], correctAnswer is the expected answer)' : 'All multiple choice with 4 options each');
+    const prompt = `Generate ${count} ${typeGuide} about "${topicTitle || 'General Study'}" for university exam preparation. Each question: question text, options array (4 strings for MC, [] for theory), correctAnswer (letter for MC, text for theory), explanation. Return JSON array: [{ "question": "...", "options": ["A...","B...","C...","D..."], "correctAnswer": "A", "explanation": "..." }]`;
     const aiRes = await studyPromptAI(prompt);
     let questions = [];
     try { const cleaned = aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim(); questions = JSON.parse(cleaned); } catch { throw new Error('Failed to parse AI response. Please try again.'); }
@@ -4671,7 +4673,7 @@ app.post('/api/study/flashcards/generate', isAuth, requirePaid, async (req, res)
   try {
     const { courseId, subtopicId, topicTitle } = req.body;
     const uid = req.session.user.id;
-    const prompt = `Generate 10 flashcards for studying "${topicTitle || 'this course'}". Each flashcard should have a front (question/term) and back (answer/definition). Return ONLY a JSON array: [{ "front": "...", "back": "..." }]`;
+    const prompt = `Generate 10 flashcards for studying "${topicTitle || 'this course'}". Each flashcard: front (question/term), back (answer/definition), image (short visual scene description for illustration, 5-10 words). Return ONLY JSON: [{ "front": "...", "back": "...", "image": "..." }]`;
     const aiRes = await studyPromptAI(prompt);
     let cards = [];
     try { cards = JSON.parse(aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim()); } catch { throw new Error('Failed to generate flashcards'); }
