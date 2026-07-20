@@ -1566,10 +1566,10 @@ app.post('/submit-exam', isStudent, async (req, res) => {
 });
 
 app.get('/history', isAuth, requirePaid, async (req, res) => {
-    try {
-        const uid = req.session.user.id;
+    const uid = req.session.user.id;
+    let quizRows = [], oldRows = [], studyRows = [];
 
-        // 1. Fetch from quiz_results (new quizzes)
+    try {
         const quizRes = await pool.query(`
             SELECT qr.*, s.name as subject_name 
             FROM quiz_results qr
@@ -1577,8 +1577,10 @@ app.get('/history', isAuth, requirePaid, async (req, res) => {
             WHERE qr.user_id = $1
             ORDER BY qr.created_at DESC
         `, [uid]);
+        quizRows = quizRes.rows;
+    } catch (e) { console.error("History quiz_results:", e.message); }
 
-        // 2. Fetch from results table (old quizzes)
+    try {
         const oldRes = await pool.query(`
             SELECT id, NULL as subject_id, score, total_questions, 
                    CASE WHEN total_questions > 0 THEN ROUND((score::numeric / total_questions) * 100) ELSE 0 END as percentage,
@@ -1589,14 +1591,11 @@ app.get('/history', isAuth, requirePaid, async (req, res) => {
             WHERE user_id = $1
             ORDER BY created_at DESC
         `, [uid]);
+        oldRows = oldRes.rows;
+    } catch (e) { console.error("History results table:", e.message); }
 
-        // 3. Merge both (old + new)
-        const historyData = [...oldRes.rows, ...quizRes.rows].sort((a, b) => {
-            return new Date(b.created_at) - new Date(a.created_at);
-        });
-
-        // 4. Fetch study quiz attempts
-        const studyQuizQuery = `
+    try {
+        const studyRes = await pool.query(`
             SELECT sqa.id, sqa.score, sqa.total_questions as total, sqa.question_type,
                    sqa.status, sqa.created_at, sc.course_name as subject_name,
                    'study_quiz' as source
@@ -1604,18 +1603,19 @@ app.get('/history', isAuth, requirePaid, async (req, res) => {
             LEFT JOIN study_courses sc ON sqa.course_id = sc.id
             WHERE sqa.user_id = $1 AND sqa.status = 'completed'
             ORDER BY sqa.created_at DESC
-        `;
-        const studyQuizData = await pool.query(studyQuizQuery, [uid]);
+        `, [uid]);
+        studyRows = studyRes.rows;
+    } catch (e) { console.error("History study_quiz_attempts:", e.message); }
 
-        res.render('history', {
-            user: req.session.user,
-            history: historyData,
-            studyHistory: studyQuizData.rows
-        });
-    } catch (err) {
-        console.error("History Page Error:", err);
-        res.render('history', { user: req.session.user, history: [], studyHistory: [] });
-    }
+    const historyData = [...oldRows, ...quizRows].sort((a, b) => {
+        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    });
+
+    res.render('history', {
+        user: req.session.user,
+        history: historyData,
+        studyHistory: studyRows
+    });
 });
 
 // GET: Show Ambassador Login Page
@@ -4318,8 +4318,10 @@ function parseRetryDelay(msg) {
       ['study_sessions', 'subject_id', 'INTEGER DEFAULT 0'],
       ['study_flashcards', 'course_id', 'INTEGER DEFAULT 0'],
       ['study_quiz_attempts', 'course_id', 'INTEGER DEFAULT 0'],
+      ['study_quiz_attempts', 'created_at', 'TIMESTAMP DEFAULT NOW()'],
     ];
     for (const [t, c, d] of adds) { try { await pool.query(`ALTER TABLE ${t} ADD COLUMN IF NOT EXISTS ${c} ${d}`); } catch(_){} }
+    try { await pool.query(`UPDATE study_quiz_attempts SET created_at = NOW() WHERE created_at IS NULL`); } catch(_){}
     // Backfill legacy title -> topic_name, keep title populated too
     await pool.query(`UPDATE study_topics SET topic_name = COALESCE(topic_name, title) WHERE topic_name IS NULL OR topic_name = ''`).catch(()=>{});
     await pool.query(`UPDATE study_topics SET title = COALESCE(title, topic_name) WHERE title IS NULL OR title = ''`).catch(()=>{});

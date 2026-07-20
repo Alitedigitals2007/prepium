@@ -128,6 +128,7 @@ async function initDB() {
       ['study_quiz_attempts', 'total_questions', 'INTEGER DEFAULT 0'],
       ['study_quiz_attempts', 'status', "VARCHAR(20) DEFAULT 'in_progress'"],
       ['study_quiz_attempts', 'started_at', 'TIMESTAMP DEFAULT NOW()'],
+      ['study_quiz_attempts', 'created_at', 'TIMESTAMP DEFAULT NOW()'],
       ['study_quiz_questions', 'attempt_id', 'INTEGER DEFAULT 0'],
       ['study_quiz_questions', 'user_answer', 'TEXT'],
       ['study_quiz_questions', 'is_correct', 'BOOLEAN'],
