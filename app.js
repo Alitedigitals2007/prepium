@@ -202,6 +202,108 @@ pool.on('error', (err) => {
     }
 })();
 
+// ── Auto-create deadlines table ─────────────────────────────────────────────
+(async () => {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS deadlines (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                title VARCHAR(255) NOT NULL,
+                due_date DATE NOT NULL,
+                due_time TIME NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_deadlines_user_date ON deadlines(user_id, due_date)`);
+        await pool.query(`
+            DO $$ BEGIN
+                ALTER TABLE deadlines ADD COLUMN IF NOT EXISTS due_time TIME;
+            EXCEPTION WHEN duplicate_column THEN null;
+            END $$;
+        `);
+        console.log('[DB] deadlines table ready');
+    } catch (err) {
+        console.error('[DB] deadlines table setup:', err.message);
+    }
+})();
+
+// Auto-create quiz_results if it doesn't have title column (used by save-ai-quiz-results)
+(async () => {
+    try {
+        await pool.query(`
+            DO $$ BEGIN
+                ALTER TABLE quiz_results ADD COLUMN IF NOT EXISTS title VARCHAR(500);
+            EXCEPTION WHEN duplicate_column THEN null;
+            END $$;
+        `);
+    } catch (err) { /* ignore */ }
+})();
+
+// Auto-create payout_requests table for ambassador withdrawals
+(async () => {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS payout_requests (
+                id SERIAL PRIMARY KEY,
+                ambassador_id INTEGER NOT NULL,
+                amount_requested NUMERIC(12,2) NOT NULL,
+                fee_amount NUMERIC(12,2) NOT NULL,
+                net_payout NUMERIC(12,2) NOT NULL,
+                bank_details TEXT NOT NULL,
+                status VARCHAR(20) DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT NOW(),
+                processed_at TIMESTAMP,
+                processed_by VARCHAR(255)
+            )
+        `);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_payout_requests_amb ON payout_requests(ambassador_id)`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_payout_requests_status ON payout_requests(status)`);
+        console.log('[DB] payout_requests table ready');
+    } catch (err) {
+        console.error('[DB] payout_requests table setup:', err.message);
+    }
+})();
+
+// Auto-create missing columns on ambassadors
+(async () => {
+    try {
+        await pool.query(`
+            DO $$ BEGIN
+                ALTER TABLE ambassadors ADD COLUMN IF NOT EXISTS active_invite_count INTEGER DEFAULT 0;
+                ALTER TABLE ambassadors ADD COLUMN IF NOT EXISTS free_invite_count INTEGER DEFAULT 0;
+            EXCEPTION WHEN duplicate_column THEN null;
+            END $$;
+        `);
+    } catch (err) { /* ignore */ }
+})();
+
+// Auto-create user_groups table for admin email grouping
+(async () => {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS user_groups (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL UNIQUE,
+                description TEXT DEFAULT '',
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS user_group_members (
+                id SERIAL PRIMARY KEY,
+                group_id INTEGER NOT NULL REFERENCES user_groups(id) ON DELETE CASCADE,
+                user_id INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(group_id, user_id)
+            )
+        `);
+        console.log('[DB] user_groups tables ready');
+    } catch (err) {
+        console.error('[DB] user_groups setup:', err.message);
+    }
+})();
+
 // Auto-create user_courses table
 (async () => {
     try {
@@ -342,27 +444,28 @@ app.get('/signup', async (req, res) => {
 
 app.post('/auth/signup', rateLimit(5, 60000), async (req, res) => {
     const { fullname, email, password, university_id, referred_by } = req.body; 
-    
+
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
         const cleanReferralCode = referred_by ? referred_by.trim().toLowerCase() : null;
+        const uniId = university_id ? parseInt(university_id, 10) || null : null;
 
-        // Ensure the array [fullname, email, ..., university_id, ...] 
+        // Ensure the array [fullname, email, ..., university_id, ...]
         // matches the $1, $2, $3, $4 order
         await pool.query(
             'INSERT INTO users (fullname, email, password, university_id, unique_code, has_paid) VALUES ($1, $2, $3, $4, $5, $6)',
             [
-                fullname, 
-                email.toLowerCase(), 
-                hashedPassword, 
-                university_id, // FIXED: removed the 's'
-                cleanReferralCode, 
+                fullname,
+                email.toLowerCase(),
+                hashedPassword,
+                uniId,
+                cleanReferralCode,
                 false
             ]
         );
 
         res.redirect('/login?msg=Account created! Please login.');
-        
+
     } catch (err) {
         console.error("Signup Error:", err);
         res.redirect('/signup?error=Error creating account.');
@@ -517,17 +620,17 @@ app.get('/verify-payment', rateLimit(5, 300000), async (req, res) => {
 
             if (ambCheck.rows.length > 0) {
                 const ambassador = ambCheck.rows[0];
-                console.log(`[Referral Match] Adding ₦150 to Ambassador: ${ambassador.name}`);
+                const commission = Math.round(1000 * 0.15);
+                console.log(`[Referral Match] Adding ₦${commission} (15%) to Ambassador: ${ambassador.name}`);
 
-                // Direct mathematical calculation targeting the ambassador ID
                 await pool.query(
                     `UPDATE ambassadors 
-                     SET total_earned = CAST(COALESCE(total_earned, 0) AS INTEGER) + 150, 
+                     SET total_earned = CAST(COALESCE(total_earned, 0) AS INTEGER) + $1, 
                          total_referrals = CAST(COALESCE(total_referrals, 0) AS INTEGER) + 1 
-                     WHERE id = $1`,
-                    [ambassador.id]
+                     WHERE id = $2`,
+                    [commission, ambassador.id]
                 );
-                console.log(`[Success] ₦150 credited to Ambassador ID ${ambassador.id}.`);
+                console.log(`[Success] ₦${commission} credited to Ambassador ID ${ambassador.id}.`);
             } else {
                 console.log(`[Warning] No matching ambassador found for code: "${codeClean}"`);
             }
@@ -662,6 +765,7 @@ app.get('/admin/dashboard', isAdmin, async (req, res) => {
         ]);
 
         res.render('admin/dashboard', {
+            user: req.session.user,
             stats: statsResult.rows[0],
             recentUsers: recentUsers.rows
         });
@@ -1031,7 +1135,7 @@ app.get('/dashboard', isStudent, async (req, res) => {
             pool.query('SELECT COALESCE(AVG(score::float/NULLIF(total_questions,0)*100), 0) as avg FROM results WHERE user_id = $1 AND total_questions > 0', [userId]),
             pool.query('SELECT current_streak FROM users WHERE id = $1', [userId])
         ]);
-        const streak = streakRes.rows[0]?.current_streak || 0;
+        const streak = parseInt(streakRes.rows[0]?.current_streak) || 0;
         const studySessions = parseInt(studyStatsRes.rows[0].s) || 0;
         const quizCount = parseInt(quizCountRes.rows[0].c) || 0;
         const avgScore = Math.round(parseFloat(avgScoreRes.rows[0].avg) || 0);
@@ -1383,8 +1487,9 @@ app.post('/submit-exam', isStudent, async (req, res) => {
         }
 
         const quizData = req.session.activeQuiz.questions;
-        const timeUsed = req.body.timeUsed || "00:00"; 
-        const subjectId = quizData[0]?.subject_id || null;
+        const timeUsed = req.body.timeUsed || "00:00";
+        const rawSubjectId = quizData[0]?.subject_id || null;
+        const subjectId = rawSubjectId !== null && rawSubjectId !== undefined ? parseInt(rawSubjectId, 10) || null : null;
         const userId = req.session.user.id;
 
         let score = 0;
@@ -1646,13 +1751,9 @@ app.post('/admin/add-ambassador', isAdmin, async (req, res) => {
 // POST: Admin marks payout as complete
 app.post('/admin/payout-complete/:id', isAdmin, async (req, res) => {
     try {
-        // Fetch existing total_earned to move it to total_withdrawn
         const ambCheck = await pool.query('SELECT total_earned FROM ambassadors WHERE id = $1', [req.params.id]);
-        
         if (ambCheck.rows.length > 0) {
             const earned = ambCheck.rows[0].total_earned;
-
-            // Set total_withdrawn to match total_earned (clearing current balance to 0)
             await pool.query(
                 'UPDATE ambassadors SET total_withdrawn = $1 WHERE id = $2', 
                 [earned, req.params.id]
@@ -1662,6 +1763,160 @@ app.post('/admin/payout-complete/:id', isAdmin, async (req, res) => {
     } catch (err) {
         console.error("Payout error:", err);
         res.status(500).send("Payout reset failed.");
+    }
+});
+
+// GET: Admin withdrawal requests
+app.get('/admin/withdrawals', isAdmin, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT pr.*, a.name as ambassador_name, a.unique_code
+            FROM payout_requests pr
+            LEFT JOIN ambassadors a ON pr.ambassador_id = a.id
+            ORDER BY pr.created_at DESC
+        `);
+        res.render('admin-withdrawals', { withdrawals: result.rows, user: req.session.user });
+    } catch (err) {
+        console.error('Admin withdrawals error:', err);
+        res.status(500).send('Error');
+    }
+});
+
+// POST: Admin update withdrawal status
+app.post('/admin/withdrawals/update/:id', isAdmin, async (req, res) => {
+    try {
+        const { status } = req.body;
+        if (!['pending', 'approved', 'completed', 'rejected'].includes(status)) {
+            return res.redirect('/admin/withdrawals?error=Invalid status');
+        }
+        await pool.query(
+            'UPDATE payout_requests SET status = $1, processed_at = NOW(), processed_by = $2 WHERE id = $3',
+            [status, req.session.user.email, req.params.id]
+        );
+        res.redirect('/admin/withdrawals?msg=Status updated');
+    } catch (err) {
+        console.error('Withdrawal update error:', err);
+        res.redirect('/admin/withdrawals?error=Update failed');
+    }
+});
+
+// GET: Admin email page
+app.get('/admin/email', isAdmin, async (req, res) => {
+    try {
+        const [universities, groups] = await Promise.all([
+            pool.query('SELECT * FROM universities ORDER BY name ASC'),
+            pool.query('SELECT * FROM user_groups ORDER BY name ASC')
+        ]);
+        res.render('admin-email', { user: req.session.user, universities: universities.rows, groups: groups.rows });
+    } catch (err) {
+        console.error('Admin email page error:', err);
+        res.status(500).send('Error');
+    }
+});
+
+// POST: Admin send bulk email
+app.post('/admin/email/send', isAdmin, async (req, res) => {
+    try {
+        const { subject, message, filter_type, filter_value } = req.body;
+        if (!subject || !message) return res.redirect('/admin/email?error=Subject and message required');
+
+        let query = 'SELECT id, fullname, email FROM users WHERE 1=1';
+        const params = [];
+
+        if (filter_type === 'university' && filter_value) {
+            params.push(parseInt(filter_value));
+            query += ' AND university_id = $' + params.length;
+        } else if (filter_type === 'tier' && filter_value) {
+            if (filter_value === 'premium') query += ' AND has_paid = true';
+            else if (filter_value === 'free') query += ' AND has_paid = false';
+        } else if (filter_type === 'group' && filter_value) {
+            params.push(parseInt(filter_value));
+            query = 'SELECT u.id, u.fullname, u.email FROM users u JOIN user_group_members ugm ON u.id = ugm.user_id WHERE ugm.group_id = $' + params.length;
+        }
+
+        const users = await pool.query(query, params);
+        if (users.rows.length === 0) return res.redirect('/admin/email?error=No users match filter');
+
+        let sent = 0;
+        const transporterLocal = (process.env.EMAIL_USER && process.env.EMAIL_PASS)
+            ? nodemailer.createTransport({
+                service: 'gmail',
+                auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+              })
+            : null;
+
+        if (!transporterLocal) return res.redirect('/admin/email?error=Email not configured (set EMAIL_USER/PASS)');
+
+        for (const u of users.rows) {
+            try {
+                await transporterLocal.sendMail({
+                    from: `"Prepium" <${process.env.EMAIL_USER}>`,
+                    to: u.email,
+                    subject: subject,
+                    html: message
+                });
+                sent++;
+            } catch (mailErr) {
+                console.error('Email send error for', u.email, mailErr.message);
+            }
+        }
+
+        res.redirect('/admin/email?msg=' + encodeURIComponent(`Email sent to ${sent}/${users.rows.length} users`));
+    } catch (err) {
+        console.error('Admin send email error:', err);
+        res.redirect('/admin/email?error=' + encodeURIComponent(err.message));
+    }
+});
+
+// Admin group management
+app.get('/admin/groups', isAdmin, async (req, res) => {
+    try {
+        const groups = await pool.query('SELECT g.*, (SELECT COUNT(*) FROM user_group_members WHERE group_id = g.id) as member_count FROM user_groups g ORDER BY g.name ASC');
+        const students = await pool.query('SELECT id, fullname, email FROM users ORDER BY fullname ASC');
+        res.render('admin-groups', { user: req.session.user, groups: groups.rows, students: students.rows });
+    } catch (err) {
+        console.error('Admin groups error:', err);
+        res.status(500).send('Error');
+    }
+});
+
+app.post('/admin/groups/create', isAdmin, async (req, res) => {
+    try {
+        const { name, description } = req.body;
+        if (!name) return res.redirect('/admin/groups?error=Group name required');
+        await pool.query('INSERT INTO user_groups (name, description) VALUES ($1, $2)', [name.trim(), description || '']);
+        res.redirect('/admin/groups?msg=Group created');
+    } catch (err) {
+        res.redirect('/admin/groups?error=' + encodeURIComponent(err.message));
+    }
+});
+
+app.post('/admin/groups/delete/:id', isAdmin, async (req, res) => {
+    try {
+        await pool.query('DELETE FROM user_groups WHERE id = $1', [req.params.id]);
+        res.redirect('/admin/groups?msg=Group deleted');
+    } catch (err) {
+        res.redirect('/admin/groups?error=' + encodeURIComponent(err.message));
+    }
+});
+
+app.post('/admin/groups/add-user', isAdmin, async (req, res) => {
+    try {
+        const { group_id, user_id } = req.body;
+        if (!group_id || !user_id) return res.redirect('/admin/groups?error=Select group and user');
+        await pool.query('INSERT INTO user_group_members (group_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [parseInt(group_id), parseInt(user_id)]);
+        res.redirect('/admin/groups?msg=User added to group');
+    } catch (err) {
+        res.redirect('/admin/groups?error=' + encodeURIComponent(err.message));
+    }
+});
+
+app.post('/admin/groups/remove-user/:groupId/:userId', isAdmin, async (req, res) => {
+    try {
+        await pool.query('DELETE FROM user_group_members WHERE group_id = $1 AND user_id = $2', [req.params.groupId, req.params.userId]);
+        res.redirect('/admin/groups?msg=User removed');
+    } catch (err) {
+        res.redirect('/admin/groups?error=' + encodeURIComponent(err.message));
     }
 });
 
@@ -1697,7 +1952,7 @@ app.post('/admin/login', async (req, res) => {
                     console.error("Session Save Error:", err);
                     return res.render('admin-login', { error: "Session failed. Try again." });
                 }
-                res.redirect('/admin/ambassadors');
+                res.redirect('/admin/dashboard');
             });
         } else {
             res.render('admin-login', { error: "Invalid admin credentials." });
@@ -1724,24 +1979,21 @@ app.get('/competition', (req, res) => {
 
 // GET: View student deadlines
 app.get('/deadlines', isAuth, async (req, res) => {
-    if (!req.session.user.has_paid) {
-        return res.redirect('/dashboard?msg=Upgrade to use deadlines');
-    }
-
     try {
         const query = `
-            SELECT id, title, 
-                   TO_CHAR(due_date, 'YYYY-MM-DD') as date_str, 
-                   TO_CHAR(due_time, 'HH24:MI') as time_str 
-            FROM deadlines 
-            WHERE user_id = $1 
+            SELECT id, title,
+                   TO_CHAR(due_date, 'YYYY-MM-DD') as date_str,
+                   TO_CHAR(due_time, 'HH24:MI') as time_str
+            FROM deadlines
+            WHERE user_id = $1
             ORDER BY due_date ASC, due_time ASC
         `;
         const result = await pool.query(query, [req.session.user.id]);
-        
-        res.render('deadlines', { 
-            user: req.session.user, 
-            deadlines: result.rows 
+
+        res.render('deadlines', {
+            user: req.session.user,
+            deadlines: result.rows,
+            query: req.query
         });
     } catch (err) {
         console.error("Error fetching deadlines:", err);
@@ -2703,14 +2955,113 @@ app.post('/admin/suggestions/status', isAdmin, async (req, res) => {
 });
 
 // =========================================================
-// AMBASSADOR HELPER & CONTROLLER LOGIC
+// REFERRAL SYSTEM (replaces ambassador)
 // =========================================================
 
-/**
- * 1. GET ROUTE: Serve the registration page
- */
-app.get('/be-ambassador', (req, res) => {
-    res.render('be-ambassador'); 
+app.get('/refer', (req, res) => {
+    const user = req.session.user || null;
+    res.render('refer', { user });
+});
+
+app.get('/refer/dashboard', isAuth, async (req, res) => {
+    try {
+        const uid = req.session.user.id;
+        const userData = await pool.query('SELECT id, fullname, email, unique_code, has_paid FROM users WHERE id = $1', [uid]);
+        if (!userData.rows[0]) return res.redirect('/login');
+
+        let refCode = userData.rows[0].unique_code;
+        let referral = null;
+
+        if (refCode) {
+            const refData = await pool.query('SELECT * FROM ambassadors WHERE unique_code = $1', [refCode]);
+            if (refData.rows[0]) {
+                const a = refData.rows[0];
+                const earned = Number(a.total_earned) || 0;
+                const withdrawn = Number(a.total_withdrawn) || 0;
+                referral = { ...a, current_balance: earned - withdrawn, total_earned: earned, total_withdrawn: withdrawn };
+            }
+        } else {
+            // Auto-generate a referral code for the user
+            refCode = 'REF' + uid + Math.floor(1000 + Math.random() * 9000);
+            await pool.query('UPDATE users SET unique_code = $1 WHERE id = $2', [refCode, uid]);
+            try {
+                await pool.query(
+                    'INSERT INTO ambassadors (name, unique_code, bank_details, total_referrals, total_earned, total_withdrawn) VALUES ($1, $2, $3, 0, 0, 0)',
+                    [req.session.user.fullname, refCode, '']
+                );
+            } catch (e) { /* already exists */ }
+            referral = { name: req.session.user.fullname, unique_code: refCode, bank_details: '', total_referrals: 0, total_earned: 0, total_withdrawn: 0, current_balance: 0 };
+        }
+
+        const referralsList = await pool.query(
+            `SELECT fullname, email, has_paid, created_at FROM users WHERE LOWER(TRIM(unique_code)) = LOWER(TRIM($1)) ORDER BY created_at DESC`,
+            [refCode]
+        );
+
+        const totalRef = referralsList.rows.length;
+        const activeRef = referralsList.rows.filter(r => r.has_paid).length;
+        const availableBal = referral ? referral.current_balance : 0;
+
+        // Get withdrawal history
+        const withdrawals = await pool.query(
+            `SELECT id, amount_requested, fee_amount, net_payout, bank_details, status, created_at, processed_at 
+             FROM payout_requests WHERE ambassador_id = $1 ORDER BY created_at DESC`,
+            [referral ? referral.id : 0]
+        );
+
+        res.render('refer-dashboard', {
+            user: req.session.user,
+            referral,
+            referrals: referralsList.rows,
+            totalRef,
+            activeRef,
+            availableBal,
+            withdrawals: withdrawals.rows
+        });
+    } catch (err) {
+        console.error('Referral dashboard error:', err);
+        res.status(500).send('Error loading dashboard');
+    }
+});
+
+app.post('/refer/withdraw', isAuth, async (req, res) => {
+    try {
+        const uid = req.session.user.id;
+        const userData = await pool.query('SELECT unique_code FROM users WHERE id = $1', [uid]);
+        const code = userData.rows[0]?.unique_code;
+        if (!code) return res.status(400).json({ success: false, error: 'No referral code' });
+
+        const amb = await pool.query('SELECT * FROM ambassadors WHERE unique_code = $1', [code]);
+        if (!amb.rows[0]) return res.status(400).json({ success: false, error: 'No referral account' });
+
+        const a = amb.rows[0];
+        const earned = Number(a.total_earned) || 0;
+        const withdrawn = Number(a.total_withdrawn) || 0;
+        const balance = earned - withdrawn;
+
+        const { amount, bank_details } = req.body;
+        const amt = parseFloat(amount);
+        if (!amt || amt <= 0) return res.status(400).json({ success: false, error: 'Invalid amount' });
+        if (amt > balance) return res.status(400).json({ success: false, error: 'Insufficient balance' });
+        if (amt < 100) return res.status(400).json({ success: false, error: 'Minimum withdrawal is ₦100' });
+
+        const fee = Math.round(amt * 0.1 * 100) / 100;
+        const net = amt - fee;
+
+        await pool.query(
+            `INSERT INTO payout_requests (ambassador_id, amount_requested, fee_amount, net_payout, bank_details, status)
+             VALUES ($1, $2, $3, $4, $5, 'pending')`,
+            [a.id, amt, fee, net, bank_details || a.bank_details || '']
+        );
+
+        // Deduct from balance immediately
+        await pool.query('UPDATE ambassadors SET total_withdrawn = COALESCE(total_withdrawn, 0) + $1 WHERE id = $2', [amt, a.id]);
+
+        res.json({ success: true, message: `Withdrawal of ₦${amt} submitted (fee: ₦${fee}, net: ₦${net}). Awaiting admin approval.` });
+    } catch (err) {
+        console.error('Withdraw error:', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
 });
 
 app.post('/ambassador/register', async (req, res) => {
@@ -4084,6 +4435,8 @@ app.post('/api/study/generate-subtopics', isAuth, requirePaid, async (req, res) 
       if (!clean) continue;
       const exists = await pool.query('SELECT id FROM study_subtopics WHERE topic_id = $1 AND (subtopic_name = $2 OR title = $2)', [topic_id, clean]);
       if (!exists.rows[0]) { await pool.query('INSERT INTO study_subtopics (topic_id, course_id, user_id, subtopic_name, title, status) VALUES ($1, $2, $3, $4, $4, $5)', [topic_id, topic.rows[0].course_id, uid, clean, 'ai-generated']); count++; }
+
+
     }
     res.json({ success: true, count });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }

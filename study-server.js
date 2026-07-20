@@ -303,9 +303,11 @@ Return ONLY a JSON array of strings, nothing else. Example: ["Subtopic 1", "Subt
     const uid = req.session.user.id;
     const results = [];
     for (const st of subtopics.slice(0, 10)) {
+      const cleanName = st.replace(/^["'\s]+|["'\s]+$/g, '').trim();
+      if (!cleanName) continue;
       const r = await pool.query(
-        'INSERT INTO study_subtopics (topic_id, course_id, user_id, title, status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-        [topicId, courseId, uid, st.replace(/^["'\s]+|["'\s]+$/g, ''), 'pending']
+        'INSERT INTO study_subtopics (topic_id, course_id, user_id, subtopic_name, title, status) VALUES ($1, $2, $3, $4, $4, $5) RETURNING *',
+        [topicId, courseId, uid, cleanName, 'pending']
       );
       results.push(r.rows[0]);
     }

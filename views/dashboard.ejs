@@ -147,9 +147,11 @@
 
     <div class="quick-mood">
         <div class="mood-chip primary" onclick="location.href='/study'"><i class="fas fa-graduation-cap"></i> Study Hub</div>
-        <div class="mood-chip" onclick="location.href='/setup-test'"><i class="fas fa-bolt"></i> Quick Quiz</div>
+        <div class="mood-chip" onclick="location.href='/setup-test'"><i class="fas fa-bolt"></i> Quiz</div>
         <div class="mood-chip" onclick="location.href='/timetable'"><i class="fas fa-table"></i> Timetable</div>
         <div class="mood-chip" onclick="location.href='/cgpa'"><i class="fas fa-chart-line"></i> CGPA</div>
+        <div class="mood-chip" onclick="location.href='/refer'"><i class="fas fa-gift"></i> Refer</div>
+        <div class="mood-chip" onclick="location.href='/history'"><i class="fas fa-chart-bar"></i> History</div>
         <div class="mood-chip" onclick="location.href='/daily-challenge'"><i class="fas fa-calendar-check"></i> Challenge</div>
     </div>
 
@@ -184,24 +186,6 @@
             <div class="fc-desc"><%= user.has_paid ? 'Unlimited' : Math.max(0, 2 - (typeof quizAttempts !== 'undefined' ? quizAttempts : 0)) + ' free attempts left' %></div>
         </a>
 
-        <a href="/suggestions" class="feature-card">
-            <div class="fc-icon" style="background:#e0f2fe;color:#0284c7;"><i class="fas fa-lightbulb"></i></div>
-            <div class="fc-label">Feedback</div>
-            <div class="fc-desc">Free for everyone</div>
-        </a>
-
-        <a href="/daily-challenge" class="feature-card">
-            <div class="fc-icon" style="background:#d1fae5;color:#10b981;"><i class="fas fa-calendar-check"></i></div>
-            <div class="fc-label">Challenge</div>
-            <div class="fc-desc">Free daily competition</div>
-        </a>
-
-        <a href="/be-ambassador" class="feature-card">
-            <div class="fc-icon" style="background:#fef3c7;color:#f59e0b;"><i class="fas fa-store"></i></div>
-            <div class="fc-label">Store</div>
-            <div class="fc-desc">Earn as ambassador</div>
-        </a>
-
         <a href="/timetable" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
             <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
             <div class="fc-icon" style="background:#f3e8ff;color:#7c3aed;"><i class="fas fa-table"></i></div>
@@ -223,18 +207,17 @@
             <div class="fc-desc">Target calculator</div>
         </a>
 
-        <a href="/study" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
-            <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-            <div class="fc-icon" style="background:#eef4ff;color:var(--brand);"><i class="fas fa-graduation-cap"></i></div>
-            <div class="fc-label">Study with AI</div>
-            <div class="fc-desc">Courses, flashcards & tutor</div>
-        </a>
-
         <a href="/history" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
             <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
             <div class="fc-icon" style="background:#fef3c7;color:#f59e0b;"><i class="fas fa-chart-bar"></i></div>
             <div class="fc-label">History</div>
             <div class="fc-desc">Quiz performance</div>
+        </a>
+
+        <a href="/refer" class="feature-card">
+            <div class="fc-icon" style="background:#d1fae5;color:#10b981;"><i class="fas fa-gift"></i></div>
+            <div class="fc-label">Refer & Earn</div>
+            <div class="fc-desc">15% commission on referrals</div>
         </a>
 
         <a href="/deadlines" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
@@ -244,11 +227,10 @@
             <div class="fc-desc">Track milestones</div>
         </a>
 
-        <a href="/pomodoro" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
-            <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-            <div class="fc-icon" style="background:#f1f5f9;color:var(--text-sub);"><i class="fas fa-stopwatch"></i></div>
-            <div class="fc-label">Pomodoro</div>
-            <div class="fc-desc">Focus timer</div>
+        <a href="/daily-challenge" class="feature-card">
+            <div class="fc-icon" style="background:#d1fae5;color:#10b981;"><i class="fas fa-calendar-check"></i></div>
+            <div class="fc-label">Daily Challenge</div>
+            <div class="fc-desc">Free daily competition</div>
         </a>
 
         <a href="/competition" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
@@ -256,6 +238,19 @@
             <div class="fc-icon" style="background:#fce7f3;color:#ec4899;"><i class="fas fa-trophy"></i></div>
             <div class="fc-label">Live Arena</div>
             <div class="fc-desc">Real-time rankings</div>
+        </a>
+
+        <a href="/pomodoro" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
+            <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
+            <div class="fc-icon" style="background:#f1f5f9;color:var(--text-sub);"><i class="fas fa-stopwatch"></i></div>
+            <div class="fc-label">Pomodoro</div>
+            <div class="fc-desc">Focus timer</div>
+        </a>
+
+        <a href="/suggestions" class="feature-card">
+            <div class="fc-icon" style="background:#e0f2fe;color:#0284c7;"><i class="fas fa-lightbulb"></i></div>
+            <div class="fc-label">Feedback</div>
+            <div class="fc-desc">Share your thoughts</div>
         </a>
     </div>
 
