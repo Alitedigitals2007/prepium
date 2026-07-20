@@ -171,9 +171,33 @@ function isAuth(req, res, next) {
   res.redirect('/login');
 }
 
-function promptAI(prompt) {
-  if (!apiKeys[0]) return Promise.resolve({ text: 'AI service not configured. Please set GEMINI_API_KEY_PRIMARY in .env' });
-  return model.generateContent(prompt).then(r => ({ text: r.response.text() })).catch(e => ({ text: 'AI error: ' + e.message }));
+function parseRetryDelay(msg) {
+  const m = msg.match(/retry\s*in\s*([\d.]+)\s*s/i);
+  return m ? Math.min(Math.round(parseFloat(m[1]) * 1000) + 500, 30000) : null;
+}
+
+async function promptAI(prompt) {
+  if (apiKeys.length === 0) return { text: 'AI service not configured. Please set GEMINI_API_KEY in .env' };
+  let lastErr = null;
+  for (let i = 0; i < Math.max(apiKeys.length, 3); i++) {
+    const key = apiKeys[i % apiKeys.length];
+    try {
+      const gai = require('@google/generative-ai');
+      const ai = new gai.GoogleGenerativeAI(key);
+      const m = ai.getGenerativeModel({ model: 'gemini-2.0-flash' });
+      const r = await m.generateContent(prompt);
+      return { text: r.response.text() };
+    } catch (e) {
+      lastErr = e;
+      const msg = (e && e.message) || '';
+      const isQuota = /429|quota|rate|exhausted|resource_exhausted|503|unavailable/i.test(msg);
+      if (!isQuota) break;
+      const delayMs = parseRetryDelay(msg) || 7000;
+      console.log(`[AI] waiting ${delayMs}ms before retry...`);
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+  }
+  return { text: 'AI error: ' + ((lastErr && lastErr.message) || 'all keys exhausted') };
 }
 
 // ============ STUDY DASHBOARD ============

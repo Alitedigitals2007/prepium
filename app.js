@@ -4265,7 +4265,7 @@ async function studyPromptAI(prompt) {
   if (studyKeys.length === 0) return { text: 'AI not configured' };
   let lastErr = null;
   const totalKeys = studyKeys.length;
-  for (let i = 0; i < totalKeys; i++) {
+  for (let i = 0; i < Math.max(totalKeys, 3); i++) {
     const key = nextStudyKey();
     try {
       const gai = require('@google/generative-ai');
@@ -4277,11 +4277,19 @@ async function studyPromptAI(prompt) {
       lastErr = e;
       const msg = (e && e.message) || '';
       const isQuota = /429|quota|rate|exhausted|resource_exhausted|503|unavailable/i.test(msg);
-      console.warn(`[StudyAI] key ${i + 1}/${totalKeys} failed: ${msg.slice(0, 120)}`);
+      console.warn(`[StudyAI] attempt ${i + 1}: ${msg.slice(0, 120)}`);
       if (!isQuota) break;
+      const delayMs = parseRetryDelay(msg) || 7000;
+      console.log(`[StudyAI] waiting ${delayMs}ms before retry...`);
+      await new Promise(r => setTimeout(r, delayMs));
     }
   }
   return { text: 'AI error: ' + ((lastErr && lastErr.message) || 'all keys exhausted') };
+}
+
+function parseRetryDelay(msg) {
+  const m = msg.match(/retry\s*in\s*([\d.]+)\s*s/i);
+  return m ? Math.min(Math.round(parseFloat(m[1]) * 1000) + 500, 30000) : null;
 }
 
 // Ensure study tables exist
