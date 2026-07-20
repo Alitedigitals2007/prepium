@@ -1567,16 +1567,35 @@ app.post('/submit-exam', isStudent, async (req, res) => {
 
 app.get('/history', isAuth, requirePaid, async (req, res) => {
     try {
-        const query = `
+        const uid = req.session.user.id;
+
+        // 1. Fetch from quiz_results (new quizzes)
+        const quizRes = await pool.query(`
             SELECT qr.*, s.name as subject_name 
             FROM quiz_results qr
             LEFT JOIN subjects s ON qr.subject_id = s.id
             WHERE qr.user_id = $1
             ORDER BY qr.created_at DESC
-        `;
-        const historyData = await pool.query(query, [req.session.user.id]);
+        `, [uid]);
 
-        // Also fetch study quiz attempts
+        // 2. Fetch from results table (old quizzes)
+        const oldRes = await pool.query(`
+            SELECT id, NULL as subject_id, score, total_questions, 
+                   CASE WHEN total_questions > 0 THEN ROUND((score::numeric / total_questions) * 100) ELSE 0 END as percentage,
+                   NULL as title, NULL as time_taken,
+                   created_at,
+                   'General Quiz' as subject_name
+            FROM results
+            WHERE user_id = $1
+            ORDER BY created_at DESC
+        `, [uid]);
+
+        // 3. Merge both (old + new)
+        const historyData = [...oldRes.rows, ...quizRes.rows].sort((a, b) => {
+            return new Date(b.created_at) - new Date(a.created_at);
+        });
+
+        // 4. Fetch study quiz attempts
         const studyQuizQuery = `
             SELECT sqa.id, sqa.score, sqa.total_questions as total, sqa.question_type,
                    sqa.status, sqa.created_at, sc.course_name as subject_name,
@@ -1586,11 +1605,11 @@ app.get('/history', isAuth, requirePaid, async (req, res) => {
             WHERE sqa.user_id = $1 AND sqa.status = 'completed'
             ORDER BY sqa.created_at DESC
         `;
-        const studyQuizData = await pool.query(studyQuizQuery, [req.session.user.id]);
+        const studyQuizData = await pool.query(studyQuizQuery, [uid]);
 
         res.render('history', {
             user: req.session.user,
-            history: historyData.rows,
+            history: historyData,
             studyHistory: studyQuizData.rows
         });
     } catch (err) {
