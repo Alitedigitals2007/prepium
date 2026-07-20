@@ -4308,7 +4308,7 @@ async function studyPromptAI(prompt) {
   } catch(e) { console.error('[Study] Table init:', e.message); }
 })();
 
-// Study Dashboard
+// ==================== STUDY DASHBOARD ====================
 app.get('/study', isAuth, requirePaid, async (req, res) => {
   try {
     const uid = req.session.user.id;
@@ -4326,11 +4326,13 @@ app.get('/study/course/:id', isAuth, requirePaid, async (req, res) => {
   try {
     const course = await pool.query('SELECT * FROM study_courses WHERE id = $1 AND user_id = $2', [req.params.id, req.session.user.id]);
     if (!course.rows[0]) return res.status(404).send('Course not found');
-    const [topicsRes, progressRes] = await Promise.all([
-      pool.query('SELECT t.*, (SELECT json_agg(json_build_object(\'id\', s.id, \'subtopic_name\', s.subtopic_name, \'status\', s.status)) FROM study_subtopics s WHERE s.topic_id = t.id) as subtopics FROM study_topics t WHERE t.course_id = $1 ORDER BY t.id ASC', [req.params.id]),
+    const [topicsRes, subtopicsRes, progressRes] = await Promise.all([
+      pool.query('SELECT * FROM study_topics WHERE course_id = $1 ORDER BY order_index ASC', [req.params.id]),
+      pool.query('SELECT * FROM study_subtopics WHERE course_id = $1 ORDER BY topic_id, id ASC', [req.params.id]),
       pool.query('SELECT * FROM study_progress WHERE user_id = $1 AND course_id = $2', [req.session.user.id, req.params.id])
     ]);
-    res.render('study-course', { user: req.session.user, course: course.rows[0], topics: topicsRes.rows, progress: progressRes.rows[0] || null });
+    const topics = topicsRes.rows.map(t => { t.subtopics = subtopicsRes.rows.filter(s => s.topic_id === t.id); return t; });
+    res.render('study-course', { user: req.session.user, course: course.rows[0], topics, progress: progressRes.rows[0] || null });
   } catch (err) { console.error(err); res.status(500).send('Error loading course'); }
 });
 
@@ -4355,10 +4357,25 @@ app.get('/study/quiz/:attemptId', isAuth, requirePaid, async (req, res) => {
 
 // Flashcards Page
 app.get('/study/flashcards/:courseId', isAuth, requirePaid, async (req, res) => {
-  res.render('study-flashcards', { user: req.session.user, courseId: parseInt(req.params.courseId) });
+  try {
+    const course = await pool.query('SELECT course_name FROM study_courses WHERE id = $1 AND user_id = $2', [req.params.courseId, req.session.user.id]).catch(() => ({ rows: [{ course_name: '' }] }));
+    res.render('study-flashcards', { user: req.session.user, courseId: parseInt(req.params.courseId), courseName: course.rows[0]?.course_name || '' });
+  } catch (err) { res.status(500).send('Error loading flashcards'); }
 });
 
-// API: Import from timetable
+// Subtopic Page
+app.get('/study/subtopic/:id', isAuth, requirePaid, async (req, res) => {
+  try {
+    const st = await pool.query('SELECT * FROM study_subtopics WHERE id = $1', [req.params.id]);
+    if (!st.rows[0]) return res.status(404).send('Subtopic not found');
+    const s = st.rows[0];
+    const topic = await pool.query('SELECT * FROM study_topics WHERE id = $1', [s.topic_id]).catch(() => ({ rows: [] }));
+    const course = await pool.query('SELECT * FROM study_courses WHERE id = $1', [s.course_id || 0]).catch(() => ({ rows: [] }));
+    res.render('study-subtopic', { user: req.session.user, subtopic: s, topic: topic.rows[0] || null, course: course.rows[0] || null });
+  } catch (err) { console.error(err); res.status(500).send('Error loading subtopic'); }
+});
+
+// ==================== STUDY API: IMPORT ====================
 app.post('/api/study/import-timetable', isAuth, requirePaid, async (req, res) => {
   try {
     const uid = req.session.user.id;
@@ -4366,33 +4383,50 @@ app.post('/api/study/import-timetable', isAuth, requirePaid, async (req, res) =>
     let count = 0;
     for (const row of tt.rows) {
       const exists = await pool.query('SELECT id FROM study_courses WHERE user_id = $1 AND course_name = $2', [uid, row.course]);
-      if (!exists.rows[0]) {
-        await pool.query('INSERT INTO study_courses (user_id, course_name, course_code, unit, source) VALUES ($1, $2, $3, $4, $5)', [uid, row.course, row.course_code || '', row.unit || 3, 'timetable']);
-        count++;
-      }
+      if (!exists.rows[0]) { await pool.query('INSERT INTO study_courses (user_id, course_name, course_code, unit, source) VALUES ($1, $2, $3, $4, $5)', [uid, row.course, row.course_code || '', row.unit || 3, 'timetable']); count++; }
     }
     res.json({ success: true, imported: count });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
-// API: Add topic
-app.post('/api/study/topics', isAuth, requirePaid, async (req, res) => {
+// ==================== STUDY API: COURSES ====================
+app.post('/api/study/courses/add', isAuth, requirePaid, async (req, res) => {
   try {
-    const { course_id, topic_name } = req.body;
-    const name = (topic_name || '').trim();
+    const { courseName, courseCode, unit } = req.body;
+    const r = await pool.query('INSERT INTO study_courses (user_id, course_name, course_code, unit) VALUES ($1, $2, $3, $4) RETURNING *', [req.session.user.id, courseName, courseCode || '', unit || 3]);
+    res.json({ success: true, course: r.rows[0] });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.post('/api/study/courses/delete/:id', isAuth, requirePaid, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM study_courses WHERE id = $1 AND user_id = $2', [req.params.id, req.session.user.id]);
+    await pool.query('DELETE FROM study_topics WHERE course_id = $1', [req.params.id]);
+    await pool.query('DELETE FROM study_subtopics WHERE course_id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.get('/api/study/courses', isAuth, async (req, res) => {
+  try {
+    const courses = await pool.query('SELECT * FROM study_courses WHERE user_id = $1 ORDER BY course_name ASC', [req.session.user.id]);
+    res.json({ courses: courses.rows });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ==================== STUDY API: TOPICS ====================
+app.post('/api/study/topics/add', isAuth, requirePaid, async (req, res) => {
+  try {
+    const { courseId, title } = req.body;
+    const name = (title || '').trim();
     if (!name) return res.status(400).json({ success: false, error: 'Topic name required' });
-    const max = await pool.query('SELECT COALESCE(MAX(order_index), 0) as n FROM study_topics WHERE course_id = $1::integer', [course_id]);
-    const orderIdx = parseInt(max.rows[0]?.n || 0, 10) + 1;
-    const r = await pool.query(
-      'INSERT INTO study_topics (course_id, user_id, topic_name, title, order_index) VALUES ($1::integer, $2::integer, $3::text, $3::text, $4::integer) RETURNING *',
-      [course_id, req.session.user.id, name, orderIdx]
-    );
+    const max = await pool.query('SELECT COALESCE(MAX(order_index), -1) + 1 as n FROM study_topics WHERE course_id = $1::integer', [courseId]);
+    const r = await pool.query('INSERT INTO study_topics (course_id, user_id, title, topic_name, order_index) VALUES ($1::integer, $2::integer, $3::text, $3::text, $4::integer) RETURNING *', [courseId, req.session.user.id, name, max.rows[0].n]);
     res.json({ success: true, topic: r.rows[0] });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
-// API: Delete topic
-app.delete('/api/study/topics/:id', isAuth, requirePaid, async (req, res) => {
+app.post('/api/study/topics/delete/:id', isAuth, requirePaid, async (req, res) => {
   try {
     await pool.query('DELETE FROM study_subtopics WHERE topic_id = $1', [req.params.id]);
     await pool.query('DELETE FROM study_topics WHERE id = $1', [req.params.id]);
@@ -4400,158 +4434,168 @@ app.delete('/api/study/topics/:id', isAuth, requirePaid, async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
-// API: Generate topics with AI
-app.post('/api/study/generate-topics', isAuth, requirePaid, async (req, res) => {
+app.get('/api/study/topics/:courseId', isAuth, async (req, res) => {
   try {
-    const { course_id } = req.body;
-    const course = await pool.query('SELECT * FROM study_courses WHERE id = $1::integer', [course_id]);
-    if (!course.rows[0]) return res.json({ success: false, error: 'Course not found' });
-    const prompt = `Generate a list of 8-12 important topics for the university course "${course.rows[0].course_name} ${course.rows[0].course_code}". Return ONLY a JSON array of strings. Example: ["Topic 1", "Topic 2"]`;
-    const aiRes = await studyPromptAI(prompt);
-    if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
-    let topics = [];
-    try { topics = JSON.parse(aiRes.text.replace(/```json/g,'').replace(/```/g,'').trim()); } catch { topics = aiRes.text.split('\n').filter(l => l.trim()).map(l => l.replace(/^[\d.\s-]+/,'').trim()).filter(Boolean); }
-    let count = 0;
-    for (const t of topics.slice(0, 15)) {
-      const exists = await pool.query('SELECT id FROM study_topics WHERE course_id = $1::integer AND (topic_name = $2::text OR title = $2::text)', [course_id, t]);
-      if (!exists.rows[0]) { await pool.query('INSERT INTO study_topics (course_id, user_id, topic_name, title) VALUES ($1::integer, $2::integer, $3::text, $3::text)', [course_id, req.session.user.id, t]); count++; }
-    }
-    res.json({ success: true, count });
-  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
-});
-
-// API: Generate subtopics with AI
-app.post('/api/study/generate-subtopics', isAuth, requirePaid, async (req, res) => {
-  try {
-    const { topic_id } = req.body;
-    const topic = await pool.query('SELECT * FROM study_topics WHERE id = $1::integer', [topic_id]);
-    if (!topic.rows[0]) return res.json({ success: false, error: 'Topic not found' });
-    const topicName = topic.rows[0].topic_name || topic.rows[0].title;
-    const prompt = `For the topic "${topicName}", generate 5-7 specific subtopics. Return ONLY a JSON array of strings. Example: ["Subtopic 1", "Subtopic 2"]`;
-    const aiRes = await studyPromptAI(prompt);
-    if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
-    let subtopics = [];
-    try { subtopics = JSON.parse(aiRes.text.replace(/```json/g,'').replace(/```/g,'').trim()); } catch { subtopics = aiRes.text.split('\n').filter(l => l.trim()).map(l => l.replace(/^[\d.\s-]+/,'').trim()).filter(Boolean); }
-    let count = 0;
-    const uid = req.session.user.id;
-    for (const st of subtopics.slice(0, 10)) {
-      const clean = (st || '').replace(/^["'\s]+|["'\s]+$/g,'').trim();
-      if (!clean) continue;
-      const exists = await pool.query('SELECT id FROM study_subtopics WHERE topic_id = $1::integer AND (subtopic_name = $2::text OR title = $2::text)', [topic_id, clean]);
-      if (!exists.rows[0]) { const cid = parseInt(topic.rows[0].course_id) || 0; const tid = parseInt(topic_id) || 0; await pool.query('INSERT INTO study_subtopics (topic_id, course_id, user_id, subtopic_name, title, status) VALUES ($1::integer, $2::integer, $3::integer, $4::text, $5::text, $6::text)', [tid, cid, parseInt(uid) || 0, clean, clean, 'ai-generated']); count++; }
-    }
-    res.json({ success: true, count });
-  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
-});
-
-// API: Accept subtopic
-app.put('/api/study/subtopics/:id/accept', isAuth, requirePaid, async (req, res) => {
-  try { await pool.query('UPDATE study_subtopics SET status = $1 WHERE id = $2', ['accepted', req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).json({ success: false, error: err.message }); }
-});
-
-// API: Update subtopic
-app.put('/api/study/subtopics/:id', isAuth, requirePaid, async (req, res) => {
-  try {
-    const name = (req.body.subtopic_name || '').trim();
-    if (!name) return res.status(400).json({ success: false, error: 'Name required' });
-    await pool.query('UPDATE study_subtopics SET subtopic_name = $1, title = $1 WHERE id = $2', [name, req.params.id]);
-    res.json({ success: true });
-  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
-});
-
-// API: Delete subtopic
-app.delete('/api/study/subtopics/:id', isAuth, requirePaid, async (req, res) => {
-  try { await pool.query('DELETE FROM study_subtopics WHERE id = $1', [req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).json({ success: false, error: err.message }); }
-});
-
-// API: Create study session
-app.post('/api/study/sessions', isAuth, requirePaid, async (req, res) => {
-  try {
-    const { course_id } = req.body;
-    const course = await pool.query('SELECT * FROM study_courses WHERE id = $1', [course_id]);
-    const r = await pool.query('INSERT INTO study_sessions (user_id, course_id, course_name, status) VALUES ($1, $2, $3, $4) RETURNING *', [req.session.user.id, course_id, course.rows[0] ? course.rows[0].course_name : 'Study', 'active']);
-    res.json({ success: true, session_id: r.rows[0].id });
-  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
-});
-
-// API: End session
-app.put('/api/study/sessions/:id/end', isAuth, requirePaid, async (req, res) => {
-  try {
-    const { elapsed_seconds } = req.body;
-    const sid = req.params.id;
-    const uid = req.session.user.id;
-    await pool.query('UPDATE study_sessions SET status = $1, elapsed_seconds = $2, completed_at = NOW() WHERE id = $3 AND user_id = $4', ['completed', elapsed_seconds || 0, sid, uid]);
-    const s = (await pool.query('SELECT * FROM study_sessions WHERE id = $1', [sid])).rows[0];
-    if (s) {
-      const mins = Math.ceil((elapsed_seconds || 0) / 60);
-      await pool.query('INSERT INTO study_progress (user_id, course_id, course_name, total_sessions, total_minutes, last_studied) VALUES ($1, $2, $3, 1, $4, NOW()) ON CONFLICT (user_id, course_name) DO UPDATE SET total_sessions = study_progress.total_sessions + 1, total_minutes = study_progress.total_minutes + $4, last_studied = NOW()', [uid, s.course_id, s.course_name, mins]);
-    }
-    res.json({ success: true });
-  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
-});
-
-// API: Get session
-app.get('/api/study/sessions/:id', isAuth, async (req, res) => {
-  try {
-    const s = await pool.query('SELECT * FROM study_sessions WHERE id = $1 AND user_id = $2', [req.params.id, req.session.user.id]);
-    res.json(s.rows[0] || {});
+    const topics = await pool.query('SELECT t.*, (SELECT COUNT(*) FROM study_subtopics WHERE topic_id = t.id) as subtopic_count FROM study_topics t WHERE t.course_id = $1 ORDER BY t.order_index ASC', [req.params.courseId]);
+    const subtopics = await pool.query('SELECT * FROM study_subtopics WHERE course_id = $1 ORDER BY topic_id, id ASC', [req.params.courseId]);
+    res.json({ topics: topics.rows, subtopics: subtopics.rows });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// API: Save notes
-app.put('/api/study/sessions/:id/notes', isAuth, requirePaid, async (req, res) => {
-  try { await pool.query('UPDATE study_sessions SET notes = $1 WHERE id = $2 AND user_id = $3', [req.body.notes, req.params.id, req.session.user.id]); res.json({ success: true }); } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+// ==================== STUDY API: SUBTOPICS ====================
+app.post('/api/study/subtopics/ai-generate', isAuth, requirePaid, async (req, res) => {
+  try {
+    const { topicId, courseId, topicTitle, courseName } = req.body;
+    const prompt = `For the topic "${topicTitle}" in the course "${courseName}", generate a list of 5-8 specific subtopics that should be studied. Return ONLY a JSON array of strings, nothing else. Example: ["Subtopic 1", "Subtopic 2", "Subtopic 3"]`;
+    const aiRes = await studyPromptAI(prompt);
+    if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
+    let subtopics = [];
+    try { const cleaned = aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim(); subtopics = JSON.parse(cleaned); } catch { subtopics = aiRes.text.split('\n').filter(l => l.trim().match(/^["\w]/)).map(l => l.replace(/^[\d.-\s"']+|["'\s]+$/g, '')).filter(Boolean); }
+    const uid = req.session.user.id;
+    const results = [];
+    for (const st of subtopics.slice(0, 10)) {
+      const cleanName = st.replace(/^["'\s]+|["'\s]+$/g, '').trim();
+      if (!cleanName) continue;
+      const r = await pool.query('INSERT INTO study_subtopics (topic_id, course_id, user_id, subtopic_name, title, status) VALUES ($1::integer, $2::integer, $3::integer, $4::text, $5::text, $6::text) RETURNING *', [parseInt(topicId) || 0, parseInt(courseId) || 0, parseInt(uid) || 0, cleanName, cleanName, 'pending']);
+      results.push(r.rows[0]);
+    }
+    res.json({ success: true, subtopics: results });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
-// API: AI Chat
+app.post('/api/study/subtopics/update', isAuth, requirePaid, async (req, res) => {
+  try {
+    const { id, title, status } = req.body;
+    await pool.query('UPDATE study_subtopics SET title = COALESCE($1, title), subtopic_name = COALESCE($1, subtopic_name), status = COALESCE($2, status) WHERE id = $3', [title, status, id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.post('/api/study/subtopics/delete/:id', isAuth, requirePaid, async (req, res) => {
+  try { await pool.query('DELETE FROM study_subtopics WHERE id = $1', [req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.get('/api/study/subtopic/:id', isAuth, async (req, res) => {
+  try {
+    const st = await pool.query('SELECT * FROM study_subtopics WHERE id = $1', [req.params.id]);
+    if (!st.rows[0]) return res.status(404).json({ error: 'Not found' });
+    const videos = await pool.query('SELECT * FROM study_youtube_videos WHERE subtopic_id = $1 ORDER BY created_at DESC LIMIT 5', [req.params.id]);
+    const flashcards = await pool.query('SELECT * FROM study_flashcards WHERE subtopic_id = $1 ORDER BY created_at DESC LIMIT 10', [req.params.id]);
+    res.json({ subtopic: st.rows[0], videos: videos.rows, flashcards: flashcards.rows });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/study/subtopic/:id/content', isAuth, requirePaid, async (req, res) => {
+  try {
+    const st = await pool.query('SELECT * FROM study_subtopics WHERE id = $1', [req.params.id]);
+    if (!st.rows[0]) return res.json({ success: false, error: 'Not found' });
+    const s = st.rows[0];
+    const topic = await pool.query('SELECT * FROM study_topics WHERE id = $1', [s.topic_id]).catch(() => ({ rows: [] }));
+    const topicName = topic.rows[0] ? (topic.rows[0].topic_name || topic.rows[0].title) : 'General';
+    const prompt = `You are a university tutor. Explain the subtopic "${s.subtopic_name || s.title}" which is part of the topic "${topicName}". Provide a clear, detailed explanation with key points, examples, and study tips. Format with short paragraphs.`;
+    const aiRes = await studyPromptAI(prompt);
+    if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
+    await pool.query('UPDATE study_subtopics SET content = $1 WHERE id = $2', [aiRes.text, req.params.id]);
+    res.json({ success: true, subtopic: s.subtopic_name || s.title, content: aiRes.text });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// ==================== STUDY API: SESSIONS ====================
+app.post('/api/study/sessions/start', isAuth, requirePaid, async (req, res) => {
+  try {
+    const { courseId, subtopicId, courseName, durationMinutes } = req.body;
+    const r = await pool.query('INSERT INTO study_sessions (user_id, course_id, subtopic_id, course_name, duration_minutes, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *', [req.session.user.id, courseId || 0, subtopicId || 0, courseName || 'General Study', durationMinutes || 60, 'active']);
+    res.json({ success: true, session: r.rows[0], redirect: '/study/session/' + r.rows[0].id });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.post('/api/study/sessions/end', isAuth, requirePaid, async (req, res) => {
+  try {
+    const { sessionId, elapsedSeconds, notes } = req.body;
+    await pool.query("UPDATE study_sessions SET status = 'completed', elapsed_seconds = $1, notes = $2, completed_at = NOW() WHERE id = $3 AND user_id = $4", [elapsedSeconds || 0, notes || '', sessionId, req.session.user.id]);
+    const s = (await pool.query('SELECT * FROM study_sessions WHERE id = $1', [sessionId])).rows[0];
+    if (s) {
+      const mins = Math.ceil((elapsedSeconds || 0) / 60);
+      await pool.query('INSERT INTO study_progress (user_id, course_id, course_name, total_sessions, total_minutes, last_studied) VALUES ($1, $2, $3, 1, $4, NOW()) ON CONFLICT (user_id, course_name) DO UPDATE SET total_sessions = study_progress.total_sessions + 1, total_minutes = study_progress.total_minutes + $4, last_studied = NOW()', [s.user_id, s.course_id, s.course_name, mins]);
+    }
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.post('/api/study/sessions/update', isAuth, requirePaid, async (req, res) => {
+  try {
+    const { sessionId, elapsedSeconds, notes } = req.body;
+    await pool.query('UPDATE study_sessions SET elapsed_seconds = $1, notes = COALESCE($2, notes) WHERE id = $3 AND user_id = $4', [elapsedSeconds || 0, notes || null, sessionId, req.session.user.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// ==================== STUDY API: AI CHAT ====================
 app.post('/api/study/chat', isAuth, requirePaid, async (req, res) => {
   try {
-    const { message, session_id, course_name } = req.body;
+    const { message, courseId, subtopicId, courseName } = req.body;
     const uid = req.session.user.id;
-    await pool.query('INSERT INTO study_chat_messages (user_id, course_id, role, message) VALUES ($1, $2, $3, $4)', [uid, 0, 'user', message]);
-    const ctx = course_name ? `Context: Student is studying "${course_name}". ` : '';
-    const prompt = `${ctx}You are a helpful university study assistant. Answer clearly with examples. Student: ${message}`;
+    await pool.query('INSERT INTO study_chat_messages (user_id, course_id, subtopic_id, role, message) VALUES ($1, $2, $3, $4, $5)', [uid, courseId || 0, subtopicId || 0, 'user', message]);
+    const ctx = courseName ? `Context: Student is studying "${courseName}". ` : '';
+    const prompt = `${ctx}You are a helpful study assistant for university students. Answer the following question clearly and concisely. Include explanations, examples, and study tips where relevant.\n\nStudent's question: ${message}\n\nProvide a thorough, educational response.`;
     const aiRes = await studyPromptAI(prompt);
-    await pool.query('INSERT INTO study_chat_messages (user_id, course_id, role, message) VALUES ($1, $2, $3, $4)', [uid, 0, 'ai', aiRes.text]);
+    await pool.query('INSERT INTO study_chat_messages (user_id, course_id, subtopic_id, role, message) VALUES ($1, $2, $3, $4, $5)', [uid, courseId || 0, subtopicId || 0, 'ai', aiRes.text]);
     res.json({ success: true, reply: aiRes.text });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
-// API: YouTube search (AI-generated search links)
-app.get('/api/study/youtube', isAuth, async (req, res) => {
+app.get('/api/study/chat/history', isAuth, async (req, res) => {
   try {
-    const q = req.query.q || '';
-    const prompt = `Generate 5 YouTube search queries for learning: "${q}". Return ONLY a JSON array of objects with "id" (a placeholder like "vid1"), "title" (descriptive title), "channel" (fictional channel name). Example: [{"id":"vid1","title":"...","channel":"..."}]`;
+    const { courseId, subtopicId } = req.query;
+    let q = 'SELECT * FROM study_chat_messages WHERE user_id = $1';
+    const p = [req.session.user.id];
+    if (courseId) { q += ' AND course_id = $2'; p.push(parseInt(courseId)); }
+    if (subtopicId) { q += ` AND subtopic_id = $${p.length + 1}`; p.push(parseInt(subtopicId)); }
+    q += ' ORDER BY created_at ASC LIMIT 100';
+    const r = await pool.query(q, p);
+    res.json({ messages: r.rows });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ==================== STUDY API: YOUTUBE VIDEOS ====================
+app.post('/api/study/youtube/search', isAuth, requirePaid, async (req, res) => {
+  try {
+    const { query: searchQuery, subtopicId, courseId } = req.body;
+    const prompt = `Generate a list of 5 YouTube video search queries for studying the topic: "${searchQuery}". Return ONLY a JSON array of strings with search terms. Example: ["term1", "term2", "term3", "term4", "term5"]`;
     const aiRes = await studyPromptAI(prompt);
-    let videos = [];
-    try { videos = JSON.parse(aiRes.text.replace(/```json/g,'').replace(/```/g,'').trim()); } catch { videos = [{ id: 'vid1', title: 'Search YouTube for: ' + q, channel: 'YouTube' }]; }
-    res.json({ success: true, videos });
+    let terms = [];
+    try { terms = JSON.parse(aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim()); } catch { terms = [searchQuery]; }
+    const html = terms.map(function(t) {
+      const encoded = encodeURIComponent(t);
+      return '<div class="yt-card" onclick="window.open(\'https://www.youtube.com/results?search_query=' + encoded + '\',\'_blank\')"><i class="fab fa-youtube" style="color:#ff0000;font-size:1.5rem;"></i><div><strong>' + t + '</strong><br><span style="font-size:0.75rem;color:var(--text-sub)">Click to search on YouTube</span></div></div>';
+    }).join('');
+    if (subtopicId && parseInt(subtopicId) > 0) {
+      for (const t of terms.slice(0, 3)) { await pool.query('INSERT INTO study_youtube_videos (course_id, subtopic_id, title, url) VALUES ($1, $2, $3, $4)', [courseId || 0, subtopicId, t, 'https://www.youtube.com/results?search_query=' + encodeURIComponent(t)]); }
+    }
+    res.json({ success: true, html, terms });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
-// API: Generate quiz
+// ==================== STUDY API: QUIZ ====================
 app.post('/api/study/quiz/generate', isAuth, requirePaid, async (req, res) => {
   try {
-    const { course_id, subtopic_id, question_type, question_count, timed_minutes } = req.body;
-    const count = parseInt(question_count) || 5;
+    const { courseId, subtopicId, topicTitle, questionType, questionCount, timeLimit } = req.body;
+    const count = parseInt(questionCount) || 10;
     const uid = req.session.user.id;
-    const course = await pool.query('SELECT * FROM study_courses WHERE id = $1', [course_id || 0]);
-    const courseName = course.rows[0] ? course.rows[0].course_name : 'General Study';
-    const prompt = `Generate ${count} ${question_type || 'mixed'} questions about "${courseName}" for university exam prep. For each: question, 4 options (for multiple choice) or answer (for theory), correctAnswer, explanation. Return JSON array: [{ "question": "...", "options": ["A...","B...","C...","D..."], "correctAnswer": "A", "explanation": "..." }]. For theory, use options: [].`;
+    const prompt = `Generate ${count} ${questionType || 'multiple_choice'} questions about "${topicTitle || 'General Study'}" for university exam preparation. For each question include: - The question text - 4 answer options (for multiple choice) or a short answer (for theory) - The correct answer - A detailed explanation. Return as JSON array: [{ "question": "...", "options": ["A...", "B...", "C...", "D..."], "correctAnswer": "A", "explanation": "..." }] For theory questions, use options: [] and correctAnswer as the expected answer.`;
     const aiRes = await studyPromptAI(prompt);
     let questions = [];
-    try { questions = JSON.parse(aiRes.text.replace(/```json/g,'').replace(/```/g,'').trim()); } catch { throw new Error('Failed to parse AI response'); }
-    const attempt = await pool.query('INSERT INTO study_quiz_attempts (user_id, course_id, subtopic_id, question_type, question_count, time_limit, status) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *', [uid, course_id || 0, subtopic_id || 0, question_type || 'mixed', questions.length, timed_minutes || 0, 'in_progress']);
+    try { const cleaned = aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim(); questions = JSON.parse(cleaned); } catch { throw new Error('Failed to parse AI response. Please try again.'); }
+    const attempt = await pool.query("INSERT INTO study_quiz_attempts (user_id, course_id, subtopic_id, question_type, question_count, time_limit, status) VALUES ($1, $2, $3, $4, $5, $6, 'in_progress') RETURNING *", [uid, courseId || 0, subtopicId || 0, questionType || 'multiple_choice', questions.length, timeLimit || 0]);
     const attemptId = attempt.rows[0].id;
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i];
       await pool.query('INSERT INTO study_quiz_questions (attempt_id, question, options, correct_answer, explanation, order_index) VALUES ($1, $2, $3, $4, $5, $6)', [attemptId, q.question, JSON.stringify(q.options || []), q.correctAnswer, q.explanation || '', i]);
     }
-    res.json({ success: true, quiz_id: attemptId, questions });
+    res.json({ success: true, attempt: attempt.rows[0], questions });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
-// API: Submit quiz
 app.post('/api/study/quiz/submit', isAuth, requirePaid, async (req, res) => {
   try {
     const { attemptId, answers } = req.body;
@@ -4565,25 +4609,18 @@ app.post('/api/study/quiz/submit', isAuth, requirePaid, async (req, res) => {
       }
     }
     const total = (await pool.query('SELECT COUNT(*) as c FROM study_quiz_questions WHERE attempt_id = $1', [attemptId])).rows[0].c;
-    await pool.query('UPDATE study_quiz_attempts SET score = $1, total_questions = $2, status = $3, completed_at = NOW() WHERE id = $4', [score, total, 'completed', attemptId]);
-
-    // Sync quiz results to study progress
+    await pool.query("UPDATE study_quiz_attempts SET score = $1, total_questions = $2, status = 'completed', completed_at = NOW() WHERE id = $3", [score, total, attemptId]);
     try {
       const attempt = await pool.query('SELECT * FROM study_quiz_attempts WHERE id = $1', [attemptId]);
       if (attempt.rows[0] && attempt.rows[0].course_id > 0) {
         const course = await pool.query('SELECT * FROM study_courses WHERE id = $1', [attempt.rows[0].course_id]);
-        if (course.rows[0]) {
-          const cname = course.rows[0].course_name;
-          await pool.query('INSERT INTO study_progress (user_id, course_id, course_name, total_sessions, total_minutes, last_studied) VALUES ($1, $2, $3, 1, 5, NOW()) ON CONFLICT (user_id, course_name) DO UPDATE SET total_sessions = study_progress.total_sessions + 1, total_minutes = study_progress.total_minutes + 5, last_studied = NOW()', [attempt.rows[0].user_id, attempt.rows[0].course_id, cname]);
-        }
+        if (course.rows[0]) { await pool.query("INSERT INTO study_progress (user_id, course_id, course_name, total_sessions, total_minutes, last_studied) VALUES ($1, $2, $3, 1, 5, NOW()) ON CONFLICT (user_id, course_name) DO UPDATE SET total_sessions = study_progress.total_sessions + 1, total_minutes = study_progress.total_minutes + 5, last_studied = NOW()", [attempt.rows[0].user_id, attempt.rows[0].course_id, course.rows[0].course_name]); }
       }
-    } catch (syncErr) { console.error('Quiz-study sync error:', syncErr.message); }
-
+    } catch (e) { console.error('Quiz-study sync error:', e.message); }
     res.json({ success: true, score, total });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
-// API: Quiz results
 app.get('/api/study/quiz/result/:attemptId', isAuth, async (req, res) => {
   try {
     const attempt = await pool.query('SELECT * FROM study_quiz_attempts WHERE id = $1 AND user_id = $2', [req.params.attemptId, req.session.user.id]);
@@ -4592,25 +4629,20 @@ app.get('/api/study/quiz/result/:attemptId', isAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// API: Generate flashcards
+// ==================== STUDY API: FLASHCARDS ====================
 app.post('/api/study/flashcards/generate', isAuth, requirePaid, async (req, res) => {
   try {
-    const { courseId, subtopicId, course_name } = req.body;
+    const { courseId, subtopicId, topicTitle } = req.body;
     const uid = req.session.user.id;
-    const course = await pool.query('SELECT * FROM study_courses WHERE id = $1', [courseId || 0]);
-    const name = course_name || (course.rows[0] ? course.rows[0].course_name : 'General');
-    const prompt = `Generate 10 flashcards for "${name}". Each: front (question/term), back (answer/definition). Return JSON array: [{ "front": "...", "back": "..." }]`;
+    const prompt = `Generate 10 flashcards for studying "${topicTitle || 'this course'}". Each flashcard should have a front (question/term) and back (answer/definition). Return ONLY a JSON array: [{ "front": "...", "back": "..." }]`;
     const aiRes = await studyPromptAI(prompt);
     let cards = [];
-    try { cards = JSON.parse(aiRes.text.replace(/```json/g,'').replace(/```/g,'').trim()); } catch { throw new Error('Failed to generate flashcards'); }
-    for (const c of cards) {
-      await pool.query('INSERT INTO study_flashcards (user_id, course_id, subtopic_id, front, back) VALUES ($1, $2, $3, $4, $5)', [uid, courseId || null, subtopicId || null, c.front, c.back]);
-    }
+    try { cards = JSON.parse(aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim()); } catch { throw new Error('Failed to generate flashcards'); }
+    for (const c of cards) { await pool.query('INSERT INTO study_flashcards (user_id, course_id, subtopic_id, front, back) VALUES ($1, $2, $3, $4, $5)', [uid, courseId || null, subtopicId || null, c.front, c.back]); }
     res.json({ success: true, count: cards.length, cards });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
-// API: Get flashcards
 app.get('/api/study/flashcards', isAuth, async (req, res) => {
   try {
     const { courseId } = req.query;
@@ -4623,12 +4655,38 @@ app.get('/api/study/flashcards', isAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// API: Delete flashcard
 app.post('/api/study/flashcards/delete/:id', isAuth, requirePaid, async (req, res) => {
   try { await pool.query('DELETE FROM study_flashcards WHERE id = $1 AND user_id = $2', [req.params.id, req.session.user.id]); res.json({ success: true }); } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
-// API: CGPA sync - import study courses into CGPA
+// ==================== STUDY API: STATS & EXPORT ====================
+app.get('/api/study/stats', isAuth, async (req, res) => {
+  try {
+    const uid = req.session.user.id;
+    const [ts, tm, ad, tc, fc] = await Promise.all([
+      pool.query("SELECT COUNT(*) as c FROM study_sessions WHERE user_id = $1 AND status = 'completed'", [uid]),
+      pool.query("SELECT COALESCE(SUM(elapsed_seconds), 0) as t FROM study_sessions WHERE user_id = $1 AND status = 'completed'", [uid]),
+      pool.query("SELECT COUNT(DISTINCT session_date) as d FROM study_sessions WHERE user_id = $1 AND status = 'completed'", [uid]),
+      pool.query('SELECT COUNT(*) as c FROM study_courses WHERE user_id = $1', [uid]),
+      pool.query('SELECT COUNT(*) as c FROM study_flashcards WHERE user_id = $1', [uid])
+    ]);
+    res.json({ totalSessions: parseInt(ts.rows[0].c), totalMinutes: Math.floor(parseInt(tm.rows[0].t) / 60), activeDays: parseInt(ad.rows[0].d), totalCourses: parseInt(tc.rows[0].c), totalFlashcards: parseInt(fc.rows[0].c) });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/study/export/:courseId', isAuth, async (req, res) => {
+  try {
+    const uid = req.session.user.id;
+    const course = (await pool.query('SELECT * FROM study_courses WHERE id = $1 AND user_id = $2', [req.params.courseId, uid])).rows[0];
+    if (!course) return res.status(404).json({ error: 'Not found' });
+    const topics = (await pool.query('SELECT * FROM study_topics WHERE course_id = $1 ORDER BY order_index', [req.params.courseId])).rows;
+    const subtopics = (await pool.query('SELECT * FROM study_subtopics WHERE course_id = $1 ORDER BY id', [req.params.courseId])).rows;
+    const flashcards = (await pool.query('SELECT * FROM study_flashcards WHERE course_id = $1 AND user_id = $2', [req.params.courseId, uid])).rows;
+    res.json({ course, topics, subtopics, flashcards, exportedAt: new Date().toISOString() });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ==================== STUDY API: CGPA SYNC ====================
 app.post('/api/study/cgpa-sync', isAuth, requirePaid, async (req, res) => {
   try {
     const uid = req.session.user.id;
@@ -4638,11 +4696,7 @@ app.post('/api/study/cgpa-sync', isAuth, requirePaid, async (req, res) => {
     let synced = 0;
     for (const c of courses.rows) {
       const exists = await pool.query('SELECT id FROM public.cgpa_courses WHERE user_id = $1 AND course_code = $2 AND deleted = false', [uid, c.course_code || c.course_name]);
-      if (!exists.rows[0]) {
-        const level = profile.rows[0].current_level || 300;
-        await pool.query('INSERT INTO public.cgpa_courses (user_id, course_code, title, level_scope, semester, credit_units, grade, is_hidden, deleted) VALUES ($1, $2, $3, $4, $5, $6, $7, false, false)', [uid, c.course_code || c.course_name, c.course_name, level, 1, c.unit || 3, 'A']);
-        synced++;
-      }
+      if (!exists.rows[0]) { const level = profile.rows[0].current_level || 300; await pool.query('INSERT INTO public.cgpa_courses (user_id, course_code, title, level_scope, semester, credit_units, grade, is_hidden, deleted) VALUES ($1, $2, $3, $4, $5, $6, $7, false, false)', [uid, c.course_code || c.course_name, c.course_name, level, 1, c.unit || 3, 'A']); synced++; }
     }
     res.json({ success: true, synced });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
