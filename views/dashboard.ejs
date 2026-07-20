@@ -299,7 +299,9 @@
 </div>
 
 <script>
-function payWithPaystack() {
+function payWithPaystack(e) {
+    if (e) { e.preventDefault(); }
+    if (typeof PaystackPop === 'undefined') { alert('Payment system loading. Please try again.'); return; }
     let handler = PaystackPop.setup({
         key: '<%= paystack_key %>',
         email: '<%= user.email %>',

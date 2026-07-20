@@ -1133,7 +1133,7 @@ app.get('/dashboard', isStudent, async (req, res) => {
             pool.query('SELECT COALESCE(SUM(elapsed_seconds), 0) as t, COUNT(*) as s FROM study_sessions WHERE user_id = $1 AND status = $2', [userId, 'completed']),
             pool.query('SELECT COUNT(*) as c FROM results WHERE user_id = $1', [userId]),
             pool.query('SELECT COALESCE(AVG(score::float/NULLIF(total_questions,0)*100), 0) as avg FROM results WHERE user_id = $1 AND total_questions > 0', [userId]),
-            pool.query('SELECT current_streak FROM users WHERE id = $1', [userId])
+            pool.query('SELECT current_streak FROM login_streaks WHERE user_id = $1', [userId])
         ]);
         const streak = parseInt(streakRes.rows[0]?.current_streak) || 0;
         const studySessions = parseInt(studyStatsRes.rows[0].s) || 0;
@@ -4453,7 +4453,7 @@ app.post('/api/study/generate-subtopics', isAuth, requirePaid, async (req, res) 
       const clean = (st || '').replace(/^["'\s]+|["'\s]+$/g,'').trim();
       if (!clean) continue;
       const exists = await pool.query('SELECT id FROM study_subtopics WHERE topic_id = $1 AND (subtopic_name = $2 OR title = $2)', [topic_id, clean]);
-      if (!exists.rows[0]) { await pool.query('INSERT INTO study_subtopics (topic_id, course_id, user_id, subtopic_name, title, status) VALUES ($1, $2, $3, $4, $4, $5)', [topic_id, topic.rows[0].course_id, uid, clean, 'ai-generated']); count++; }
+      if (!exists.rows[0]) { const cid = parseInt(topic.rows[0].course_id) || 0; const tid = parseInt(topic_id) || 0; await pool.query('INSERT INTO study_subtopics (topic_id, course_id, user_id, subtopic_name, title, status) VALUES ($1, $2, $3, $4, $5, $6)', [tid, cid, parseInt(uid) || 0, clean, clean, 'ai-generated']); count++; }
 
 
     }
