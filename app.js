@@ -3,6 +3,7 @@ const nodemailer = require('nodemailer');
 const bcrypt = require('bcryptjs');
 const session = require('express-session');
 require('dotenv').config();
+try { require('./key-rotator.cjs'); } catch(_) {}
 const app = express();
 const multer = require('multer');
 
@@ -3881,37 +3882,74 @@ setTimeout(checkDeadlineNotifications, 10000);
 
 // ======================== STUDY HUB ROUTES ========================
 
-// Study AI helper using existing Gemini setup
-const studyModel = (() => {
-  try {
-    const gai = require('@google/generative-ai');
-    const keys = [process.env.GEMINI_API_KEY_PRIMARY, process.env.GEMINI_API_KEY_SECONDARY].filter(Boolean);
-    if (keys[0]) {
-      const ai = new gai.GoogleGenerativeAI(keys[0]);
-      return ai.getGenerativeModel({ model: 'gemini-2.0-flash' });
+// Study AI helper - rotates between PRIMARY and SECONDARY keys on quota / failure
+const studyKeys = [process.env.GEMINI_API_KEY_PRIMARY, process.env.GEMINI_API_KEY_SECONDARY].filter(Boolean);
+let studyKeyIdx = 0;
+function nextStudyKey() {
+  if (studyKeys.length === 0) return null;
+  const k = studyKeys[studyKeyIdx % studyKeys.length];
+  studyKeyIdx++;
+  return k;
+}
+async function studyPromptAI(prompt) {
+  if (studyKeys.length === 0) return { text: 'AI not configured' };
+  let lastErr = null;
+  const totalKeys = studyKeys.length;
+  for (let i = 0; i < totalKeys; i++) {
+    const key = nextStudyKey();
+    try {
+      const gai = require('@google/generative-ai');
+      const ai = new gai.GoogleGenerativeAI(key);
+      const m = ai.getGenerativeModel({ model: 'gemini-2.0-flash' });
+      const r = await m.generateContent(prompt);
+      return { text: r.response.text() };
+    } catch (e) {
+      lastErr = e;
+      const msg = (e && e.message) || '';
+      const isQuota = /429|quota|rate|exhausted|resource_exhausted|503|unavailable/i.test(msg);
+      console.warn(`[StudyAI] key ${i + 1}/${totalKeys} failed: ${msg.slice(0, 120)}`);
+      if (!isQuota) break;
     }
-  } catch(e) {}
-  return null;
-})();
-
-function studyPromptAI(prompt) {
-  if (!studyModel) return Promise.resolve({ text: 'AI not configured' });
-  return studyModel.generateContent(prompt).then(r => ({ text: r.response.text() })).catch(e => ({ text: 'AI error: ' + e.message }));
+  }
+  return { text: 'AI error: ' + ((lastErr && lastErr.message) || 'all keys exhausted') };
 }
 
 // Ensure study tables exist
 (async function initStudyDB() {
   try {
     await pool.query(`CREATE TABLE IF NOT EXISTS study_courses (id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL, course_name VARCHAR(255) NOT NULL, course_code VARCHAR(50) DEFAULT '', unit INTEGER DEFAULT 3, source VARCHAR(20) DEFAULT 'manual', created_at TIMESTAMP DEFAULT NOW())`);
-    await pool.query(`CREATE TABLE IF NOT EXISTS study_topics (id SERIAL PRIMARY KEY, course_id INTEGER NOT NULL, user_id INTEGER NOT NULL, topic_name VARCHAR(500) NOT NULL, completed BOOLEAN DEFAULT false, created_at TIMESTAMP DEFAULT NOW())`);
-    await pool.query(`CREATE TABLE IF NOT EXISTS study_subtopics (id SERIAL PRIMARY KEY, topic_id INTEGER NOT NULL, course_id INTEGER NOT NULL, user_id INTEGER NOT NULL, subtopic_name VARCHAR(500) NOT NULL, status VARCHAR(20) DEFAULT 'pending', created_at TIMESTAMP DEFAULT NOW())`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS study_topics (id SERIAL PRIMARY KEY, course_id INTEGER NOT NULL, user_id INTEGER NOT NULL, topic_name VARCHAR(500) NOT NULL, title VARCHAR(500), completed BOOLEAN DEFAULT false, order_index INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT NOW())`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS study_subtopics (id SERIAL PRIMARY KEY, topic_id INTEGER NOT NULL, course_id INTEGER NOT NULL, user_id INTEGER NOT NULL, subtopic_name VARCHAR(500) NOT NULL, title VARCHAR(500), status VARCHAR(20) DEFAULT 'pending', created_at TIMESTAMP DEFAULT NOW())`);
     await pool.query(`CREATE TABLE IF NOT EXISTS study_sessions (id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL, course_id INTEGER DEFAULT 0, course_name VARCHAR(255) DEFAULT '', elapsed_seconds INTEGER DEFAULT 0, status VARCHAR(20) DEFAULT 'active', notes TEXT DEFAULT '', created_at TIMESTAMP DEFAULT NOW(), completed_at TIMESTAMP)`);
     await pool.query(`CREATE TABLE IF NOT EXISTS study_progress (id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL, course_id INTEGER DEFAULT 0, course_name VARCHAR(255) NOT NULL, total_sessions INTEGER DEFAULT 0, total_minutes INTEGER DEFAULT 0, last_studied TIMESTAMP DEFAULT NOW())`);
     await pool.query(`CREATE TABLE IF NOT EXISTS study_chat_messages (id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL, course_id INTEGER DEFAULT 0, role VARCHAR(20) DEFAULT 'user', message TEXT NOT NULL, created_at TIMESTAMP DEFAULT NOW())`);
     await pool.query(`CREATE TABLE IF NOT EXISTS study_flashcards (id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL, course_id INTEGER DEFAULT 0, subtopic_id INTEGER DEFAULT 0, front TEXT NOT NULL, back TEXT NOT NULL, created_at TIMESTAMP DEFAULT NOW())`);
     await pool.query(`CREATE TABLE IF NOT EXISTS study_quiz_attempts (id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL, course_id INTEGER DEFAULT 0, subtopic_id INTEGER DEFAULT 0, question_type VARCHAR(50) DEFAULT 'multiple_choice', question_count INTEGER DEFAULT 10, time_limit INTEGER DEFAULT 0, score INTEGER DEFAULT 0, total_questions INTEGER DEFAULT 0, status VARCHAR(20) DEFAULT 'in_progress', created_at TIMESTAMP DEFAULT NOW(), completed_at TIMESTAMP)`);
     await pool.query(`CREATE TABLE IF NOT EXISTS study_quiz_questions (id SERIAL PRIMARY KEY, attempt_id INTEGER NOT NULL, question TEXT NOT NULL, options JSONB, correct_answer TEXT, user_answer TEXT, is_correct BOOLEAN, explanation TEXT, order_index INTEGER DEFAULT 0)`);
-    // Add unique constraint if missing
+    // Compatibility: make sure optional columns exist on legacy tables
+    const adds = [
+      ['study_courses', 'unit', 'INTEGER DEFAULT 3'],
+      ['study_courses', 'source', "VARCHAR(20) DEFAULT 'manual'"],
+      ['study_courses', 'updated_at', 'TIMESTAMP DEFAULT NOW()'],
+      ['study_topics', 'topic_name', 'VARCHAR(500)'],
+      ['study_topics', 'order_index', 'INTEGER DEFAULT 0'],
+      ['study_topics', 'completed', 'BOOLEAN DEFAULT false'],
+      ['study_subtopics', 'subtopic_name', 'VARCHAR(500)'],
+      ['study_subtopics', 'course_id', 'INTEGER DEFAULT 0'],
+      ['study_sessions', 'subtopic_id', 'INTEGER DEFAULT 0'],
+      ['study_sessions', 'subject_id', 'INTEGER DEFAULT 0'],
+      ['study_flashcards', 'course_id', 'INTEGER DEFAULT 0'],
+      ['study_quiz_attempts', 'course_id', 'INTEGER DEFAULT 0'],
+    ];
+    for (const [t, c, d] of adds) { try { await pool.query(`ALTER TABLE ${t} ADD COLUMN IF NOT EXISTS ${c} ${d}`); } catch(_){} }
+    // Backfill legacy title -> topic_name, keep title populated too
+    await pool.query(`UPDATE study_topics SET topic_name = COALESCE(topic_name, title) WHERE topic_name IS NULL OR topic_name = ''`).catch(()=>{});
+    await pool.query(`UPDATE study_topics SET title = COALESCE(title, topic_name) WHERE title IS NULL OR title = ''`).catch(()=>{});
+    await pool.query(`UPDATE study_subtopics SET subtopic_name = COALESCE(subtopic_name, title) WHERE subtopic_name IS NULL OR subtopic_name = ''`).catch(()=>{});
+    await pool.query(`UPDATE study_subtopics SET title = COALESCE(title, subtopic_name) WHERE title IS NULL OR title = ''`).catch(()=>{});
+    // Loosen legacy NOT NULL constraint on title if it was kept from older schema
+    try { await pool.query(`ALTER TABLE study_topics ALTER COLUMN title DROP NOT NULL`); } catch(_) {}
+    try { await pool.query(`ALTER TABLE study_subtopics ALTER COLUMN title DROP NOT NULL`); } catch(_) {}
     try { await pool.query(`ALTER TABLE study_progress ADD CONSTRAINT study_progress_user_course UNIQUE (user_id, course_name)`); } catch(e) {}
     console.log('[Study] Tables ready');
   } catch(e) { console.error('[Study] Table init:', e.message); }
@@ -3988,7 +4026,14 @@ app.post('/api/study/import-timetable', isAuth, requirePaid, async (req, res) =>
 app.post('/api/study/topics', isAuth, requirePaid, async (req, res) => {
   try {
     const { course_id, topic_name } = req.body;
-    const r = await pool.query('INSERT INTO study_topics (course_id, user_id, topic_name) VALUES ($1, $2, $3) RETURNING *', [course_id, req.session.user.id, topic_name]);
+    const name = (topic_name || '').trim();
+    if (!name) return res.status(400).json({ success: false, error: 'Topic name required' });
+    const max = await pool.query('SELECT COALESCE(MAX(order_index), 0) as n FROM study_topics WHERE course_id = $1', [course_id]);
+    const orderIdx = parseInt(max.rows[0]?.n || 0, 10) + 1;
+    const r = await pool.query(
+      'INSERT INTO study_topics (course_id, user_id, topic_name, title, order_index) VALUES ($1, $2, $3, $3, $4) RETURNING *',
+      [course_id, req.session.user.id, name, orderIdx]
+    );
     res.json({ success: true, topic: r.rows[0] });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
@@ -4014,8 +4059,8 @@ app.post('/api/study/generate-topics', isAuth, requirePaid, async (req, res) => 
     try { topics = JSON.parse(aiRes.text.replace(/```json/g,'').replace(/```/g,'').trim()); } catch { topics = aiRes.text.split('\n').filter(l => l.trim()).map(l => l.replace(/^[\d.\s-]+/,'').trim()).filter(Boolean); }
     let count = 0;
     for (const t of topics.slice(0, 15)) {
-      const exists = await pool.query('SELECT id FROM study_topics WHERE course_id = $1 AND topic_name = $2', [course_id, t]);
-      if (!exists.rows[0]) { await pool.query('INSERT INTO study_topics (course_id, user_id, topic_name) VALUES ($1, $2, $3)', [course_id, req.session.user.id, t]); count++; }
+      const exists = await pool.query('SELECT id FROM study_topics WHERE course_id = $1 AND (topic_name = $2 OR title = $2)', [course_id, t]);
+      if (!exists.rows[0]) { await pool.query('INSERT INTO study_topics (course_id, user_id, topic_name, title) VALUES ($1, $2, $3, $3)', [course_id, req.session.user.id, t]); count++; }
     }
     res.json({ success: true, count });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
@@ -4027,15 +4072,18 @@ app.post('/api/study/generate-subtopics', isAuth, requirePaid, async (req, res) 
     const { topic_id } = req.body;
     const topic = await pool.query('SELECT * FROM study_topics WHERE id = $1', [topic_id]);
     if (!topic.rows[0]) return res.json({ success: false, error: 'Topic not found' });
-    const prompt = `For the topic "${topic.rows[0].topic_name}", generate 5-7 specific subtopics. Return ONLY a JSON array of strings. Example: ["Subtopic 1", "Subtopic 2"]`;
+    const topicName = topic.rows[0].topic_name || topic.rows[0].title;
+    const prompt = `For the topic "${topicName}", generate 5-7 specific subtopics. Return ONLY a JSON array of strings. Example: ["Subtopic 1", "Subtopic 2"]`;
     const aiRes = await studyPromptAI(prompt);
     let subtopics = [];
     try { subtopics = JSON.parse(aiRes.text.replace(/```json/g,'').replace(/```/g,'').trim()); } catch { subtopics = aiRes.text.split('\n').filter(l => l.trim()).map(l => l.replace(/^[\d.\s-]+/,'').trim()).filter(Boolean); }
     let count = 0;
     const uid = req.session.user.id;
     for (const st of subtopics.slice(0, 10)) {
-      const exists = await pool.query('SELECT id FROM study_subtopics WHERE topic_id = $1 AND subtopic_name = $2', [topic_id, st]);
-      if (!exists.rows[0]) { await pool.query('INSERT INTO study_subtopics (topic_id, course_id, user_id, subtopic_name, status) VALUES ($1, $2, $3, $4, $5)', [topic_id, topic.rows[0].course_id, uid, st.replace(/^["'\s]+|["'\s]+$/g,''), 'ai-generated']); count++; }
+      const clean = (st || '').replace(/^["'\s]+|["'\s]+$/g,'').trim();
+      if (!clean) continue;
+      const exists = await pool.query('SELECT id FROM study_subtopics WHERE topic_id = $1 AND (subtopic_name = $2 OR title = $2)', [topic_id, clean]);
+      if (!exists.rows[0]) { await pool.query('INSERT INTO study_subtopics (topic_id, course_id, user_id, subtopic_name, title, status) VALUES ($1, $2, $3, $4, $4, $5)', [topic_id, topic.rows[0].course_id, uid, clean, 'ai-generated']); count++; }
     }
     res.json({ success: true, count });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
@@ -4048,7 +4096,12 @@ app.put('/api/study/subtopics/:id/accept', isAuth, requirePaid, async (req, res)
 
 // API: Update subtopic
 app.put('/api/study/subtopics/:id', isAuth, requirePaid, async (req, res) => {
-  try { await pool.query('UPDATE study_subtopics SET subtopic_name = $1 WHERE id = $2', [req.body.subtopic_name, req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+  try {
+    const name = (req.body.subtopic_name || '').trim();
+    if (!name) return res.status(400).json({ success: false, error: 'Name required' });
+    await pool.query('UPDATE study_subtopics SET subtopic_name = $1, title = $1 WHERE id = $2', [name, req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
 // API: Delete subtopic
