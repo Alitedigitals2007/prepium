@@ -3,7 +3,7 @@ const nodemailer = require('nodemailer');
 const bcrypt = require('bcryptjs');
 const session = require('express-session');
 require('dotenv').config();
-try { require('./key-rotator.cjs'); } catch(_) {}
+
 const app = express();
 const multer = require('multer');
 
@@ -12,10 +12,6 @@ const path = require('path');
 const crypto = require('crypto');
 const { Pool } = require('pg');
 
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-
-const apiKeys = [process.env.GEMINI_API_KEY_PRIMARY, process.env.GEMINI_API_KEY_SECONDARY].filter(Boolean);
-const ai = new GoogleGenerativeAI(apiKeys[0] || '');
 const pdfToText = require('pdf-to-text');
 
 const upload = multer({ 
@@ -4252,44 +4248,21 @@ setTimeout(checkDeadlineNotifications, 10000);
 
 // ======================== STUDY HUB ROUTES ========================
 
-// Study AI helper - rotates between PRIMARY and SECONDARY keys on quota / failure
-const studyKeys = [process.env.GEMINI_API_KEY_PRIMARY, process.env.GEMINI_API_KEY_SECONDARY].filter(Boolean);
-let studyKeyIdx = 0;
-function nextStudyKey() {
-  if (studyKeys.length === 0) return null;
-  const k = studyKeys[studyKeyIdx % studyKeys.length];
-  studyKeyIdx++;
-  return k;
-}
+// Study AI helper — uses OpenRouter
 async function studyPromptAI(prompt) {
-  if (studyKeys.length === 0) return { text: 'AI not configured' };
-  let lastErr = null;
-  const totalKeys = studyKeys.length;
-  for (let i = 0; i < Math.max(totalKeys, 3); i++) {
-    const key = nextStudyKey();
-    try {
-      const gai = require('@google/generative-ai');
-      const ai = new gai.GoogleGenerativeAI(key);
-      const m = ai.getGenerativeModel({ model: 'gemini-2.0-flash' });
-      const r = await m.generateContent(prompt);
-      return { text: r.response.text() };
-    } catch (e) {
-      lastErr = e;
-      const msg = (e && e.message) || '';
-      const isQuota = /429|quota|rate|exhausted|resource_exhausted|503|unavailable/i.test(msg);
-      console.warn(`[StudyAI] attempt ${i + 1}: ${msg.slice(0, 120)}`);
-      if (!isQuota) break;
-      const delayMs = parseRetryDelay(msg) || 7000;
-      console.log(`[StudyAI] waiting ${delayMs}ms before retry...`);
-      await new Promise(r => setTimeout(r, delayMs));
-    }
-  }
-  return { text: 'AI error: ' + ((lastErr && lastErr.message) || 'all keys exhausted') };
-}
-
-function parseRetryDelay(msg) {
-  const m = msg.match(/retry\s*in\s*([\d.]+)\s*s/i);
-  return m ? Math.min(Math.round(parseFloat(m[1]) * 1000) + 500, 30000) : null;
+  const key = process.env.OPENROUTER_API_KEY;
+  if (!key) return { text: 'AI not configured. Set OPENROUTER_API_KEY in .env' };
+  try {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}`, 'HTTP-Referer': 'https://theprepium.vercel.app', 'X-Title': 'Prepium' },
+      body: JSON.stringify({ model: 'openrouter/free', messages: [{ role: 'user', content: prompt }], temperature: 0.15 }),
+      signal: AbortSignal.timeout(45000)
+    });
+    if (!res.ok) { const t = await res.text().catch(()=>''); return { text: `AI error: ${res.status} ${t}` }; }
+    const data = await res.json();
+    return { text: data.choices?.[0]?.message?.content?.trim() || 'AI returned empty response' };
+  } catch (e) { return { text: `AI error: ${e.message}` }; }
 }
 
 // Ensure study tables exist
