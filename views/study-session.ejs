@@ -182,11 +182,14 @@
 
 <script>
 var sessionId = <%= session ? session.id : 0 %>;
+var courseId = <%= session ? session.course_id : 0 %>;
 var courseName = '<%= session ? session.course_name.replace(/'/g, "\\'") : '' %>';
 var timerInterval = null;
 var elapsedSeconds = <%= session ? session.elapsed_seconds : 0 %>;
 var isRunning = false;
 var flips = 0;
+
+document.getElementById('notesArea').value = '<%= session ? (session.notes || "").replace(/'/g, "\\'").replace(/\n/g, "\\n") : '' %>';
 
 function formatTime(secs) {
     var m = Math.floor(secs / 60);
@@ -245,48 +248,50 @@ function sendChat() {
     fetch('/api/study/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sessionId, message: msg, course_name: courseName })
-    }).then(r => r.json()).then(d => {
+        body: JSON.stringify({ message: msg, courseId: courseId, courseName: courseName })
+    }).then(r => r.json()).then(function(d) {
         container.innerHTML += '<div class="chat-msg ai"><div class="bubble">' + (d.reply || 'Sorry, I could not process that.') + '</div></div>';
         container.scrollTop = container.scrollHeight;
     });
 }
 
 function escapeHtml(text) {
-    return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return (text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 function saveNotes() {
     var notes = document.getElementById('notesArea').value;
-    fetch('/api/study/sessions/' + sessionId + '/notes', {
-        method: 'PUT',
+    fetch('/api/study/sessions/update', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes: notes })
-    }).then(r => r.json()).then(d => {
+        body: JSON.stringify({ sessionId: sessionId, elapsedSeconds: elapsedSeconds, notes: notes })
+    }).then(r => r.json()).then(function(d) {
         if (d.success) Swal.fire({ icon: 'success', title: 'Saved!', timer: 1000, showConfirmButton: false });
+        else Swal.fire({ icon: 'error', text: d.error });
     });
 }
 
 function loadNotes() {
-    fetch('/api/study/sessions/' + sessionId)
-    .then(r => r.json()).then(d => {
-        if (d.notes) document.getElementById('notesArea').value = d.notes;
-        else Swal.fire({ icon: 'info', text: 'No saved notes found' });
-    });
+    document.getElementById('notesArea').value = '<%= session ? (session.notes || "").replace(/'/g, "\\'").replace(/\n/g, "\\n") : '' %>';
 }
 
 function searchYouTube() {
     var q = document.getElementById('ytSearchInput').value.trim() || courseName;
-    Swal.fire({ title: 'Searching...', html: 'Looking for videos', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-    fetch('/api/study/youtube?q=' + encodeURIComponent(q))
-    .then(r => r.json()).then(d => {
+    Swal.fire({ title: 'Searching...', html: 'Looking for videos', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
+    fetch('/api/study/youtube/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: q })
+    }).then(r => r.json()).then(function(d) {
         var container = document.getElementById('ytResults');
         container.innerHTML = '';
-        if (d.videos && d.videos.length > 0) {
-            d.videos.forEach(function(v) {
+        if (d.success && d.html) {
+            container.innerHTML = d.html;
+        } else if (d.terms && d.terms.length > 0) {
+            d.terms.forEach(function(t) {
                 container.innerHTML += '<div class="yt-video">' +
-                    '<a href="https://www.youtube.com/results?search_query=' + encodeURIComponent(v.title) + '" target="_blank" style="display:block;background:#f1f5f9;padding:3rem 1rem;text-align:center;border-radius:8px;text-decoration:none;color:var(--brand);font-weight:700;font-size:0.9rem"><i class="fab fa-youtube" style="font-size:2rem;display:block;margin-bottom:8px"></i> Search YouTube for "' + escapeHtml(v.title) + '"</a>' +
-                    '<div class="yt-info"><h4>' + escapeHtml(v.title) + '</h4><p>' + escapeHtml(v.channel || '') + '</p></div></div>';
+                    '<a href="https://www.youtube.com/results?search_query=' + encodeURIComponent(t) + '" target="_blank" style="display:block;background:#f1f5f9;padding:3rem 1rem;text-align:center;border-radius:8px;text-decoration:none;color:var(--brand);font-weight:700;font-size:0.9rem"><i class="fab fa-youtube" style="font-size:2rem;display:block;margin-bottom:8px"></i> Search YouTube for "' + escapeHtml(t) + '"</a>' +
+                    '<div class="yt-info"><h4>' + escapeHtml(t) + '</h4></div></div>';
             });
         } else {
             container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);font-weight:600;">No videos found</div>';
@@ -299,15 +304,15 @@ var flashcards = [];
 var fcIndex = 0;
 
 function generateFlashcards() {
-    Swal.fire({ title: 'Generating...', html: 'AI creating flashcards', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    Swal.fire({ title: 'Generating...', html: 'AI creating flashcards', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
     fetch('/api/study/flashcards/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sessionId, course_name: courseName })
-    }).then(r => r.json()).then(d => {
+        body: JSON.stringify({ courseId: courseId, topicTitle: courseName })
+    }).then(r => r.json()).then(function(d) {
         Swal.close();
-        if (d.success && d.flashcards && d.flashcards.length > 0) {
-            flashcards = d.flashcards;
+        if (d.success && d.cards && d.cards.length > 0) {
+            flashcards = d.cards;
             fcIndex = 0;
             renderFlashcard();
         } else {
@@ -324,8 +329,8 @@ function renderFlashcard() {
     }
     var fc = flashcards[fcIndex];
     container.innerHTML = '<div class="fc-card" onclick="this.classList.toggle(\'flipped\')">' +
-        '<div class="fc-front">' + escapeHtml(fc.question) + '</div>' +
-        '<div class="fc-back">' + escapeHtml(fc.answer) + '</div>' +
+        '<div class="fc-front">' + escapeHtml(fc.front) + '</div>' +
+        '<div class="fc-back">' + escapeHtml(fc.back) + '</div>' +
         '<div class="tap-hint">' + (fcIndex + 1) + '/' + flashcards.length + ' - Tap to flip</div></div>';
 }
 
@@ -342,19 +347,20 @@ function prevFlashcard() {
 }
 
 function endSession() {
+    var notes = document.getElementById('notesArea').value;
     Swal.fire({
         title: 'End Session?',
         text: 'Time studied: ' + formatTime(elapsedSeconds),
         icon: 'question',
         showCancelButton: true, confirmButtonText: 'End', cancelButtonText: 'Continue'
-    }).then(res => {
+    }).then(function(res) {
         if (res.isConfirmed) {
             if (timerInterval) clearInterval(timerInterval);
-            fetch('/api/study/sessions/' + sessionId + '/end', {
-                method: 'PUT',
+            fetch('/api/study/sessions/end', {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ elapsed_seconds: elapsedSeconds })
-            }).then(r => r.json()).then(d => {
+                body: JSON.stringify({ sessionId: sessionId, elapsedSeconds: elapsedSeconds, notes: notes })
+            }).then(r => r.json()).then(function(d) {
                 if (d.success) window.location.href = '/study';
                 else Swal.fire({ icon: 'error', text: d.error });
             });

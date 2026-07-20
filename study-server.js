@@ -209,15 +209,20 @@ app.get('/study/course/:id', isAuth, async (req, res) => {
   try {
     const course = await pool.query('SELECT * FROM study_courses WHERE id = $1 AND user_id = $2', [req.params.id, req.session.user.id]);
     if (course.rows.length === 0) return res.status(404).send('Course not found');
-    const [topicsRes, sessionsRes, progressRes, flashcardsRes] = await Promise.all([
+    const [topicsRes, subtopicsRes, sessionsRes, progressRes, flashcardsRes] = await Promise.all([
       pool.query('SELECT * FROM study_topics WHERE course_id = $1 ORDER BY order_index ASC', [req.params.id]),
+      pool.query('SELECT * FROM study_subtopics WHERE course_id = $1 ORDER BY topic_id, id ASC', [req.params.id]),
       pool.query('SELECT * FROM study_sessions WHERE user_id = $1 AND course_id = $2 ORDER BY created_at DESC LIMIT 20', [req.session.user.id, req.params.id]),
       pool.query('SELECT * FROM study_progress WHERE user_id = $1 AND course_id = $2', [req.session.user.id, req.params.id]),
       pool.query('SELECT COUNT(*) as count FROM study_flashcards WHERE user_id = $1 AND course_id = $2', [req.session.user.id, req.params.id])
     ]);
+    const topics = topicsRes.rows.map(t => {
+      t.subtopics = subtopicsRes.rows.filter(s => s.topic_id === t.id);
+      return t;
+    });
     res.render('study-course', {
       user: req.session.user, course: course.rows[0],
-      topics: topicsRes.rows, sessions: sessionsRes.rows,
+      topics, sessions: sessionsRes.rows,
       progress: progressRes.rows[0] || null,
       flashcardCount: flashcardsRes.rows[0].count
     });
@@ -621,7 +626,9 @@ app.get('/api/study/quiz/result/:attemptId', isAuth, async (req, res) => {
 // ============ FLASHCARDS ============
 app.get('/study/flashcards/:courseId', isAuth, async (req, res) => {
   try {
-    res.render('study-flashcards', { user: req.session.user, courseId: parseInt(req.params.courseId) });
+    const course = await pool.query('SELECT course_name FROM study_courses WHERE id = $1 AND user_id = $2',
+      [req.params.courseId, req.session.user.id]).catch(() => ({ rows: [{ course_name: '' }] }));
+    res.render('study-flashcards', { user: req.session.user, courseId: parseInt(req.params.courseId), courseName: course.rows[0]?.course_name || '' });
   } catch (err) {
     res.status(500).send('Error loading flashcards');
   }

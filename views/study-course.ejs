@@ -110,9 +110,7 @@
         <button onclick="addTopic()">Add</button>
     </div>
 
-    <div class="generate-section">
-        <button class="gen-btn" onclick="generateTopics()"><i class="fas fa-magic"></i> Auto-generate with AI</button>
-    </div>
+
 
     <div id="topicsContainer">
         <% if (topics && topics.length > 0) { %>
@@ -120,7 +118,7 @@
             <div class="topic-item" data-topic-id="<%= t.id %>">
                 <div class="topic-header" onclick="toggleSubtopicList(this)">
                     <div class="topic-dot <%= t.completed ? 'completed' : '' %>"></div>
-                    <div class="topic-name"><%= t.topic_name %></div>
+                    <div class="topic-name"><%= t.topic_name || t.title %></div>
                     <div class="topic-actions">
                         <button onclick="event.stopPropagation(); generateSubtopicAI(<%= t.id %>)" title="AI Generate"><i class="fas fa-magic"></i></button>
                         <button class="del-btn" onclick="event.stopPropagation(); deleteTopic(<%= t.id %>)" title="Delete"><i class="fas fa-trash"></i></button>
@@ -130,7 +128,7 @@
                     <% if (t.subtopics && t.subtopics.length > 0) { %>
                         <% t.subtopics.forEach(function(st) { %>
                         <div class="subtopic-chip" data-subtopic-id="<%= st.id %>" onclick="openSubtopic(<%= st.id %>)">
-                            <span><%= st.subtopic_name %></span>
+                            <span class="st-name"><%= st.subtopic_name || st.title %></span>
                             <span class="status-badge <%= st.status %>"><%= st.status %></span>
                             <div class="chip-actions" onclick="event.stopPropagation()">
                                 <% if (st.status === 'ai-generated') { %>
@@ -168,6 +166,9 @@
 </div>
 
 <script>
+var courseId = <%= course ? course.id : 0 %>;
+var courseName = '<%= course ? course.course_name.replace(/'/g, "\\'") : '' %>';
+
 function toggleSubtopicList(header) {
     header.nextElementSibling.classList.toggle('open');
 }
@@ -181,21 +182,20 @@ function addTopicPrompt() {
 function addTopic() {
     var name = document.getElementById('topicInput').value.trim();
     if (!name) return Swal.fire({ icon: 'warning', text: 'Enter a topic name' });
-    var courseId = <%= course ? course.id : 0 %>;
-    fetch('/api/study/topics', {
+    fetch('/api/study/topics/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ course_id: courseId, topic_name: name })
+        body: JSON.stringify({ courseId: courseId, title: name })
     }).then(r => r.json()).then(d => {
-        if (d.success) { Swal.fire({ icon: 'success', timer: 1000, showConfirmButton: false, title: 'Added!' }); setTimeout(() => location.reload(), 1000); }
+        if (d.success) { Swal.fire({ icon: 'success', timer: 1000, showConfirmButton: false, title: 'Added!' }); setTimeout(function() { location.reload(); }, 1000); }
         else Swal.fire({ icon: 'error', text: d.error });
     });
 }
 
 function deleteTopic(id) {
-    Swal.fire({ title: 'Delete topic?', text: 'Subtopics will also be removed', icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete' }).then(res => {
+    Swal.fire({ title: 'Delete topic?', text: 'Subtopics will also be removed', icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete' }).then(function(res) {
         if (res.isConfirmed) {
-            fetch('/api/study/topics/' + id, { method: 'DELETE' }).then(r => r.json()).then(d => {
+            fetch('/api/study/topics/delete/' + id, { method: 'POST' }).then(r => r.json()).then(function(d) {
                 if (d.success) location.reload();
                 else Swal.fire({ icon: 'error', text: d.error });
             });
@@ -203,51 +203,50 @@ function deleteTopic(id) {
     });
 }
 
-function generateTopics() {
-    var courseId = <%= course ? course.id : 0 %>;
-    Swal.fire({ title: 'Generating...', html: 'AI is creating topics for this course', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-    fetch('/api/study/generate-topics', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ course_id: courseId })
-    }).then(r => r.json()).then(d => {
-        if (d.success && d.count > 0) { Swal.fire({ icon: 'success', text: d.count + ' topics generated!', timer: 1500, showConfirmButton: false }); setTimeout(() => location.reload(), 1500); }
-        else Swal.fire({ icon: 'info', text: d.error || 'No topics generated' });
-    });
-}
-
 function generateSubtopicAI(topicId) {
-    Swal.fire({ title: 'Generating...', html: 'AI is creating subtopics', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-    fetch('/api/study/generate-subtopics', {
+    var topicEl = document.querySelector('[data-topic-id="' + topicId + '"]');
+    var topicTitle = topicEl ? topicEl.querySelector('.topic-name').textContent.trim() : '';
+    Swal.fire({ title: 'Generating...', html: 'AI is creating subtopics', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
+    fetch('/api/study/subtopics/ai-generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic_id: topicId })
-    }).then(r => r.json()).then(d => {
-        if (d.success) { Swal.fire({ icon: 'success', text: d.count + ' subtopics generated!', timer: 1500, showConfirmButton: false }); setTimeout(() => location.reload(), 1500); }
+        body: JSON.stringify({ topicId: topicId, courseId: courseId, topicTitle: topicTitle, courseName: courseName })
+    }).then(r => r.json()).then(function(d) {
+        if (d.success) { Swal.fire({ icon: 'success', text: (d.subtopics ? d.subtopics.length : 0) + ' subtopics generated!', timer: 1500, showConfirmButton: false }); setTimeout(function() { location.reload(); }, 1500); }
         else Swal.fire({ icon: 'error', text: d.error });
     });
 }
 
 function acceptSubtopic(id) {
-    fetch('/api/study/subtopics/' + id + '/accept', { method: 'PUT' }).then(r => r.json()).then(d => { if (d.success) location.reload(); });
+    fetch('/api/study/subtopics/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: id, status: 'accepted' })
+    }).then(r => r.json()).then(function(d) { if (d.success) location.reload(); });
 }
 
 function rejectSubtopic(id) {
-    fetch('/api/study/subtopics/' + id, { method: 'DELETE' }).then(r => r.json()).then(d => { if (d.success) location.reload(); });
+    Swal.fire({ title: 'Remove subtopic?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Remove' }).then(function(res) {
+        if (res.isConfirmed) {
+            fetch('/api/study/subtopics/delete/' + id, { method: 'POST' }).then(r => r.json()).then(function(d) { if (d.success) location.reload(); });
+        }
+    });
 }
 
 function deleteSubtopic(id) {
-    fetch('/api/study/subtopics/' + id, { method: 'DELETE' }).then(r => r.json()).then(d => { if (d.success) location.reload(); });
+    fetch('/api/study/subtopics/delete/' + id, { method: 'POST' }).then(r => r.json()).then(function(d) { if (d.success) location.reload(); });
 }
 
 function editSubtopic(id) {
-    Swal.fire({ title: 'Edit Subtopic', input: 'text', inputValue: document.querySelector('[data-subtopic-id="' + id + '"] span').textContent.trim(), showCancelButton: true, confirmButtonText: 'Save' }).then(res => {
+    var nameEl = document.querySelector('[data-subtopic-id="' + id + '"] .st-name');
+    var currentName = nameEl ? nameEl.textContent.trim() : '';
+    Swal.fire({ title: 'Edit Subtopic', input: 'text', inputValue: currentName, showCancelButton: true, confirmButtonText: 'Save' }).then(function(res) {
         if (res.isConfirmed && res.value.trim()) {
-            fetch('/api/study/subtopics/' + id, {
-                method: 'PUT',
+            fetch('/api/study/subtopics/update', {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ subtopic_name: res.value.trim() })
-            }).then(r => r.json()).then(d => { if (d.success) location.reload(); });
+                body: JSON.stringify({ id: id, title: res.value.trim() })
+            }).then(r => r.json()).then(function(d) { if (d.success) location.reload(); });
         }
     });
 }
@@ -257,26 +256,25 @@ function openSubtopic(id) {
 }
 
 function startSession() {
-    var courseId = <%= course ? course.id : 0 %>;
-    fetch('/api/study/sessions', {
+    Swal.fire({ title: 'Starting session...', html: 'Setting up your study environment', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
+    fetch('/api/study/sessions/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ course_id: courseId })
-    }).then(r => r.json()).then(d => {
-        if (d.success) window.location.href = '/study/session/' + d.session_id;
-        else Swal.fire({ icon: 'error', text: d.error });
+        body: JSON.stringify({ courseId: courseId, courseName: courseName })
+    }).then(r => r.json()).then(function(d) {
+        if (d.success && d.redirect) window.location.href = d.redirect;
+        else Swal.fire({ icon: 'error', text: d.error || 'Could not start session' });
     });
 }
 
 function showQuizSetup() {
-    var courseId = <%= course ? course.id : 0 %>;
     Swal.fire({
         title: 'Quick Quiz',
         html:
             '<select id="swal-subtopic" style="width:100%;padding:10px;border-radius:10px;border:1px solid #e2e8f0;font-family:inherit;font-weight:600;margin-bottom:8px">' +
             '<option value="">All Subtopics</option>' +
             '<% if (topics) { topics.forEach(function(t) { if (t.subtopics) { t.subtopics.forEach(function(st) { %>' +
-            '<option value="<%= st.id %>"><%= st.subtopic_name %></option>' +
+            '<option value="<%= st.id %>"><%= st.subtopic_name || st.title %></option>' +
             '<% }); } }); } %>' +
             '</select>' +
             '<select id="swal-type" style="width:100%;padding:10px;border-radius:10px;border:1px solid #e2e8f0;font-family:inherit;font-weight:600;margin-bottom:8px">' +
@@ -289,36 +287,32 @@ function showQuizSetup() {
             '</select></div>',
         showCancelButton: true, confirmButtonText: 'Start Quiz', showLoaderOnConfirm: true,
         preConfirm: function() {
-            var subtopic = document.getElementById('swal-subtopic').value;
+            var subtopicId = document.getElementById('swal-subtopic').value;
             var type = document.getElementById('swal-type').value;
             var count = document.getElementById('swal-count').value;
             var timed = document.getElementById('swal-timed').value;
             return fetch('/api/study/quiz/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ course_id: courseId, subtopic_id: subtopic || undefined, question_type: type, question_count: parseInt(count), timed_minutes: parseInt(timed) })
-            }).then(r => r.json()).then(d => {
-                if (d.success) return d;
-                throw new Error(d.error);
+                body: JSON.stringify({ courseId: courseId, subtopicId: subtopicId || undefined, topicTitle: courseName, questionType: type, questionCount: parseInt(count), timeLimit: parseInt(timed) })
+            }).then(function(r) { return r.json(); }).then(function(d) {
+                if (d.success && d.attempt) return d;
+                throw new Error(d.error || 'Failed to generate quiz');
             });
         }
-    }).then(res => {
+    }).then(function(res) {
         if (res.isConfirmed) {
-            window.location.href = '/study/quiz/' + res.value.quiz_id;
+            window.location.href = '/study/quiz/' + res.value.attempt.id;
         }
     });
-}
-
-function openAIClass() {
-    var courseId = <%= course ? course.id : 0 %>;
-    window.location.href = '/study/session/' + courseId + '?ai=1';
 }
 
 function openFlashcards() {
-    var courseId = <%= course ? course.id : 0 %>;
-    Swal.fire({ title: 'Flashcards', input: 'select', inputOptions: { 'course': 'All Subtopics' }, showCancelButton: true, confirmButtonText: 'Open' }).then(res => {
-        if (res.isConfirmed) window.location.href = '/study/flashcards/' + courseId;
-    });
+    window.location.href = '/study/flashcards/' + courseId;
+}
+
+function openAIClass() {
+    startSession();
 }
 </script>
 </body>

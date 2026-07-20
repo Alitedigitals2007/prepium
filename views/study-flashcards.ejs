@@ -83,6 +83,7 @@
 
 <script>
 var courseId = <%= courseId %>;
+var courseName = '<%= typeof courseName !== 'undefined' ? courseName.replace(/'/g, "\\'") : '' %>';
 var flashcards = [];
 var currentIndex = 0;
 
@@ -131,7 +132,7 @@ function generateFlashcards() {
     fetch('/api/study/flashcards/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ courseId: courseId })
+        body: JSON.stringify({ courseId: courseId, topicTitle: courseName })
     }).then(r => r.json()).then(d => {
         if (d.success && d.count > 0) {
             Swal.fire({ icon: 'success', text: d.count + ' flashcards created!', timer: 1500, showConfirmButton: false });
