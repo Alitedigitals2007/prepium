@@ -644,7 +644,7 @@ Return ONLY a JSON array: [{ "front": "...", "back": "..." }]`;
     for (const c of cards) {
       await pool.query(
         'INSERT INTO study_flashcards (user_id, course_id, subtopic_id, front, back) VALUES ($1, $2, $3, $4, $5)',
-        [uid, courseId || 0, subtopicId || 0, c.front, c.back]
+        [uid, courseId || null, subtopicId || null, c.front, c.back]
       );
     }
     res.json({ success: true, count: cards.length, cards });
@@ -716,6 +716,44 @@ app.get('/api/study/subtopic/:id', isAuth, async (req, res) => {
     res.json({ subtopic: st.rows[0], videos: videos.rows, flashcards: flashcards.rows });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ============ SUBTOPIC CONTENT GENERATION ============
+app.post('/api/study/subtopic/:id/content', isAuth, async (req, res) => {
+  try {
+    const st = await pool.query('SELECT * FROM study_subtopics WHERE id = $1', [req.params.id]);
+    if (st.rows.length === 0) return res.status(404).json({ success: false, error: 'Not found' });
+    const s = st.rows[0];
+    const topic = await pool.query('SELECT * FROM study_topics WHERE id = $1', [s.topic_id]);
+    const topicName = topic.rows[0] ? (topic.rows[0].topic_name || topic.rows[0].title) : 'General';
+    const prompt = `You are a university tutor. Explain the subtopic "${s.subtopic_name || s.title}" which is part of the topic "${topicName}". Provide a clear, detailed explanation with key points, examples, and study tips. Format with short paragraphs.`;
+    const aiRes = await promptAI(prompt);
+    if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
+    await pool.query('UPDATE study_subtopics SET content = $1 WHERE id = $2', [aiRes.text, req.params.id]);
+    res.json({ success: true, subtopic: s.subtopic_name || s.title, content: aiRes.text });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ============ SUBTOPIC PAGE ============
+app.get('/study/subtopic/:id', isAuth, async (req, res) => {
+  try {
+    const st = await pool.query('SELECT * FROM study_subtopics WHERE id = $1', [req.params.id]);
+    if (st.rows.length === 0) return res.status(404).send('Subtopic not found');
+    const s = st.rows[0];
+    const topic = await pool.query('SELECT * FROM study_topics WHERE id = $1', [s.topic_id]);
+    const course = await pool.query('SELECT * FROM study_courses WHERE id = $1', [s.course_id || 0]);
+    res.render('study-subtopic', {
+      user: req.session.user,
+      subtopic: s,
+      topic: topic.rows[0] || null,
+      course: course.rows[0] || null
+    });
+  } catch (err) {
+    console.error('Subtopic page error:', err);
+    res.status(500).send('Error loading subtopic');
   }
 });
 

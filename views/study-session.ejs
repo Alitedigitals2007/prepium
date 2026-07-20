@@ -285,7 +285,7 @@ function searchYouTube() {
         if (d.videos && d.videos.length > 0) {
             d.videos.forEach(function(v) {
                 container.innerHTML += '<div class="yt-video">' +
-                    '<iframe src="https://www.youtube.com/embed/' + v.id + '" allowfullscreen></iframe>' +
+                    '<a href="https://www.youtube.com/results?search_query=' + encodeURIComponent(v.title) + '" target="_blank" style="display:block;background:#f1f5f9;padding:3rem 1rem;text-align:center;border-radius:8px;text-decoration:none;color:var(--brand);font-weight:700;font-size:0.9rem"><i class="fab fa-youtube" style="font-size:2rem;display:block;margin-bottom:8px"></i> Search YouTube for "' + escapeHtml(v.title) + '"</a>' +
                     '<div class="yt-info"><h4>' + escapeHtml(v.title) + '</h4><p>' + escapeHtml(v.channel || '') + '</p></div></div>';
             });
         } else {

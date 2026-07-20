@@ -4604,7 +4604,7 @@ app.post('/api/study/flashcards/generate', isAuth, requirePaid, async (req, res)
     let cards = [];
     try { cards = JSON.parse(aiRes.text.replace(/```json/g,'').replace(/```/g,'').trim()); } catch { throw new Error('Failed to generate flashcards'); }
     for (const c of cards) {
-      await pool.query('INSERT INTO study_flashcards (user_id, course_id, subtopic_id, front, back) VALUES ($1, $2, $3, $4, $5)', [uid, courseId || 0, subtopicId || 0, c.front, c.back]);
+      await pool.query('INSERT INTO study_flashcards (user_id, course_id, subtopic_id, front, back) VALUES ($1, $2, $3, $4, $5)', [uid, courseId || null, subtopicId || null, c.front, c.back]);
     }
     res.json({ success: true, count: cards.length, cards });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }

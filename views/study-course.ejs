@@ -129,10 +129,10 @@
                 <div class="subtopic-list">
                     <% if (t.subtopics && t.subtopics.length > 0) { %>
                         <% t.subtopics.forEach(function(st) { %>
-                        <div class="subtopic-chip" data-subtopic-id="<%= st.id %>">
+                        <div class="subtopic-chip" data-subtopic-id="<%= st.id %>" onclick="openSubtopic(<%= st.id %>)">
                             <span><%= st.subtopic_name %></span>
                             <span class="status-badge <%= st.status %>"><%= st.status %></span>
-                            <div class="chip-actions">
+                            <div class="chip-actions" onclick="event.stopPropagation()">
                                 <% if (st.status === 'ai-generated') { %>
                                     <button class="accept-btn" onclick="acceptSubtopic(<%= st.id %>)"><i class="fas fa-check"></i></button>
                                     <button class="edit-btn" onclick="editSubtopic(<%= st.id %>)"><i class="fas fa-pen"></i></button>
@@ -250,6 +250,10 @@ function editSubtopic(id) {
             }).then(r => r.json()).then(d => { if (d.success) location.reload(); });
         }
     });
+}
+
+function openSubtopic(id) {
+    window.location.href = '/study/subtopic/' + id;
 }
 
 function startSession() {
