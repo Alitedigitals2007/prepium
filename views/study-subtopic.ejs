@@ -163,15 +163,16 @@ function loadVideos() {
 }
 
 function loadFlashcards() {
-    fetch('/api/study/flashcards?courseId=' + courseId)
-    .then(function(r) { return r.json(); })
+    var url = '/api/study/flashcards?courseId=' + courseId + (subtopicId ? '&subtopicId=' + subtopicId : '');
+    fetch(url)
+    .then(function(r) { return r.json().catch(function(){ return { flashcards: [] }; }); })
     .then(function(d) {
         if (d.flashcards && d.flashcards.length > 0) {
             flashcards = d.flashcards;
             currentCard = 0;
             showCard();
         }
-    });
+    }).catch(function(e){ console.warn('flashcards load failed', e); });
 }
 
 function showCard() {

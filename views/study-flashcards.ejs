@@ -87,13 +87,16 @@ var currentIndex = 0;
 
 function loadFlashcards() {
     fetch('/api/study/flashcards?courseId=' + courseId)
-    .then(r => r.json()).then(d => {
+    .then(function(r){ return r.json().catch(function(){ return { flashcards: [] }; }); })
+    .then(function(d) {
         if (d.flashcards && d.flashcards.length > 0) {
             flashcards = d.flashcards;
             currentIndex = 0;
             renderCurrentCard();
+        } else {
+            document.getElementById('totalCards').textContent = (d.flashcards ? d.flashcards.length : 0);
         }
-    });
+    }).catch(function(e){ console.warn('flashcards load failed', e); });
 }
 
 var gradients = [

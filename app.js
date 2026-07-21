@@ -4594,7 +4594,7 @@ async function studyPromptAI(prompt) {
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}`, 'HTTP-Referer': 'https://theprepium.vercel.app', 'X-Title': 'Prepium' },
-      body: JSON.stringify({ model: 'openrouter/free', messages: [{ role: 'user', content: prompt }], temperature: 0.15 }),
+      body: JSON.stringify({ model: 'mistralai/mistral-7b-instruct:free', messages: [{ role: 'user', content: prompt }], temperature: 0.15 }),
       signal: AbortSignal.timeout(45000)
     });
     if (!res.ok) { const t = await res.text().catch(()=>''); return { text: `AI error: ${res.status} ${t}` }; }
@@ -5003,10 +5003,11 @@ app.post('/api/study/flashcards/generate', isAuth, requirePaid, async (req, res)
 
 app.get('/api/study/flashcards', isAuth, async (req, res) => {
   try {
-    const { courseId } = req.query;
+    const { courseId, subtopicId } = req.query;
     let q = 'SELECT * FROM study_flashcards WHERE user_id = $1';
     const p = [req.session.user.id];
     if (courseId) { q += ' AND course_id = $2'; p.push(courseId); }
+    if (subtopicId) { q += ' AND subtopic_id = $' + p.length + 1; p.push(subtopicId); }
     q += ' ORDER BY created_at DESC';
     const r = await pool.query(q, p);
     const flashcards = r.rows.map(function(f) { f.front = cleanLatex(f.front); f.back = cleanLatex(f.back); return f; });

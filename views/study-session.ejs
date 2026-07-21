@@ -237,22 +237,39 @@ function switchTab(tab, btn) {
     document.getElementById('tab-' + tab).classList.add('active');
 }
 
+var chatAbort = null;
 function sendChat() {
     var input = document.getElementById('chatInput');
     var msg = input.value.trim();
     if (!msg) return;
     input.value = '';
     var container = document.getElementById('chatMessages');
-    container.innerHTML += '<div class="chat-msg user"><div class="bubble">' + escapeHtml(msg) + '</div></div>';
+    var pId = 'chat-pending-' + Date.now();
+    container.insertAdjacentHTML('beforeend',
+        '<div class="chat-msg user"><div class="bubble">' + escapeHtml(msg) + '</div></div>' +
+        '<div class="chat-msg ai" id="' + pId + '"><div class="bubble"><i class="fas fa-spinner fa-spin"></i> Thinking…</div></div>'
+    );
     container.scrollTop = container.scrollHeight;
-    fetch('/api/study/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: msg, courseId: courseId, courseName: courseName })
-    }).then(r => r.json()).then(function(d) {
-        container.innerHTML += '<div class="chat-msg ai"><div class="bubble">' + (d.reply || 'Sorry, I could not process that.') + '</div></div>';
+    if (chatAbort) try { chatAbort.abort(); } catch(e){}
+    chatAbort = ('AbortController' in window) ? new AbortController() : null;
+    var fetchOpts = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg, courseId: courseId, courseName: courseName }) };
+    if (chatAbort) fetchOpts.signal = chatAbort.signal;
+    var clientTimer = setTimeout(function() { try { if (chatAbort) chatAbort.abort(); } catch(e){} }, 55000);
+    fetch('/api/study/chat', fetchOpts)
+    .then(function(r){ return r.json().catch(function(){ return { success:false, error:'Bad server response (' + r.status + ')' }; }); })
+    .then(function(d) {
+        var el = document.getElementById(pId); if (el) el.remove();
+        var reply = (d && d.success && d.reply) ? d.reply : ((d && d.error) ? ('AI error: ' + d.error) : 'Sorry, I could not process that. Please try again.');
+        container.insertAdjacentHTML('beforeend', '<div class="chat-msg ai"><div class="bubble">' + escapeHtml(reply).replace(/\n/g,'<br>') + '</div></div>');
         container.scrollTop = container.scrollHeight;
-    });
+    })
+    .catch(function(err) {
+        var el = document.getElementById(pId); if (el) el.remove();
+        var msg2 = (err && err.name === 'AbortError') ? 'Request timed out. Tap send again to retry.' : ('AI error: ' + (err && err.message ? err.message : 'network error'));
+        container.insertAdjacentHTML('beforeend', '<div class="chat-msg ai"><div class="bubble">' + escapeHtml(msg2) + '</div></div>');
+        container.scrollTop = container.scrollHeight;
+    })
+    .finally(function() { clearTimeout(clientTimer); });
 }
 
 function escapeHtml(text) {
@@ -272,7 +289,25 @@ function saveNotes() {
 }
 
 function loadNotes() {
-    document.getElementById('notesArea').value = '<%= session ? (session.notes || "").replace(/'/g, "\\'").replace(/\n/g, "\\n") : '' %>';
+document.getElementById('notesArea').value = '<%= session ? (session.notes || "").replace(/'/g, "\\'").replace(/\n/g, "\\n") : '' %>';
+
+var sessionAlreadyPrompted = false;
+if (!sessionAlreadyPrompted) {
+  sessionAlreadyPrompted = true;
+  Swal.fire({
+    title: 'Start studying?',
+    text: 'Do you want to start studying now?',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Yes, start',
+    cancelButtonText: 'Not yet',
+    allowOutsideClick: false,
+    allowEscapeKey: false
+  }).then(function(res) {
+    if (res.isConfirmed && !isRunning) toggleTimer();
+  });
+}
+
 }
 
 function searchYouTube() {
