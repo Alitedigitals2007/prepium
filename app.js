@@ -3979,7 +3979,7 @@ app.post('/generate-ai-quiz', isStudent, upload.single('lecture_note'), async (r
             "options": ["Option A", "Option B", "Option C", "Option D"],
             "correct": "Correct option text or keyword answer definition",
             "keywords": ["key1", "key2"],
-            "explanation": "Write a clear, thorough explanation of the correct answer. Use plain text only - no markdown (no **, no __, no *). Use proper grammar, complete sentences, and structure the explanation logically. Include relevant formulas using LaTeX math mode like $E=mc^2$ or $\\int_{0}^{1} x^2 dx$ where appropriate."
+            "explanation": "Write a clear, thorough explanation of the correct answer. CRITICAL: Use PLAIN TEXT ONLY. NO markdown formatting whatsoever - no **bold**, no *italic*, no __underline__, no backticks, no headers. Use proper grammar and complete sentences. Structure the explanation logically in paragraphs. Include formulas using LaTeX like $E=mc^2$ if needed."
           }
         ]`;
 

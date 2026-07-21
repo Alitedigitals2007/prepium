@@ -23,9 +23,7 @@
         .fc-card:active { transform: scale(0.98); }
         .fc-card .fc-side { width: 100%; }
         .fc-card .fc-front { font-size: 1.05rem; font-weight: 700; line-height: 1.5; }
-        .fc-card .fc-back { font-size: 0.95rem; font-weight: 600; color: var(--text-sub); line-height: 1.5; display: none; }
-        .fc-card.flipped .fc-front { display: none; }
-        .fc-card.flipped .fc-back { display: block; }
+        .fc-card .fc-back { font-size: 0.95rem; font-weight: 600; color: var(--text-sub); line-height: 1.5; }
         .fc-card .tap-hint { position: absolute; bottom: 16px; font-size: 0.6rem; color: var(--text-muted); font-weight: 600; }
         .fc-card .fc-actions { position: absolute; top: 12px; right: 12px; display: flex; gap: 4px; }
         .fc-card .fc-actions button { width: 30px; height: 30px; border-radius: 8px; border: none; background: #f1f5f9; cursor: pointer; color: var(--text-sub); font-size: 0.7rem; display: flex; align-items: center; justify-content: center; }
@@ -136,12 +134,12 @@ function renderCurrentCard() {
     document.getElementById('currentCardNum').textContent = currentIndex + 1;
     var fc = flashcards[currentIndex];
     var colors = getCardColors(fc.front);
-    container.innerHTML = '<div class="fc-card" onclick="this.classList.toggle(\'flipped\')" style="padding:0;overflow:hidden">' +
+    container.innerHTML = '<div class="fc-card" style="padding:0;overflow:hidden">' +
         cardSvg(fc, colors) +
         '<div class="fc-actions" style="position:absolute;top:8px;right:8px;z-index:2"><button onclick="event.stopPropagation();deleteCard(' + fc.id + ')" title="Delete" style="width:30px;height:30px;border-radius:8px;border:none;background:rgba(255,255,255,0.8);cursor:pointer;color:var(--danger);font-size:0.7rem"><i class="fas fa-trash"></i></button></div>' +
-        '<div style="padding:16px 20px 20px">' +
+        '<div style="padding:16px 20px 20px" onclick="flipCard(this)">' +
         '<div class="fc-side fc-front" style="font-size:1rem;font-weight:700;line-height:1.5">' + escapeHtml(fc.front) + '</div>' +
-        '<div class="fc-side fc-back" style="font-size:0.92rem;font-weight:600;color:var(--text-sub);line-height:1.5">' + escapeHtml(fc.back) + '</div>' +
+        '<div class="fc-side fc-back" style="font-size:0.92rem;font-weight:600;color:var(--text-sub);line-height:1.5;display:none">' + escapeHtml(fc.back) + '</div>' +
         '</div>' +
         '<div class="tap-hint" style="padding:0 20px 14px;font-size:0.6rem;color:var(--text-muted);font-weight:600">Tap to flip</div></div>';
 }
@@ -183,6 +181,19 @@ function deleteCard(id) {
             });
         }
     });
+}
+
+function flipCard(el) {
+    var front = el.querySelector('.fc-front');
+    var back = el.querySelector('.fc-back');
+    if (!front || !back) return;
+    if (front.style.display === 'none') {
+        front.style.display = 'block';
+        back.style.display = 'none';
+    } else {
+        front.style.display = 'none';
+        back.style.display = 'block';
+    }
 }
 
 function escapeHtml(text) {

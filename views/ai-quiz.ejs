@@ -33,11 +33,24 @@
 
         .main { padding: 0 1.5rem; }
 
+        /* Animations */
+        @keyframes fadeInUp { from { opacity:0;transform:translateY(20px) } to { opacity:1;transform:translateY(0) } }
+        @keyframes fadeInScale { from { opacity:0;transform:scale(0.95) } to { opacity:1;transform:scale(1) } }
+        @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+        @keyframes slideInRight { from { opacity:0;transform:translateX(40px) } to { opacity:1;transform:translateX(0) } }
+        @keyframes slideInLeft { from { opacity:0;transform:translateX(-40px) } to { opacity:1;transform:translateX(0) } }
+        @keyframes confetti { 0%{transform:translateY(0) rotate(0);opacity:1} 100%{transform:translateY(-200px) rotate(720deg);opacity:0} }
+        .anim-fade { animation: fadeInUp 0.5s ease forwards; }
+        .anim-scale { animation: fadeInScale 0.4s ease forwards; }
+        .anim-slide-right { animation: slideInRight 0.4s ease forwards; }
+        .anim-slide-left { animation: slideInLeft 0.4s ease forwards; }
+
         /* Hero Card */
         .hero-card {
             background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
             border-radius: 24px; padding: 24px; margin-bottom: 16px;
             color: white; position: relative; overflow: hidden;
+            animation: fadeInUp 0.5s ease;
         }
         .hero-card::before {
             content: ''; position: absolute; top: -40px; right: -40px;
@@ -53,11 +66,12 @@
         .hero-desc { font-size: 0.75rem; opacity: 0.8; font-weight: 500; position: relative; z-index: 1; }
 
         /* Stats Row */
-        .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+        .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; animation: fadeInUp 0.6s ease; }
         .stat-item { 
             background: white; border: 1.5px solid var(--border); border-radius: 16px;
-            padding: 14px 10px; text-align: center;
+            padding: 14px 10px; text-align: center; transition: all 0.3s ease;
         }
+        .stat-item:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.06); }
         .stat-icon { font-size: 1rem; margin-bottom: 4px; }
         .stat-icon.purple { color: var(--brand); }
         .stat-icon.green { color: var(--success); }
@@ -70,7 +84,9 @@
             border: 2px dashed var(--border); border-radius: 20px; padding: 28px 16px;
             text-align: center; cursor: pointer; transition: all 0.3s ease;
             background: white; margin-bottom: 16px; position: relative;
+            animation: fadeInUp 0.7s ease;
         }
+        .upload-zone:hover { border-color: var(--brand); background: var(--brand-light); transform: translateY(-2px); }
         .upload-zone:active { transform: scale(0.98); }
         .upload-zone.has-file { border-color: var(--brand); background: var(--brand-light); }
         .upload-icon { font-size: 2rem; color: var(--brand); margin-bottom: 8px; display: block; }
@@ -79,7 +95,11 @@
         .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 
         /* Form Fields */
-        .field { margin-bottom: 14px; }
+        .field { margin-bottom: 14px; animation: fadeInUp 0.8s ease; animation-fill-mode: backwards; }
+        .field:nth-child(2) { animation-delay: 0.1s; }
+        .field:nth-child(3) { animation-delay: 0.2s; }
+        .field:nth-child(4) { animation-delay: 0.3s; }
+        .field:nth-child(5) { animation-delay: 0.4s; }
         .field-label { 
             display: block; font-size: 0.65rem; font-weight: 700; color: var(--muted);
             text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px;
@@ -90,9 +110,9 @@
             color: var(--text); outline: none; appearance: none; -webkit-appearance: none;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23a3aed0'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
             background-repeat: no-repeat; background-position: right 14px center; background-size: 16px;
-            padding-right: 40px;
+            padding-right: 40px; transition: all 0.3s ease;
         }
-        .field-select:focus { border-color: var(--brand); background-color: white; }
+        .field-select:focus { border-color: var(--brand); background-color: white; box-shadow: 0 0 0 4px rgba(124,58,237,0.1); }
 
         /* Generate Button */
         .generate-btn {
@@ -101,14 +121,16 @@
             color: white; font-size: 0.9rem; font-weight: 800; cursor: pointer;
             display: flex; align-items: center; justify-content: center; gap: 8px;
             box-shadow: 0 8px 24px rgba(124,58,237,0.25);
-            transition: all 0.3s ease;
+            transition: all 0.3s ease; animation: fadeInUp 0.9s ease; animation-fill-mode: backwards; animation-delay: 0.5s;
         }
+        .generate-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(124,58,237,0.35); }
         .generate-btn:active { transform: scale(0.97); }
 
         /* Loading Screen */
         .loading-card {
             background: white; border-radius: 24px; padding: 40px 24px;
             text-align: center; border: 1.5px solid var(--border);
+            animation: fadeInScale 0.4s ease;
         }
         .loading-spinner {
             width: 60px; height: 60px; border: 4px solid var(--border);
@@ -132,39 +154,46 @@
         .quiz-card {
             background: white; border-radius: 24px; padding: 20px;
             border: 1.5px solid var(--border); margin-bottom: 16px;
+            animation: fadeInScale 0.4s ease;
         }
         .quiz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        .quiz-counter { font-size: 0.75rem; font-weight: 800; color: var(--brand); }
+        .quiz-counter { 
+            font-size: 0.75rem; font-weight: 800; color: var(--brand);
+            background: var(--brand-light); padding: 6px 14px; border-radius: 20px;
+        }
         .quiz-timer { 
             display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 800;
             color: var(--danger); background: #fef2f2; padding: 6px 12px; border-radius: 20px;
+            animation: pulse 2s ease-in-out infinite;
         }
         .question-text { font-size: 1rem; font-weight: 700; line-height: 1.6; margin-bottom: 20px; }
 
         /* Progress Bar */
         .quiz-progress { 
-            height: 4px; background: var(--border); border-radius: 2px; 
+            height: 6px; background: #f1f5f9; border-radius: 3px; 
             margin-bottom: 20px; overflow: hidden;
         }
         .quiz-progress-fill { 
             height: 100%; background: linear-gradient(90deg, #7c3aed, #5b21b6);
-            border-radius: 2px; transition: width 0.3s ease;
+            border-radius: 3px; transition: width 0.5s ease;
         }
 
         /* Option Cards */
         .option-card {
             border: 1.5px solid var(--border); border-radius: 16px; padding: 14px 16px;
             margin-bottom: 10px; cursor: pointer; display: flex; align-items: center;
-            gap: 12px; transition: all 0.2s ease; background: white;
+            gap: 12px; transition: all 0.3s ease; background: white;
         }
+        .option-card:hover { border-color: var(--brand); background: var(--brand-light); transform: translateX(4px); }
         .option-card:active { transform: scale(0.98); }
-        .option-card.selected { border-color: var(--brand); background: var(--brand-light); }
+        .option-card.selected { border-color: var(--brand); background: var(--brand-light); box-shadow: 0 4px 12px rgba(124,58,237,0.15); }
         .option-letter {
-            width: 32px; height: 32px; border-radius: 10px; background: #f1f5f9;
+            width: 36px; height: 36px; border-radius: 12px; background: #f1f5f9;
             display: flex; align-items: center; justify-content: center;
-            font-size: 0.75rem; font-weight: 800; color: var(--muted);
+            font-size: 0.8rem; font-weight: 800; color: var(--muted);
+            transition: all 0.3s ease;
         }
-        .option-card.selected .option-letter { background: var(--brand); color: white; }
+        .option-card.selected .option-letter { background: var(--brand); color: white; transform: scale(1.1); }
         .option-text { font-size: 0.9rem; font-weight: 600; flex: 1; }
 
         /* Navigation */
@@ -173,10 +202,14 @@
             flex: 1; padding: 14px; border: none; border-radius: 14px;
             font-size: 0.85rem; font-weight: 700; cursor: pointer;
             display: flex; align-items: center; justify-content: center; gap: 6px;
+            transition: all 0.3s ease;
         }
         .nav-btn.prev { background: #f1f5f9; color: var(--text); }
+        .nav-btn.prev:hover { background: #e2e8f0; }
         .nav-btn.next { background: var(--brand); color: white; }
+        .nav-btn.next:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(124,58,237,0.3); }
         .nav-btn.finish { background: var(--success); color: white; }
+        .nav-btn.finish:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(16,185,129,0.3); }
         .nav-btn:active { transform: scale(0.97); }
 
         /* Results */
@@ -184,10 +217,16 @@
             background: linear-gradient(135deg, #10b981 0%, #059669 100%);
             border-radius: 24px; padding: 32px 24px; text-align: center;
             color: white; margin-bottom: 16px; position: relative; overflow: hidden;
+            animation: fadeInScale 0.5s ease;
         }
         .result-hero::before {
             content: ''; position: absolute; top: -50px; right: -50px;
             width: 150px; height: 150px; background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
+        .result-hero::after {
+            content: ''; position: absolute; bottom: -30px; left: -30px;
+            width: 100px; height: 100px; background: rgba(255,255,255,0.08);
             border-radius: 50%;
         }
         .result-score { font-size: 4rem; font-weight: 800; position: relative; z-index: 1; }
@@ -196,10 +235,11 @@
         .review-card {
             background: white; border-radius: 16px; padding: 16px;
             border: 1.5px solid var(--border); margin-bottom: 10px;
+            animation: fadeInUp 0.4s ease; animation-fill-mode: backwards;
         }
         .review-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .review-badge { 
-            font-size: 0.6rem; font-weight: 800; padding: 3px 8px; 
+            font-size: 0.6rem; font-weight: 800; padding: 4px 10px; 
             border-radius: 6px; text-transform: uppercase;
         }
         .review-badge.pass { background: #dcfce7; color: #15803d; }
@@ -208,7 +248,8 @@
         .review-detail { font-size: 0.75rem; color: var(--muted); line-height: 1.5; }
         .review-explain { 
             font-size: 0.75rem; color: var(--text); background: #f8fafc;
-            padding: 12px; border-radius: 10px; margin-top: 8px; line-height: 1.5;
+            padding: 12px; border-radius: 10px; margin-top: 8px; line-height: 1.6;
+            border-left: 3px solid var(--brand);
         }
 
     </style>
@@ -386,10 +427,12 @@
             }
         });
 
+        let prevIndex = -1;
+
         function startQuiz() {
             document.getElementById('loaderStep').style.display = 'none';
             document.getElementById('arenaStep').style.display = 'block';
-            curIndex = 0; responses = {};
+            curIndex = 0; responses = {}; prevIndex = -1;
             showQuestion(); runTimer();
         }
 
@@ -401,11 +444,12 @@
             document.getElementById('nextBtn').style.display = curIndex === examQuestions.length-1 ? 'none' : 'flex';
             document.getElementById('finishBtn').style.display = curIndex === examQuestions.length-1 ? 'flex' : 'none';
 
+            const area = document.getElementById('dynamicQuestionArea');
             let html = `<div class="question-text">${q.question}</div>`;
             if(q.type === 'obj') {
                 q.options.forEach((opt, i) => {
                     html += `
-                        <div class="option-card ${responses[curIndex]===opt?'selected':''}" onclick="selectOpt('${opt.replace(/'/g,"\\'")}')">
+                        <div class="option-card ${responses[curIndex]===opt?'selected':''}" onclick="selectOpt(this, '${opt.replace(/'/g,"\\'")}')">
                             <div class="option-letter">${String.fromCharCode(65+i)}</div>
                             <div class="option-text">${opt}</div>
                         </div>`;
@@ -415,11 +459,19 @@
             } else {
                 html += `<textarea class="field-select" rows="5" placeholder="Write your answer..." oninput="responses[curIndex]=this.value">${responses[curIndex]||''}</textarea>`;
             }
-            document.getElementById('dynamicQuestionArea').innerHTML = html;
-            if(window.MathJax && window.MathJax.typesetPromise) MathJax.typesetPromise([document.getElementById('dynamicQuestionArea')]);
+            area.innerHTML = html;
+            const animDir = prevIndex === -1 ? 'fadeInScale' : (curIndex > prevIndex ? 'slideInRight' : 'slideInLeft');
+            area.style.animation = 'none'; void area.offsetWidth;
+            area.style.animation = `${animDir} 0.4s ease`;
+            prevIndex = curIndex;
+            if(window.MathJax && window.MathJax.typesetPromise) MathJax.typesetPromise([area]);
         }
 
-        window.selectOpt = val => { responses[curIndex] = val; showQuestion(); };
+        window.selectOpt = (el, val) => {
+            responses[curIndex] = val;
+            el.parentElement.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+        };
         window.prevQuestion = () => { if(curIndex>0){curIndex--;showQuestion();} };
         window.nextQuestion = () => { if(curIndex<examQuestions.length-1){curIndex++;showQuestion();} };
 
@@ -435,14 +487,7 @@
         }
 
         function cleanText(text) {
-            var t = text||'';
-            t = t.replace(/###\s?(.*?)(?:\n|$)/g, '<h4 style="font-size:0.85rem;font-weight:800;margin:10px 0 4px">$1</h4>');
-            t = t.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            t = t.replace(/\*(.*?)\*/g, '<em>$1</em>');
-            t = t.replace(/__(.*?)__/g, '<u>$1</u>');
-            t = t.replace(/`(.*?)`/g, '<code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:0.8rem">$1</code>');
-            t = t.replace(/\n/g, '<br>');
-            return t;
+            return (text||'').replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1').replace(/__(.*?)__/g, '$1').replace(/_(.*?)_/g, '$1').replace(/~~(.*?)~~/g, '$1').replace(/`(.*?)`/g, '$1').replace(/#{1,6}\s?/g, '').replace(/\n{2,}/g, '\n\n');
         }
 
         async function submitQuiz() {
