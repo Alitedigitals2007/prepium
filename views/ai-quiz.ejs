@@ -278,6 +278,16 @@
                     </div>
 
                     <div class="field">
+                        <label class="field-label">Difficulty Level</label>
+                        <select class="field-select" id="difficulty" name="difficulty">
+                            <option value="easy">Easy</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="hard">Hard</option>
+                            <option value="expert">Expert</option>
+                        </select>
+                    </div>
+
+                    <div class="field">
                         <label class="field-label">Time Limit</label>
                         <select class="field-select" id="quiz_duration" name="quiz_duration">
                             <option value="5" selected>5 Minutes</option>
@@ -424,6 +434,17 @@
             countdownTimer = setInterval(tick, 1000);
         }
 
+        function cleanText(text) {
+            var t = text||'';
+            t = t.replace(/###\s?(.*?)(?:\n|$)/g, '<h4 style="font-size:0.85rem;font-weight:800;margin:10px 0 4px">$1</h4>');
+            t = t.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            t = t.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            t = t.replace(/__(.*?)__/g, '<u>$1</u>');
+            t = t.replace(/`(.*?)`/g, '<code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:0.8rem">$1</code>');
+            t = t.replace(/\n/g, '<br>');
+            return t;
+        }
+
         async function submitQuiz() {
             clearInterval(countdownTimer);
             document.getElementById('arenaStep').style.display = 'none';
@@ -457,7 +478,7 @@
                         </div>
                         <div class="review-q">${q.question}</div>
                         ${detail}
-                        <div class="review-explain"><strong>Explanation:</strong> ${q.explanation}</div>
+                        <div class="review-explain"><strong>Explanation:</strong> ${cleanText(q.explanation)}</div>
                     </div>`;
             });
 
@@ -465,7 +486,9 @@
             document.getElementById('percentMark').textContent = pct+'%';
             document.getElementById('fractionMark').textContent = `${pts.toFixed(1)} / ${examQuestions.length} correct`;
             document.getElementById('solutionsSheet').innerHTML = html;
-            if(window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([document.getElementById('solutionsSheet')]);
+            if(window.MathJax && MathJax.typesetPromise) {
+                MathJax.typesetPromise([document.getElementById('solutionsSheet')]);
+            }
 
             try {
                 await fetch('/save-ai-quiz-results', {

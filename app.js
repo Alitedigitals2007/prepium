@@ -198,6 +198,50 @@ pool.on('error', (err) => {
     }
 })();
 
+// ── Auto-create daily_task_items & personal_goals & weekly_analytics ────────
+(async () => {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS personal_goals (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                goal TEXT NOT NULL,
+                target_date DATE,
+                is_completed BOOLEAN DEFAULT false,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS daily_task_items (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                task_date DATE DEFAULT CURRENT_DATE,
+                task_type VARCHAR(50) NOT NULL,
+                task_label TEXT NOT NULL,
+                is_done BOOLEAN DEFAULT false,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS weekly_analytics (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                week_start DATE NOT NULL,
+                total_tasks INTEGER DEFAULT 0,
+                completed_tasks INTEGER DEFAULT 0,
+                study_minutes INTEGER DEFAULT 0,
+                quiz_count INTEGER DEFAULT 0,
+                avg_score DECIMAL(5,2) DEFAULT 0,
+                created_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(user_id, week_start)
+            )
+        `);
+        console.log('[DB] daily_task_items, personal_goals, weekly_analytics tables ready');
+    } catch (err) {
+        console.error('[DB] daily task tables setup:', err.message);
+    }
+})();
+
 // ── Auto-create deadlines table ─────────────────────────────────────────────
 (async () => {
     try {
@@ -3599,6 +3643,270 @@ app.get('/ai-quiz', isAuth, (req, res) => {
     });
 });
 
+// ─── DAILY TASK DASHBOARD ──────────────────────────────────────────────────
+
+app.get('/daily-task', isAuth, async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+        const today = new Date().toISOString().split('T')[0];
+        const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+
+        // 1. Today's school timetable slots
+        const slotsRes = await pool.query(
+            `SELECT id, course, course_code, start_time, end_time, venue
+             FROM timetables WHERE user_id = $1 AND day = $2
+             ORDER BY start_time`, [userId, dayName]
+        );
+
+        // 2. Today's reading timetable slots
+        const readingRes = await pool.query(
+            `SELECT id, course, course_code, start_time, end_time
+             FROM reading_timetables WHERE user_id = $1 AND day = $2
+             ORDER BY start_time`, [userId, dayName]
+        );
+
+        // 3. Upcoming deadlines
+        const deadlineRes = await pool.query(
+            `SELECT id, title, TO_CHAR(due_date, 'Mon DD') as date_str, TO_CHAR(due_time, 'HH24:MI') as time_str
+             FROM deadlines WHERE user_id = $1 AND due_date >= CURRENT_DATE
+             ORDER BY due_date, due_time LIMIT 10`, [userId]
+        );
+
+        // 4. Personal goals
+        const goalsRes = await pool.query(
+            `SELECT id, goal, target_date, is_completed
+             FROM personal_goals WHERE user_id = $1
+             ORDER BY is_completed, created_at DESC`, [userId]
+        );
+
+        // 5. Today's task items (tick-box)
+        const tasksRes = await pool.query(
+            `SELECT id, task_type, task_label, is_done
+             FROM daily_task_items WHERE user_id = $1 AND task_date = $2
+             ORDER BY created_at`, [userId, today]
+        );
+
+        // 6. Weekly analysis
+        const weekStart = new Date();
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+        const weekStartStr = weekStart.toISOString().split('T')[0];
+
+        const weekRes = await pool.query(
+            `SELECT COALESCE(SUM(CASE WHEN is_done THEN 1 ELSE 0 END), 0) as done,
+                    COUNT(*) as total
+             FROM daily_task_items
+             WHERE user_id = $1 AND task_date >= $2 AND task_date <= $3`,
+            [userId, weekStartStr, today]
+        );
+
+        const studyWeekRes = await pool.query(
+            `SELECT COALESCE(SUM(elapsed_seconds), 0) as secs
+             FROM study_sessions WHERE user_id = $1
+             AND status = 'completed'
+             AND DATE(created_at) >= $2 AND DATE(created_at) <= $3`,
+            [userId, weekStartStr, today]
+        );
+
+        const quizWeekRes = await pool.query(
+            `SELECT COUNT(*) as count, COALESCE(AVG(percentage), 0) as avg
+             FROM quiz_results WHERE user_id = $1
+             AND DATE(created_at) >= $2 AND DATE(created_at) <= $3`,
+            [userId, weekStartStr, today]
+        );
+
+        res.render('daily-task', {
+            user: req.session.user,
+            today,
+            dayName,
+            slots: slotsRes.rows,
+            readingSlots: readingRes.rows,
+            deadlines: deadlineRes.rows,
+            goals: goalsRes.rows,
+            tasks: tasksRes.rows,
+            weekStats: {
+                done: parseInt(weekRes.rows[0].done),
+                total: parseInt(weekRes.rows[0].total),
+                studyMins: Math.round(parseInt(studyWeekRes.rows[0].secs) / 60),
+                quizCount: parseInt(quizWeekRes.rows[0].count),
+                avgScore: Math.round(parseFloat(quizWeekRes.rows[0].avg))
+            }
+        });
+    } catch (err) {
+        console.error('Daily Task Error:', err);
+        res.redirect('/dashboard');
+    }
+});
+
+// POST: Add personal goal
+app.post('/api/daily-task/goal', isAuth, async (req, res) => {
+    const { goal, target_date } = req.body;
+    if (!goal) return res.status(400).json({ success: false, error: 'Goal text required' });
+    try {
+        await pool.query(
+            'INSERT INTO personal_goals (user_id, goal, target_date) VALUES ($1, $2, $3)',
+            [req.session.user.id, goal, target_date || null]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// POST: Toggle goal completion
+app.post('/api/daily-task/goal/toggle/:id', isAuth, async (req, res) => {
+    try {
+        await pool.query(
+            'UPDATE personal_goals SET is_completed = NOT is_completed WHERE id = $1 AND user_id = $2',
+            [req.params.id, req.session.user.id]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// POST: Delete goal
+app.post('/api/daily-task/goal/delete/:id', isAuth, async (req, res) => {
+    try {
+        await pool.query(
+            'DELETE FROM personal_goals WHERE id = $1 AND user_id = $2',
+            [req.params.id, req.session.user.id]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// POST: Toggle daily task
+app.post('/api/daily-task/task/toggle', isAuth, async (req, res) => {
+    const { taskId } = req.body;
+    try {
+        await pool.query(
+            'UPDATE daily_task_items SET is_done = NOT is_done WHERE id = $1 AND user_id = $2',
+            [taskId, req.session.user.id]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// POST: Auto-generate daily tasks from timetable + deadlines + goals
+app.post('/api/daily-task/generate-tasks', isAuth, async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+        const today = new Date().toISOString().split('T')[0];
+        const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+
+        var count = 0;
+
+        // Generate from school timetable
+        const slots = await pool.query(
+            'SELECT id, course, start_time, end_time FROM timetables WHERE user_id = $1 AND day = $2',
+            [userId, dayName]
+        );
+        for (const s of slots.rows) {
+            await pool.query(
+                `INSERT INTO daily_task_items (user_id, task_date, task_type, task_label)
+                 VALUES ($1, $2, 'class', $3) ON CONFLICT DO NOTHING`,
+                [userId, today, 'Attend ' + s.course + ' (' + (s.start_time||'').substring(0,5) + '-' + (s.end_time||'').substring(0,5) + ')']
+            );
+            count++;
+        }
+
+        // Generate from reading timetable
+        const readingSlots = await pool.query(
+            'SELECT id, course, start_time, end_time FROM reading_timetables WHERE user_id = $1 AND day = $2',
+            [userId, dayName]
+        );
+        for (const r of readingSlots.rows) {
+            await pool.query(
+                `INSERT INTO daily_task_items (user_id, task_date, task_type, task_label)
+                 VALUES ($1, $2, 'study', $3) ON CONFLICT DO NOTHING`,
+                [userId, today, 'Study ' + r.course + ' (' + (r.start_time||'').substring(0,5) + '-' + (r.end_time||'').substring(0,5) + ')']
+            );
+            count++;
+        }
+
+        // Generate from deadlines
+        const deadlines = await pool.query(
+            `SELECT id, title FROM deadlines WHERE user_id = $1 AND due_date = $2`,
+            [userId, today]
+        );
+        for (const d of deadlines.rows) {
+            await pool.query(
+                `INSERT INTO daily_task_items (user_id, task_date, task_type, task_label)
+                 VALUES ($1, $2, 'deadline', $3) ON CONFLICT DO NOTHING`,
+                [userId, today, 'Submit: ' + d.title]
+            );
+            count++;
+        }
+
+        // If nothing generated, create default tasks
+        if (count === 0) {
+            const defaults = ['Review lecture notes', 'Complete practice quiz', 'Read a chapter'];
+            for (const label of defaults) {
+                await pool.query(
+                    `INSERT INTO daily_task_items (user_id, task_date, task_type, task_label)
+                     VALUES ($1, $2, 'general', $3) ON CONFLICT DO NOTHING`,
+                    [userId, today, label]
+                );
+                count++;
+            }
+        }
+
+        res.json({ success: true, count: count });
+    } catch (err) {
+        console.error('Generate tasks error:', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// GET: Weekly report data (JSON)
+app.get('/api/daily-task/weekly-report', isAuth, async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+        const today = new Date().toISOString().split('T')[0];
+        const weekStart = new Date();
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+        const ws = weekStart.toISOString().split('T')[0];
+
+        const [dayData, studyData, quizData] = await Promise.all([
+            pool.query(
+                `SELECT task_date, COUNT(*) as total,
+                        SUM(CASE WHEN is_done THEN 1 ELSE 0 END) as done
+                 FROM daily_task_items WHERE user_id = $1
+                 AND task_date >= $2 AND task_date <= $3
+                 GROUP BY task_date ORDER BY task_date`,
+                [userId, ws, today]
+            ),
+            pool.query(
+                `SELECT DATE(created_at) as d, SUM(elapsed_seconds) as secs
+                 FROM study_sessions WHERE user_id = $1
+                 AND status = 'completed' AND DATE(created_at) >= $2
+                 GROUP BY DATE(created_at) ORDER BY d`,
+                [userId, ws]
+            ),
+            pool.query(
+                `SELECT DATE(created_at) as d, COUNT(*) as cnt,
+                        ROUND(AVG(percentage)) as avg
+                 FROM quiz_results WHERE user_id = $1
+                 AND DATE(created_at) >= $2
+                 GROUP BY DATE(created_at) ORDER BY d`,
+                [userId, ws]
+            )
+        ]);
+
+        res.json({
+            days: dayData.rows,
+            study: studyData.rows,
+            quizzes: quizData.rows
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 app.post('/upload-pdf', upload.single('lecture_note'), async (req, res) => {
     try {
@@ -3635,10 +3943,11 @@ app.post('/generate-ai-quiz', isStudent, upload.single('lecture_note'), async (r
         const numQuestions = parseInt(req.body.num_questions) || 5;
         const quizDuration = parseInt(req.body.quiz_duration) || 5; 
         const questionType = req.body.question_type || 'obj'; 
+        const difficulty = req.body.difficulty || 'medium';
         const originalFileName = req.file.originalname;
         const pdfBase64 = req.file.buffer.toString("base64");
 
-        console.log(`[AI ENGINE] Compiling exactly ${numQuestions} [Format: ${questionType.toUpperCase()}] questions for "${originalFileName}"`);
+        console.log(`[AI ENGINE] Compiling exactly ${numQuestions} [Format: ${questionType.toUpperCase()}] [Difficulty: ${difficulty.toUpperCase()}] questions for "${originalFileName}"`);
 
         // Strict style guidelines to prevent format bleeding and mixed questions
         let styleInstruction = "";
@@ -3652,8 +3961,13 @@ app.post('/generate-ai-quiz', isStudent, upload.single('lecture_note'), async (r
             styleInstruction = "You may mix 'obj', 'german', and 'theory' question types throughout the collection layout.";
         }
 
+        const difficultyMap = { easy: 'basic recall and comprehension level', medium: 'application and analysis level', hard: 'synthesis and evaluation level', expert: 'critical thinking and expert level' };
+        const difficultyText = difficultyMap[difficulty] || 'application and analysis level';
+
         const promptText = `You are an expert academic examiner. Analyze the attached PDF file context carefully.
         Generate exactly ${numQuestions} unique, highly relevant academic questions based strictly on its contents.
+        
+        DIFFICULTY LEVEL: ${difficultyText} — adjust question complexity accordingly.
         
         CRITICAL STYLE RULE: ${styleInstruction}
 
@@ -3665,7 +3979,7 @@ app.post('/generate-ai-quiz', isStudent, upload.single('lecture_note'), async (r
             "options": ["Option A", "Option B", "Option C", "Option D"],
             "correct": "Correct option text or keyword answer definition",
             "keywords": ["key1", "key2"],
-            "explanation": "Detailed explanation context..."
+            "explanation": "Write a clear, thorough explanation of the correct answer. Use plain text only - no markdown (no **, no __, no *). Use proper grammar, complete sentences, and structure the explanation logically. Include relevant formulas using LaTeX math mode like $E=mc^2$ or $\\int_{0}^{1} x^2 dx$ where appropriate."
           }
         ]`;
 
