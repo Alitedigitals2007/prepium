@@ -416,7 +416,8 @@
                 });
                 if(!res.ok) throw new Error("Failed to generate quiz");
                 const data = await res.json();
-                examQuestions = data.questions;
+                examQuestions = data.questions || [];
+                if (!examQuestions.length) { clearInterval(loop); Swal.fire({ icon:'error', title:'Empty', text:'No questions generated. Try again.' }).then(() => location.reload()); return; }
                 timeRemaining = data.durationSeconds;
                 activeQuizName = data.quizTitle;
                 clearInterval(loop);
@@ -437,6 +438,10 @@
         }
 
         function showQuestion() {
+            if (!examQuestions || examQuestions.length === 0) {
+                document.getElementById('dynamicQuestionArea').innerHTML = '<div style="text-align:center;padding:2rem;color:#64748b;font-weight:600">No questions available. Please try again.</div>';
+                return;
+            }
             const q = examQuestions[curIndex];
             document.getElementById('qNumLabel').textContent = `${curIndex+1} / ${examQuestions.length}`;
             document.getElementById('progressFill').style.width = `${((curIndex+1)/examQuestions.length)*100}%`;

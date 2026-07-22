@@ -1374,7 +1374,7 @@ if (pdfBtn) {
 }
 
 /* ── CGPA AI Functions ──────────────────── */
-function aiEscape(s) { return (s == null ? '' : String(s)).replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>'); }
+function aiEscape(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function aiPredictGpa() {
     var box = document.getElementById('aiPredictResult');

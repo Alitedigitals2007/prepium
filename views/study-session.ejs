@@ -209,7 +209,7 @@
         <div class="tab-content" id="tab-summary">
             <div style="background:white;border:1px solid var(--border);border-radius:var(--radius-sm);padding:1rem 1.2rem">
                 <h3 style="font-size:0.85rem;font-weight:800;margin:0 0 10px;display:flex;align-items:center;gap:8px"><i class="fas fa-list-check" style="color:var(--brand)"></i> Session Summary</h3>
-                <textarea id="summaryArea" placeholder="What did you learn? Write key takeaways here..." style="width:100%;min-height:160px;padding:11px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:0.82rem;font-weight:500;line-height:1.6;outline:none;resize:vertical"><%= session ? (session.notes || "").replace(/'/g, "\\'").replace(/\n/g, "\\n") : '' %></textarea>
+                <textarea id="summaryArea" placeholder="What did you learn? Write key takeaways here..." style="width:100%;min-height:160px;padding:11px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:0.82rem;font-weight:500;line-height:1.6;outline:none;resize:vertical"><%= session ? (session.notes || "").replace(/'/g, "\\'") : '' %></textarea>
                 <div style="display:flex;gap:8px;margin-top:10px">
                     <button onclick="saveSummary()" style="flex:1;padding:11px;border:none;background:var(--brand-gradient);color:white;border-radius:10px;font-weight:700;font-size:0.78rem;cursor:pointer"><i class="fas fa-save"></i> Save Summary</button>
                     <button onclick="aiSessionSummary()" style="padding:11px 16px;border:none;background:#0f172a;color:white;border-radius:10px;font-weight:700;font-size:0.78rem;cursor:pointer"><i class="fas fa-magic"></i> AI Summarize</button>
@@ -235,7 +235,6 @@ var courseName = '<%= session ? session.course_name.replace(/'/g, "\\'") : '' %>
 var timerInterval = null;
 var elapsedSeconds = <%= session ? session.elapsed_seconds : 0 %>;
 var isRunning = false;
-var flips = 0;
 
 document.getElementById('notesArea').value = '<%= session ? (session.notes || "").replace(/'/g, "\\'").replace(/\n/g, "\\n") : '' %>';
 
@@ -288,11 +287,11 @@ function switchTab(tab, btn) {
 var chatAbort = null;
 function chatEscape(s) {
     return (s == null ? '' : String(s))
-        .replace(/&/g, '&')
-        .replace(/</g, '<')
-        .replace(/>/g, '>')
-        .replace(/"/g, '"')
-        .replace(/'/g, ''');
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 function chatRender(text) {
     var raw = String(text || '');
@@ -361,25 +360,27 @@ function saveNotes() {
 
 function loadNotes() {
 document.getElementById('notesArea').value = '<%= session ? (session.notes || "").replace(/'/g, "\\'").replace(/\n/g, "\\n") : '' %>';
-
-var sessionAlreadyPrompted = false;
-if (!sessionAlreadyPrompted) {
-  sessionAlreadyPrompted = true;
-  Swal.fire({
-    title: 'Start studying?',
-    text: 'Do you want to start studying now?',
-    icon: 'question',
-    showCancelButton: true,
-    confirmButtonText: 'Yes, start',
-    cancelButtonText: 'Not yet',
-    allowOutsideClick: false,
-    allowEscapeKey: false
-  }).then(function(res) {
-    if (res.isConfirmed && !isRunning) toggleTimer();
-  });
 }
 
-}
+/* ── Session start prompt on load ── */
+(function autoInit() {
+  var prompted = sessionStorage.getItem('study_session_prompted');
+  if (!prompted) {
+    sessionStorage.setItem('study_session_prompted', '1');
+    Swal.fire({
+      title: 'Start studying?',
+      text: 'Do you want to start studying now?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, start',
+      cancelButtonText: 'Not yet',
+      allowOutsideClick: false,
+      allowEscapeKey: false
+    }).then(function(res) {
+      if (res.isConfirmed && !isRunning) toggleTimer();
+    });
+  }
+})();
 
 function searchYouTube() {
     var q = document.getElementById('ytSearchInput').value.trim() || courseName;
@@ -532,7 +533,7 @@ function aiSessionSummary() {
     }).then(function(r){ return r.json().catch(function(){ return { success:false, error:'Bad response' }; }); })
     .then(function(d) {
         if (d && d.success && d.summary) {
-            box.innerHTML = '<div style="white-space:pre-wrap">' + (d.summary || '').replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>') + '</div>';
+            box.innerHTML = '<div style="white-space:pre-wrap">' + (d.summary || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>';
             var ta = document.getElementById('summaryArea');
             if (ta) ta.value = (ta.value ? ta.value + '\n' : '') + d.summary;
         } else {

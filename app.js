@@ -2118,18 +2118,6 @@ app.get('/api/deadlines', isAuth, async (req, res) => {
     }
 });
 
-// GET: Render the Pomodoro Timer page
-app.get('/pomodoro', isAuth, (req, res) => {
-    if (!req.session.user.has_paid) {
-        return res.redirect('/dashboard?msg=Upgrade to access the Pomodoro Timer');
-    }
-
-    res.render('pomodoro', { 
-        user: req.session.user,
-        hasNewNotifs: req.session.hasNewNotifs || false 
-    });
-});
-
 // ─── User Courses API (for AI Extract Wizard) ───
 
 // GET: Fetch user's courses
@@ -3934,7 +3922,7 @@ app.post('/upload-pdf', upload.single('lecture_note'), async (req, res) => {
 });
 
 // POST: Process and Generate Contextual Quizzes from PDFs with Gemini and OpenRouter Backup
-app.post('/generate-ai-quiz', isStudent, upload.single('lecture_note'), async (req, res) => {
+app.post('/generate-ai-quiz', isAuth, upload.single('lecture_note'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: "No file uploaded." });
@@ -4144,7 +4132,7 @@ app.post('/generate-ai-quiz', isStudent, upload.single('lecture_note'), async (r
 });
 
 // POST: Save and Persist Graded Flexible Score Results
-app.post('/save-ai-quiz-results', isStudent, async (req, res) => {
+app.post('/save-ai-quiz-results', isAuth, async (req, res) => {
     try {
         const { quizTitle, totalQuestions, correctAnswers, scorePercentage } = req.body;
         
@@ -4675,6 +4663,7 @@ async function studyPromptAI(prompt) {
     await pool.query(`CREATE TABLE IF NOT EXISTS study_flashcards (id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL, course_id INTEGER DEFAULT 0, subtopic_id INTEGER DEFAULT 0, front TEXT NOT NULL, back TEXT NOT NULL, created_at TIMESTAMP DEFAULT NOW())`);
     await pool.query(`CREATE TABLE IF NOT EXISTS study_quiz_attempts (id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL, course_id INTEGER DEFAULT 0, subtopic_id INTEGER DEFAULT 0, question_type VARCHAR(50) DEFAULT 'multiple_choice', question_count INTEGER DEFAULT 10, time_limit INTEGER DEFAULT 0, score INTEGER DEFAULT 0, total_questions INTEGER DEFAULT 0, status VARCHAR(20) DEFAULT 'in_progress', created_at TIMESTAMP DEFAULT NOW(), completed_at TIMESTAMP)`);
     await pool.query(`CREATE TABLE IF NOT EXISTS study_quiz_questions (id SERIAL PRIMARY KEY, attempt_id INTEGER NOT NULL, question TEXT NOT NULL, options JSONB, correct_answer TEXT, user_answer TEXT, is_correct BOOLEAN, explanation TEXT, order_index INTEGER DEFAULT 0)`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS study_youtube_videos (id SERIAL PRIMARY KEY, user_id INTEGER DEFAULT 0, course_id INTEGER DEFAULT 0, subtopic_id INTEGER DEFAULT 0, title VARCHAR(500) DEFAULT '', url TEXT DEFAULT '', created_at TIMESTAMP DEFAULT NOW())`);
     // Compatibility: make sure optional columns exist on legacy tables
     const adds = [
       ['study_courses', 'unit', 'INTEGER DEFAULT 3'],
@@ -5327,19 +5316,6 @@ app.get('/api/cgpa/transcript', isAuth, async (req, res) => {
 });
 
 // API: Study stats
-app.get('/api/study/stats', isAuth, async (req, res) => {
-  try {
-    const uid = req.session.user.id;
-    const [ts, tm, tc, fc] = await Promise.all([
-      pool.query('SELECT COUNT(*) as c FROM study_sessions WHERE user_id = $1 AND status = $2', [uid, 'completed']),
-      pool.query('SELECT COALESCE(SUM(elapsed_seconds), 0) as t FROM study_sessions WHERE user_id = $1 AND status = $2', [uid, 'completed']),
-      pool.query('SELECT COUNT(*) as c FROM study_courses WHERE user_id = $1', [uid]),
-      pool.query('SELECT COUNT(*) as c FROM study_flashcards WHERE user_id = $1', [uid])
-    ]);
-    res.json({ totalSessions: parseInt(ts.rows[0].c), totalMinutes: Math.floor(parseInt(tm.rows[0].t) / 60), totalCourses: parseInt(tc.rows[0].c), totalFlashcards: parseInt(fc.rows[0].c) });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
 // ======================== END STUDY HUB ROUTES ========================
 
 // Global error handler - catches multer and other errors, returns JSON

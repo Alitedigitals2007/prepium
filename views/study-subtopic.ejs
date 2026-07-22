@@ -137,7 +137,7 @@ function explainRender(t) {
   return paras.map(function(p) {
     var t = p.replace(/\s*\n\s*/g, ' ').trim();
     if (!t) return '';
-    return '<p style="margin:0 0 10px;line-height:1.7">' + t.replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>') + '</p>';
+    return '<p style="margin:0 0 10px;line-height:1.7">' + t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</p>';
   }).join('');
 }
 
@@ -288,7 +288,7 @@ function escapeHtml(t) { return (t || '').replace(/&/g,'&amp;').replace(/</g,'&l
 if (document.querySelector('#tab-videos.active')) loadVideos();
 
 (function autoInit() {
-  var raw = '<%- (typeof subtopic !== "undefined" && subtopic && subtopic.content) ? subtopic.content.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, "\\n").replace(/\r/g, "").replace(/<\//gi, "\\x3C/") : "" %>';
+  var raw = <%= JSON.stringify(typeof subtopic !== "undefined" && subtopic ? (subtopic.content || '') : '') %>;
   if (raw) {
     document.getElementById('contentDisplay').style.display = 'block';
     document.getElementById('explanationText').innerHTML = explainRender(raw);
