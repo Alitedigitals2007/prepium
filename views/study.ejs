@@ -122,22 +122,7 @@
         </div>
     </div>
 
-    <% if (typeof activeSession !== 'undefined' && activeSession) { %>
-    <div class="active-session-card" onclick="resumeSession(<%= activeSession.id %>)">
-        <div class="as-icon"><i class="fas fa-play-circle"></i></div>
-        <div class="as-info">
-            <h4><%= activeSession.course_name %></h4>
-            <p>Started <%= new Date(activeSession.created_at).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) %></p>
-        </div>
-        <button class="as-resume"><i class="fas fa-play"></i> Resume</button>
-    </div>
-    <% } %>
 
-    <div class="quick-start" onclick="quickStart()">
-        <h3><i class="fas fa-bolt"></i> Quick Start</h3>
-        <p>Pick a course and start studying right away</p>
-        <button class="qs-btn"><i class="fas fa-play"></i> Go</button>
-    </div>
 
     <div class="tab-bar">
         <button class="tab-pill active" onclick="switchTab('courses', this)"><i class="fas fa-book"></i> My Courses</button>
@@ -245,54 +230,7 @@ function importTimetable() {
     });
 }
 
-function resumeSession(id) {
-    window.location.href = '/study/session/' + id;
-}
 
-function quickStart() {
-    Swal.fire({
-        title: 'Quick Start',
-        html:
-            '<div style="text-align:left;font-size:0.78rem;color:#475569;font-weight:600;margin-bottom:4px">Pick a course</div>' +
-            '<select id="qs-course" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #cbd5e1;font-family:inherit;font-weight:600;margin-bottom:10px">' +
-            '<option value="">Select...</option>' +
-            '<% if (courses && courses.length > 0) { courses.forEach(function(c) { %>' +
-            '<option value="<%= c.id %>" data-name="<%- c.course_name.replace(/'/g, '&#39;') %>"><%= c.course_name %></option>' +
-            '<% }); } %>' +
-            '</select>' +
-            '<div style="text-align:left;font-size:0.78rem;color:#475569;font-weight:600;margin-bottom:4px">Mode</div>' +
-            '<select id="qs-mode" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #cbd5e1;font-family:inherit;font-weight:600">' +
-            '<option value="study" selected>Study Session</option>' +
-            '<option value="quiz">Quiz</option>' +
-            '<option value="flashcard">Flashcards</option></select>',
-        showCancelButton: true,
-        confirmButtonText: 'Start',
-        preConfirm: function() {
-            var sel = document.getElementById('qs-course');
-            var cid = sel.value;
-            var name = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].getAttribute('data-name') || '' : '';
-            var mode = document.getElementById('qs-mode').value;
-            if (!cid) { Swal.showValidationMessage('Select a course'); return; }
-            return { courseId: cid, courseName: name, mode: mode };
-        }
-    }).then(function(res) {
-        if (!res || !res.isConfirmed || !res.value) return;
-        var v = res.value;
-        if (v.mode === 'quiz') window.location.href = '/study/course/' + v.courseId;
-        else if (v.mode === 'flashcard') window.location.href = '/study/flashcards/' + v.courseId;
-        else {
-            Swal.fire({ title: 'Starting...', html: 'Setting up', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
-            fetch('/api/study/sessions/start', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ courseId: parseInt(v.courseId), courseName: v.courseName })
-            }).then(function(r){ return r.json(); }).then(function(d) {
-                if (d.success && d.redirect) window.location.href = d.redirect;
-                else Swal.fire({ icon: 'error', text: d.error || 'Failed to start' });
-            });
-        }
-    });
-}
 </script>
 </body>
 </html>
