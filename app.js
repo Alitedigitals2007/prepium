@@ -5306,12 +5306,21 @@ app.get('/api/cgpa/transcript', isAuth, async (req, res) => {
     if (scale === 5) { if (cgpa >= 4.5) degreeClass = 'First Class Honours'; else if (cgpa >= 3.5) degreeClass = 'Second Class (Upper)'; else if (cgpa >= 2.4) degreeClass = 'Second Class (Lower)'; else if (cgpa >= 1.5) degreeClass = 'Third Class'; else degreeClass = 'Pass'; }
     else { if (cgpa >= 3.5) degreeClass = 'First Class Honours'; else if (cgpa >= 3.0) degreeClass = 'Second Class (Upper)'; else if (cgpa >= 2.0) degreeClass = 'Second Class (Lower)'; else if (cgpa >= 1.5) degreeClass = 'Third Class'; else degreeClass = 'Pass'; }
 
+    const semesters = Object.values(semesterData).sort((a,b) => a.level - b.level || a.semester - b.semester);
+    let totalPassed = 0;
+    semesters.forEach(s => {
+      s.courses.forEach(c => { if (c.grade !== 'F' && !c.excluded) totalPassed++; });
+    });
+    const refNum = 'PPT/' + new Date().getFullYear() + '/' + String(uid).slice(-4) + '/' + String(Date.now()).slice(-6);
+
     res.json({
       student: user.rows[0] ? { name: user.rows[0].fullname, email: user.rows[0].email } : {},
       department: profile.rows[0]?.department || '',
+      currentLevel: profile.rows[0]?.current_level || '',
       gradingScale: scale,
-      semesters: Object.values(semesterData).sort((a,b) => a.level - b.level || a.semester - b.semester),
-      totalUnits, cgpa: cgpa.toFixed(2), degreeClass,
+      semesters,
+      totalUnits, totalPassed, cgpa: cgpa.toFixed(2), degreeClass,
+      refNumber: refNum,
       generatedAt: new Date().toISOString()
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
