@@ -9,7 +9,8 @@
     <link rel="stylesheet" href="/css/style.css">
 
     <style>
-        .app-shell { padding-bottom: 220px; }
+        .app-shell { padding-bottom: 240px; }
+
         .top-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
         .back-circle { 
             width: 42px; height: 42px; 
@@ -38,16 +39,29 @@
         .guide-box {
             background: linear-gradient(135deg, rgba(0, 98, 255, 0.06) 0%, rgba(79, 70, 229, 0.06) 100%);
             border: 1px solid rgba(0, 98, 255, 0.08);
-            border-radius: 16px; padding: 14px 16px;
+            border-radius: 16px; padding: 16px 18px;
             margin-bottom: 14px;
         }
-        .guide-box p { 
-            margin: 0; font-size: 0.78rem; color: var(--text-sub); 
-            font-weight: 600; line-height: 1.5; 
+        .guide-box .guide-steps { margin: 0; padding: 0; list-style: none; }
+        .guide-box .guide-steps li {
+            font-size: 0.78rem; color: var(--text-sub);
+            font-weight: 600; line-height: 1.5; padding: 4px 0;
+            display: flex; align-items: flex-start; gap: 8px;
         }
-        .guide-box i { color: var(--brand); margin-right: 6px; }
+        .guide-box .guide-steps li .step-num {
+            width: 20px; height: 20px; border-radius: 50%;
+            background: var(--brand); color: white; font-size: 0.6rem;
+            font-weight: 800; display: flex; align-items: center;
+            justify-content: center; flex-shrink: 0; margin-top: 2px;
+        }
+        .guide-box .guide-icon { color: var(--brand); margin-right: 6px; }
+        .guide-box .guide-head {
+            font-size: 0.85rem; font-weight: 800; color: var(--text-dark);
+            margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+        }
 
-        .search-row { display: flex; gap: 10px; }
+        .section-title { padding-left: 14px !important; padding-right: 14px !important; }
+        .search-row { display: flex; gap: 10px; margin: 0 14px; }
         .search-bar { 
             flex: 1; 
             background: rgba(255,255,255,0.8); 
@@ -63,7 +77,7 @@
         }
         .search-bar input::placeholder { color: var(--text-sub); }
 
-        .course-grid { padding: 0 1.2rem; display: grid; gap: 12px; }
+        .course-grid { padding: 0 14px; display: grid; gap: 12px; }
         .course-grid.grid-layout { grid-template-columns: 1fr 1fr; }
         .course-grid.list-layout { grid-template-columns: 1fr; }
 
@@ -116,14 +130,17 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
         .summary-panel {
-            position: fixed; bottom: 104px; width: 100%; max-width: 430px;
-            background: rgba(255,255,255,0.9);
+            position: fixed; bottom: 100px;
+            left: 50%; transform: translateX(-50%);
+            width: calc(100% - 28px); max-width: 430px;
+            background: rgba(255,255,255,0.95);
             backdrop-filter: blur(24px);
             -webkit-backdrop-filter: blur(24px);
             padding: 1.25rem 1.5rem; 
-            border-top: 1px solid rgba(255,255,255,0.7);
+            border: 1px solid rgba(255,255,255,0.8);
+            border-radius: 20px;
             z-index: 99;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.03);
+            box-shadow: 0 -4px 30px rgba(0,0,0,0.06);
         }
 
         .stats-row { 
@@ -184,7 +201,13 @@
             </div>
 
             <div class="guide-box">
-                <p><i class="fas fa-info-circle"></i> Pick up to 4 courses, set question counts, and choose your preferred duration.</p>
+                <div class="guide-head"><i class="fas fa-info-circle guide-icon"></i> How to set up your test</div>
+                <ul class="guide-steps">
+                    <li><span class="step-num">1</span> Select up to <strong>4 courses</strong> by tapping the checkbox</li>
+                    <li><span class="step-num">2</span> For each course, enter how many questions you want</li>
+                    <li><span class="step-num">3</span> Set the total <strong>duration</strong> (in minutes) for the test</li>
+                    <li><span class="step-num">4</span> Tap <strong>"Generate Test"</strong> to begin — your timer starts immediately</li>
+                </ul>
             </div>
 
             <div class="search-row">

@@ -117,6 +117,15 @@
         .empty-state { text-align: center; padding: 2rem 1rem; color: var(--sub); }
         .empty-state i { font-size: 2.5rem; color: #e2e8f0; margin-bottom: 1rem; display: block; }
 
+        .wiz-toggle {
+            display: flex; align-items: center; justify-content: space-between; cursor: pointer;
+            user-select: none;
+        }
+        .wiz-toggle .wiz-arrow { transition: transform 0.25s ease; font-size: 0.75rem; color: #94a3b8; }
+        .wiz-toggle.collapsed .wiz-arrow { transform: rotate(-90deg); }
+        .wiz-body { transition: max-height 0.3s ease, opacity 0.25s ease; overflow: hidden; max-height: 2000px; opacity: 1; }
+        .wiz-body.hidden { max-height: 0; opacity: 0; padding: 0 !important; margin: 0 !important; }
+
         .range-row { display: flex; gap: 12px; }
         .range-row .form-group { flex: 1; }
 
@@ -149,8 +158,12 @@
 
         <!-- Settings Card -->
         <div class="section-card" id="settingsCard">
-            <div class="section-title"><i class="fas fa-cog"></i> Setup Wizard</div>
+            <div class="section-title wiz-toggle" id="wizToggle" onclick="toggleWizard()">
+                <span><i class="fas fa-cog"></i> Setup Wizard</span>
+                <span class="wiz-arrow"><i class="fas fa-chevron-down"></i></span>
+            </div>
 
+            <div class="wiz-body" id="wizBody">
             <!-- Mode Toggle -->
             <div class="mode-toggle" id="modeToggle">
                 <div class="mode-option active" data-mode="school" onclick="setMode('school')">
@@ -182,12 +195,10 @@
                     <label>Exclude Courses (tap to exclude from reading)</label>
                     <div class="checkbox-group" id="exclusionList">
                         <% if (courses && courses.length > 0) {
-                            const excluded = settings && settings.excluded_courses ? settings.excluded_courses : [];
                             courses.forEach(c => {
-                                const isExcluded = excluded.includes(c.course) || excluded.includes(c.course_code);
                         %>
                             <label class="checkbox-label">
-                                <input type="checkbox" value="<%= c.course %>" <%= isExcluded ? 'checked' : '' %> onchange="toggleExcluded(this)">
+                                <input type="checkbox" value="<%= c.course %>" onchange="toggleExcluded(this)">
                                 <span><%= c.course_code ? c.course_code + ' - ' : '' %><%= c.course %></span>
                             </label>
                         <% }); } else { %>
@@ -235,6 +246,7 @@
             <button class="btn-primary" onclick="generateReadingTimetable()" id="generateBtn" style="margin-top:16px;">
                 <i class="fas fa-wand-magic-sparkles"></i> Generate Reading Timetable
             </button>
+            </div><!-- /wizBody -->
         </div>
 
         <!-- Generated Reading Timetable -->
@@ -292,7 +304,14 @@
 
     <script>
         let currentMode = 'school';
-        let excludedCourses = <%= JSON.stringify(settings && settings.excluded_courses ? settings.excluded_courses : []) %>;
+        let excludedCourses = []; // always start empty — user ticks manually
+
+        function toggleWizard() {
+            var body = document.getElementById('wizBody');
+            var toggle = document.getElementById('wizToggle');
+            body.classList.toggle('hidden');
+            toggle.classList.toggle('collapsed');
+        }
 
         function setMode(mode) {
             currentMode = mode;
@@ -390,6 +409,9 @@
                     renderReadingTimetable(data.readingSlots);
                     document.getElementById('readingResult').style.display = 'block';
                     document.getElementById('emptyState').style.display = 'none';
+                    // Collapse wizard so timetable takes center stage
+                    document.getElementById('wizBody').classList.add('hidden');
+                    document.getElementById('wizToggle').classList.add('collapsed');
                 } else {
                     alert(data.message || 'Failed to generate. Check your settings.');
                 }

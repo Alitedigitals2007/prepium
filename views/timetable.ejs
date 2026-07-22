@@ -138,6 +138,57 @@
         }
         .ef-remove:active { transform: scale(0.9); }
 
+        /* Today's Schedule Box */
+        .today-box {
+            margin: 0 1.5rem 1rem;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            border-radius: 24px;
+            padding: 18px 20px;
+            color: white;
+            box-shadow: 0 8px 32px rgba(15,23,42,0.2);
+        }
+        .today-box .today-date { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6; }
+        .today-box .today-day { font-size: 1.35rem; font-weight: 800; margin: 2px 0 4px; }
+        .today-box .today-status { font-size: 0.82rem; font-weight: 600; opacity: 0.85; display: flex; align-items: center; gap: 8px; }
+        .today-box .today-status .live-dot {
+            width: 8px; height: 8px; border-radius: 50%; background: #22c55e;
+            display: inline-block; animation: pulse-dot 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        .today-box .today-slot {
+            background: rgba(255,255,255,0.1); border-radius: 14px; padding: 12px 14px;
+            margin-top: 10px; display: flex; align-items: center; gap: 12px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .today-box .today-slot .ts-hour {
+            font-size: 0.7rem; font-weight: 800; color: #94a3b8;
+            background: rgba(255,255,255,0.06); padding: 4px 10px; border-radius: 8px; white-space: nowrap;
+        }
+        .today-box .today-slot .ts-name { flex: 1; font-weight: 700; font-size: 0.9rem; }
+        .today-box .today-slot .ts-venue { font-size: 0.65rem; opacity: 0.6; font-weight: 600; }
+        .today-box .today-slot .ts-live {
+            background: #22c55e; color: white; font-size: 0.55rem; font-weight: 800;
+            padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .today-box .today-empty {
+            margin-top: 10px; font-size: 0.78rem; opacity: 0.5; font-weight: 600;
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        .time-slot.now {
+            border-color: var(--brand);
+            background: rgba(0, 98, 255, 0.04);
+            box-shadow: 0 0 0 1px var(--brand), 0 4px 16px rgba(0,98,255,0.08);
+        }
+        .time-slot.now .slot-hour {
+            background: var(--brand);
+            color: white;
+        }
+        .time-slot.upcoming {
+            border-color: #fef3c7;
+            background: #fffbeb;
+        }
+
         /* PDF Preview & Printable Section Header */
         #pdf-preview { padding: 1rem 0; }
         .pdf-brand-head { display: none; text-align: center; border-bottom: 2px dashed #e2e8f0; padding-bottom: 15px; margin-bottom: 20px; }
@@ -171,6 +222,13 @@
                 <i class="fas fa-magic"></i> AI Extract
             </button>
             <button class="btn-action btn-print" onclick="printTimetable()"><i>📥</i> Download PDF</button>
+        </div>
+
+        <div id="todayBox" class="today-box">
+            <div class="today-date" id="todayDate"></div>
+            <div class="today-day" id="todayDay"></div>
+            <div class="today-status" id="todayStatus"><span class="live-dot"></span> Loading schedule...</div>
+            <div id="todaySlotContainer"></div>
         </div>
 
         <div class="timetable-content" id="pdf-preview">
@@ -607,6 +665,133 @@
             if (!str) return '';
             return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         }
+
+        /* ── Today Box + Now Indicator ────────── */
+        function initTodayBox() {
+            var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+            var now = new Date();
+            var dayName = days[now.getDay()];
+            var dateStr = now.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+
+            document.getElementById('todayDate').textContent = dateStr;
+            document.getElementById('todayDay').textContent = dayName;
+
+            var dayGroup = document.querySelector('.day-group');
+            if (!dayGroup) {
+                document.getElementById('todayStatus').innerHTML = 'No classes scheduled today';
+                document.getElementById('todaySlotContainer').innerHTML = '<div class="today-empty"><i class="fas fa-calendar-check"></i> Rest day — no classes today</div>';
+                return;
+            }
+
+            // Find today's day group
+            var groups = document.querySelectorAll('.day-group');
+            var todayGroup = null;
+            var todayLabel = '';
+            groups.forEach(function(g) {
+                var label = g.querySelector('.day-label');
+                if (label && label.textContent.trim() === dayName) {
+                    todayGroup = g;
+                    todayLabel = label.textContent.trim();
+                }
+            });
+
+            if (!todayGroup) {
+                document.getElementById('todayStatus').innerHTML = 'No classes today';
+                document.getElementById('todaySlotContainer').innerHTML = '<div class="today-empty"><i class="fas fa-calendar-check"></i> Rest day — no classes scheduled</div>';
+                return;
+            }
+
+            // Get current time as minutes
+            var nowMin = now.getHours() * 60 + now.getMinutes();
+
+            // Find today's slots
+            var slots = todayGroup.querySelectorAll('.time-slot');
+            var currentSlot = null;
+            var nextSlot = null;
+            var currentEndMin = 0;
+
+            slots.forEach(function(s) {
+                var hourEl = s.querySelector('.slot-hour');
+                if (!hourEl) return;
+                var timeText = hourEl.textContent.trim();
+                // timeText format: "HH:MM"
+                var parts = timeText.split(':');
+                if (parts.length < 2) return;
+                var startH = parseInt(parts[0]), startM = parseInt(parts[1]);
+                var startMin = startH * 60 + startM;
+
+                // Find end time from slot-info p
+                var infoEl = s.querySelector('.slot-info p');
+                var endMin = startMin + 60; // default 1h
+                if (infoEl) {
+                    var infoText = infoEl.textContent;
+                    var timeMatch = infoText.match(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/);
+                    if (timeMatch && timeMatch[2]) {
+                        var endParts = timeMatch[2].split(':');
+                        endMin = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
+                    }
+                }
+
+                if (nowMin >= startMin && nowMin < endMin) {
+                    currentSlot = s;
+                    currentEndMin = endMin;
+                } else if (nowMin < startMin && !nextSlot) {
+                    nextSlot = s;
+                }
+            });
+
+            var container = document.getElementById('todaySlotContainer');
+            container.innerHTML = '';
+
+            if (currentSlot) {
+                // Highlight current slot
+                currentSlot.classList.add('now');
+
+                var name = currentSlot.querySelector('.slot-info b');
+                var infoP = currentSlot.querySelector('.slot-info p');
+                var hourEl = currentSlot.querySelector('.slot-hour');
+
+                var timeLeft = Math.max(0, currentEndMin - nowMin);
+                var timeStr = timeLeft >= 60 ? Math.floor(timeLeft/60)+'h '+ (timeLeft%60)+'m' : timeLeft+'m';
+
+                document.getElementById('todayStatus').innerHTML =
+                    '<span class="live-dot"></span> <strong>Now</strong> \u2014 ' + timeStr + ' remaining';
+
+                container.innerHTML =
+                    '<div class="today-slot">' +
+                    '<span class="ts-hour">' + (hourEl ? hourEl.textContent : '') + '</span>' +
+                    '<div style="flex:1"><div class="ts-name">' + (name ? name.textContent : 'Class') + '</div>' +
+                    '<div class="ts-venue">' + (infoP ? infoP.textContent.trim() : '') + '</div></div>' +
+                    '<span class="ts-live">Live</span></div>';
+            } else if (nextSlot) {
+                nextSlot.classList.add('upcoming');
+                var name = nextSlot.querySelector('.slot-info b');
+                var hourEl = nextSlot.querySelector('.slot-hour');
+
+                var nextParts = hourEl.textContent.trim().split(':');
+                var nextStartMin = parseInt(nextParts[0])*60 + parseInt(nextParts[1]);
+                var minsUntil = nextStartMin - nowMin;
+                var untilStr = minsUntil >= 60 ? Math.floor(minsUntil/60)+'h '+ (minsUntil%60)+'m' : minsUntil+'m';
+
+                document.getElementById('todayStatus').innerHTML =
+                    '<i class="fas fa-clock" style="font-size:0.75rem;opacity:0.6"></i> Next class in ' + untilStr;
+
+                container.innerHTML =
+                    '<div class="today-slot">' +
+                    '<span class="ts-hour">' + (hourEl ? hourEl.textContent : '') + '</span>' +
+                    '<div style="flex:1"><div class="ts-name">' + (name ? name.textContent : 'Class') + '</div>' +
+                    '<div class="ts-venue">Upcoming</div></div></div>';
+            } else {
+                document.getElementById('todayStatus').innerHTML =
+                    '<i class="fas fa-check-circle" style="font-size:0.75rem;opacity:0.6"></i> All classes done for today';
+                container.innerHTML = '<div class="today-empty"><i class="fas fa-check-circle"></i> You\u2019re all done for today</div>';
+            }
+
+            // Refresh every 30s
+            setTimeout(initTodayBox, 30000);
+        }
+
+        document.addEventListener('DOMContentLoaded', initTodayBox);
 
         function saveExtractedCourses() {
             if (extractedCourses.length === 0) return;
