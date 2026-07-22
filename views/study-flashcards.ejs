@@ -139,12 +139,15 @@ function renderCurrentCard() {
     var colors = getCardColors(fc.front);
     container.innerHTML = '<div class="fc-card" style="padding:0;overflow:hidden">' +
         cardSvg(fc, colors) +
-        '<div class="fc-actions" style="position:absolute;top:8px;right:8px;z-index:2"><button onclick="event.stopPropagation();deleteCard(' + fc.id + ')" title="Delete" style="width:30px;height:30px;border-radius:8px;border:none;background:rgba(255,255,255,0.8);cursor:pointer;color:var(--danger);font-size:0.7rem"><i class="fas fa-trash"></i></button></div>' +
-        '<div style="padding:16px 20px 20px" onclick="flipCard(this)">' +
-        '<div class="fc-side fc-front" style="font-size:1rem;font-weight:700;line-height:1.5">' + escapeHtml(fc.front) + '</div>' +
-        '<div class="fc-side fc-back" style="font-size:0.92rem;font-weight:600;color:var(--text-sub);line-height:1.5;display:none">' + escapeHtml(fc.back) + '</div>' +
+        '<div class="fc-actions" style="position:absolute;top:12px;right:12px;z-index:2"><button onclick="event.stopPropagation();deleteCard(' + fc.id + ')" title="Delete" style="width:30px;height:30px;border-radius:8px;border:none;background:rgba(255,255,255,0.85);cursor:pointer;color:var(--danger);font-size:0.7rem;display:flex;align-items:center;justify-content:center"><i class="fas fa-trash"></i></button></div>' +
+        '<div style="padding:24px 24px 16px;cursor:pointer;min-height:120px" onclick="flipCard(this)">' +
+        '<div class="fc-side fc-front" style="font-size:1.05rem;font-weight:700;line-height:1.5;color:var(--text-dark)">' + escapeHtml(fc.front || '(empty)') + '</div>' +
+        '<div class="fc-side fc-back" style="font-size:0.95rem;font-weight:600;color:var(--text-sub);line-height:1.55;display:none">' + escapeHtml(fc.back || '(empty)') + '</div>' +
         '</div>' +
-        '<div class="tap-hint" style="padding:0 20px 14px;font-size:0.6rem;color:var(--text-muted);font-weight:600">Tap to flip</div></div>';
+        '<div style="padding:0 24px 18px;display:flex;justify-content:space-between;align-items:center">' +
+        '<div style="font-size:0.6rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Tap card to flip</div>' +
+        '<div id="flipStateBadge" style="font-size:0.6rem;color:var(--brand);font-weight:800;text-transform:uppercase;letter-spacing:0.5px">Front</div>' +
+        '</div></div>';
 }
 
 function nextCard() {
@@ -193,9 +196,11 @@ function flipCard(el) {
     if (front.style.display === 'none') {
         front.style.display = 'block';
         back.style.display = 'none';
+        var b = document.getElementById('flipStateBadge'); if (b) b.textContent = 'Front';
     } else {
         front.style.display = 'none';
         back.style.display = 'block';
+        var b2 = document.getElementById('flipStateBadge'); if (b2) b2.textContent = 'Back';
     }
 }
 

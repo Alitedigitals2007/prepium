@@ -110,6 +110,37 @@ function subCardSvg(c,cs) {
         '<text x="18" y="54" font-family="Plus Jakarta Sans,sans-serif" font-size="42" font-weight="800" fill="' + cs[0] + '" opacity="0.15">' + ch + '</text></svg>';
 }
 
+function aiCleanText(t) {
+  if (!t) return '';
+  return (t + '')
+    .replace(/```[a-zA-Z]*\n?/g, '')
+    .replace(/```/g, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/^\s*#{1,6}\s*/gm, '')
+    .replace(/^\s*[-*+]\s+/gm, '\u2022 ')
+    .replace(/^\s*(\d+)\.\s+/gm, '$1) ')
+    .replace(/^>\s?/gm, '')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)')
+    .replace(/\\\(([^)]+)\\\)/g, '($1)')
+    .replace(/\\\[(.+?)\\\]/g, '[$1]')
+    .replace(/\$/g, '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function explainRender(t) {
+  var clean = aiCleanText(t);
+  var paras = clean.split(/\n\s*\n/);
+  return paras.map(function(p) {
+    var t = p.replace(/\s*\n\s*/g, ' ').trim();
+    if (!t) return '';
+    return '<p style="margin:0 0 10px;line-height:1.7">' + t.replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>') + '</p>';
+  }).join('');
+}
+
 function generateContent() {
     var btn = document.getElementById('genContentBtn');
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
@@ -119,7 +150,7 @@ function generateContent() {
     .then(function(d) {
         if (d.success) {
             document.getElementById('contentDisplay').style.display = 'block';
-            document.getElementById('explanationText').textContent = d.content;
+            document.getElementById('explanationText').innerHTML = explainRender(d.content);
         } else {
             Swal.fire({ icon: 'error', text: d.error });
         }
@@ -185,8 +216,8 @@ function showCard() {
     document.getElementById('fcContainer').innerHTML = '<div class="fc-card" onclick="this.classList.toggle(\'flipped\')" style="padding:0;overflow:hidden">' +
         subCardSvg(c, cs) +
         '<div style="padding:12px 16px 16px">' +
-        '<div class="fc-front" style="font-size:0.92rem;font-weight:700;line-height:1.5">' + escapeHtml(c.front) + '</div>' +
-        '<div class="fc-back" style="font-size:0.85rem;font-weight:600;color:var(--text-sub);line-height:1.5;display:none">' + escapeHtml(c.back) + '</div>' +
+        '<div class="fc-front" style="font-size:0.95rem;font-weight:700;line-height:1.5;color:var(--text-dark)">' + escapeHtml(c.front || '(empty)') + '</div>' +
+        '<div class="fc-back" style="font-size:0.88rem;font-weight:600;color:var(--text-sub);line-height:1.5">' + escapeHtml(c.back || '(empty)') + '</div>' +
         '</div>' +
         '<div class="tap-hint" style="display:block;padding:0 16px 10px;font-size:0.6rem;color:var(--text-muted);font-weight:600">Tap to flip</div></div>' +
         '<div style="text-align:center;font-size:0.7rem;font-weight:600;color:var(--text-sub);margin-top:4px">' + (currentCard + 1) + ' / ' + flashcards.length + '</div>';
@@ -208,20 +239,61 @@ function genFlashcards() {
 }
 
 function startQuiz() {
-    Swal.fire({ title: 'Generating quiz...', html: 'AI creating questions', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
-    fetch('/api/study/quiz/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ courseId: courseId, subtopicId: subtopicId, topicTitle: subtopicName, questionType: 'mixed', questionCount: 5, timeLimit: 0 })
-    }).then(function(r) { return r.json(); }).then(function(d) {
-        if (d.success && d.attempt) window.location.href = '/study/quiz/' + d.attempt.id;
-        else Swal.fire({ icon: 'error', text: d.error || 'Failed to generate quiz' });
+    Swal.fire({
+        title: 'Quiz Setup',
+        html:
+            '<div style="text-align:left;font-size:0.8rem;color:#475569;font-weight:600;margin-bottom:6px">Number of questions</div>' +
+            '<select id="qz-count" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #cbd5e1;font-family:inherit;font-weight:600;margin-bottom:10px">' +
+            '<option value="5">5 questions</option><option value="10" selected>10 questions</option>' +
+            '<option value="15">15 questions</option><option value="20">20 questions</option></select>' +
+            '<div style="text-align:left;font-size:0.8rem;color:#475569;font-weight:600;margin-bottom:6px">Question type</div>' +
+            '<select id="qz-type" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #cbd5e1;font-family:inherit;font-weight:600;margin-bottom:10px">' +
+            '<option value="mixed" selected>Mixed (MCQ + Theory)</option>' +
+            '<option value="multiple_choice">Multiple Choice only</option>' +
+            '<option value="theory">Theory only</option></select>' +
+            '<div style="text-align:left;font-size:0.8rem;color:#475569;font-weight:600;margin-bottom:6px">Time limit</div>' +
+            '<select id="qz-time" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #cbd5e1;font-family:inherit;font-weight:600;margin-bottom:10px">' +
+            '<option value="0" selected>Untimed</option>' +
+            '<option value="5">5 minutes</option>' +
+            '<option value="10">10 minutes</option>' +
+            '<option value="15">15 minutes</option></select>',
+        showCancelButton: true,
+        confirmButtonText: 'Generate Quiz',
+        showLoaderOnConfirm: true,
+        preConfirm: function() {
+            var count = parseInt(document.getElementById('qz-count').value) || 5;
+            var type = document.getElementById('qz-type').value;
+            var time = parseInt(document.getElementById('qz-time').value) || 0;
+            Swal.update({ html: '<div style="margin-top:8px"><i class="fas fa-spinner fa-spin" style="font-size:1.6rem;color:#0062ff"></i></div><div style="margin-top:8px;font-weight:600;color:#475569">Generating quiz…</div>' });
+            return fetch('/api/study/quiz/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ courseId: courseId, subtopicId: subtopicId, topicTitle: subtopicName, questionType: type, questionCount: count, timeLimit: time })
+            }).then(function(r){ return r.json(); }).then(function(d) {
+                if (d && d.success && d.attempt) return d;
+                throw new Error((d && d.error) ? d.error : 'Failed to generate quiz');
+            });
+        }
+    }).then(function(res) {
+        if (res && res.isConfirmed && res.value && res.value.attempt) {
+            window.location.href = '/study/quiz/' + res.value.attempt.id;
+        }
+    }).catch(function(err) {
+        Swal.fire({ icon: 'error', title: 'Quiz error', text: err.message });
     });
 }
 
 function escapeHtml(t) { return (t || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 if (document.querySelector('#tab-videos.active')) loadVideos();
+
+(function autoInit() {
+  var raw = '<%- (typeof subtopic !== "undefined" && subtopic && subtopic.content) ? subtopic.content.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, "\\n").replace(/\r/g, "") : "" %>';
+  if (raw) {
+    document.getElementById('contentDisplay').style.display = 'block';
+    document.getElementById('explanationText').innerHTML = explainRender(raw);
+  }
+})();
 </script>
 </body>
 </html>

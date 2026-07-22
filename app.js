@@ -4587,6 +4587,26 @@ function cleanLatex(t) {
     .replace(/\s+/g, ' ').trim();
 }
 
+function cleanAiText(t) {
+  if (t == null) return '';
+  var s = cleanLatex(String(t));
+  s = s.replace(/```[a-zA-Z]*\n?/g, '').replace(/```/g, '');
+  s = s.replace(/\*\*([^*\n]+)\*\*/g, '$1');
+  s = s.replace(/__([^_\n]+)__/g, '$1');
+  s = s.replace(/(^|[^*])\*(?!\s)([^*\n]+?)\*(?!\*)/g, '$1$2');
+  s = s.replace(/(^|[^_])_(?!_)([^_\n]+?)_(?!_)/g, '$1$2');
+  s = s.replace(/`+([^`\n]+?)`+/g, '$1');
+  s = s.replace(/^#{1,6}\s*/gm, '');
+  s = s.replace(/^\s*[-*+]\s+/gm, '\u2022 ');
+  s = s.replace(/^\s*(\d+)\.\s+/gm, '$1) ');
+  s = s.replace(/^\s*>\s?/gm, '');
+  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)');
+  s = s.replace(/\r\n/g, '\n');
+  s = s.replace(/[ \t]+\n/g, '\n');
+  s = s.replace(/\n{3,}/g, '\n\n');
+  return s.trim();
+}
+
 async function studyPromptAI(prompt) {
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) return { text: 'AI not configured. Set OPENROUTER_API_KEY in .env' };
@@ -4717,7 +4737,7 @@ app.get('/study/subtopic/:id', isAuth, requirePaid, async (req, res) => {
     const st = await pool.query('SELECT * FROM study_subtopics WHERE id = $1', [req.params.id]);
     if (!st.rows[0]) return res.status(404).send('Subtopic not found');
     const s = st.rows[0];
-    if (s.content) s.content = cleanLatex(s.content);
+    if (s.content) s.content = cleanAiText(s.content);
     const topic = await pool.query('SELECT * FROM study_topics WHERE id = $1', [s.topic_id]).catch(() => ({ rows: [] }));
     const course = await pool.query('SELECT * FROM study_courses WHERE id = $1', [s.course_id || 0]).catch(() => ({ rows: [] }));
     res.render('study-subtopic', { user: req.session.user, subtopic: s, topic: topic.rows[0] || null, course: course.rows[0] || null });
@@ -4841,11 +4861,12 @@ app.post('/api/study/subtopic/:id/content', isAuth, requirePaid, async (req, res
     const s = st.rows[0];
     const topic = await pool.query('SELECT * FROM study_topics WHERE id = $1', [s.topic_id]).catch(() => ({ rows: [] }));
     const topicName = topic.rows[0] ? (topic.rows[0].topic_name || topic.rows[0].title) : 'General';
-    const prompt = `You are a university tutor. Explain the subtopic "${s.subtopic_name || s.title}" which is part of the topic "${topicName}". Provide a clear, detailed explanation with key points, examples, and study tips. Format with short paragraphs.`;
+    const prompt = `You are a university tutor. Explain the subtopic "${s.subtopic_name || s.title}" which is part of the topic "${topicName}". Provide a clear, detailed explanation with key points, examples, and study tips. Use PLAIN TEXT only. Do NOT use markdown. No asterisks, no hashtags, no backticks. Short paragraphs separated by blank lines. Use simple numbered points like "1) ..." if needed.`;
     const aiRes = await studyPromptAI(prompt);
     if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
-    await pool.query('UPDATE study_subtopics SET content = $1 WHERE id = $2', [aiRes.text, req.params.id]);
-    res.json({ success: true, subtopic: s.subtopic_name || s.title, content: aiRes.text });
+    const clean = cleanAiText(aiRes.text);
+    await pool.query('UPDATE study_subtopics SET content = $1 WHERE id = $2', [clean, req.params.id]);
+    res.json({ success: true, subtopic: s.subtopic_name || s.title, content: clean });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
@@ -4860,14 +4881,27 @@ app.post('/api/study/sessions/start', isAuth, requirePaid, async (req, res) => {
 
 app.post('/api/study/sessions/end', isAuth, requirePaid, async (req, res) => {
   try {
-    const { sessionId, elapsedSeconds, notes } = req.body;
-    await pool.query("UPDATE study_sessions SET status = 'completed', elapsed_seconds = $1, notes = $2, completed_at = NOW() WHERE id = $3 AND user_id = $4", [elapsedSeconds || 0, notes || '', sessionId, req.session.user.id]);
+    const { sessionId, elapsedSeconds, notes, summary } = req.body;
+    const mergedNotes = (notes || '') + (summary ? (notes ? '\n\n--- Key points ---\n' + summary : summary) : '');
+    await pool.query("UPDATE study_sessions SET status = 'completed', elapsed_seconds = $1, notes = $2, completed_at = NOW() WHERE id = $3 AND user_id = $4", [elapsedSeconds || 0, mergedNotes, sessionId, req.session.user.id]);
     const s = (await pool.query('SELECT * FROM study_sessions WHERE id = $1', [sessionId])).rows[0];
     if (s) {
       const mins = Math.ceil((elapsedSeconds || 0) / 60);
       await pool.query('INSERT INTO study_progress (user_id, course_id, course_name, total_sessions, total_minutes, last_studied) VALUES ($1, $2, $3, 1, $4, NOW()) ON CONFLICT (user_id, course_name) DO UPDATE SET total_sessions = study_progress.total_sessions + 1, total_minutes = study_progress.total_minutes + $4, last_studied = NOW()', [s.user_id, s.course_id, s.course_name, mins]);
     }
     res.json({ success: true });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.post('/api/study/session/summarize', isAuth, requirePaid, async (req, res) => {
+  try {
+    const { notes, courseName } = req.body;
+    if (!notes || !notes.trim()) return res.json({ success: false, error: 'No notes to summarize.' });
+    const ctx = courseName ? ` from a "${courseName}" study session` : '';
+    const prompt = `Read these student study notes${ctx} and produce 3-6 short bullet points capturing the most important takeaways. Output PLAIN TEXT only. No markdown, no asterisks, no hashtags, no backticks. Each line should be a short key point. Lines separated by newline. Keep it concise (max 60 words total).\n\nNotes:\n"""${notes.slice(0, 4000)}"""\n\nKey points:`;
+    const aiRes = await studyPromptAI(prompt);
+    if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
+    res.json({ success: true, summary: cleanAiText(aiRes.text) });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
@@ -4884,12 +4918,14 @@ app.post('/api/study/chat', isAuth, requirePaid, async (req, res) => {
   try {
     const { message, courseId, subtopicId, courseName } = req.body;
     const uid = req.session.user.id;
-    await pool.query('INSERT INTO study_chat_messages (user_id, course_id, subtopic_id, role, message) VALUES ($1, $2, $3, $4, $5)', [uid, courseId || 0, subtopicId || 0, 'user', message]);
+    const cleanUser = cleanAiText(message);
+    await pool.query('INSERT INTO study_chat_messages (user_id, course_id, subtopic_id, role, message) VALUES ($1, $2, $3, $4, $5)', [uid, courseId || 0, subtopicId || 0, 'user', cleanUser]);
     const ctx = courseName ? `Context: Student is studying "${courseName}". ` : '';
-    const prompt = `${ctx}You are a helpful study assistant for university students. Answer the following question clearly and concisely. Include explanations, examples, and study tips where relevant.\n\nStudent's question: ${message}\n\nProvide a thorough, educational response.`;
+    const prompt = `${ctx}You are a helpful study assistant for university students. Answer the following question in PLAIN TEXT only. Do NOT use markdown bullets that start with asterisks or hashes. Use short paragraphs separated by blank lines. Keep formatting simple — no asterisks, no hashtags, no backticks.\n\nStudent's question: ${cleanUser}\n\nProvide a thorough, educational response in clean plain text.`;
     const aiRes = await studyPromptAI(prompt);
-    await pool.query('INSERT INTO study_chat_messages (user_id, course_id, subtopic_id, role, message) VALUES ($1, $2, $3, $4, $5)', [uid, courseId || 0, subtopicId || 0, 'ai', aiRes.text]);
-    res.json({ success: true, reply: aiRes.text });
+    const clean = cleanAiText(aiRes.text);
+    await pool.query('INSERT INTO study_chat_messages (user_id, course_id, subtopic_id, role, message) VALUES ($1, $2, $3, $4, $5)', [uid, courseId || 0, subtopicId || 0, 'ai', clean]);
+    res.json({ success: true, reply: clean });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
@@ -4996,7 +5032,12 @@ app.post('/api/study/flashcards/generate', isAuth, requirePaid, async (req, res)
     const aiRes = await studyPromptAI(prompt);
     let cards = [];
     try { cards = JSON.parse(aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim()); } catch { throw new Error('Failed to generate flashcards'); }
-    for (const c of cards) { await pool.query('INSERT INTO study_flashcards (user_id, course_id, subtopic_id, front, back) VALUES ($1, $2, $3, $4, $5)', [uid, courseId || null, subtopicId || null, c.front, c.back]); }
+    for (const c of cards) {
+      const front = cleanAiText(c.front);
+      const back = cleanAiText(c.back);
+      await pool.query('INSERT INTO study_flashcards (user_id, course_id, subtopic_id, front, back) VALUES ($1, $2, $3, $4, $5)', [uid, courseId || null, subtopicId || null, front, back]);
+      c.front = front; c.back = back;
+    }
     res.json({ success: true, count: cards.length, cards });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });

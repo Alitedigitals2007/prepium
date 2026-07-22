@@ -127,7 +127,10 @@
             <div class="chat-box">
                 <div class="chat-messages" id="chatMessages">
                     <div class="chat-msg ai">
-                        <div class="bubble">Hello! I'm your AI tutor. Ask me anything about <strong><%= session ? session.course_name : 'this course' %></strong>.</div>
+                        <div class="bubble">
+                            <p style="margin:0 0 6px"><strong>Hi, I'm your AI tutor.</strong></p>
+                            <p style="margin:0">Ask anything about <strong><%= session ? session.course_name : 'this course' %></strong> and I'll answer in plain text. Type your question below and hit send.</p>
+                        </div>
                     </div>
                 </div>
                 <div class="chat-input-row">
@@ -238,18 +241,43 @@ function switchTab(tab, btn) {
 }
 
 var chatAbort = null;
+function chatEscape(s) {
+    return (s == null ? '' : String(s))
+        .replace(/&/g, '&')
+        .replace(/</g, '<')
+        .replace(/>/g, '>')
+        .replace(/"/g, '"')
+        .replace(/'/g, ''');
+}
+function chatRender(text) {
+    var raw = String(text || '');
+    var paras = raw.split(/\n\s*\n/);
+    return paras.map(function(p) {
+        var t = p.replace(/\s*\n\s*/g, ' ').trim();
+        if (!t) return '';
+        return '<p style="margin:0 0 8px">' + chatEscape(t) + '</p>';
+    }).join('');
+}
+function chatAppend(role, html) {
+    var wrap = document.createElement('div');
+    wrap.className = 'chat-msg ' + role;
+    var bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.innerHTML = html;
+    wrap.appendChild(bubble);
+    document.getElementById('chatMessages').appendChild(wrap);
+    var box = document.getElementById('chatMessages');
+    box.scrollTop = box.scrollHeight;
+    return wrap;
+}
+
 function sendChat() {
     var input = document.getElementById('chatInput');
     var msg = input.value.trim();
     if (!msg) return;
     input.value = '';
-    var container = document.getElementById('chatMessages');
-    var pId = 'chat-pending-' + Date.now();
-    container.insertAdjacentHTML('beforeend',
-        '<div class="chat-msg user"><div class="bubble">' + escapeHtml(msg) + '</div></div>' +
-        '<div class="chat-msg ai" id="' + pId + '"><div class="bubble"><i class="fas fa-spinner fa-spin"></i> Thinking…</div></div>'
-    );
-    container.scrollTop = container.scrollHeight;
+    chatAppend('user', chatEscape(msg));
+    var pending = chatAppend('ai', '<i class="fas fa-spinner fa-spin"></i> Thinking…');
     if (chatAbort) try { chatAbort.abort(); } catch(e){}
     chatAbort = ('AbortController' in window) ? new AbortController() : null;
     var fetchOpts = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg, courseId: courseId, courseName: courseName }) };
@@ -258,16 +286,14 @@ function sendChat() {
     fetch('/api/study/chat', fetchOpts)
     .then(function(r){ return r.json().catch(function(){ return { success:false, error:'Bad server response (' + r.status + ')' }; }); })
     .then(function(d) {
-        var el = document.getElementById(pId); if (el) el.remove();
-        var reply = (d && d.success && d.reply) ? d.reply : ((d && d.error) ? ('AI error: ' + d.error) : 'Sorry, I could not process that. Please try again.');
-        container.insertAdjacentHTML('beforeend', '<div class="chat-msg ai"><div class="bubble">' + escapeHtml(reply).replace(/\n/g,'<br>') + '</div></div>');
-        container.scrollTop = container.scrollHeight;
+        pending.remove();
+        if (d && d.success && d.reply) chatAppend('ai', chatRender(d.reply));
+        else chatAppend('ai', '<p style="color:#dc2626;margin:0">' + chatEscape((d && d.error) ? ('AI error: ' + d.error) : 'Sorry, I could not process that. Please try again.') + '</p>');
     })
     .catch(function(err) {
-        var el = document.getElementById(pId); if (el) el.remove();
+        pending.remove();
         var msg2 = (err && err.name === 'AbortError') ? 'Request timed out. Tap send again to retry.' : ('AI error: ' + (err && err.message ? err.message : 'network error'));
-        container.insertAdjacentHTML('beforeend', '<div class="chat-msg ai"><div class="bubble">' + escapeHtml(msg2) + '</div></div>');
-        container.scrollTop = container.scrollHeight;
+        chatAppend('ai', '<p style="color:#dc2626;margin:0">' + chatEscape(msg2) + '</p>');
     })
     .finally(function() { clearTimeout(clientTimer); });
 }
@@ -393,8 +419,8 @@ function renderFlashcard() {
     container.innerHTML = '<div class="fc-card" onclick="this.classList.toggle(\'flipped\')" style="padding:0;overflow:hidden">' +
         cardSvg(fc, cs) +
         '<div style="padding:14px 18px 18px">' +
-        '<div class="fc-front" style="font-size:0.95rem;font-weight:700;line-height:1.5">' + escapeHtml(fc.front) + '</div>' +
-        '<div class="fc-back" style="font-size:0.88rem;font-weight:600;color:var(--text-sub);line-height:1.5;display:none">' + escapeHtml(fc.back) + '</div>' +
+        '<div class="fc-front" style="font-size:0.98rem;font-weight:700;line-height:1.5;color:var(--text-dark)">' + escapeHtml(fc.front || '(empty)') + '</div>' +
+        '<div class="fc-back" style="font-size:0.9rem;font-weight:600;color:var(--text-sub);line-height:1.5">' + escapeHtml(fc.back || '(empty)') + '</div>' +
         '</div>' +
         '<div class="tap-hint" style="padding:0 18px 12px;font-size:0.6rem;color:var(--text-muted);font-weight:600">' + (fcIndex + 1) + '/' + flashcards.length + ' - Tap to flip</div></div>';
 }
@@ -413,23 +439,76 @@ function prevFlashcard() {
 
 function endSession() {
     var notes = document.getElementById('notesArea').value;
+    var mins = Math.max(1, Math.ceil(elapsedSeconds / 60));
     Swal.fire({
-        title: 'End Session?',
-        text: 'Time studied: ' + formatTime(elapsedSeconds),
-        icon: 'question',
-        showCancelButton: true, confirmButtonText: 'End', cancelButtonText: 'Continue'
-    }).then(function(res) {
-        if (res.isConfirmed) {
+        title: 'Session Summary',
+        html:
+            '<div style="text-align:left;font-size:0.85rem">' +
+            '<div style="display:flex;justify-content:space-between;padding:10px 12px;background:#f1f5f9;border-radius:10px;margin-bottom:12px">' +
+            '<span style="color:#475569;font-weight:600">Time studied</span>' +
+            '<strong style="color:#0f172a">' + mins + ' min</strong></div>' +
+            '<div style="font-size:0.78rem;color:#475569;font-weight:700;margin-bottom:6px">Key points to remember</div>' +
+            '<textarea id="summaryPoints" placeholder="e.g.&#10;- Definition of Newton&apos;s laws&#10;- Application of derivatives in physics&#10;- Solve 2 practice problems" style="width:100%;min-height:120px;padding:10px;border-radius:10px;border:1.5px solid #cbd5e1;font-family:inherit;font-size:0.85rem;font-weight:500;line-height:1.5;outline:none;resize:vertical"></textarea>' +
+            '<div style="display:flex;gap:6px;margin-top:8px">' +
+            '<button type="button" id="aiSummarize" style="flex:1;padding:9px 12px;border:none;background:#0f172a;color:white;border-radius:10px;font-weight:700;font-size:0.78rem;cursor:pointer"><i class="fas fa-magic"></i> Auto-extract from notes</button>' +
+            '<button type="button" id="aiTipsClose" style="flex:1;padding:9px 12px;border:none;background:#fde68a;color:#92400e;border-radius:10px;font-weight:700;font-size:0.78rem;cursor:pointer"><i class="fas fa-lightbulb"></i> Add motivation</button>' +
+            '</div>' +
+            '<div id="aiExtracted" style="display:none;margin-top:10px;padding:8px 10px;background:#f1f5f9;border-radius:8px;font-size:0.75rem;color:#475569"></div>' +
+            '</div>',
+        showCancelButton: true,
+        confirmButtonText: 'Save & Exit',
+        cancelButtonText: 'Continue Studying',
+        showLoaderOnConfirm: true,
+        didOpen: function() {
+            if (notes && notes.length > 20) {
+                var box = document.getElementById('aiExtracted');
+                box.style.display = 'block';
+                box.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Extracting key points from your notes…';
+            }
+            document.getElementById('aiSummarize').onclick = function() {
+                if (!notes || !notes.trim()) return Swal.fire({ icon: 'warning', text: 'No notes to extract from yet.' });
+                var box = document.getElementById('aiExtracted');
+                box.style.display = 'block';
+                box.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Asking AI to summarize your notes…';
+                fetch('/api/study/session/summarize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ notes: notes, courseName: courseName })
+                }).then(function(r){ return r.json().catch(function(){ return { success:false,error:'Bad response' }; }); })
+                .then(function(d) {
+                    if (d && d.success && d.summary) {
+                        var ta = document.getElementById('summaryPoints');
+                        ta.value = d.summary;
+                        box.innerHTML = '<i class="fas fa-check-circle" style="color:#16a34a"></i> Extracted from your notes.';
+                    } else {
+                        box.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:#dc2626"></i> ' + ((d && d.error) ? d.error : 'Could not summarize.');
+                    }
+                }).catch(function(err) {
+                    box.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:#dc2626"></i> ' + err.message;
+                });
+            };
+            document.getElementById('aiTipsClose').onclick = function() {
+                var ta = document.getElementById('summaryPoints');
+                ta.value = (ta.value ? ta.value + '\n' : '') + '- Keep up the momentum — 25 mins tomorrow too.\n- Review key formulas once today.';
+                Swal.fire({ icon: 'success', text: 'Added a quick motivation note.', timer: 1200, showConfirmButton: false });
+            };
+        },
+        preConfirm: function() {
+            var summary = document.getElementById('summaryPoints').value || '';
             if (timerInterval) clearInterval(timerInterval);
-            fetch('/api/study/sessions/end', {
+            return fetch('/api/study/sessions/end', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sessionId: sessionId, elapsedSeconds: elapsedSeconds, notes: notes })
-            }).then(r => r.json()).then(function(d) {
-                if (d.success) window.location.href = '/study';
-                else Swal.fire({ icon: 'error', text: d.error });
+                body: JSON.stringify({ sessionId: sessionId, elapsedSeconds: elapsedSeconds, notes: notes, summary: summary })
+            }).then(function(r){ return r.json(); }).then(function(d) {
+                if (d && d.success) return d;
+                throw new Error((d && d.error) ? d.error : 'Could not save session');
             });
         }
+    }).then(function(res) {
+        if (res && res.isConfirmed) window.location.href = '/study';
+    }).catch(function(err) {
+        Swal.fire({ icon: 'error', title: 'Save error', text: err.message });
     });
 }
 </script>
