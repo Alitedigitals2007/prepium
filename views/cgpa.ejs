@@ -1230,10 +1230,15 @@ function openTranscript() {
 
 function printTranscript() {
     generateFullTranscript(function(html) {
-        var win = window.open('', '_blank');
-        win.document.write(html);
-        win.document.close();
-        setTimeout(function() { win.print(); }, 500);
+        var iframe = document.createElement('iframe');
+        iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;border:none';
+        document.body.appendChild(iframe);
+        var doc = iframe.contentDocument || iframe.contentWindow.document;
+        doc.open(); doc.write(html); doc.close();
+        setTimeout(function() {
+            iframe.contentWindow.print();
+            setTimeout(function() { document.body.removeChild(iframe); }, 1000);
+        }, 800);
     });
 }
 
@@ -1244,13 +1249,19 @@ function downloadTranscriptPDF() {
         tmp.id = 'transcript-pdf-export';
         tmp.style.cssText = 'position:fixed;left:-9999px;top:0;width:210mm;background:white;z-index:-1';
         document.body.appendChild(tmp);
-        html2pdf().set({
+        var opt = {
             margin: [8,10,8,10],
             filename: 'prepium_academic_transcript.pdf',
             image: { type:'jpeg', quality:1 },
             html2canvas: { scale:2, useCORS:true, scrollX:0, scrollY:0, width:794, windowWidth:794 },
             jsPDF: { unit:'mm', format:'a4', orientation:'portrait' }
-        }).from(tmp).save().then(function() { document.body.removeChild(tmp); });
+        };
+        html2pdf().set(opt).from(tmp).save().then(function() {
+            if (document.body.contains(tmp)) document.body.removeChild(tmp);
+        }).catch(function() {
+            if (document.body.contains(tmp)) document.body.removeChild(tmp);
+            Swal.fire({ icon: 'error', text: 'PDF generation failed. Try Print instead.' });
+        });
     });
 }
 
@@ -1268,10 +1279,9 @@ function generateFullTranscript(callback) {
         d.semesters.forEach(function(s) { s.courses.forEach(function(c) { if (c.grade !== 'F' && !c.excluded) totalPassed++; }); });
 
         var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Official Transcript - ' + (d.student.name || 'Student') + '</title>' +
-            '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">' +
             '<style>' +
             '@page { margin: 20mm 16mm 16mm; }' +
-            'body { font-family: Inter, sans-serif; color: #0f172a; font-size: 9.5pt; line-height: 1.45; margin: 0; padding: 0; }' +
+            'body { font-family: "Segoe UI", Arial, sans-serif; color: #0f172a; font-size: 9.5pt; line-height: 1.45; margin: 0; padding: 0; }' +
             '.header { text-align: center; padding-bottom: 16px; border-bottom: 3px double #0f172a; margin-bottom: 20px; }' +
             '.header .inst { font-size: 18pt; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; margin: 0; }' +
             '.header .title { font-size: 11pt; font-weight: 700; margin: 4px 0 6px; letter-spacing: 2px; text-transform: uppercase; color: #1e293b; }' +
