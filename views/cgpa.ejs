@@ -615,13 +615,13 @@
     </div>
 </div>
 
-<!-- Transcript Export -->
+<!-- Transcript -->
 <div class="analytics reveal" style="margin-top:10px;">
     <div class="section-head" onclick="openTranscript()" style="cursor:pointer;">
-        <div class="section-label"><i class="fas fa-file-alt"></i> Transcript Export</div>
+        <div class="section-label"><i class="fas fa-file-alt"></i> Transcript</div>
         <span style="font-size:0.7rem;color:var(--brand);font-weight:700;">View <i class="fas fa-arrow-right" style="font-size:0.6rem;"></i></span>
     </div>
-    <p style="font-size:0.72rem;color:var(--text-sub);font-weight:500;line-height:1.5;">Generate a structured academic transcript organized by semester.</p>
+    <p style="font-size:0.72rem;color:var(--text-sub);font-weight:500;line-height:1.5;">View your complete academic transcript organized by semester.</p>
 </div>
 
 <!-- Filters -->
@@ -1171,19 +1171,21 @@ function calcTarget() {
     });
 }
 
-/* ── Transcript Export ───────────────────── */
+/* ── Transcript View ─────────────────────── */
 function openTranscript() {
-    Swal.fire({ title: 'Generating Transcript...', html: 'Compiling academic records', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    Swal.fire({ title: 'Loading Transcript...', html: 'Compiling your academic records', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
     fetch('/api/cgpa/transcript')
-    .then(r => r.json()).then(d => {
+    .then(function(r) { return r.json().catch(function() { return { error: 'Invalid server response' }; }); })
+    .then(function(d) {
         Swal.close();
         if (d.error) { Swal.fire({ icon: 'error', text: d.error }); return; }
+        if (!d.semesters || d.semesters.length === 0) { Swal.fire({ icon: 'info', text: 'No courses logged yet. Add courses to generate a transcript.' }); return; }
 
         var html = '<div style="text-align:left;font-family:\'Plus Jakarta Sans\',sans-serif;">';
         html += '<div style="text-align:center;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #e2e8f0;">';
         html += '<h2 style="font-size:1.2rem;font-weight:800;margin:0 0 4px;">ACADEMIC TRANSCRIPT</h2>';
-        html += '<p style="font-size:0.75rem;color:var(--text-sub);font-weight:600;margin:0;">' + d.student.name + '</p>';
-        html += '<p style="font-size:0.7rem;color:var(--text-muted);font-weight:500;margin:2px 0;">' + d.department + ' &bull; ' + d.gradingScale + '-Point Scale</p>';
+        html += '<p style="font-size:0.75rem;color:var(--text-sub);font-weight:600;margin:0;">' + (d.student && d.student.name ? d.student.name : 'Student') + '</p>';
+        html += '<p style="font-size:0.7rem;color:var(--text-muted);font-weight:500;margin:2px 0;">' + (d.department || '') + (d.department && d.gradingScale ? ' &bull; ' : '') + (d.gradingScale ? d.gradingScale + '-Point Scale' : '') + '</p>';
         html += '</div>';
 
         d.semesters.forEach(function(sem) {
@@ -1198,33 +1200,35 @@ function openTranscript() {
             html += '</tr></thead><tbody>';
             sem.courses.forEach(function(c) {
                 html += '<tr style="border-bottom:1px solid #f1f5f9;">';
-                html += '<td style="padding:6px 8px;font-weight:700;">' + (c.excluded ? '<span style="opacity:0.4">' : '') + c.code + (c.excluded ? '</span>' : '') + '</td>';
+                html += '<td style="padding:6px 8px;font-weight:700;">' + (c.excluded ? '<span style="opacity:0.4">' : '') + (c.code || '') + (c.excluded ? '</span>' : '') + '</td>';
                 html += '<td style="padding:6px 8px;">' + (c.excluded ? '<span style="opacity:0.4">' : '') + (c.title || '') + (c.excluded ? '</span>' : '') + '</td>';
-                html += '<td style="padding:6px 8px;text-align:center;">' + c.units + '</td>';
-                html += '<td style="padding:6px 8px;text-align:center;"><strong>' + c.grade + '</strong></td>';
+                html += '<td style="padding:6px 8px;text-align:center;">' + (c.units || '') + '</td>';
+                html += '<td style="padding:6px 8px;text-align:center;"><strong>' + (c.grade || '') + '</strong></td>';
                 html += '</tr>';
             });
             html += '<tr style="background:#f8fafc;font-weight:700;">';
             html += '<td colspan="2" style="padding:6px 8px;font-size:0.7rem;">Semester GPA</td>';
             var semGPA = sem.units > 0 ? (sem.points / sem.units).toFixed(2) : '—';
-            html += '<td style="padding:6px 8px;text-align:center;">' + sem.units + '</td>';
+            html += '<td style="padding:6px 8px;text-align:center;">' + (sem.units || 0) + '</td>';
             html += '<td style="padding:6px 8px;text-align:center;color:var(--brand);">' + semGPA + '</td>';
             html += '</tr>';
             html += '</tbody></table></div>';
         });
 
         html += '<div style="margin-top:12px;padding:12px;background:var(--text-dark);border-radius:var(--radius-sm);color:white;display:flex;justify-content:space-between;align-items:center;">';
-        html += '<div><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;opacity:0.6;">Cumulative GPA</div><div style="font-size:1.3rem;font-weight:800;">' + d.cgpa + '</div></div>';
-        html += '<div style="text-align:right;"><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;opacity:0.6;">Total Units</div><div style="font-size:1.3rem;font-weight:800;">' + d.totalUnits + '</div></div>';
-        html += '<div style="text-align:right;"><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;opacity:0.6;">Class</div><div style="font-size:0.75rem;font-weight:700;">' + d.degreeClass + '</div></div>';
+        html += '<div><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;opacity:0.6;">Cumulative GPA</div><div style="font-size:1.3rem;font-weight:800;">' + (d.cgpa || '—') + '</div></div>';
+        html += '<div style="text-align:right;"><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;opacity:0.6;">Total Units</div><div style="font-size:1.3rem;font-weight:800;">' + (d.totalUnits || 0) + '</div></div>';
+        html += '<div style="text-align:right;"><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;opacity:0.6;">Class</div><div style="font-size:0.75rem;font-weight:700;">' + (d.degreeClass || '—') + '</div></div>';
         html += '</div>';
 
-        html += '<div style="margin-top:10px;display:flex;gap:8px;">';
-        html += '<button onclick="downloadTranscript()" style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--brand-gradient);color:white;font-weight:700;cursor:pointer;"><i class="fas fa-download"></i> Download Transcript</button>';
-        html += '<button onclick="printTranscript()" style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:#f1f5f9;color:var(--text-dark);font-weight:700;cursor:pointer;"><i class="fas fa-print"></i> Print</button>';
-        html += '</div></div>';
+        html += '<div style="margin-top:10px;text-align:center;font-size:0.68rem;color:var(--text-muted);font-weight:600;">Reference: ' + (d.refNumber || 'N/A') + '</div>';
+        html += '</div>';
 
         Swal.fire({ title: '', html: html, showConfirmButton: false, width: 420, customClass: { popup: 'swal-wide' } });
+    })
+    .catch(function(err) {
+        Swal.close();
+        Swal.fire({ icon: 'error', text: 'Failed to load transcript: ' + (err.message || 'network error') });
     });
 }
 
