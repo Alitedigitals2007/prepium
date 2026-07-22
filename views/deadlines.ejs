@@ -71,6 +71,13 @@
         }
         .del-btn:hover { background: #fee2e2; }
 
+        .countdown { font-size: 0.6rem; font-weight: 800; display: flex; align-items: center; gap: 4px; margin-top: 4px; }
+        .countdown .cd-num { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-variant-numeric: tabular-nums; color: #0f172a; }
+        .countdown .cd-lbl { font-size: 0.5rem; color: #94a3b8; text-transform: uppercase; margin-right: 2px; }
+        .countdown .cd-sep { color: #cbd5e1; font-weight: 300; }
+        .countdown.urgent .cd-num { background: #fee2e2; color: #b91c1c; }
+        .countdown.expired { color: #94a3b8; }
+
         .empty-state {
             text-align: center; padding: 3rem 1.5rem; color: var(--text-sub);
         }
@@ -161,6 +168,7 @@
                             <span class="status-pill <%= status %>"><%= label %></span>
                             <small><%= dateStr %></small>
                         </div>
+                        <div class="countdown <%= status %>" data-due="<%= dateStr %>T<%= timeStr %>"></div>
                     </div>
                     <form action="/deadlines/delete/<%= d.id %>" method="POST" style="margin:0;">
                         <button type="submit" class="del-btn" onclick="return confirm('Delete this deadline?');" title="Delete">
@@ -201,6 +209,41 @@
     }
     var timeInput = document.querySelector('input[name="due_time"]');
     if (timeInput && !timeInput.value) timeInput.value = '09:00';
+
+    /* ── Countdown Timer ── */
+    function updateCountdowns() {
+        document.querySelectorAll('.countdown').forEach(function(el) {
+            var dueStr = el.getAttribute('data-due');
+            if (!dueStr) return;
+            var due = new Date(dueStr);
+            var now = new Date();
+            var diff = due.getTime() - now.getTime();
+
+            if (diff <= 0) {
+                el.innerHTML = '<span style="color:#94a3b8">Past due</span>';
+                el.className = 'countdown expired';
+                return;
+            }
+
+            var days = Math.floor(diff / 86400000);
+            var hours = Math.floor((diff % 86400000) / 3600000);
+            var mins = Math.floor((diff % 3600000) / 60000);
+            var secs = Math.floor((diff % 60000) / 1000);
+
+            var parts = [];
+            if (days > 0) parts.push('<span class="cd-num">' + days + '</span><span class="cd-lbl">d</span>');
+            parts.push('<span class="cd-num">' + String(hours).padStart(2,'0') + '</span><span class="cd-lbl">h</span>');
+            parts.push('<span class="cd-sep">:</span>');
+            parts.push('<span class="cd-num">' + String(mins).padStart(2,'0') + '</span><span class="cd-lbl">m</span>');
+            parts.push('<span class="cd-sep">:</span>');
+            parts.push('<span class="cd-num">' + String(secs).padStart(2,'0') + '</span><span class="cd-lbl">s</span>');
+
+            el.innerHTML = '<i class="far fa-clock" style="font-size:0.55rem;opacity:0.5"></i> ' + parts.join('');
+        });
+    }
+
+    updateCountdowns();
+    setInterval(updateCountdowns, 1000);
 })();
 </script>
 </body>
