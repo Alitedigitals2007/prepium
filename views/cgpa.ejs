@@ -729,21 +729,22 @@
         <div class="ov-title">Log a Course</div>
         <button class="ov-close" onclick="closeOv('ov-add')"><i class="fas fa-times"></i></button>
     </div>
-    <form action="/cgpa/course/add" method="POST">
+    <div style="padding:20px">
         <div class="grid2">
             <div class="fg">
                 <label>Course Code</label>
-                <input type="text" name="code" placeholder="e.g. PHY301" required style="text-transform:uppercase">
+                <input type="text" id="add-code" placeholder="e.g. PHY301" required style="text-transform:uppercase;width:100%;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-weight:600;outline:none;box-sizing:border-box">
+                <div id="add-code-warn" style="font-size:0.68rem;font-weight:600;margin-top:4px;display:none"></div>
             </div>
             <div class="fg">
                 <label>Course Title</label>
-                <input type="text" name="title" placeholder="e.g. Thermodynamics">
+                <input type="text" id="add-title" placeholder="e.g. Thermodynamics" style="width:100%;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-weight:600;outline:none;box-sizing:border-box">
             </div>
         </div>
         <div class="grid2">
             <div class="fg">
                 <label>Level</label>
-                <select name="level_scope">
+                <select id="add-level" style="width:100%;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-weight:600;outline:none;box-sizing:border-box">
                     <option value="100">100 Level</option>
                     <option value="200">200 Level</option>
                     <option value="300" selected>300 Level</option>
@@ -753,7 +754,7 @@
             </div>
             <div class="fg">
                 <label>Semester</label>
-                <select name="semester">
+                <select id="add-sem" style="width:100%;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-weight:600;outline:none;box-sizing:border-box">
                     <option value="1" selected>1st Semester</option>
                     <option value="2">2nd Semester</option>
                 </select>
@@ -762,7 +763,7 @@
         <div class="grid2">
             <div class="fg">
                 <label>Credit Units</label>
-                <input type="number" name="credit_units" min="1" max="8" value="3" required>
+                <input type="number" id="add-units" min="1" max="8" value="3" required style="width:100%;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-weight:600;outline:none;box-sizing:border-box">
             </div>
             <div class="fg">
                 <label>Grade
@@ -770,7 +771,7 @@
                     <small style="text-transform:none;letter-spacing:0;color:var(--blue);">(<%= profile.grading_scale %>-pt)</small>
                     <% } %>
                 </label>
-                <select name="grade" required>
+                <select id="add-grade" required style="width:100%;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-weight:600;outline:none;box-sizing:border-box">
                     <% if (hasProfile && profile.grading_scale == 5) { %>
                         <option value="A">A — 5 pts</option>
                         <option value="B">B — 4 pts</option>
@@ -788,12 +789,105 @@
                 </select>
             </div>
         </div>
-        <button type="submit" class="btn btn-primary" style="margin-top:8px">
-            <i class="fas fa-plus"></i> Save Course
-        </button>
-    </form>
+        <div id="add-loading" style="display:none;text-align:center;padding:8px;color:#475569;font-weight:600"><i class="fas fa-spinner fa-spin"></i> Saving...</div>
+        <div id="add-error" style="display:none;font-size:0.75rem;color:#dc2626;font-weight:600;margin:4px 0 8px;padding:8px 10px;background:#fef2f2;border-radius:8px"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+            <button id="add-save-btn" onclick="addCourseAjax()" style="flex:1;padding:12px;border:none;background:linear-gradient(135deg,#0062ff,#003fcc);color:white;border-radius:10px;font-weight:700;font-size:0.82rem;cursor:pointer"><i class="fas fa-plus"></i> Save Course</button>
+            <button id="add-save-another" onclick="addCourseAjax(true)" style="padding:12px 16px;border:1.5px solid var(--border);background:white;border-radius:10px;font-weight:700;font-size:0.78rem;cursor:pointer;color:var(--text-dark)"><i class="fas fa-plus-circle"></i> Add Another</button>
+        </div>
+    </div>
 </div>
 </div>
+
+<script>
+var addCourseCodes = [];
+<% if (typeof courses !== 'undefined' && courses && courses.length > 0) { %>
+<% courses.forEach(function(c) { %>
+addCourseCodes.push('<%= c.code ? c.code.toUpperCase().replace(/'/g, "\\'") : "" %>');
+<% }); } %>
+
+document.addEventListener('DOMContentLoaded', function() {
+    var codeInput = document.getElementById('add-code');
+    if (codeInput) {
+        codeInput.addEventListener('input', function() {
+            var val = this.value.trim().toUpperCase();
+            var warn = document.getElementById('add-code-warn');
+            if (addCourseCodes.indexOf(val) >= 0) {
+                warn.style.display = 'block';
+                warn.style.color = '#d97706';
+                warn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> This course already exists. It will be skipped.';
+            } else {
+                warn.style.display = 'none';
+            }
+        });
+    }
+});
+
+function addCourseAjax(keepOpen) {
+    var code = document.getElementById('add-code').value.trim().toUpperCase();
+    var title = document.getElementById('add-title').value.trim() || code;
+    var level = document.getElementById('add-level').value;
+    var sem = document.getElementById('add-sem').value;
+    var units = parseInt(document.getElementById('add-units').value) || 3;
+    var grade = document.getElementById('add-grade').value;
+    if (!code) { return showAddError('Enter a course code.'); }
+    if (units < 1 || units > 8) { return showAddError('Units must be 1-8.'); }
+    document.getElementById('add-loading').style.display = 'block';
+    document.getElementById('add-error').style.display = 'none';
+    document.getElementById('add-save-btn').disabled = true;
+    document.getElementById('add-save-another').disabled = true;
+    document.getElementById('add-code-warn').style.display = 'none';
+    fetch('/api/cgpa/course/add-ajax', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code, title: title, level_scope: level, semester: sem, credit_units: units, grade: grade })
+    }).then(function(r){ return r.json(); }).then(function(d) {
+        document.getElementById('add-loading').style.display = 'none';
+        document.getElementById('add-save-btn').disabled = false;
+        document.getElementById('add-save-another').disabled = false;
+        if (d && d.success) {
+            if (d.duplicate) {
+                showAddError('Course already exists (skipped).');
+            } else {
+                if (keepOpen) {
+                    document.getElementById('add-code').value = '';
+                    document.getElementById('add-title').value = '';
+                    document.getElementById('add-grade').selectedIndex = 0;
+                    document.getElementById('add-code').focus();
+                    showAddError('');
+                    document.getElementById('add-error').style.display = 'none';
+                    showAddSuccess('Course added! Add another.');
+                } else {
+                    closeOv('ov-add');
+                    Swal.fire({ icon: 'success', title: 'Course Added', text: code + ' was added successfully.', timer: 1500, showConfirmButton: false });
+                    setTimeout(function(){ location.reload(); }, 1500);
+                }
+            }
+        } else {
+            showAddError((d && d.error) ? d.error : 'Could not add course.');
+        }
+    }).catch(function(err) {
+        document.getElementById('add-loading').style.display = 'none';
+        document.getElementById('add-save-btn').disabled = false;
+        document.getElementById('add-save-another').disabled = false;
+        showAddError('Network error: ' + (err.message || ''));
+    });
+}
+
+function showAddError(msg) {
+    var box = document.getElementById('add-error');
+    if (msg) { box.style.display = 'block'; box.innerHTML = '<i class="fas fa-times-circle"></i> ' + msg; }
+    else box.style.display = 'none';
+}
+
+function showAddSuccess(msg) {
+    var box = document.getElementById('add-error');
+    box.style.display = 'block';
+    box.style.color = '#16a34a';
+    box.style.background = '#f0fdf4';
+    box.innerHTML = '<i class="fas fa-check-circle"></i> ' + msg;
+}
+</script>
 
 <!-- ════ EDIT COURSE OVERLAY ════ -->
 <div class="overlay" id="ov-edit">
@@ -1123,25 +1217,103 @@ function openTranscript() {
 }
 
 function printTranscript() {
-    var content = document.querySelector('.swal2-popup');
-    if (content) {
+    generateFullTranscript(function(html) {
         var win = window.open('', '_blank');
-        win.document.write('<html><head><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>body{font-family:\'Plus Jakarta Sans\',sans-serif;padding:20px;color:#0f172a;}table{width:100%;border-collapse:collapse;}th,td{padding:6px 8px;border-bottom:1px solid #e2e8f0;font-size:12px;}th{background:#f1f5f9;font-weight:700;text-align:left;}.cgpa-bar{background:#0f172a;color:white;padding:12px;border-radius:8px;display:flex;justify-content:space-between;margin-top:12px;}@media print{body{padding:0;}}</style></head><body>' + content.innerHTML + '<script>window.print();window.close();</'+'script></body></html>');
+        win.document.write(html);
         win.document.close();
-    }
+        setTimeout(function() { win.print(); }, 500);
+    });
 }
 
 function downloadTranscriptPDF() {
-    var content = document.querySelector('.swal2-popup');
-    if (content) {
+    generateFullTranscript(function(html) {
+        var tmp = document.createElement('div');
+        tmp.innerHTML = html;
+        tmp.id = 'transcript-pdf-export';
+        tmp.style.cssText = 'position:fixed;left:-9999px;top:0;width:210mm;background:white;z-index:-1';
+        document.body.appendChild(tmp);
         html2pdf().set({
-            margin: [10,10,10,10],
-            filename: 'prepium_transcript.pdf',
-            image: { type:'jpeg', quality:.98 },
-            html2canvas: { scale:2, useCORS:true, scrollX:0, scrollY:0 },
+            margin: [8,10,8,10],
+            filename: 'prepium_academic_transcript.pdf',
+            image: { type:'jpeg', quality:1 },
+            html2canvas: { scale:2, useCORS:true, scrollX:0, scrollY:0, width:794, windowWidth:794 },
             jsPDF: { unit:'mm', format:'a4', orientation:'portrait' }
-        }).from(content).save();
-    }
+        }).from(tmp).save().then(function() { document.body.removeChild(tmp); });
+    });
+}
+
+function generateFullTranscript(callback) {
+    fetch('/api/cgpa/transcript')
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+        if (d.error) { Swal.fire({ icon: 'error', text: d.error }); return; }
+        var today = new Date();
+        var dateStr = today.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+        var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Academic Transcript - ' + (d.student.name || 'Student') + '</title>' +
+            '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">' +
+            '<style>' +
+            '@page { margin: 18mm 14mm 14mm; }' +
+            'body { font-family: Inter, sans-serif; color: #0f172a; font-size: 10pt; line-height: 1.5; margin: 0; padding: 0; }' +
+            '.letterhead { text-align: center; padding-bottom: 14px; border-bottom: 2.5px solid #0f172a; margin-bottom: 18px; }' +
+            '.letterhead h1 { font-size: 16pt; font-weight: 800; margin: 0 0 2px; letter-spacing: 1px; text-transform: uppercase; }' +
+            '.letterhead .sub { font-size: 9pt; color: #475569; font-weight: 500; }' +
+            '.letterhead .line { width: 60px; height: 2px; background: #0f172a; margin: 6px auto; }' +
+            '.letterhead .date { font-size: 8pt; color: #94a3b8; margin-top: 8px; }' +
+            '.student-info { display: flex; justify-content: space-between; font-size: 9pt; margin-bottom: 14px; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }' +
+            '.student-info .col { flex: 1; }' +
+            '.student-info .col span.label { color: #64748b; font-weight: 600; font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 1px; }' +
+            '.student-info .col span.val { color: #0f172a; font-weight: 700; font-size: 9.5pt; }' +
+            '.sem-block { margin-bottom: 14px; }' +
+            '.sem-header { font-size: 9pt; font-weight: 800; color: #334155; text-transform: uppercase; letter-spacing: 0.5px; padding: 5px 0 3px; border-bottom: 1px solid #cbd5e1; margin-bottom: 4px; }' +
+            'table { width: 100%; border-collapse: collapse; font-size: 8.5pt; }' +
+            'th { background: #f1f5f9; padding: 5px 6px; text-align: left; font-weight: 700; font-size: 7.5pt; color: #475569; text-transform: uppercase; letter-spacing: 0.3px; }' +
+            'td { padding: 4px 6px; border-bottom: 1px solid #f1f5f9; }' +
+            'tr:last-child td { border-bottom: none; }' +
+            '.sem-gpa td { background: #f8fafc; font-weight: 700; border-top: 1.5px solid #cbd5e1; border-bottom: none; font-size: 8pt; }' +
+            '.cgpa-footer { margin-top: 16px; padding: 10px 12px; background: #0f172a; color: white; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }' +
+            '.cgpa-footer .item { text-align: center; }' +
+            '.cgpa-footer .item .lbl { font-size: 6.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.65; }' +
+            '.cgpa-footer .item .num { font-size: 13pt; font-weight: 800; margin-top: 1px; }' +
+            '.footer-note { text-align: center; font-size: 7pt; color: #94a3b8; margin-top: 14px; border-top: 1px solid #e2e8f0; padding-top: 10px; }' +
+            '@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }' +
+            '</style></head><body>' +
+            '<div class="letterhead">' +
+            '<h1>Prepium</h1>' +
+            '<div class="line"></div>' +
+            '<div class="sub">Academic Transcript &mdash; Official Record</div>' +
+            '<div class="date">Issued: ' + dateStr + '</div></div>' +
+            '<div class="student-info">' +
+            '<div class="col"><span class="label">Student Name</span><span class="val">' + (d.student.name || 'N/A') + '</span></div>' +
+            '<div class="col"><span class="label">Department</span><span class="val">' + (d.department || 'N/A') + '</span></div>' +
+            '<div class="col"><span class="label">Grading Scale</span><span class="val">' + d.gradingScale + '-Point</span></div></div>';
+
+        d.semesters.forEach(function(sem) {
+            html += '<div class="sem-block">' +
+                '<div class="sem-header">Level ' + sem.level + ' &bull; ' + (sem.semester === '1' ? 'First' : 'Second') + ' Semester</div>' +
+                '<table><thead><tr><th style="width:18%">Code</th><th style="width:46%">Course Title</th><th style="width:12%;text-align:center">Units</th><th style="width:12%;text-align:center">Grade</th><th style="width:12%;text-align:center">GP</th></tr></thead><tbody>';
+            sem.courses.forEach(function(c) {
+                var gpMap = (d.gradingScale === '5') ? {A:5,B:4,C:3,D:2,E:1,F:0} : {A:4,B:3,C:2,D:1,F:0};
+                var gp = gpMap[c.grade] || 0;
+                var excl = c.excluded ? ' style="opacity:0.35;text-decoration:line-through"' : '';
+                html += '<tr' + excl + '><td style="font-weight:700">' + (c.code || '') + '</td><td>' + (c.title || '') + '</td><td style="text-align:center">' + c.units + '</td><td style="text-align:center;font-weight:700">' + c.grade + '</td><td style="text-align:center">' + gp + '</td></tr>';
+            });
+            var semGpa = sem.units > 0 ? (sem.points / sem.units).toFixed(2) : '0.00';
+            html += '<tr class="sem-gpa"><td colspan="2" style="font-size:7.5pt;color:#475569">Semester GPA</td>' +
+                '<td style="text-align:center">' + sem.units + '</td>' +
+                '<td style="text-align:center">' + semGpa + '</td>' +
+                '<td style="text-align:center">' + sem.points + '</td></tr>';
+            html += '</tbody></table></div>';
+        });
+
+        html += '<div class="cgpa-footer">' +
+            '<div class="item"><div class="lbl">Cumulative GPA</div><div class="num">' + d.cgpa + '</div></div>' +
+            '<div class="item"><div class="lbl">Total Units</div><div class="num">' + d.totalUnits + '</div></div>' +
+            '<div class="item"><div class="lbl">Class</div><div class="num" style="font-size:9pt">' + (d.degreeClass || 'N/A') + '</div></div></div>' +
+            '<div class="footer-note">This is a computer-generated transcript. All information is based on student-provided data.</div>' +
+            '</body></html>';
+
+        if (callback) callback(html);
+    });
 }
 
 /* ── PDF export ──────────────────────────── */

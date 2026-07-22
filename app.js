@@ -4358,6 +4358,46 @@ app.post('/cgpa/course/add', isAuth, requirePaid, async (req, res) => {
     }
 });
 
+// 2B. AJAX ADD COURSE (for polished overlay)
+app.post('/api/cgpa/course/add-ajax', isAuth, async (req, res) => {
+    try {
+        if (!req.session || !req.session.user || !req.session.user.id) {
+            return res.json({ success: false, error: 'Not authenticated' });
+        }
+        const userId = req.session.user.id;
+        const { code, title, level_scope, semester, credit_units, grade } = req.body;
+        const courseCode = (code || '').trim().toUpperCase();
+        if (!courseCode) return res.json({ success: false, error: 'Course code required' });
+
+        const exist = await pool.query(
+            'SELECT id FROM public.cgpa_courses WHERE user_id = $1 AND course_code = $2 AND deleted = false',
+            [userId, courseCode]
+        );
+        if (exist.rows.length > 0) {
+            return res.json({ success: true, duplicate: true, error: 'Course already exists' });
+        }
+
+        await pool.query(
+            `INSERT INTO public.cgpa_courses 
+             (user_id, course_code, title, level_scope, semester, credit_units, grade, is_hidden, deleted) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, false, false)`,
+            [
+                userId,
+                courseCode,
+                (title || '').trim() || 'Course Module',
+                parseInt(level_scope),
+                parseInt(semester),
+                parseInt(credit_units),
+                (grade || '').trim().toUpperCase()
+            ]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        console.error('AJAX Add Course Error:', err);
+        res.json({ success: false, error: 'Error adding course' });
+    }
+});
+
 // 3. EDIT EXISTING REGISTERED COURSE PARAMETERS
 app.post('/cgpa/course/edit', isAuth, requirePaid, async (req, res) => {
     try {
@@ -5167,7 +5207,7 @@ app.post('/api/cgpa/forecast', isAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/api/cgpa/ai-predict', isAuth, requirePaid, async (req, res) => {
+app.post('/api/cgpa/ai-predict', isAuth, async (req, res) => {
   try {
     const uid = req.session.user.id;
     const profile = await pool.query('SELECT * FROM public.cgpa_profiles WHERE user_id = $1', [uid]);
@@ -5187,7 +5227,7 @@ Predict their likely GPA range next semester, identify subjects they are at risk
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
-app.post('/api/cgpa/ai-whatif', isAuth, requirePaid, async (req, res) => {
+app.post('/api/cgpa/ai-whatif', isAuth, async (req, res) => {
   try {
     const { courseName, units, anticipatedGrade } = req.body;
     if (!courseName || !units || !anticipatedGrade) return res.json({ success: false, error: 'Fill in all fields.' });
@@ -5213,7 +5253,7 @@ app.post('/api/cgpa/ai-whatif', isAuth, requirePaid, async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
-app.post('/api/cgpa/ai-chat', isAuth, requirePaid, async (req, res) => {
+app.post('/api/cgpa/ai-chat', isAuth, async (req, res) => {
   try {
     const { message, history } = req.body;
     if (!message || !message.trim()) return res.json({ success: false, error: 'Empty message.' });
