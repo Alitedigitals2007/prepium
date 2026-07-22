@@ -2702,6 +2702,129 @@ async function callGeminiWithText(prompt, textContent) {
     return { success: false, text: '' };
 }
 
+// Auto-generate daily challenge questions using Gemini
+async function generateDailyChallengeQuestions() {
+  const endpoints = [
+    { url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', key: process.env.GEMINI_API_KEY_PRIMARY },
+    { url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', key: process.env.GEMINI_API_KEY_SECONDARY }
+  ].filter(e => e.key);
+
+  const prompt = `You are a quiz generator. Generate exactly 10 multiple-choice questions for a general academic daily challenge. 
+Each question must have 4 options (A, B, C, D), one correct answer, and a brief explanation.
+Cover a variety of subjects: Mathematics, Science, English, History, Geography, Logic, Technology, Literature, and General Knowledge.
+Vary difficulty (mix of easy, medium, hard).
+Respond with ONLY valid JSON array (no markdown, no code fences):
+[
+  {
+    "question_text": "...",
+    "option_a": "...",
+    "option_b": "...",
+    "option_c": "...",
+    "option_d": "...",
+    "correct_option": "A",
+    "explanation": "..."
+  }
+]`;
+
+  for (const ep of endpoints) {
+    try {
+      const body = {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          temperature: 0.7,
+          maxOutputTokens: 8192
+        }
+      };
+
+      const resp = await fetch(`${ep.url}?key=${ep.key}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(30000)
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+        if (!text) continue;
+        const questions = JSON.parse(text);
+        if (!Array.isArray(questions) || questions.length !== 10) continue;
+
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          for (const q of questions) {
+            if (!q.question_text || !q.option_a || !q.option_b || !q.option_c || !q.option_d || !q.correct_option) continue;
+            await client.query(
+              `INSERT INTO daily_questions (question_text, option_a, option_b, option_c, option_d, correct_option, explanation, date_scheduled) 
+               VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_DATE)`,
+              [q.question_text, q.option_a, q.option_b, q.option_c, q.option_d, q.correct_option, q.explanation || '']
+            );
+          }
+          await client.query('COMMIT');
+          console.log('[Daily] Auto-generated 10 questions for today');
+          return { success: true };
+        } catch (e) {
+          await client.query('ROLLBACK');
+          throw e;
+        } finally {
+          client.release();
+        }
+      }
+    } catch (e) {
+      console.error('Daily challenge Gemini generation failed:', e.message);
+    }
+  }
+
+  // Fallback: try OpenRouter
+  try {
+    const key = process.env.OPENROUTER_API_KEY;
+    if (key) {
+      const orResp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}`, 'HTTP-Referer': 'https://theprepium.vercel.app', 'X-Title': 'Prepium' },
+        body: JSON.stringify({ model: 'mistralai/mistral-7b-instruct:free', messages: [{ role: 'user', content: prompt }], temperature: 0.7 }),
+        signal: AbortSignal.timeout(30000)
+      });
+      if (orResp.ok) {
+        const orData = await orResp.json();
+        const orText = orData.choices?.[0]?.message?.content?.trim();
+        if (orText) {
+          const cleaned = orText.replace(/```json|```/g, '').trim();
+          const questions = JSON.parse(cleaned);
+          if (Array.isArray(questions) && questions.length > 0) {
+            const client = await pool.connect();
+            try {
+              await client.query('BEGIN');
+              for (const q of questions) {
+                if (!q.question_text || !q.option_a || !q.option_b || !q.option_c || !q.option_d || !q.correct_option) continue;
+                await client.query(
+                  `INSERT INTO daily_questions (question_text, option_a, option_b, option_c, option_d, correct_option, explanation, date_scheduled) 
+                   VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_DATE)`,
+                  [q.question_text, q.option_a, q.option_b, q.option_c, q.option_d, q.correct_option, q.explanation || '']
+                );
+              }
+              await client.query('COMMIT');
+              console.log('[Daily] Auto-generated via OpenRouter fallback');
+              return { success: true };
+            } catch (e) {
+              await client.query('ROLLBACK');
+              throw e;
+            } finally {
+              client.release();
+            }
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Daily challenge OpenRouter fallback failed:', e.message);
+  }
+
+  return { success: false, error: 'All AI endpoints failed' };
+}
+
 // Call LlamaParse API for PDFs
 async function callLlamaParse(fileBuffer, fileName) {
     const apiKey = process.env.LLAMAPARSE_API_KEY;
@@ -3217,23 +3340,19 @@ app.post('/admin/students/toggle-status/:id', isAdmin, async (req, res) => {
 
 app.get('/admin/daily', isAdmin, async (req, res) => {
     try {
-        // Use 'pool' instead of 'db'
-        const leaderboard = await pool.query(
-            'SELECT * FROM daily_leaderboard ORDER BY monthly_score DESC LIMIT 30'
-        );
-        
-        // Count total upcoming questions
-        const counts = await pool.query(
-            'SELECT COUNT(*) as total FROM daily_questions WHERE date_scheduled >= CURRENT_DATE'
-        );
-        
-        // Convert string count to number
+        const [leaderboard, counts, todayRes] = await Promise.all([
+            pool.query('SELECT * FROM daily_leaderboard ORDER BY monthly_score DESC LIMIT 30'),
+            pool.query('SELECT COUNT(*) as total FROM daily_questions WHERE date_scheduled >= CURRENT_DATE'),
+            pool.query('SELECT * FROM daily_questions WHERE date_scheduled = CURRENT_DATE ORDER BY id ASC LIMIT 10')
+        ]);
+
         const totalCount = parseInt(counts.rows[0].total) || 0;
         const daysLeft = Math.floor(totalCount / 10);
 
         res.render('admin/daily-manage', { 
             leaderboard: leaderboard.rows, 
-            daysLeft: daysLeft 
+            daysLeft: daysLeft,
+            todayQuestions: todayRes.rows
         });
     } catch (err) {
         console.error("ARENA_ERROR:", err);
@@ -3241,109 +3360,23 @@ app.get('/admin/daily', isAdmin, async (req, res) => {
     }
 });
 
-app.post('/admin/add-daily-batch', isAdmin, async (req, res) => {
-    const questions = req.body.questions;
-
-    try {
-        const lastDateRes = await pool.query('SELECT MAX(date_scheduled) as max_date FROM daily_questions');
-        
-        let nextDate;
-        if (lastDateRes.rows[0].max_date) {
-            nextDate = new Date(lastDateRes.rows[0].max_date);
-            nextDate.setDate(nextDate.getDate() + 1);
-        } else {
-            nextDate = new Date();
-        }
-        
-        const dateStr = nextDate.toISOString().split('T')[0];
-
-        const client = await pool.connect();
-        try {
-            await client.query('BEGIN');
-            
-            for (const q of questions) {
-                await client.query(
-                    `INSERT INTO daily_questions 
-                    (question_text, option_a, option_b, option_c, option_d, correct_option, explanation, date_scheduled) 
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-                    [q.text, q.a, q.b, q.c, q.d, q.correct, q.explanation || '', dateStr]
-                );
-            }
-            
-            await client.query('COMMIT');
-        } catch (err) {
-            await client.query('ROLLBACK');
-            throw err;
-        } finally {
-            client.release();
-        }
-
-        res.redirect('/admin/daily?success=true');
-    } catch (err) {
-        console.error("BATCH_INSERT_ERROR:", err);
-        res.status(500).send("Database Error: " + err.message);
-    }
-});
-
-app.post('/admin/bulk-daily', isAdmin, async (req, res) => {
-    try {
-        const rawData = JSON.parse(req.body.jsonData);
-        if (!Array.isArray(rawData)) throw new Error("Data must be an array");
-
-        const lastDateRes = await pool.query('SELECT MAX(date_scheduled) as max_date FROM daily_questions');
-        let nextDate = lastDateRes.rows[0].max_date ? new Date(lastDateRes.rows[0].max_date) : new Date();
-        
-        const lastDateCount = await pool.query('SELECT COUNT(*) FROM daily_questions WHERE date_scheduled = $1', [nextDate]);
-        let currentDayCount = parseInt(lastDateCount.rows[0].count) || 0;
-
-        if (currentDayCount >= 10 || nextDate < new Date().setHours(0,0,0,0)) {
-            nextDate.setDate(nextDate.getDate() + 1);
-            currentDayCount = 0;
-        }
-
-        const client = await pool.connect();
-        try {
-            await client.query('BEGIN');
-            
-            for (let i = 0; i < rawData.length; i++) {
-                const q = rawData[i];
-                const dateStr = nextDate.toISOString().split('T')[0];
-
-                await client.query(
-                    `INSERT INTO daily_questions 
-                    (question_text, option_a, option_b, option_c, option_d, correct_option, explanation, date_scheduled) 
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-                    [q.text, q.a, q.b, q.c, q.d, q.correct, q.explanation || '', dateStr]
-                );
-
-                currentDayCount++;
-
-                if (currentDayCount >= 10) {
-                    nextDate.setDate(nextDate.getDate() + 1);
-                    currentDayCount = 0;
-                }
-            }
-            
-            await client.query('COMMIT');
-        } catch (err) {
-            await client.query('ROLLBACK');
-            throw err;
-        } finally {
-            client.release();
-        }
-
-        res.redirect('/admin/daily?bulkSuccess=true');
-    } catch (err) {
-        console.error("BULK_ERROR:", err);
-        res.status(500).send("Invalid JSON format or Database Error: " + err.message);
-    }
-});
-
 app.get('/daily-challenge', isAuth, async (req, res) => {
     const sessionUser = req.session.user;
-
     const userId = sessionUser.id; 
     try {
+        // Auto-generate questions for today if missing
+        const countRes = await pool.query(
+            'SELECT COUNT(*) as cnt FROM daily_questions WHERE date_scheduled = CURRENT_DATE'
+        );
+        let questionsNeeded = 10 - parseInt(countRes.rows[0]?.cnt || 0);
+        if (questionsNeeded > 0) {
+            console.log(`[Daily] ${questionsNeeded} questions needed for today, generating...`);
+            const gen = await generateDailyChallengeQuestions();
+            if (!gen.success) {
+                console.error('[Daily] Generation failed:', gen.error);
+            }
+        }
+
         const questionsRes = await pool.query(
             'SELECT * FROM daily_questions WHERE date_scheduled = CURRENT_DATE ORDER BY id ASC LIMIT 10'
         );
@@ -3360,7 +3393,6 @@ app.get('/daily-challenge', isAuth, async (req, res) => {
             if (lastPlayed === today) hasPlayed = true;
         }
 
-        // --- UPDATED LEADERBOARD QUERY ---
         const leaderboardRes = await pool.query(`
             SELECT 
                 dl.username, 
