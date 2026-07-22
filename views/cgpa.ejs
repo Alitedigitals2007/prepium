@@ -312,7 +312,9 @@
 /* ══ OVERLAYS ══ */
 .overlay {
     display: none; position: fixed; inset: 0; z-index: 2000;
-    background: var(--bg-gradient);
+    background: rgba(255,255,255,0.97);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     overflow-y: auto; padding-bottom: 48px;
 }
 .overlay.show { display: block; animation: appear .2s ease; }
@@ -720,7 +722,7 @@
 <button id="fab-add-course" type="button" onclick="openOv('ov-add')" title="Add a course" aria-label="Add a course" style="position:fixed;right:18px;bottom:90px;z-index:9000;width:56px;height:56px;border-radius:50%;border:none;background:linear-gradient(135deg,#0062ff,#003fcc);color:white;font-size:1.4rem;box-shadow:0 10px 24px rgba(0,98,255,0.35);cursor:pointer;display:flex;align-items:center;justify-content:center"><i class="fas fa-plus"></i></button>
 
 <!-- Floating: AI Chat button -->
-<button id="fab-ai-chat" type="button" onclick="openCGPAChat()" title="AI Academic Advisor" aria-label="AI Chat" style="position:fixed;left:18px;bottom:90px;z-index:9000;height:48px;padding:0 16px;border-radius:24px;border:none;background:#0f172a;color:white;font-weight:700;font-size:0.78rem;box-shadow:0 10px 24px rgba(15,23,42,0.25);cursor:pointer;display:flex;align-items:center;gap:8px"><i class="fas fa-robot"></i> AI Advisor</button>
+<button id="fab-ai-chat" type="button" onclick="openCGPAChat()" title="AI Academic Advisor" aria-label="AI Chat" style="position:fixed;right:18px;bottom:155px;z-index:9000;height:48px;padding:0 18px;border-radius:24px;border:none;background:#0f172a;color:white;font-weight:700;font-size:0.78rem;box-shadow:0 10px 24px rgba(15,23,42,0.25);cursor:pointer;display:flex;align-items:center;gap:8px"><i class="fas fa-robot"></i> AI Advisor</button>
 
 <!-- ════ ADD COURSE OVERLAY ════ -->
 <div class="overlay" id="ov-add">
@@ -986,6 +988,16 @@ function openEdit(id) {
     const sel = document.getElementById('e-grade');
     if (sel) sel.value = r.dataset.grade;
     openOv('ov-edit');
+}
+
+/* ── AI Advisor fallback (overridden by real fn if hasProfile) ── */
+function openCGPAChat() {
+    Swal.fire({
+        icon: 'info',
+        title: 'Setup Required',
+        text: 'Set up your CGPA profile first to use the AI Advisor.',
+        confirmButtonText: 'OK'
+    });
 }
 
 <% if (hasProfile) { %>
