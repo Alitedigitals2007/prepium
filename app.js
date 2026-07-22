@@ -5161,6 +5161,80 @@ app.post('/api/cgpa/forecast', isAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+app.post('/api/cgpa/ai-predict', isAuth, requirePaid, async (req, res) => {
+  try {
+    const uid = req.session.user.id;
+    const profile = await pool.query('SELECT * FROM public.cgpa_profiles WHERE user_id = $1', [uid]);
+    if (!profile.rows[0]) return res.json({ success: false, error: 'Set up your CGPA profile first.' });
+    const p = profile.rows[0];
+    const courses = await pool.query("SELECT course_code, title, credit_units, grade, level_scope, semester FROM public.cgpa_courses WHERE user_id = $1 AND deleted = false AND is_hidden = false ORDER BY level_scope DESC, semester DESC LIMIT 60", [uid]);
+    if (courses.rows.length === 0) return res.json({ success: false, error: 'Log at least one course to get a prediction.' });
+    const prompt = `You are an academic advisor. The student has the following academic profile on a ${p.grading_scale || 5}-point scale:
+Level: ${p.current_level || 'unknown'} ${p.department || ''}
+Recent courses (code | title | units | grade | level-sem):
+${courses.rows.map(c => '- ' + c.course_code + ' | ' + (c.title||'') + ' | ' + c.credit_units + 'u | ' + c.grade + ' | L' + c.level_scope + 'S' + c.semester).join('\n')}
+
+Predict their likely GPA range next semester, identify subjects they are at risk of failing, and give 4 short practical study tips to lift their CGPA. Output PLAIN TEXT only (no markdown, no asterisks, no hashtags, no backticks). Use short paragraphs and numbered points as 1), 2), 3) where useful. Maximum 200 words.`;
+    const aiRes = await studyPromptAI(prompt);
+    if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
+    res.json({ success: true, prediction: cleanAiText(aiRes.text) });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.post('/api/cgpa/ai-whatif', isAuth, requirePaid, async (req, res) => {
+  try {
+    const { courseName, units, anticipatedGrade } = req.body;
+    if (!courseName || !units || !anticipatedGrade) return res.json({ success: false, error: 'Fill in all fields.' });
+    const uid = req.session.user.id;
+    const profile = await pool.query('SELECT * FROM public.cgpa_profiles WHERE user_id = $1', [uid]);
+    if (!profile.rows[0]) return res.json({ success: false, error: 'Set up your CGPA profile first.' });
+    const p = profile.rows[0];
+    const scale = p.grading_scale || 5;
+    const gpMap = scale === 5 ? { A:5, B:4, C:3, D:2, E:1, F:0 } : { A:4, B:3, C:2, D:1, F:0 };
+    const courses = await pool.query("SELECT credit_units, grade FROM public.cgpa_courses WHERE user_id = $1 AND deleted = false AND is_hidden = false", [uid]);
+    let curUnits = parseInt(p.prev_units) || 0;
+    let curPoints = parseFloat(p.prev_gp) || 0;
+    courses.rows.forEach(c => { const u = parseInt(c.credit_units)||0; curUnits += u; curPoints += (gpMap[c.grade]||0) * u; });
+    const curCGPA = curUnits > 0 ? (curPoints / curUnits) : 0;
+    const addU = parseInt(units) || 0;
+    const addPts = (gpMap[String(anticipatedGrade).toUpperCase()] || 0) * addU;
+    const newCGPA = (curPoints + addPts) / (curUnits + addU);
+    const warn = newCGPA < curCGPA ? 'This would lower your CGPA. Consider aiming higher if possible.' : 'Good — this move improves your cumulative GPA.';
+    const advicePrompt = `You are an academic advisor. The student asks: "If I take "${courseName}" (${addU} units) and aim for grade ${anticipatedGrade}, what's the impact?" Their current CGPA is ${curCGPA.toFixed(2)} / ${scale}. New CGPA would be ${newCGPA.toFixed(2)}. Give a 3-sentence plain-text answer about the impact and what to focus on to actually achieve ${anticipatedGrade}. No markdown, no asterisks.`;
+    const aiRes = await studyPromptAI(advicePrompt);
+    const advice = aiRes.text.startsWith('AI error') ? warn : cleanAiText(aiRes.text);
+    res.json({ success: true, currentCGPA: curCGPA.toFixed(2), newCGPA: newCGPA.toFixed(2), advice: advice });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.post('/api/cgpa/ai-chat', isAuth, requirePaid, async (req, res) => {
+  try {
+    const { message, history } = req.body;
+    if (!message || !message.trim()) return res.json({ success: false, error: 'Empty message.' });
+    const uid = req.session.user.id;
+    const cleanUser = cleanAiText(message);
+    await pool.query('INSERT INTO study_chat_messages (user_id, course_id, subtopic_id, role, message) VALUES ($1, 0, 0, $2, $3)', [uid, 'user:' + cleanUser]).catch(()=>{});
+    const profile = await pool.query('SELECT * FROM public.cgpa_profiles WHERE user_id = $1', [uid]);
+    const courses = await pool.query("SELECT course_code, credit_units, grade, level_scope, semester FROM public.cgpa_courses WHERE user_id = $1 AND deleted = false AND is_hidden = false ORDER BY id DESC LIMIT 20", [uid]);
+    let ctx = '';
+    if (profile.rows[0]) {
+      const p = profile.rows[0];
+      ctx += 'Context: Student academic profile — current level ' + (p.current_level || 'unknown') + ', ' + (p.department || '') + ', scale ' + (p.grading_scale || 5) + '.\n';
+    }
+    if (courses.rows.length) {
+      ctx += 'Recent courses (code | units | grade | lvl-sem):\n' + courses.rows.map(c => '- ' + c.course_code + ' | ' + c.credit_units + 'u | ' + c.grade + ' | L' + c.level_scope + 'S' + c.semester).join('\n') + '\n';
+    }
+    let convo = '';
+    if (Array.isArray(history)) {
+      history.slice(-6).forEach(function(m){ convo += (m.role === 'user' ? 'Student' : 'Advisor') + ': ' + (m.text || '').slice(0, 500) + '\n'; });
+    }
+    const prompt = 'You are a helpful academic advisor chatbot. Answer clearly and practically. Output PLAIN TEXT only (no markdown, no asterisks, no hashtags, no backticks). Use short paragraphs. Maximum 180 words per reply.\n\n' + ctx + (convo ? 'Conversation so far:\n' + convo + '\n' : '') + 'Student: ' + cleanUser + '\nAdvisor:';
+    const aiRes = await studyPromptAI(prompt);
+    if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
+    res.json({ success: true, reply: cleanAiText(aiRes.text) });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
 // API: Transcript export - structured JSON
 app.get('/api/cgpa/transcript', isAuth, async (req, res) => {
   try {

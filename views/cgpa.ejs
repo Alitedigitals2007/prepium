@@ -597,6 +597,22 @@
     </div>
 </div>
 
+<!-- AI: What-If Advisor + Predict -->
+<div class="analytics reveal" style="margin-top:10px;">
+    <div class="section-head" style="cursor:pointer;" onclick="document.getElementById('aiWhatifBox').style.display = document.getElementById('aiWhatifBox').style.display === 'block' ? 'none' : 'block'">
+        <div class="section-label"><i class="fas fa-robot"></i> AI Course Advisor</div>
+        <span style="font-size:0.7rem;color:var(--brand);font-weight:700;">Open <i class="fas fa-arrow-right" style="font-size:0.6rem;"></i></span>
+    </div>
+    <div id="aiWhatifBox" style="display:none;">
+        <div style="display:flex;gap:6px;margin-bottom:10px">
+            <button type="button" onclick="aiPredictGpa()" style="flex:1;padding:11px;border:none;background:linear-gradient(135deg,#0062ff,#003fcc);color:white;border-radius:10px;font-weight:700;font-size:0.78rem;cursor:pointer"><i class="fas fa-magic"></i> Predict next semester</button>
+            <button type="button" onclick="aiWhatif()" style="flex:1;padding:11px;border:none;background:#0f172a;color:white;border-radius:10px;font-weight:700;font-size:0.78rem;cursor:pointer"><i class="fas fa-calculator"></i> What-if a course</button>
+        </div>
+        <div id="aiPredictResult" style="display:none;background:#f8fafc;border-radius:10px;padding:12px;font-size:0.85rem;color:#0f172a;line-height:1.55;white-space:pre-wrap"></div>
+        <div id="aiWhatifResult" style="display:none;background:#f8fafc;border-radius:10px;padding:12px;font-size:0.85rem;color:#0f172a;line-height:1.55;margin-top:8px"></div>
+    </div>
+</div>
+
 <!-- Transcript Export -->
 <div class="analytics reveal" style="margin-top:10px;">
     <div class="section-head" onclick="openTranscript()" style="cursor:pointer;">
@@ -1139,6 +1155,144 @@ if (pdfBtn) {
             html2canvas: { scale:2, useCORS:true, scrollX:0, scrollY:0 },
             jsPDF: { unit:'mm', format:'a4', orientation:'portrait' }
         }).from(document.getElementById('pdf-root')).save();
+    });
+}
+
+/* ── CGPA AI Functions ──────────────────── */
+function aiEscape(s) { return (s == null ? '' : String(s)).replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>'); }
+
+function aiPredictGpa() {
+    var box = document.getElementById('aiPredictResult');
+    var btn = aiEscape('Predict next semester');
+    box.style.display = 'block';
+    box.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Asking AI to analyze your grades...';
+    fetch('/api/cgpa/ai-predict', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+        if (d && d.success && d.prediction) {
+            var html = d.prediction.split(/\n/).map(function(l) {
+                return l.trim() ? '<p style="margin:0 0 6px">' + aiEscape(l) + '</p>' : '';
+            }).join('');
+            box.innerHTML = '<div style="border-left:3px solid var(--brand);padding-left:12px">' + html + '</div>';
+        } else {
+            box.innerHTML = '<p style="color:#dc2626;margin:0">' + aiEscape((d && d.error) ? d.error : 'Could not generate prediction.') + '</p>';
+        }
+    })
+    .catch(function(err) {
+        box.innerHTML = '<p style="color:#dc2626;margin:0">Network error: ' + aiEscape(err.message) + '</p>';
+    });
+}
+
+function aiWhatif() {
+    Swal.fire({
+        title: 'What-If Advisor',
+        html:
+            '<div style="text-align:left;font-size:0.78rem;color:#475569;font-weight:600;margin-bottom:4px">Course name</div>' +
+            '<input id="wi-name" type="text" placeholder="e.g. PHY 301" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #cbd5e1;font-family:inherit;font-weight:600;margin-bottom:10px">' +
+            '<div style="text-align:left;font-size:0.78rem;color:#475569;font-weight:600;margin-bottom:4px">Credit units</div>' +
+            '<input id="wi-units" type="number" min="1" max="8" value="3" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #cbd5e1;font-family:inherit;font-weight:600;margin-bottom:10px">' +
+            '<div style="text-align:left;font-size:0.78rem;color:#475569;font-weight:600;margin-bottom:4px">Anticipated grade</div>' +
+            '<select id="wi-grade" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #cbd5e1;font-family:inherit;font-weight:600;margin-bottom:10px">' +
+            '<option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option><option value="E">E</option><option value="F">F</option></select>',
+        showCancelButton: true,
+        confirmButtonText: 'Check Impact',
+        showLoaderOnConfirm: true,
+        preConfirm: function() {
+            var name = document.getElementById('wi-name').value.trim() || 'Course';
+            var units = parseInt(document.getElementById('wi-units').value) || 3;
+            var grade = document.getElementById('wi-grade').value;
+            return fetch('/api/cgpa/ai-whatif', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ courseName: name, units: units, anticipatedGrade: grade })
+            }).then(function(r){ return r.json(); }).then(function(d) {
+                if (d && d.success) return d;
+                throw new Error((d && d.error) ? d.error : 'What-if failed');
+            });
+        }
+    }).then(function(res) {
+        if (res && res.isConfirmed && res.value) {
+            var v = res.value;
+            var box = document.getElementById('aiWhatifResult');
+            box.style.display = 'block';
+            box.innerHTML =
+                '<div style="background:white;border-radius:8px;padding:10px;margin-bottom:8px">' +
+                '<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:#475569;font-weight:600">Current CGPA</span><strong>' + v.currentCGPA + '</strong></div>' +
+                '<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:#475569;font-weight:600">New CGPA</span><strong style="color:' + (parseFloat(v.newCGPA) >= parseFloat(v.currentCGPA) ? '#16a34a' : '#dc2626') + '">' + v.newCGPA + '</strong></div>' +
+                '<div style="display:flex;justify-content:space-between"><span style="color:#475569;font-weight:600">Change</span><strong>' + (parseFloat(v.newCGPA) - parseFloat(v.currentCGPA)).toFixed(3) + '</strong></div>' +
+                '</div>' +
+                '<div style="background:#f1f5f9;border-radius:8px;padding:10px;font-size:0.82rem;line-height:1.55;color:#0f172a">' + v.advice.split(/\n/).map(function(l){ return l.trim() ? '<p style="margin:0 0 4px">' + aiEscape(l) + '</p>' : ''; }).join('') + '</div>';
+        }
+    }).catch(function(err) {
+        Swal.fire({ icon: 'error', text: err.message });
+    });
+}
+
+function openCGPAChat() {
+    var history = [];
+    var containerId = 'cgpa-chat-container-' + Date.now();
+    Swal.fire({
+        title: '<span style="font-weight:800;font-size:1rem">AI Academic Advisor</span>',
+        html:
+            '<div id="' + containerId + '" style="text-align:left;max-height:400px;overflow-y:auto;padding:4px;font-size:0.85rem"></div>' +
+            '<div id="cgpa-chat-pending" style="display:none;background:#f1f5f9;border-radius:10px;padding:10px;margin-bottom:8px;font-size:0.85rem"><i class="fas fa-spinner fa-spin"></i> Thinking...</div>' +
+            '<div style="display:flex;gap:6px;margin-top:8px">' +
+            '<input id="cgpa-chat-inp" type="text" placeholder="Ask about your CGPA..." style="flex:1;padding:11px 13px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-size:0.85rem;font-weight:600;outline:none">' +
+            '<button id="cgpa-chat-send" type="button" style="padding:11px 16px;border:none;background:linear-gradient(135deg,#0062ff,#003fcc);color:white;font-weight:700;border-radius:10px;cursor:pointer"><i class="fas fa-paper-plane"></i></button></div>' +
+            '<div style="font-size:0.68rem;color:#94a3b8;margin-top:6px;font-weight:600">AI can misread data. Verify important decisions.</div>',
+        showConfirmButton: false,
+        showCloseButton: true,
+        width: 500,
+        didOpen: function() {
+            var box = document.getElementById(containerId);
+            var pending = document.getElementById('cgpa-chat-pending');
+            box.innerHTML = '<div style="display:flex;gap:10px;margin-bottom:8px"><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#0062ff,#003fcc);display:flex;align-items:center;justify-content:center;color:white;font-size:0.7rem"><i class="fas fa-robot"></i></div><div style="flex:1;background:#f1f5f9;border-radius:10px;padding:10px;line-height:1.5">Hi! I\'m your CGPA advisor. Ask me anything — what-if a grade, how to raise your GPA, which semesters to focus on, etc.</div></div>';
+
+            function appnd(role, text, color) {
+                var div = document.createElement('div');
+                div.style.cssText = 'display:flex;gap:10px;margin-bottom:8px';
+                if (role === 'user') div.style.flexDirection = 'row-reverse';
+                div.innerHTML = role === 'user'
+                    ? '<div style="flex:1;background:#0062ff;color:white;border-radius:10px;padding:10px;line-height:1.5">' + aiEscape(text) + '</div>'
+                    : '<div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#0062ff,#003fcc);display:flex;align-items:center;justify-content:center;color:white;font-size:0.7rem;flex-shrink:0"><i class="fas fa-robot"></i></div><div style="flex:1;background:#f1f5f9;border-radius:10px;padding:10px;line-height:1.5;white-space:pre-wrap">' + aiEscape(text) + '</div>';
+                box.appendChild(div);
+                box.parentElement.scrollTop = box.parentElement.scrollHeight;
+            }
+
+            var inp = document.getElementById('cgpa-chat-inp');
+            var send = document.getElementById('cgpa-chat-send');
+
+            function ask(q) {
+                q = (q || '').trim();
+                if (!q) return;
+                appnd('user', q);
+                pending.style.display = 'block';
+                inp.value = '';
+                history.push({ role: 'user', text: q });
+                fetch('/api/cgpa/ai-chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: q, history: history })
+                })
+                .then(function(r){ return r.json().catch(function(){ return { success:false, error:'Bad response' }; }); })
+                .then(function(d) {
+                    pending.style.display = 'none';
+                    if (d && d.success && d.reply) {
+                        history.push({ role: 'assistant', text: d.reply });
+                        appnd('ai', d.reply);
+                    } else {
+                        appnd('ai', (d && d.error) ? 'Error: ' + d.error : 'Sorry, I could not process that.');
+                    }
+                })
+                .catch(function(err) {
+                    pending.style.display = 'none';
+                    appnd('ai', 'Network error: ' + (err.message || 'request failed'));
+                });
+            }
+            send.onclick = function(){ ask(inp.value); };
+            inp.onkeydown = function(e){ if (e.key === 'Enter') ask(inp.value); };
+            setTimeout(function(){ try { inp.focus(); } catch(e){} }, 100);
+        }
     });
 }
 <% } %>
