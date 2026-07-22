@@ -288,7 +288,7 @@ function escapeHtml(t) { return (t || '').replace(/&/g,'&amp;').replace(/</g,'&l
 if (document.querySelector('#tab-videos.active')) loadVideos();
 
 (function autoInit() {
-  var raw = '<%- (typeof subtopic !== "undefined" && subtopic && subtopic.content) ? subtopic.content.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, "\\n").replace(/\r/g, "") : "" %>';
+  var raw = '<%- (typeof subtopic !== "undefined" && subtopic && subtopic.content) ? subtopic.content.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, "\\n").replace(/\r/g, "").replace(/<\//gi, "\\x3C/") : "" %>';
   if (raw) {
     document.getElementById('contentDisplay').style.display = 'block';
     document.getElementById('explanationText').innerHTML = explainRender(raw);

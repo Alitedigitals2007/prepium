@@ -1163,7 +1163,6 @@ function aiEscape(s) { return (s == null ? '' : String(s)).replace(/&/g,'&').rep
 
 function aiPredictGpa() {
     var box = document.getElementById('aiPredictResult');
-    var btn = aiEscape('Predict next semester');
     box.style.display = 'block';
     box.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Asking AI to analyze your grades...';
     fetch('/api/cgpa/ai-predict', { method: 'POST', headers: { 'Content-Type': 'application/json' } })

@@ -257,7 +257,7 @@ function quickStart() {
             '<select id="qs-course" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #cbd5e1;font-family:inherit;font-weight:600;margin-bottom:10px">' +
             '<option value="">Select...</option>' +
             '<% if (courses && courses.length > 0) { courses.forEach(function(c) { %>' +
-            '<option value="<%= c.id %>" data-name="<%= c.course_name.replace(/'/g, '&#39;') %>"><%= c.course_name %></option>' +
+            '<option value="<%= c.id %>" data-name="<%- c.course_name.replace(/'/g, '&#39;') %>"><%= c.course_name %></option>' +
             '<% }); } %>' +
             '</select>' +
             '<div style="text-align:left;font-size:0.78rem;color:#475569;font-weight:600;margin-bottom:4px">Mode</div>' +
