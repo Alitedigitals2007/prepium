@@ -95,9 +95,7 @@
 
     <div class="quick-actions">
         <button class="q-btn" onclick="startSession()"><i class="fas fa-play-circle"></i> Study</button>
-        <button class="q-btn" onclick="showQuizSetup()"><i class="fas fa-question-circle"></i> Quiz</button>
         <button class="q-btn" onclick="openAIClass()"><i class="fas fa-robot"></i> AI Class</button>
-        <button class="q-btn" onclick="openFlashcards()"><i class="fas fa-layer-group"></i> Cards</button>
     </div>
 
     <div class="section-label">
@@ -255,15 +253,37 @@ function openSubtopic(id) {
     window.location.href = '/study/subtopic/' + id;
 }
 
+var activeSessionId = null;
 function startSession() {
-    Swal.fire({ title: 'Starting session...', html: 'Setting up your study environment', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
+    if (activeSessionId) {
+        Swal.fire({
+            title: 'End session?',
+            text: 'You have an active session. End it?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'End Session'
+        }).then(function(res) {
+            if (res.isConfirmed) {
+                fetch('/api/study/sessions/end', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId: activeSessionId, elapsedSeconds: 0 })
+                }).then(function() { activeSessionId = null; Swal.fire({ icon: 'success', text: 'Session ended', timer: 1000, showConfirmButton: false }); });
+            }
+        });
+        return;
+    }
     fetch('/api/study/sessions/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ courseId: courseId, courseName: courseName })
-    }).then(r => r.json()).then(function(d) {
-        if (d.success && d.redirect) window.location.href = d.redirect;
-        else Swal.fire({ icon: 'error', text: d.error || 'Could not start session' });
+    }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.success && d.session) {
+            activeSessionId = d.session.id;
+            Swal.fire({ icon: 'success', title: 'Session started!', text: 'Study time is now being tracked.', timer: 1500, showConfirmButton: false });
+        } else {
+            Swal.fire({ icon: 'error', text: d.error || 'Could not start session' });
+        }
     });
 }
 

@@ -2777,14 +2777,14 @@ Respond with ONLY valid JSON array (no markdown, no code fences):
     }
   }
 
-  // Fallback: try OpenRouter
+  // Fallback: try Mistral
   try {
-    const key = process.env.OPENROUTER_API_KEY;
+    const key = process.env.MISTRAL_API_KEY;
     if (key) {
-      const orResp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const orResp = await fetch('https://api.mistral.ai/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}`, 'HTTP-Referer': 'https://theprepium.vercel.app', 'X-Title': 'Prepium' },
-        body: JSON.stringify({ model: 'mistralai/mistral-7b-instruct:free', messages: [{ role: 'user', content: prompt }], temperature: 0.7 }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+        body: JSON.stringify({ model: 'mistral-small-latest', messages: [{ role: 'user', content: prompt }], temperature: 0.7 }),
         signal: AbortSignal.timeout(30000)
       });
       if (orResp.ok) {
@@ -4034,9 +4034,9 @@ app.post('/generate-ai-quiz', isAuth, upload.single('lecture_note'), async (req,
             }
         };
 
-        // OpenRouter chat completions format
-        const openRouterPayload = {
-            model: "openrouter/free", 
+        // Mistral chat completions format
+        const mistralPayload = {
+            model: "pixtral-large-latest", 
             messages: [
                 {
                     role: "user",
@@ -4053,7 +4053,7 @@ app.post('/generate-ai-quiz', isAuth, upload.single('lecture_note'), async (req,
             temperature: 0.15
         };
 
-        // The Router Queue Array (Ordered by your preference: Native first, OpenRouter last)
+        // The Router Queue Array (Ordered by your preference: Native first, Mistral last)
         const activeEndpoints = [
             { 
                 provider: 'gemini',
@@ -4066,9 +4066,9 @@ app.post('/generate-ai-quiz', isAuth, upload.single('lecture_note'), async (req,
                 key: process.env.GEMINI_API_KEY_SECONDARY 
             },
             { 
-                provider: 'openrouter',
-                url: 'https://openrouter.ai/api/v1/chat/completions', 
-                key: process.env.OPENROUTER_API_KEY 
+                provider: 'mistral',
+                url: 'https://api.mistral.ai/v1/chat/completions', 
+                key: process.env.MISTRAL_API_KEY 
             }
         ].filter(endpoint => endpoint.key); // Drops any slots missing keys from env
 
@@ -4091,12 +4091,10 @@ app.post('/generate-ai-quiz', isAuth, upload.single('lecture_note'), async (req,
                 if (currentTarget.provider === 'gemini') {
                     requestUrl = `${currentTarget.url}?key=${currentTarget.key}`;
                     requestBody = geminiPayload;
-                } else if (currentTarget.provider === 'openrouter') {
+                } else if (currentTarget.provider === 'mistral') {
                     requestUrl = currentTarget.url;
                     headers['Authorization'] = `Bearer ${currentTarget.key}`;
-                    headers['HTTP-Referer'] = 'https://theprepium.vercel.app'; 
-                    headers['X-Title'] = 'Prepium CBT';
-                    requestBody = openRouterPayload;
+                    requestBody = mistralPayload;
                 }
 
                 response = await fetch(requestUrl, {
@@ -4113,7 +4111,7 @@ app.post('/generate-ai-quiz', isAuth, upload.single('lecture_note'), async (req,
                     
                     if (currentTarget.provider === 'gemini') {
                         responseText = data.candidates[0].content.parts[0].text.trim();
-                    } else if (currentTarget.provider === 'openrouter') {
+                    } else if (currentTarget.provider === 'mistral') {
                         responseText = data.choices[0].message.content.trim();
                     }
                     break; // Exit loop on successful execution
@@ -4668,6 +4666,22 @@ function cleanAiText(t) {
 }
 
 async function studyPromptAI(prompt) {
+  const key = process.env.MISTRAL_API_KEY;
+  if (!key) return { text: 'AI not configured. Set MISTRAL_API_KEY in .env' };
+  try {
+    const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ model: 'mistral-small-latest', messages: [{ role: 'user', content: prompt }], temperature: 0.15 }),
+      signal: AbortSignal.timeout(45000)
+    });
+    if (!res.ok) { const t = await res.text().catch(()=>''); return { text: `AI error: ${res.status} ${t}` }; }
+    const data = await res.json();
+    return { text: cleanLatex(data.choices?.[0]?.message?.content) || 'AI returned empty response' };
+  } catch (e) { return { text: `AI error: ${e.message}` }; }
+}
+
+async function openRouterPrompt(prompt) {
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) return { text: 'AI not configured. Set OPENROUTER_API_KEY in .env' };
   try {
@@ -4883,7 +4897,7 @@ app.post('/api/study/subtopics/ai-generate', isAuth, requirePaid, async (req, re
   try {
     const { topicId, courseId, topicTitle, courseName } = req.body;
     const prompt = `For the topic "${topicTitle}" in the course "${courseName}", generate a list of 5-8 specific subtopics that should be studied. Return ONLY a JSON array of strings, nothing else. Example: ["Subtopic 1", "Subtopic 2", "Subtopic 3"]`;
-    const aiRes = await studyPromptAI(prompt);
+    const aiRes = await openRouterPrompt(prompt);
     if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
     let subtopics = [];
     try { const cleaned = aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim(); subtopics = JSON.parse(cleaned); } catch { subtopics = aiRes.text.split('\n').filter(l => l.trim().match(/^["\w]/)).map(l => l.replace(/^[\d.-\s"']+|["'\s]+$/g, '')).filter(Boolean); }
@@ -4929,7 +4943,7 @@ app.post('/api/study/subtopic/:id/content', isAuth, requirePaid, async (req, res
     const topic = await pool.query('SELECT * FROM study_topics WHERE id = $1', [s.topic_id]).catch(() => ({ rows: [] }));
     const topicName = topic.rows[0] ? (topic.rows[0].topic_name || topic.rows[0].title) : 'General';
     const prompt = `You are a university tutor. Explain the subtopic "${s.subtopic_name || s.title}" which is part of the topic "${topicName}". Provide a clear, detailed explanation with key points, examples, and study tips. Use PLAIN TEXT only. Do NOT use markdown. No asterisks, no hashtags, no backticks. Short paragraphs separated by blank lines. Use simple numbered points like "1) ..." if needed.`;
-    const aiRes = await studyPromptAI(prompt);
+    const aiRes = await openRouterPrompt(prompt);
     if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
     const clean = cleanAiText(aiRes.text);
     await pool.query('UPDATE study_subtopics SET content = $1 WHERE id = $2', [clean, req.params.id]);
@@ -4966,7 +4980,7 @@ app.post('/api/study/session/summarize', isAuth, requirePaid, async (req, res) =
     if (!notes || !notes.trim()) return res.json({ success: false, error: 'No notes to summarize.' });
     const ctx = courseName ? ` from a "${courseName}" study session` : '';
     const prompt = `Read these student study notes${ctx} and produce 3-6 short bullet points capturing the most important takeaways. Output PLAIN TEXT only. No markdown, no asterisks, no hashtags, no backticks. Each line should be a short key point. Lines separated by newline. Keep it concise (max 60 words total).\n\nNotes:\n"""${notes.slice(0, 4000)}"""\n\nKey points:`;
-    const aiRes = await studyPromptAI(prompt);
+    const aiRes = await openRouterPrompt(prompt);
     if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
     res.json({ success: true, summary: cleanAiText(aiRes.text) });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
@@ -5015,7 +5029,7 @@ app.post('/api/study/youtube/search', isAuth, requirePaid, async (req, res) => {
   try {
     const { query: searchQuery, subtopicId, courseId } = req.body;
     const prompt = `Generate a list of 5 YouTube video search queries for studying the topic: "${searchQuery}". Return ONLY a JSON array of strings with search terms. Example: ["term1", "term2", "term3", "term4", "term5"]`;
-    const aiRes = await studyPromptAI(prompt);
+    const aiRes = await openRouterPrompt(prompt);
     let terms = [];
     try { terms = JSON.parse(aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim()); } catch { terms = [searchQuery]; }
     const html = terms.map(function(t) {
@@ -5038,7 +5052,7 @@ app.post('/api/study/quiz/generate', isAuth, requirePaid, async (req, res) => {
     var qType = questionType || 'multiple_choice';
     var typeGuide = qType === 'mixed' ? 'Mix of multiple choice (with 4 options) and theory questions (options: [])' : (qType === 'theory' ? 'All theory questions (options: [], correctAnswer is the expected answer)' : 'All multiple choice with 4 options each');
     const prompt = `Generate ${count} ${typeGuide} about "${topicTitle || 'General Study'}" for university exam preparation. Each question: question text, options array (4 strings for MC, [] for theory), correctAnswer (letter for MC, text for theory), explanation. Return JSON array: [{ "question": "...", "options": ["A...","B...","C...","D..."], "correctAnswer": "A", "explanation": "..." }]`;
-    const aiRes = await studyPromptAI(prompt);
+    const aiRes = await openRouterPrompt(prompt);
     let questions = [];
     try { const cleaned = aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim(); questions = JSON.parse(cleaned); } catch { throw new Error('Failed to parse AI response. Please try again.'); }
     const attempt = await pool.query("INSERT INTO study_quiz_attempts (user_id, course_id, subtopic_id, question_type, question_count, time_limit, status) VALUES ($1, $2, $3, $4, $5, $6, 'in_progress') RETURNING *", [uid, courseId || 0, subtopicId || 0, questionType || 'multiple_choice', questions.length, timeLimit || 0]);
@@ -5096,7 +5110,7 @@ app.post('/api/study/flashcards/generate', isAuth, requirePaid, async (req, res)
     const { courseId, subtopicId, topicTitle } = req.body;
     const uid = req.session.user.id;
     const prompt = `Generate 10 flashcards for studying "${topicTitle || 'this course'}". Each flashcard: front (question/term), back (answer/definition), image (short visual scene description for illustration, 5-10 words). Return ONLY JSON: [{ "front": "...", "back": "...", "image": "..." }]`;
-    const aiRes = await studyPromptAI(prompt);
+    const aiRes = await openRouterPrompt(prompt);
     let cards = [];
     try { cards = JSON.parse(aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim()); } catch { throw new Error('Failed to generate flashcards'); }
     for (const c of cards) {
@@ -5114,8 +5128,8 @@ app.get('/api/study/flashcards', isAuth, async (req, res) => {
     const { courseId, subtopicId } = req.query;
     let q = 'SELECT * FROM study_flashcards WHERE user_id = $1';
     const p = [req.session.user.id];
-    if (courseId) { q += ' AND course_id = $2'; p.push(courseId); }
-    if (subtopicId) { q += ' AND subtopic_id = $' + p.length + 1; p.push(subtopicId); }
+    if (courseId) { q += ' AND course_id = $' + (p.length + 1); p.push(courseId); }
+    if (subtopicId) { q += ' AND subtopic_id = $' + (p.length + 1); p.push(subtopicId); }
     q += ' ORDER BY created_at DESC';
     const r = await pool.query(q, p);
     const flashcards = r.rows.map(function(f) { f.front = cleanLatex(f.front); f.back = cleanLatex(f.back); return f; });
