@@ -253,38 +253,8 @@ function openSubtopic(id) {
     window.location.href = '/study/subtopic/' + id;
 }
 
-var activeSessionId = null;
 function startSession() {
-    if (activeSessionId) {
-        Swal.fire({
-            title: 'End session?',
-            text: 'You have an active session. End it?',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'End Session'
-        }).then(function(res) {
-            if (res.isConfirmed) {
-                fetch('/api/study/sessions/end', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sessionId: activeSessionId, elapsedSeconds: 0 })
-                }).then(function() { activeSessionId = null; Swal.fire({ icon: 'success', text: 'Session ended', timer: 1000, showConfirmButton: false }); });
-            }
-        });
-        return;
-    }
-    fetch('/api/study/sessions/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ courseId: courseId, courseName: courseName })
-    }).then(function(r) { return r.json(); }).then(function(d) {
-        if (d.success && d.session) {
-            activeSessionId = d.session.id;
-            Swal.fire({ icon: 'success', title: 'Session started!', text: 'Study time is now being tracked.', timer: 1500, showConfirmButton: false });
-        } else {
-            Swal.fire({ icon: 'error', text: d.error || 'Could not start session' });
-        }
-    });
+    Swal.fire({ icon: 'info', title: 'Open a subtopic', text: 'Go to a subtopic to start a study session with timer.', confirmButtonText: 'OK' });
 }
 
 function showQuizSetup() {

@@ -4681,14 +4681,16 @@ async function studyPromptAI(prompt) {
   } catch (e) { return { text: `AI error: ${e.message}` }; }
 }
 
-async function openRouterPrompt(prompt) {
+async function openRouterPrompt(prompt, jsonMode) {
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) return { text: 'AI not configured. Set OPENROUTER_API_KEY in .env' };
   try {
+    const body = { model: 'mistralai/mistral-7b-instruct:free', messages: [{ role: 'user', content: prompt }], temperature: 0.15 };
+    if (jsonMode) body.response_format = { type: 'json_object' };
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}`, 'HTTP-Referer': 'https://theprepium.vercel.app', 'X-Title': 'Prepium' },
-      body: JSON.stringify({ model: 'mistralai/mistral-7b-instruct:free', messages: [{ role: 'user', content: prompt }], temperature: 0.15 }),
+      body: JSON.stringify(body),
       signal: AbortSignal.timeout(45000)
     });
     if (!res.ok) { const t = await res.text().catch(()=>''); return { text: `AI error: ${res.status} ${t}` }; }
@@ -4896,11 +4898,11 @@ app.get('/api/study/topics/:courseId', isAuth, async (req, res) => {
 app.post('/api/study/subtopics/ai-generate', isAuth, requirePaid, async (req, res) => {
   try {
     const { topicId, courseId, topicTitle, courseName } = req.body;
-    const prompt = `For the topic "${topicTitle}" in the course "${courseName}", generate a list of 5-8 specific subtopics that should be studied. Return ONLY a JSON array of strings, nothing else. Example: ["Subtopic 1", "Subtopic 2", "Subtopic 3"]`;
-    const aiRes = await openRouterPrompt(prompt);
+    const prompt = `For the topic "${topicTitle}" in the course "${courseName}", generate a list of 5-8 specific subtopics that should be studied. Return a JSON array of strings. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
+    const aiRes = await openRouterPrompt(prompt, true);
     if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
     let subtopics = [];
-    try { const cleaned = aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim(); subtopics = JSON.parse(cleaned); } catch { subtopics = aiRes.text.split('\n').filter(l => l.trim().match(/^["\w]/)).map(l => l.replace(/^[\d.-\s"']+|["'\s]+$/g, '')).filter(Boolean); }
+    try { subtopics = JSON.parse(aiRes.text.trim()); } catch { try { const cleaned = aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim(); subtopics = JSON.parse(cleaned); } catch { subtopics = aiRes.text.split('\n').filter(l => l.trim().match(/^["\w]/)).map(l => l.replace(/^[\d.-\s"']+|["'\s]+$/g, '')).filter(Boolean); } }
     const uid = req.session.user.id;
     const results = [];
     for (const st of subtopics.slice(0, 10)) {
@@ -5028,8 +5030,8 @@ app.get('/api/study/chat/history', isAuth, async (req, res) => {
 app.post('/api/study/youtube/search', isAuth, requirePaid, async (req, res) => {
   try {
     const { query: searchQuery, subtopicId, courseId } = req.body;
-    const prompt = `Generate a list of 5 YouTube video search queries for studying the topic: "${searchQuery}". Return ONLY a JSON array of strings with search terms. Example: ["term1", "term2", "term3", "term4", "term5"]`;
-    const aiRes = await openRouterPrompt(prompt);
+    const prompt = `Generate a list of 5 YouTube video search queries for studying the topic: "${searchQuery}". Return a JSON array of strings. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
+    const aiRes = await openRouterPrompt(prompt, true);
     let terms = [];
     try { terms = JSON.parse(aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim()); } catch { terms = [searchQuery]; }
     const html = terms.map(function(t) {
@@ -5051,10 +5053,10 @@ app.post('/api/study/quiz/generate', isAuth, requirePaid, async (req, res) => {
     const uid = req.session.user.id;
     var qType = questionType || 'multiple_choice';
     var typeGuide = qType === 'mixed' ? 'Mix of multiple choice (with 4 options) and theory questions (options: [])' : (qType === 'theory' ? 'All theory questions (options: [], correctAnswer is the expected answer)' : 'All multiple choice with 4 options each');
-    const prompt = `Generate ${count} ${typeGuide} about "${topicTitle || 'General Study'}" for university exam preparation. Each question: question text, options array (4 strings for MC, [] for theory), correctAnswer (letter for MC, text for theory), explanation. Return JSON array: [{ "question": "...", "options": ["A...","B...","C...","D..."], "correctAnswer": "A", "explanation": "..." }]`;
-    const aiRes = await openRouterPrompt(prompt);
+    const prompt = `Generate ${count} ${typeGuide} about "${topicTitle || 'General Study'}" for university exam preparation. Each question: question text, options array (4 strings for MC, [] for theory), correctAnswer (letter for MC, text for theory), explanation. Return a JSON array of objects. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
+    const aiRes = await openRouterPrompt(prompt, true);
     let questions = [];
-    try { const cleaned = aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim(); questions = JSON.parse(cleaned); } catch { throw new Error('Failed to parse AI response. Please try again.'); }
+    try { questions = JSON.parse(aiRes.text.trim()); } catch { try { const cleaned = aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim(); questions = JSON.parse(cleaned); } catch { throw new Error('Failed to parse AI response. Please try again.'); } }
     const attempt = await pool.query("INSERT INTO study_quiz_attempts (user_id, course_id, subtopic_id, question_type, question_count, time_limit, status) VALUES ($1, $2, $3, $4, $5, $6, 'in_progress') RETURNING *", [uid, courseId || 0, subtopicId || 0, questionType || 'multiple_choice', questions.length, timeLimit || 0]);
     const attemptId = attempt.rows[0].id;
     for (let i = 0; i < questions.length; i++) {
@@ -5109,10 +5111,10 @@ app.post('/api/study/flashcards/generate', isAuth, requirePaid, async (req, res)
   try {
     const { courseId, subtopicId, topicTitle } = req.body;
     const uid = req.session.user.id;
-    const prompt = `Generate 10 flashcards for studying "${topicTitle || 'this course'}". Each flashcard: front (question/term), back (answer/definition), image (short visual scene description for illustration, 5-10 words). Return ONLY JSON: [{ "front": "...", "back": "...", "image": "..." }]`;
-    const aiRes = await openRouterPrompt(prompt);
+    const prompt = `Generate 10 flashcards for studying "${topicTitle || 'this course'}". Each flashcard: front (question/term), back (answer/definition), image (short visual scene description for illustration, 5-10 words). Return a JSON array of objects. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
+    const aiRes = await openRouterPrompt(prompt, true);
     let cards = [];
-    try { cards = JSON.parse(aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim()); } catch { throw new Error('Failed to generate flashcards'); }
+    try { cards = JSON.parse(aiRes.text.trim()); } catch { try { const cleaned = aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim(); cards = JSON.parse(cleaned); } catch { throw new Error('Failed to generate flashcards'); } }
     for (const c of cards) {
       const front = cleanAiText(c.front);
       const back = cleanAiText(c.back);
