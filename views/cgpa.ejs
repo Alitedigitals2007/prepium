@@ -1220,8 +1220,8 @@ function openTranscript() {
         html += '</div>';
 
         html += '<div style="margin-top:10px;display:flex;gap:8px;">';
-        html += '<button onclick="printTranscript()" style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--brand-gradient);color:white;font-weight:700;cursor:pointer;"><i class="fas fa-print"></i> Print</button>';
-        html += '<button onclick="downloadTranscriptPDF()" style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:#f1f5f9;color:var(--text-dark);font-weight:700;cursor:pointer;"><i class="fas fa-file-pdf"></i> PDF</button>';
+        html += '<button onclick="downloadTranscript()" style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--brand-gradient);color:white;font-weight:700;cursor:pointer;"><i class="fas fa-download"></i> Download Transcript</button>';
+        html += '<button onclick="printTranscript()" style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:#f1f5f9;color:var(--text-dark);font-weight:700;cursor:pointer;"><i class="fas fa-print"></i> Print</button>';
         html += '</div></div>';
 
         Swal.fire({ title: '', html: html, showConfirmButton: false, width: 420, customClass: { popup: 'swal-wide' } });
@@ -1230,38 +1230,27 @@ function openTranscript() {
 
 function printTranscript() {
     generateFullTranscript(function(html) {
-        var iframe = document.createElement('iframe');
-        iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;border:none';
-        document.body.appendChild(iframe);
-        var doc = iframe.contentDocument || iframe.contentWindow.document;
-        doc.open(); doc.write(html); doc.close();
-        setTimeout(function() {
-            iframe.contentWindow.print();
-            setTimeout(function() { document.body.removeChild(iframe); }, 1000);
-        }, 800);
+        var w = window.open('', '_blank', 'width=794,height=600,scrollbars=yes');
+        if (!w) { Swal.fire({ icon: 'error', text: 'Pop-up blocked. Allow pop-ups and try again.' }); return; }
+        w.document.write(html);
+        w.document.close();
+        w.focus();
+        setTimeout(function() { w.print(); }, 500);
     });
 }
 
-function downloadTranscriptPDF() {
+function downloadTranscript() {
     generateFullTranscript(function(html) {
-        var tmp = document.createElement('div');
-        tmp.innerHTML = html;
-        tmp.id = 'transcript-pdf-export';
-        tmp.style.cssText = 'position:fixed;left:-9999px;top:0;width:210mm;background:white;z-index:-1';
-        document.body.appendChild(tmp);
-        var opt = {
-            margin: [8,10,8,10],
-            filename: 'prepium_academic_transcript.pdf',
-            image: { type:'jpeg', quality:1 },
-            html2canvas: { scale:2, useCORS:true, scrollX:0, scrollY:0, width:794, windowWidth:794 },
-            jsPDF: { unit:'mm', format:'a4', orientation:'portrait' }
-        };
-        html2pdf().set(opt).from(tmp).save().then(function() {
-            if (document.body.contains(tmp)) document.body.removeChild(tmp);
-        }).catch(function() {
-            if (document.body.contains(tmp)) document.body.removeChild(tmp);
-            Swal.fire({ icon: 'error', text: 'PDF generation failed. Try Print instead.' });
-        });
+        var blob = new Blob([html], { type: 'text/html' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'prepium_academic_transcript.html';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        Swal.fire({ icon: 'success', text: 'Transcript downloaded! Open in your browser and use Ctrl+P to print.', timer: 3000, showConfirmButton: false });
     });
 }
 
