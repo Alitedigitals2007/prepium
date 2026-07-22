@@ -4675,12 +4675,18 @@ async function studyPromptAI(prompt) {
 app.get('/study', isAuth, requirePaid, async (req, res) => {
   try {
     const uid = req.session.user.id;
-    const [coursesRes, progressRes, sessionsRes] = await Promise.all([
+    const [coursesRes, progressRes, sessionsRes, activeRes, streakRes, todayRes] = await Promise.all([
       pool.query('SELECT * FROM study_courses WHERE user_id = $1 ORDER BY course_name ASC', [uid]),
       pool.query('SELECT * FROM study_progress WHERE user_id = $1 ORDER BY last_studied DESC', [uid]),
-      pool.query('SELECT * FROM study_sessions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 10', [uid])
+      pool.query("SELECT * FROM study_sessions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 10", [uid]),
+      pool.query("SELECT * FROM study_sessions WHERE user_id = $1 AND status = 'active' LIMIT 1", [uid]),
+      pool.query('SELECT current_streak FROM login_streaks WHERE user_id = $1', [uid]),
+      pool.query("SELECT COUNT(*) as today_sessions, COALESCE(SUM(elapsed_seconds), 0) as today_seconds FROM study_sessions WHERE user_id = $1 AND status = 'completed' AND session_date = CURRENT_DATE", [uid])
     ]);
-    res.render('study', { user: req.session.user, courses: coursesRes.rows, progress: progressRes.rows, recentSessions: sessionsRes.rows, subjects: [] });
+    const activeSession = activeRes.rows[0] || null;
+    const streak = parseInt(streakRes.rows[0]?.current_streak) || 0;
+    const todayStats = { sessions: parseInt(todayRes.rows[0]?.today_sessions) || 0, seconds: parseInt(todayRes.rows[0]?.today_seconds) || 0 };
+    res.render('study', { user: req.session.user, courses: coursesRes.rows, progress: progressRes.rows, recentSessions: sessionsRes.rows, activeSession, streak, todayStats, subjects: [] });
   } catch (err) { console.error(err); res.status(500).send('Error loading study page'); }
 });
 

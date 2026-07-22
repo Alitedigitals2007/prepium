@@ -23,6 +23,23 @@
         .stat-chip i { font-size: 1.15rem; color: var(--brand); margin-bottom: 6px; display: block; }
         .stat-chip .num { font-size: 1.3rem; font-weight: 800; line-height: 1.2; }
         .stat-chip .lbl { font-size: 0.6rem; color: var(--text-sub); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+        .stat-chip.streak-chip i { color: #f97316; }
+        .stat-chip.streak-chip .num { color: #f97316; }
+
+        .active-session-card { margin: 0 1.5rem 1rem; background: linear-gradient(135deg,#1e293b,#0f172a); border-radius: var(--radius-lg); padding: 18px 20px; color: white; display: flex; align-items: center; gap: 14px; cursor: pointer; box-shadow: 0 8px 24px rgba(15,23,42,0.3); }
+        .active-session-card:active { transform: scale(0.98); }
+        .active-session-card .as-icon { width: 46px; height: 46px; border-radius: var(--radius-sm); background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
+        .active-session-card .as-info { flex: 1; }
+        .active-session-card .as-info h4 { margin: 0 0 2px; font-size: 0.85rem; font-weight: 800; }
+        .active-session-card .as-info p { margin: 0; font-size: 0.7rem; opacity: 0.7; font-weight: 600; }
+        .active-session-card .as-resume { padding: 8px 16px; border-radius: 20px; border: none; background: #22c55e; color: white; font-weight: 800; font-size: 0.7rem; cursor: pointer; }
+
+        .quick-start { margin: 0 1.5rem 1rem; background: var(--brand-gradient); border-radius: var(--radius-lg); padding: 20px; color: white; position: relative; overflow: hidden; cursor: pointer; }
+        .quick-start:active { transform: scale(0.98); }
+        .quick-start::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at top right, rgba(255,255,255,0.15) 0%, transparent 60%); }
+        .quick-start h3 { margin: 0 0 4px; font-size: 1rem; font-weight: 800; position: relative; }
+        .quick-start p { margin: 0 0 12px; font-size: 0.72rem; opacity: 0.85; font-weight: 600; position: relative; }
+        .quick-start .qs-btn { padding: 10px 24px; border-radius: 20px; border: none; background: white; color: var(--brand); font-weight: 800; font-size: 0.78rem; cursor: pointer; position: relative; display: inline-flex; align-items: center; gap: 8px; }
 
         .tab-bar { display: flex; gap: 6px; padding: 0.5rem 1.5rem; }
         .tab-pill { flex: 1; padding: 12px; border-radius: var(--radius-sm); background: #f1f5f9; border: none; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 0.78rem; color: var(--text-sub); transition: var(--transition); display: flex; align-items: center; justify-content: center; gap: 6px; }
@@ -82,6 +99,9 @@
     if (typeof progress !== 'undefined' && progress) {
         progress.forEach(function(p) { totalSessions += p.total_sessions || 0; totalMins += p.total_minutes || 0; });
     }
+    var streak = typeof streak !== 'undefined' ? streak : 0;
+    var todaySecs = typeof todayStats !== 'undefined' && todayStats ? todayStats.seconds : 0;
+    var todaySessions = typeof todayStats !== 'undefined' && todayStats ? todayStats.sessions : 0;
     %>
 
     <div class="stats-row">
@@ -93,13 +113,30 @@
         <div class="stat-chip">
             <i class="fas fa-clock"></i>
             <div class="num"><%= Math.floor(totalMins / 60) %>h <%= totalMins % 60 %>m</div>
-            <div class="lbl">Studied</div>
+            <div class="lbl">Total</div>
         </div>
-        <div class="stat-chip">
-            <i class="fas fa-check-circle"></i>
-            <div class="num"><%= totalSessions %></div>
-            <div class="lbl">Sessions</div>
+        <div class="stat-chip streak-chip">
+            <i class="fas fa-fire"></i>
+            <div class="num"><%= streak %></div>
+            <div class="lbl">Day Streak</div>
         </div>
+    </div>
+
+    <% if (typeof activeSession !== 'undefined' && activeSession) { %>
+    <div class="active-session-card" onclick="resumeSession(<%= activeSession.id %>)">
+        <div class="as-icon"><i class="fas fa-play-circle"></i></div>
+        <div class="as-info">
+            <h4><%= activeSession.course_name %></h4>
+            <p>Started <%= new Date(activeSession.created_at).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) %></p>
+        </div>
+        <button class="as-resume"><i class="fas fa-play"></i> Resume</button>
+    </div>
+    <% } %>
+
+    <div class="quick-start" onclick="quickStart()">
+        <h3><i class="fas fa-bolt"></i> Quick Start</h3>
+        <p>Pick a course and start studying right away</p>
+        <button class="qs-btn"><i class="fas fa-play"></i> Go</button>
     </div>
 
     <div class="tab-bar">
@@ -203,6 +240,55 @@ function importTimetable() {
                 } else {
                     Swal.fire({ icon: 'error', title: 'Error', text: d.error });
                 }
+            });
+        }
+    });
+}
+
+function resumeSession(id) {
+    window.location.href = '/study/session/' + id;
+}
+
+function quickStart() {
+    Swal.fire({
+        title: 'Quick Start',
+        html:
+            '<div style="text-align:left;font-size:0.78rem;color:#475569;font-weight:600;margin-bottom:4px">Pick a course</div>' +
+            '<select id="qs-course" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #cbd5e1;font-family:inherit;font-weight:600;margin-bottom:10px">' +
+            '<option value="">Select...</option>' +
+            '<% if (courses && courses.length > 0) { courses.forEach(function(c) { %>' +
+            '<option value="<%= c.id %>" data-name="<%= c.course_name.replace(/'/g, '&#39;') %>"><%= c.course_name %></option>' +
+            '<% }); } %>' +
+            '</select>' +
+            '<div style="text-align:left;font-size:0.78rem;color:#475569;font-weight:600;margin-bottom:4px">Mode</div>' +
+            '<select id="qs-mode" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #cbd5e1;font-family:inherit;font-weight:600">' +
+            '<option value="study" selected>Study Session</option>' +
+            '<option value="quiz">Quiz</option>' +
+            '<option value="flashcard">Flashcards</option></select>',
+        showCancelButton: true,
+        confirmButtonText: 'Start',
+        preConfirm: function() {
+            var sel = document.getElementById('qs-course');
+            var cid = sel.value;
+            var name = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].getAttribute('data-name') || '' : '';
+            var mode = document.getElementById('qs-mode').value;
+            if (!cid) { Swal.showValidationMessage('Select a course'); return; }
+            return { courseId: cid, courseName: name, mode: mode };
+        }
+    }).then(function(res) {
+        if (!res || !res.isConfirmed || !res.value) return;
+        var v = res.value;
+        if (v.mode === 'quiz') window.location.href = '/study/course/' + v.courseId;
+        else if (v.mode === 'flashcard') window.location.href = '/study/flashcards/' + v.courseId;
+        else {
+            Swal.fire({ title: 'Starting...', html: 'Setting up', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
+            fetch('/api/study/sessions/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ courseId: parseInt(v.courseId), courseName: v.courseName })
+            }).then(function(r){ return r.json(); }).then(function(d) {
+                if (d.success && d.redirect) window.location.href = d.redirect;
+                else Swal.fire({ icon: 'error', text: d.error || 'Failed to start' });
             });
         }
     });

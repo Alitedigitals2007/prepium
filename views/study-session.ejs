@@ -120,6 +120,8 @@
             <button class="tab-pill" onclick="switchTab('notes', this)"><i class="fas fa-pen"></i> Notes</button>
             <button class="tab-pill" onclick="switchTab('youtube', this)"><i class="fas fa-video"></i> Videos</button>
             <button class="tab-pill" onclick="switchTab('flashcards', this)"><i class="fas fa-layer-group"></i> Cards</button>
+            <button class="tab-pill" onclick="switchTab('quiz', this)"><i class="fas fa-question-circle"></i> Quiz</button>
+            <button class="tab-pill" onclick="switchTab('summary', this)"><i class="fas fa-list-check"></i> Summary</button>
         </div>
 
         <!-- AI Chat Tab -->
@@ -170,6 +172,49 @@
                     <i class="fas fa-layer-group" style="font-size:2rem;display:block;margin-bottom:8px;color:#e2e8f0"></i>
                     Generate flashcards to study
                 </div>
+            </div>
+        </div>
+
+        <!-- Quiz Tab -->
+        <div class="tab-content" id="tab-quiz">
+            <div id="sessionQuizContainer" style="text-align:center;padding:1rem">
+                <div style="background:white;border:1px solid var(--border);border-radius:var(--radius-sm);padding:2rem 1.5rem">
+                    <i class="fas fa-question-circle" style="font-size:2.2rem;color:#e2e8f0;display:block;margin-bottom:10px"></i>
+                    <h3 style="font-size:0.9rem;font-weight:800;margin:0 0 6px">Test yourself</h3>
+                    <p style="font-size:0.75rem;color:var(--text-sub);font-weight:600;margin:0 0 14px">Generate a quiz for <strong><%= session ? session.course_name : 'this course' %></strong></p>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+                        <button onclick="sessionQuiz(5)" style="padding:10px 20px;border-radius:10px;border:1px solid var(--border);background:white;font-family:inherit;font-weight:700;font-size:0.78rem;cursor:pointer">5 Qs</button>
+                        <button onclick="sessionQuiz(10)" style="padding:10px 20px;border-radius:10px;border:1px solid var(--border);background:white;font-family:inherit;font-weight:700;font-size:0.78rem;cursor:pointer">10 Qs</button>
+                        <button onclick="sessionQuiz(15)" style="padding:10px 20px;border-radius:10px;border:1px solid var(--border);background:white;font-family:inherit;font-weight:700;font-size:0.78rem;cursor:pointer">15 Qs</button>
+                        <button onclick="sessionQuiz(20)" style="padding:10px 20px;border-radius:10px;border:1px solid var(--border);background:white;font-family:inherit;font-weight:700;font-size:0.78rem;cursor:pointer">20 Qs</button>
+                    </div>
+                    <div style="margin-top:10px">
+                        <select id="sq-type" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);font-family:inherit;font-weight:600;font-size:0.72rem">
+                            <option value="mixed">Mixed</option>
+                            <option value="multiple_choice">Multiple Choice</option>
+                            <option value="theory">Theory</option>
+                        </select>
+                        <select id="sq-time" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);font-family:inherit;font-weight:600;font-size:0.72rem;margin-left:6px">
+                            <option value="0">Untimed</option>
+                            <option value="5">5 min</option>
+                            <option value="10">10 min</option>
+                            <option value="15">15 min</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Tab -->
+        <div class="tab-content" id="tab-summary">
+            <div style="background:white;border:1px solid var(--border);border-radius:var(--radius-sm);padding:1rem 1.2rem">
+                <h3 style="font-size:0.85rem;font-weight:800;margin:0 0 10px;display:flex;align-items:center;gap:8px"><i class="fas fa-list-check" style="color:var(--brand)"></i> Session Summary</h3>
+                <textarea id="summaryArea" placeholder="What did you learn? Write key takeaways here..." style="width:100%;min-height:160px;padding:11px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:0.82rem;font-weight:500;line-height:1.6;outline:none;resize:vertical"><%= session ? (session.notes || "").replace(/'/g, "\\'").replace(/\n/g, "\\n") : '' %></textarea>
+                <div style="display:flex;gap:8px;margin-top:10px">
+                    <button onclick="saveSummary()" style="flex:1;padding:11px;border:none;background:var(--brand-gradient);color:white;border-radius:10px;font-weight:700;font-size:0.78rem;cursor:pointer"><i class="fas fa-save"></i> Save Summary</button>
+                    <button onclick="aiSessionSummary()" style="padding:11px 16px;border:none;background:#0f172a;color:white;border-radius:10px;font-weight:700;font-size:0.78rem;cursor:pointer"><i class="fas fa-magic"></i> AI Summarize</button>
+                </div>
+                <div id="summaryAIResult" style="display:none;margin-top:10px;padding:10px;background:#f1f5f9;border-radius:8px;font-size:0.82rem;line-height:1.55;color:#0f172a"></div>
             </div>
         </div>
 
@@ -435,6 +480,67 @@ function prevFlashcard() {
     if (flashcards.length === 0) return;
     fcIndex = (fcIndex - 1 + flashcards.length) % flashcards.length;
     renderFlashcard();
+}
+
+function sessionQuiz(count) {
+    var type = document.getElementById('sq-type') ? document.getElementById('sq-type').value : 'mixed';
+    var time = document.getElementById('sq-time') ? parseInt(document.getElementById('sq-time').value) : 0;
+    var container = document.getElementById('sessionQuizContainer');
+    container.innerHTML = '<div style="text-align:center;padding:2rem"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:var(--brand)"></i><p style="font-size:0.82rem;font-weight:600;color:var(--text-sub);margin-top:10px">Generating ' + count + ' questions...</p></div>';
+    fetch('/api/study/quiz/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ courseId: courseId, topicTitle: courseName, questionType: type, questionCount: count, timeLimit: time })
+    }).then(function(r){ return r.json(); }).then(function(d) {
+        if (d && d.success && d.attempt) {
+            window.location.href = '/study/quiz/' + d.attempt.id;
+        } else {
+            container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-sub)">' +
+                '<i class="fas fa-exclamation-triangle" style="font-size:2rem;color:var(--danger);display:block;margin-bottom:10px"></i>' +
+                '<p style="font-size:0.82rem;font-weight:600">' + ((d && d.error) ? d.error : 'Could not generate quiz') + '</p>' +
+                '<button onclick="location.reload()" style="padding:10px 20px;border-radius:10px;border:none;background:var(--brand-gradient);color:white;font-weight:700;cursor:pointer">Try Again</button></div>';
+        }
+    }).catch(function(err) {
+        container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-sub)"><p style="font-size:0.82rem;font-weight:600;color:var(--danger)">Network error</p><button onclick="location.reload()" style="padding:10px 20px;border-radius:10px;border:none;background:var(--brand-gradient);color:white;font-weight:700;cursor:pointer">Retry</button></div>';
+    });
+}
+
+function saveSummary() {
+    var summary = document.getElementById('summaryArea').value;
+    var notes = document.getElementById('notesArea').value;
+    var merged = (notes || '') + (summary ? (notes ? '\n\n--- Summary ---\n' + summary : summary) : '');
+    fetch('/api/study/sessions/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: sessionId, elapsedSeconds: elapsedSeconds, notes: merged })
+    }).then(function(r){ return r.json(); }).then(function(d) {
+        if (d && d.success) Swal.fire({ icon: 'success', title: 'Saved!', timer: 1000, showConfirmButton: false });
+        else Swal.fire({ icon: 'error', text: (d && d.error) ? d.error : 'Could not save' });
+    });
+}
+
+function aiSessionSummary() {
+    var notes = document.getElementById('notesArea').value;
+    if (!notes || !notes.trim()) return Swal.fire({ icon: 'warning', text: 'Write some notes first before summarizing.' });
+    var box = document.getElementById('summaryAIResult');
+    box.style.display = 'block';
+    box.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing notes...';
+    fetch('/api/study/session/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: notes, courseName: courseName })
+    }).then(function(r){ return r.json().catch(function(){ return { success:false, error:'Bad response' }; }); })
+    .then(function(d) {
+        if (d && d.success && d.summary) {
+            box.innerHTML = '<div style="white-space:pre-wrap">' + (d.summary || '').replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>') + '</div>';
+            var ta = document.getElementById('summaryArea');
+            if (ta) ta.value = (ta.value ? ta.value + '\n' : '') + d.summary;
+        } else {
+            box.innerHTML = '<span style="color:#dc2626">' + ((d && d.error) ? d.error : 'Could not summarize.') + '</span>';
+        }
+    }).catch(function(err) {
+        box.innerHTML = '<span style="color:#dc2626">' + err.message + '</span>';
+    });
 }
 
 function endSession() {
