@@ -1183,12 +1183,11 @@ function openTranscript() {
         if (d.error) { Swal.fire({ icon: 'error', text: d.error }); return; }
         if (!d.semesters || d.semesters.length === 0) { Swal.fire({ icon: 'info', text: 'No courses logged yet.' }); return; }
         var html = buildTranscriptHtml(d);
-        var w = window.open('', '_blank', 'width=794,height=600,scrollbars=yes');
+        var w = window.open('about:blank', '_blank', 'width=794,height=600,scrollbars=yes');
         if (!w) { Swal.fire({ icon: 'error', text: 'Pop-up blocked. Allow pop-ups and try again.' }); return; }
         w.document.write(html);
         w.document.close();
         w.focus();
-        setTimeout(function() { w.print(); }, 600);
     })
     .catch(function(err) { Swal.close(); Swal.fire({ icon: 'error', text: 'Failed: ' + (err.message || 'network error') }); });
 }
@@ -1286,6 +1285,7 @@ function buildTranscriptHtml(d) {
         'It serves as a personal academic summary and is not an official university-issued document. ' +
         '<br>Reference: ' + (d.refNumber || 'N/A') + ' &nbsp;|&nbsp; Generated: ' + dateStr + ' &nbsp;|&nbsp; Prepium CGPA Tracker' +
         '</div>' +
+        '<script>window.addEventListener("load",function(){setTimeout(function(){window.print()},300)})<' + '/script>' +
         '</body></html>';
 
     return html;
