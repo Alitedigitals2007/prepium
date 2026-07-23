@@ -617,7 +617,7 @@
 
 <!-- Transcript -->
 <div class="analytics reveal" style="margin-top:10px;">
-    <button onclick="openTranscript()" style="width:100%;background:none;border:none;cursor:pointer;padding:0;text-align:left;font-family:inherit;">
+    <button onclick="downloadTranscript()" style="width:100%;background:none;border:none;cursor:pointer;padding:0;text-align:left;font-family:inherit;">
         <div class="section-head">
             <div class="section-label"><i class="fas fa-file-alt"></i> Transcript</div>
             <span style="font-size:0.7rem;color:var(--brand);font-weight:700;">View <i class="fas fa-arrow-right" style="font-size:0.6rem;"></i></span>
@@ -1173,8 +1173,8 @@ function calcTarget() {
     });
 }
 
-/* ── Transcript Print/View ───────────────── */
-function openTranscript() {
+/* ── Transcript Download ─────────────────── */
+function downloadTranscript() {
     Swal.fire({ title: 'Generating Transcript...', html: 'Preparing your document', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
     fetch('/api/cgpa/transcript')
     .then(function(r) { return r.json(); })
@@ -1183,11 +1183,15 @@ function openTranscript() {
         if (d.error) { Swal.fire({ icon: 'error', text: d.error }); return; }
         if (!d.semesters || d.semesters.length === 0) { Swal.fire({ icon: 'info', text: 'No courses logged yet.' }); return; }
         var html = buildTranscriptHtml(d);
-        var w = window.open('about:blank', '_blank', 'width=794,height=600,scrollbars=yes');
-        if (!w) { Swal.fire({ icon: 'error', text: 'Pop-up blocked. Allow pop-ups and try again.' }); return; }
-        w.document.write(html);
-        w.document.close();
-        w.focus();
+        var blob = new Blob([html], { type: 'text/html' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'Transcript_' + (d.student.name || 'Student').replace(/\s+/g, '_') + '.html';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
     })
     .catch(function(err) { Swal.close(); Swal.fire({ icon: 'error', text: 'Failed: ' + (err.message || 'network error') }); });
 }
@@ -1285,7 +1289,6 @@ function buildTranscriptHtml(d) {
         'It serves as a personal academic summary and is not an official university-issued document. ' +
         '<br>Reference: ' + (d.refNumber || 'N/A') + ' &nbsp;|&nbsp; Generated: ' + dateStr + ' &nbsp;|&nbsp; Prepium CGPA Tracker' +
         '</div>' +
-        '<script>window.addEventListener("load",function(){setTimeout(function(){window.print()},300)})<' + '/script>' +
         '</body></html>';
 
     return html;
@@ -1293,7 +1296,7 @@ function buildTranscriptHtml(d) {
 
 /* ── Export button → Transcript ──────────── */
 var pdfBtn = document.getElementById('pdfBtn');
-if (pdfBtn) pdfBtn.addEventListener('click', openTranscript);
+if (pdfBtn) pdfBtn.addEventListener('click', downloadTranscript);
 
 /* ── CGPA AI Functions ──────────────────── */
 function aiEscape(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
