@@ -22,7 +22,7 @@
         .hero-card .meta-row i { margin-right: 4px; }
 
         .quick-actions { display: flex; gap: 8px; padding: 0 1.5rem 1rem; }
-        .q-btn { flex: 1; padding: 12px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 0.72rem; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: var(--transition); background: white; border: 1px solid var(--border); color: var(--text-dark); }
+        .q-btn { flex: 1; padding: 12px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 0.72rem; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: var(--transition); background: var(--surface-solid); border: 1px solid var(--border); color: var(--text-dark); }
         .q-btn i { font-size: 1rem; color: var(--brand); }
         .q-btn:active { transform: scale(0.95); }
         .q-btn.primary { background: var(--brand-gradient); color: white; border: none; }
@@ -32,7 +32,7 @@
         .section-label { font-size: 0.62rem; font-weight: 800; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; padding: 0.5rem 1.5rem 0.5rem; display: flex; justify-content: space-between; align-items: center; }
         .section-label .action-link { font-size: 0.68rem; text-transform: none; letter-spacing: 0; color: var(--brand); cursor: pointer; font-weight: 700; background: none; border: none; font-family: inherit; }
 
-        .topic-item { margin: 0 1.5rem 8px; background: white; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; transition: var(--transition); }
+        .topic-item { margin: 0 1.5rem 8px; background: var(--surface-solid); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; transition: var(--transition); }
         .topic-header { display: flex; align-items: center; gap: 10px; padding: 14px 14px; cursor: pointer; }
         .topic-header:active { background: #fafbfc; }
         .topic-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--brand); flex-shrink: 0; }
@@ -112,8 +112,8 @@
 
     <div id="topicsContainer">
         <% if (topics && topics.length > 0) { %>
-            <% topics.forEach(function(t) { %>
-            <div class="topic-item" data-topic-id="<%= t.id %>">
+            <% topics.forEach(function(t, i) { %>
+            <div class="topic-item reveal" data-topic-id="<%= t.id %>" style="animation-delay:<%= (i % 5) * 0.07 %>s">
                 <div class="topic-header" onclick="toggleSubtopicList(this)">
                     <div class="topic-dot <%= t.completed ? 'completed' : '' %>"></div>
                     <div class="topic-name" style="flex:1;min-width:0">
@@ -133,8 +133,8 @@
                 </div>
                 <div class="subtopic-list">
                     <% if (t.subtopics && t.subtopics.length > 0) { %>
-                        <% t.subtopics.forEach(function(st) { %>
-                        <div class="subtopic-chip" data-subtopic-id="<%= st.id %>" onclick="openSubtopic(<%= st.id %>)">
+                        <% t.subtopics.forEach(function(st, j) { %>
+                        <div class="subtopic-chip reveal" data-subtopic-id="<%= st.id %>" onclick="openSubtopic(<%= st.id %>)" style="animation-delay:<%= (j % 5) * 0.05 %>s">
                             <span class="st-name"><%= st.subtopic_name || st.title %></span>
                             <span class="status-badge <%= st.status %>"><%= st.status %></span>
                             <div class="chip-actions" onclick="event.stopPropagation()">

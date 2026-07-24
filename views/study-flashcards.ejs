@@ -15,22 +15,22 @@
         .page-content { padding: 0 1.5rem 1.5rem; }
 
         .fc-stats { display: flex; gap: 8px; padding: 1rem 0; }
-        .fc-stats .stat { flex: 1; background: white; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; text-align: center; }
+        .fc-stats .stat { flex: 1; background: var(--surface-solid); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; text-align: center; }
         .fc-stats .stat .num { font-size: 1.15rem; font-weight: 800; }
         .fc-stats .stat .lbl { font-size: 0.58rem; color: var(--text-sub); font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
 
-        .fc-card { background: white; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 3rem 1.5rem; text-align: center; min-height: 260px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.4s var(--ease-out); margin-bottom: 12px; box-shadow: var(--shadow-sm); position: relative; }
+        .fc-card { background: var(--surface-solid); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 3rem 1.5rem; text-align: center; min-height: 260px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.4s var(--ease-out); margin-bottom: 12px; box-shadow: var(--shadow-sm); position: relative; }
         .fc-card:active { transform: scale(0.98); }
         .fc-card .fc-side { width: 100%; }
         .fc-card .fc-front { font-size: 1.05rem; font-weight: 700; line-height: 1.5; }
         .fc-card .fc-back { font-size: 0.95rem; font-weight: 600; color: var(--text-sub); line-height: 1.5; }
         .fc-card .tap-hint { position: absolute; bottom: 16px; font-size: 0.6rem; color: var(--text-muted); font-weight: 600; }
         .fc-card .fc-actions { position: absolute; top: 12px; right: 12px; display: flex; gap: 4px; }
-        .fc-card .fc-actions button { width: 30px; height: 30px; border-radius: 8px; border: none; background: #f1f5f9; cursor: pointer; color: var(--text-sub); font-size: 0.7rem; display: flex; align-items: center; justify-content: center; }
+        .fc-card .fc-actions button { width: 30px; height: 30px; border-radius: 8px; border: none; background: var(--bg); cursor: pointer; color: var(--text-sub); font-size: 0.7rem; display: flex; align-items: center; justify-content: center; }
         .fc-card .fc-actions button:hover { background: #fee2e2; color: var(--danger); }
 
         .fc-nav { display: flex; gap: 8px; justify-content: center; }
-        .fc-nav button { padding: 12px 20px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: white; font-family: inherit; font-weight: 700; font-size: 0.78rem; cursor: pointer; color: var(--text-dark); transition: var(--transition); display: flex; align-items: center; gap: 6px; }
+        .fc-nav button { padding: 12px 20px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface-solid); font-family: inherit; font-weight: 700; font-size: 0.78rem; cursor: pointer; color: var(--text-dark); transition: var(--transition); display: flex; align-items: center; gap: 6px; }
         .fc-nav button:active { transform: scale(0.95); }
         .fc-nav button.primary { background: var(--brand-gradient); color: white; border: none; }
 
@@ -67,6 +67,19 @@
             </div>
         </div>
 
+        <div class="count-picker" id="countPicker">
+            <button class="count-pill" onclick="setCardCount(5)">5</button>
+            <button class="count-pill active" onclick="setCardCount(10)">10</button>
+            <button class="count-pill" onclick="setCardCount(15)">15</button>
+            <button class="count-pill" onclick="setCardCount(20)">20</button>
+        </div>
+
+        <div id="inlineError" class="inline-error" style="display:none">
+            <i class="fas fa-exclamation-circle"></i>
+            <span id="errorText" style="flex:1"></span>
+            <button onclick="generateFlashcards()"><i class="fas fa-redo"></i> Retry</button>
+        </div>
+
         <div class="fc-nav">
             <button class="primary" onclick="generateFlashcards()"><i class="fas fa-magic"></i> Generate</button>
             <button onclick="prevCard()"><i class="fas fa-chevron-left"></i></button>
@@ -87,8 +100,17 @@ var courseId = <%= courseId %>;
 var courseName = '<%= typeof courseName !== 'undefined' ? courseName.replace(/'/g, "\\'") : '' %>';
 var flashcards = [];
 var currentIndex = 0;
+var cardCount = 10;
+
+function setCardCount(n) {
+    cardCount = n;
+    document.querySelectorAll('.count-pill').forEach(function(p) {
+        p.classList.toggle('active', parseInt(p.textContent) === n);
+    });
+}
 
 function loadFlashcards() {
+    hideInlineError();
     fetch('/api/study/flashcards?courseId=' + courseId)
     .then(function(r){ return r.json().catch(function(){ return { flashcards: [] }; }); })
     .then(function(d) {
@@ -129,20 +151,36 @@ function cardSvg(c, fg) {
         '</svg>';
 }
 
+function showSkeleton() {
+    document.getElementById('fcContainer').innerHTML =
+        '<div class="skeleton skeleton-card"></div>' +
+        '<div class="skeleton skeleton-text" style="margin:0 auto 6px;width:40%"></div>' +
+        '<div class="skeleton skeleton-text short" style="margin:0 auto"></div>';
+}
+
+function hideInlineError() {
+    document.getElementById('inlineError').style.display = 'none';
+}
+
+function showInlineError(msg) {
+    document.getElementById('errorText').textContent = msg;
+    document.getElementById('inlineError').style.display = 'flex';
+}
+
 function renderCurrentCard() {
     var container = document.getElementById('fcContainer');
     document.getElementById('totalCards').textContent = flashcards.length;
     if (flashcards.length === 0) {
-        container.innerHTML = '<div class="empty-state"><i class="fas fa-layer-group"></i><h3>No flashcards yet</h3><p>Generate flashcards from your course material</p></div>';
+        container.innerHTML = '<div class="empty-state reveal"><i class="fas fa-layer-group"></i><h3>No flashcards yet</h3><p>Generate flashcards from your course material</p></div>';
         document.getElementById('currentCardNum').textContent = '0';
         return;
     }
     document.getElementById('currentCardNum').textContent = currentIndex + 1;
     var fc = flashcards[currentIndex];
     var colors = getCardColors(fc.front);
-    container.innerHTML = '<div class="fc-card" style="padding:0;overflow:hidden">' +
+    container.innerHTML = '<div class="fc-card reveal" style="padding:0;overflow:hidden">' +
         cardSvg(fc, colors) +
-        '<div class="fc-actions" style="position:absolute;top:12px;right:12px;z-index:2"><button onclick="event.stopPropagation();deleteCard(' + fc.id + ')" title="Delete" style="width:30px;height:30px;border-radius:8px;border:none;background:rgba(255,255,255,0.85);cursor:pointer;color:var(--danger);font-size:0.7rem;display:flex;align-items:center;justify-content:center"><i class="fas fa-trash"></i></button></div>' +
+        '<div class="fc-actions" style="position:absolute;top:12px;right:12px;z-index:2"><button onclick="event.stopPropagation();deleteCard(' + fc.id + ')" title="Delete" style="width:30px;height:30px;border-radius:8px;border:none;background:var(--surface);cursor:pointer;color:var(--danger);font-size:0.7rem;display:flex;align-items:center;justify-content:center"><i class="fas fa-trash"></i></button></div>' +
         '<div style="padding:24px 24px 16px;cursor:pointer;min-height:120px" onclick="flipCard(this)">' +
         '<div class="fc-side fc-front" style="font-size:1.05rem;font-weight:700;line-height:1.5;color:var(--text-dark)">' + escapeHtml(fc.front || '(empty)') + '</div>' +
         '<div class="fc-side fc-back" style="font-size:0.95rem;font-weight:600;color:var(--text-sub);line-height:1.55;display:none">' + escapeHtml(fc.back || '(empty)') + '</div>' +
@@ -166,18 +204,24 @@ function prevCard() {
 }
 
 function generateFlashcards() {
-    Swal.fire({ title: 'Generating...', html: 'AI creating flashcards for this course', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    hideInlineError();
+    showSkeleton();
     fetch('/api/study/flashcards/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ courseId: courseId, topicTitle: courseName })
-    }).then(r => r.json()).then(d => {
+        body: JSON.stringify({ courseId: courseId, topicTitle: courseName, count: cardCount })
+    }).then(function(r) { return r.json(); }).then(function(d) {
         if (d.success && d.count > 0) {
-            Swal.fire({ icon: 'success', text: d.count + ' flashcards created!', timer: 1500, showConfirmButton: false });
+            Swal.fire({ icon: 'success', text: d.count + ' flashcards created!', timer: 1200, showConfirmButton: false });
             loadFlashcards();
         } else {
-            Swal.fire({ icon: 'error', text: d.error || 'Could not generate flashcards' });
+            showSkeleton();
+            document.getElementById('fcContainer').innerHTML = '<div class="empty-state"><i class="fas fa-layer-group"></i><h3>No flashcards yet</h3><p>Generate flashcards from your course material</p></div>';
+            showInlineError(d.error || 'Could not generate flashcards');
         }
+    }).catch(function(e) {
+        document.getElementById('fcContainer').innerHTML = '<div class="empty-state"><i class="fas fa-layer-group"></i><h3>No flashcards yet</h3><p>Generate flashcards from your course material</p></div>';
+        showInlineError(e.message || 'Network error');
     });
 }
 

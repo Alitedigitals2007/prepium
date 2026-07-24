@@ -5156,9 +5156,10 @@ app.get('/api/study/quiz/result/:attemptId', isAuth, async (req, res) => {
 // ==================== STUDY API: FLASHCARDS ====================
 app.post('/api/study/flashcards/generate', isAuth, requirePaid, async (req, res) => {
   try {
-    const { courseId, subtopicId, topicTitle } = req.body;
+    const { courseId, subtopicId, topicTitle, count } = req.body;
+    const fcCount = parseInt(count) || 10;
     const uid = req.session.user.id;
-    const prompt = `Generate 10 flashcards for studying "${topicTitle || 'this course'}". Each flashcard: front (question/term), back (answer/definition), image (short visual scene description for illustration, 5-10 words). Return a JSON array of objects. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
+    const prompt = `Generate ${fcCount} flashcards for studying "${topicTitle || 'this course'}". Each flashcard: front (question/term), back (answer/definition), image (short visual scene description for illustration, 5-10 words). Return a JSON array of objects. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
     const aiRes = await openRouterPrompt(prompt, true);
     let cards = [];
     try {
