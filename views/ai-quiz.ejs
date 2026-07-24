@@ -162,7 +162,7 @@
 <div class="app-shell">
     <div class="status-bar"></div>
     <div class="header-nav">
-        <a href="/study" class="back-circle"><i class="fas fa-arrow-left"></i></a>
+        <a href="/dashboard" class="back-circle" title="Back to Dashboard"><i class="fas fa-arrow-left"></i></a>
         <div class="header-title-row">
             <div class="header-title">AI Quiz Arena</div>
             <span class="ai-badge">Premium</span>
@@ -235,6 +235,7 @@
                 <button type="submit" class="generate-btn" id="generateBtn" onclick="generateQuiz(event)">
                     <i class="fas fa-wand-magic-sparkles"></i> Generate Quiz
                 </button>
+                <a href="/dashboard" class="back-to-dashboard" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;padding:12px;border-radius:12px;background:var(--surface-solid);border:1.5px solid var(--border);color:var(--text-dark);text-decoration:none;font-weight:700;font-size:0.85rem"><i class="fas fa-home"></i> Back to Dashboard</a>
             </div>
 
             <div id="loaderStep" style="display: none;">
@@ -279,6 +280,10 @@
                 <div class="result-label" id="fractionMark">0 / 0 correct</div>
             </div>
             <div id="solutionsSheet"></div>
+            <div style="display:flex;gap:10px;margin-top:18px;flex-direction:column">
+                <button type="button" onclick="document.getElementById('tab-generate').click();" style="width:100%;padding:14px;border:none;border-radius:14px;background:var(--brand-gradient);color:white;font-weight:800;font-size:0.9rem;cursor:pointer;font-family:inherit"><i class="fas fa-redo"></i> Generate Another Quiz</button>
+                <a href="/dashboard" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border-radius:14px;background:var(--surface-solid);border:1.5px solid var(--border);color:var(--text-dark);text-decoration:none;font-weight:700;font-size:0.9rem"><i class="fas fa-home"></i> Back to Dashboard</a>
+            </div>
         </div>
     </div>
 
@@ -319,9 +324,13 @@ async function generateQuiz(e) {
         formData.append('difficulty', document.getElementById('difficulty').value);
         formData.append('quiz_duration', document.getElementById('quiz_duration').value);
         const res = await fetch('/generate-ai-quiz', { method: 'POST', body: formData });
-        if (!res.ok) throw new Error('Failed to generate quiz');
-        const data = await res.json();
-        examQuestions = data.questions || [];
+        let data = null;
+        try { data = await res.json(); } catch(_) { /* ignore non-json */ }
+        if (!res.ok) {
+            const msg = (data && data.message) ? data.message : ('Upload failed (HTTP ' + res.status + ')');
+            throw new Error(msg);
+        }
+        examQuestions = (data && data.questions) || [];
         if (!examQuestions.length) throw new Error('No questions generated. Try a different PDF or settings.');
         timeRemaining = data.durationSeconds;
         activeQuizName = data.quizTitle;
@@ -330,7 +339,8 @@ async function generateQuiz(e) {
         document.getElementById('loaderStep').style.display = 'none';
         document.getElementById('setupStep').style.display = 'block';
         btn.disabled = false;
-        showInlineError(err.message);
+        showInlineError(err && err.message ? err.message : 'Quiz generation failed. Please try again.');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 }
 
