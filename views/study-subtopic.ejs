@@ -75,6 +75,21 @@
             <%= (subtopic.subtopic_name || subtopic.title) %>
         </div>
 
+        <div style="display:flex;align-items:center;gap:8px;margin:4px 0 10px">
+            <div style="flex:1">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                    <span class="status-badge <%= subtopic.status %>" id="statusBadge" style="font-size:0.6rem;padding:2px 8px;border-radius:4px;font-weight:700;<% if (subtopic.status === 'accepted') { %>background:#d1fae5;color:#065f46<% } else if (subtopic.status === 'completed') { %>background:#d1fae5;color:#065f46<% } else { %>background:#fef3c7;color:#92400e<% } %>"><%= subtopic.status %></span>
+                    <button onclick="toggleComplete()" id="completeBtn" style="padding:4px 10px;border-radius:6px;border:none;font-size:0.7rem;font-weight:700;cursor:pointer;<%= subtopic.status === 'completed' ? 'background:#d1fae5;color:#065f46' : 'background:#f1f5f9;color:var(--text-sub)' %>"><i class="fas <%= subtopic.status === 'completed' ? 'fa-check-circle' : 'fa-circle' %>"></i> <%= subtopic.status === 'completed' ? 'Completed' : 'Mark completed' %></button>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px">
+                    <div style="flex:1;height:4px;background:#e2e8f0;border-radius:2px;overflow:hidden">
+                        <div id="topicProgressBar" style="width:<%= topicSubtopics ? Math.round(topicSubtopics.filter(function(st){ return st.status === 'completed'; }).length / topicSubtopics.length * 100) : 0 %>%;height:100%;background:linear-gradient(90deg,#3b82f6,#8b5cf6);border-radius:2px;transition:width 0.4s"></div>
+                    </div>
+                    <span id="topicProgressText" style="font-size:0.6rem;font-weight:700;color:var(--text-sub);white-space:nowrap"><%= topicSubtopics ? topicSubtopics.filter(function(st){ return st.status === 'completed'; }).length + '/' + topicSubtopics.length : '0/0' %></span>
+                </div>
+            </div>
+        </div>
+
         <div class="session-timer-bar" id="sessionTimerBar">
             <i class="fas fa-clock"></i>
             <span class="st-time" id="stDisplay">00:00</span>
@@ -90,6 +105,11 @@
         </div>
 
         <div class="tab-content active" id="tab-videos">
+            <div onclick="toggleVideos(this)" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f1f5f9;border-radius:10px;margin-bottom:8px;cursor:pointer;font-size:0.78rem;font-weight:700;color:var(--text-dark);user-select:none">
+                <i class="fas fa-video" style="color:#ff0000"></i>
+                <span style="flex:1">Video Resources</span>
+                <i class="fas fa-chevron-down" style="font-size:0.6rem;transition:transform 0.2s"></i>
+            </div>
             <div id="videoList"></div>
         </div>
         <div class="tab-content" id="tab-flashcards">
@@ -129,6 +149,8 @@
 var subtopicId = <%= subtopic.id %>;
 var subtopicName = '<%= (subtopic.subtopic_name || subtopic.title || "").replace(/'/g, "\\'") %>';
 var courseId = <%= course ? course.id : 0 %>;
+var topicSubtopics = <%- JSON.stringify(topicSubtopics || []) %>;
+var topicId = <%= topic ? topic.id : 0 %>;
 var flashcards = [];
 var currentCard = 0;
 var stInterval = null;
@@ -175,32 +197,53 @@ function aiCleanText(t) {
     .trim();
 }
 
+function toggleVideos(el) {
+  var body = el.nextElementSibling;
+  var icon = el.querySelector('.fa-chevron-down');
+  if (body.style.display === 'none') { body.style.display = 'block'; icon.style.transform = 'rotate(0deg)'; }
+  else { body.style.display = 'none'; icon.style.transform = 'rotate(-90deg)'; }
+}
+
+function toggleSection(header) {
+  var body = header.nextElementSibling;
+  var icon = header.querySelector('.fa-chevron-down');
+  if (body.style.display === 'none') { body.style.display = 'block'; icon.style.transform = 'rotate(0deg)'; }
+  else { body.style.display = 'none'; icon.style.transform = 'rotate(-90deg)'; }
+}
+
+var SEC_CFG = {
+  'Key Points': { icon: 'fa-list-check', color: '#3b82f6', bg: '#eff6ff' },
+  'Note': { icon: 'fa-sticky-note', color: '#f59e0b', bg: '#fffbeb' },
+  'Example': { icon: 'fa-flask', color: '#8b5cf6', bg: '#f5f3ff' },
+  'Tip': { icon: 'fa-lightbulb', color: '#10b981', bg: '#ecfdf5' },
+  'Important': { icon: 'fa-triangle-exclamation', color: '#ef4444', bg: '#fef2f2' }
+};
+
 function explainRender(t) {
   var clean = aiCleanText(t);
-  var lines = clean.split('\n').filter(function(l) { return l.trim(); });
-  var html = '';
-  var inList = false;
+  var sections = [];
+  var lines = clean.split('\n');
+  var curHead = ''; var curBody = [];
   lines.forEach(function(line) {
-    var esc = line.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    var m = esc.match(/^(\d+)\)\s(.+)/);
+    var m = line.trim().match(/^(Key Points|Note|Example|Tip|Important):$/i);
     if (m) {
-      if (!inList) { html += '<div style="margin:0 0 10px">'; inList = true; }
-      html += '<div style="display:flex;gap:10px;margin:0 0 6px;align-items:flex-start"><span style="background:linear-gradient(135deg,#f59e0b,#d97706);color:white;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:800;flex-shrink:0;margin-top:2px">' + m[1] + '</span><span style="flex:1;line-height:1.6">' + m[2] + '</span></div>';
-      return;
-    }
-    if (inList) { html += '</div>'; inList = false; }
-    if (esc.match(/^(key point|tip|example|note|important)/i)) {
-      var tag = esc.split(':')[0];
-      var rest = esc.substring(tag.length + 1).trim();
-      var colors = { 'key point': ['#3b82f6','#eff6ff','#93c5fd'], 'tip': ['#10b981','#ecfdf5','#6ee7b7'], 'example': ['#8b5cf6','#f5f3ff','#a78bfa'], 'note': ['#f59e0b','#fffbeb','#fcd34d'], 'important': ['#ef4444','#fef2f2','#fca5a5'] };
-      var c = colors[tag.toLowerCase()] || ['#6b7280','#f3f4f6','#d1d5db'];
-      html += '<div style="margin:0 0 10px;padding:10px 14px;background:' + c[1] + ';border-left:4px solid ' + c[0] + ';border-radius:8px;font-size:0.82rem;line-height:1.6;color:#374151"><strong style="color:' + c[0] + '">' + tag + ':</strong> ' + (rest || esc) + '</div>';
-    } else {
-      html += '<p style="margin:0 0 10px;line-height:1.7">' + esc + '</p>';
-    }
+      if (curHead) sections.push({ head: curHead, body: curBody.join('\n') });
+      curHead = m[1]; curBody = [];
+    } else { curBody.push(line); }
   });
-  if (inList) html += '</div>';
-  return html;
+  if (curHead) sections.push({ head: curHead, body: curBody.join('\n') });
+  if (!sections.length) return '<div style="padding:10px;line-height:1.7;font-size:0.85rem">' + escapeHtml(clean) + '</div>';
+  var uid = Date.now();
+  return sections.map(function(s, i) {
+    var c = SEC_CFG[s.head] || { icon: 'fa-circle', color: '#6b7280', bg: '#f3f4f6' };
+    var body = s.body.split('\n').filter(function(l){ return l.trim(); }).map(function(l){ return '<p style="margin:0 0 6px;line-height:1.7">' + escapeHtml(l) + '</p>'; }).join('');
+    return '<div style="margin-bottom:8px;border-radius:10px;overflow:hidden;border:1px solid ' + c.color + '33">' +
+      '<div onclick="toggleSection(this)" style="padding:10px 14px;background:' + c.bg + ';cursor:pointer;display:flex;align-items:center;gap:10px;font-weight:700;font-size:0.82rem;color:' + c.color + ';user-select:none">' +
+      '<i class="fas ' + c.icon + '" style="font-size:0.85rem;width:18px"></i>' +
+      '<span style="flex:1">' + s.head + '</span>' +
+      '<i class="fas fa-chevron-down" style="font-size:0.6rem;transition:transform 0.2s"></i></div>' +
+      '<div class="sec-body" style="padding:10px 14px;font-size:0.83rem;line-height:1.6;color:#374151">' + body + '</div></div>';
+  }).join('');
 }
 
 function generateContent() {
@@ -359,6 +402,49 @@ function startQuiz() {
 }
 
 function escapeHtml(t) { return (t || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function updateTopicProgress() {
+  fetch('/api/study/subtopic/topic-progress?topicId=' + topicId)
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      if (d.subtopics) {
+        topicSubtopics = d.subtopics;
+        var total = topicSubtopics.length;
+        var done = topicSubtopics.filter(function(s){ return s.status === 'completed'; }).length;
+        var pct = total > 0 ? Math.round(done / total * 100) : 0;
+        var bar = document.getElementById('topicProgressBar');
+        var txt = document.getElementById('topicProgressText');
+        if (bar) bar.style.width = pct + '%';
+        if (txt) txt.textContent = done + '/' + total;
+      }
+    }).catch(function(){});
+}
+
+function toggleComplete() {
+  var btn = document.getElementById('completeBtn');
+  var badge = document.getElementById('statusBadge');
+  var isComplete = badge && badge.textContent.trim() === 'completed';
+  var newStatus = isComplete ? 'accepted' : 'completed';
+  fetch('/api/study/subtopics/update', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: subtopicId, status: newStatus })
+  }).then(function(r){ return r.json(); }).then(function(d) {
+    if (d.success) {
+      if (badge) {
+        badge.textContent = newStatus;
+        badge.style.background = newStatus === 'completed' ? '#d1fae5' : '#fef3c7';
+        badge.style.color = newStatus === 'completed' ? '#065f46' : '#92400e';
+      }
+      if (btn) {
+        btn.innerHTML = newStatus === 'completed' ? '<i class="fas fa-check-circle"></i> Completed' : '<i class="fas fa-circle"></i> Mark completed';
+        btn.style.background = newStatus === 'completed' ? '#d1fae5' : '#f1f5f9';
+        btn.style.color = newStatus === 'completed' ? '#065f46' : 'var(--text-sub)';
+      }
+      updateTopicProgress();
+    }
+  });
+}
 
 function fmtTime(secs) {
     var m = Math.floor(secs / 60);

@@ -4814,7 +4814,8 @@ app.get('/study/subtopic/:id', isAuth, requirePaid, async (req, res) => {
     if (s.content) s.content = cleanAiText(s.content);
     const topic = await pool.query('SELECT * FROM study_topics WHERE id = $1', [s.topic_id]).catch(() => ({ rows: [] }));
     const course = await pool.query('SELECT * FROM study_courses WHERE id = $1', [s.course_id || 0]).catch(() => ({ rows: [] }));
-    res.render('study-subtopic', { user: req.session.user, subtopic: s, topic: topic.rows[0] || null, course: course.rows[0] || null });
+    const topicSubtopics = await pool.query('SELECT id, status FROM study_subtopics WHERE topic_id = $1', [s.topic_id]).catch(() => ({ rows: [] }));
+    res.render('study-subtopic', { user: req.session.user, subtopic: s, topic: topic.rows[0] || null, course: course.rows[0] || null, topicSubtopics: topicSubtopics.rows });
   } catch (err) { console.error(err); res.status(500).send('Error loading subtopic'); }
 });
 
@@ -4930,6 +4931,16 @@ app.post('/api/study/subtopics/delete/:id', isAuth, requirePaid, async (req, res
   try { await pool.query('DELETE FROM study_subtopics WHERE id = $1', [req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
+app.get('/api/study/subtopic/topic-progress', isAuth, async (req, res) => {
+  try {
+    const uid = req.session.user.id;
+    const { topicId } = req.query;
+    if (!topicId) return res.json({ subtopics: [] });
+    const r = await pool.query('SELECT id, status FROM study_subtopics WHERE topic_id = $1 AND user_id = $2', [parseInt(topicId), uid]);
+    res.json({ subtopics: r.rows });
+  } catch (err) { res.json({ subtopics: [] }); }
+});
+
 app.get('/api/study/subtopic/:id', isAuth, async (req, res) => {
   try {
     const st = await pool.query('SELECT * FROM study_subtopics WHERE id = $1', [req.params.id]);
@@ -4947,7 +4958,18 @@ app.post('/api/study/subtopic/:id/content', isAuth, requirePaid, async (req, res
     const s = st.rows[0];
     const topic = await pool.query('SELECT * FROM study_topics WHERE id = $1', [s.topic_id]).catch(() => ({ rows: [] }));
     const topicName = topic.rows[0] ? (topic.rows[0].topic_name || topic.rows[0].title) : 'General';
-    const prompt = `You are a university tutor. Explain the subtopic "${s.subtopic_name || s.title}" which is part of the topic "${topicName}". Structure your explanation using these exact labels at the start of lines: "Key Point:" for important concepts, "Example:" for concrete illustrations, "Tip:" for study advice, "Note:" for additional context, "Important:" for critical warnings. Include at least 2 Key Points and 2 Examples. Use PLAIN TEXT only. Do NOT use markdown. No asterisks, no hashtags, no backticks. Short paragraphs separated by blank lines. Use simple numbered points like "1) ..." if needed.`;
+    const prompt = `You are a university tutor. Explain the subtopic "${s.subtopic_name || s.title}" which is part of the topic "${topicName}". Structure your explanation with exactly these 3 sections — use the exact headers on their own line:
+
+Key Points:
+(2-3 key concepts in full sentences)
+
+Note:
+(important things to remember, in full sentences)
+
+Example:
+(1-2 practical examples in full sentences)
+
+Keep each section brief. Use PLAIN TEXT only. No markdown. No asterisks, no hashtags, no backticks.`;
     const aiRes = await openRouterPrompt(prompt);
     if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
     const clean = cleanAiText(aiRes.text);
