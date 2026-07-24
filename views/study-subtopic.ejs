@@ -97,6 +97,7 @@
                 <button onclick="genFlashcards()"><i class="fas fa-magic"></i> Generate</button>
                 <button onclick="prevCard()"><i class="fas fa-chevron-left"></i></button>
                 <button onclick="nextCard()"><i class="fas fa-chevron-right"></i></button>
+                <button onclick="deleteSubtopicFlashcards()" style="color:var(--danger);border-color:#fecaca;background:#fef2f2"><i class="fas fa-trash"></i></button>
             </div>
             <div id="fcContainer"><div style="text-align:center;padding:2rem;color:var(--text-muted);font-weight:600;">Load or generate flashcards</div></div>
         </div>
@@ -296,6 +297,19 @@ function genFlashcards() {
     }).then(function(r) { return r.json(); }).then(function(d) {
         if (d.success) { Swal.fire({ icon: 'success', text: d.count + ' flashcards created!', timer: 1500, showConfirmButton: false }); loadFlashcards(); }
         else Swal.fire({ icon: 'error', text: d.error });
+    });
+}
+
+function deleteSubtopicFlashcards() {
+    Swal.fire({ title: 'Delete all flashcards?', text: 'This will remove all flashcards for this subtopic.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete all', confirmButtonColor: '#dc2626' }).then(function(res) {
+        if (res.isConfirmed) {
+            fetch('/api/study/flashcards/delete-all', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ courseId: courseId, subtopicId: subtopicId }) })
+            .then(function(r){ return r.json(); })
+            .then(function(d) {
+                if (d.success) { Swal.fire({ icon: 'success', text: d.deleted + ' flashcards deleted', timer: 1500, showConfirmButton: false }); loadFlashcards(); }
+                else Swal.fire({ icon: 'error', text: d.error });
+            });
+        }
     });
 }
 

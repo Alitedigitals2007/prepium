@@ -4685,17 +4685,17 @@ async function openRouterPrompt(prompt, jsonMode) {
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) return { text: 'AI not configured. Set OPENROUTER_API_KEY in .env' };
   try {
-    const body = { model: 'mistralai/mistral-7b-instruct:free', messages: [{ role: 'user', content: prompt }], temperature: 0.15 };
-    if (jsonMode) body.response_format = { type: 'json_object' };
+    const body = { model: 'google/gemini-2.0-flash-exp:free', messages: [{ role: 'user', content: prompt }], temperature: 0.15 };
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}`, 'HTTP-Referer': 'https://theprepium.vercel.app', 'X-Title': 'Prepium' },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(45000)
+      signal: AbortSignal.timeout(60000)
     });
     if (!res.ok) { const t = await res.text().catch(()=>''); return { text: `AI error: ${res.status} ${t}` }; }
     const data = await res.json();
-    return { text: cleanLatex(data.choices?.[0]?.message?.content) || 'AI returned empty response' };
+    const raw = data.choices?.[0]?.message?.content || 'AI returned empty response';
+    return { text: jsonMode ? raw : cleanLatex(raw) };
   } catch (e) { return { text: `AI error: ${e.message}` }; }
 }
 
@@ -4902,7 +4902,19 @@ app.post('/api/study/subtopics/ai-generate', isAuth, requirePaid, async (req, re
     const aiRes = await openRouterPrompt(prompt, true);
     if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
     let subtopics = [];
-    try { subtopics = JSON.parse(aiRes.text.trim()); } catch { try { const cleaned = aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim(); subtopics = JSON.parse(cleaned); } catch { subtopics = aiRes.text.split('\n').filter(l => l.trim().match(/^["\w]/)).map(l => l.replace(/^[\d.-\s"']+|["'\s]+$/g, '')).filter(Boolean); } }
+    try {
+      var txt = aiRes.text.trim();
+      var m = txt.match(/\[[\s\S]*\]/);
+      if (m) txt = m[0];
+      subtopics = JSON.parse(txt);
+    } catch {
+      try {
+        var cleaned = aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim();
+        var m2 = cleaned.match(/\[[\s\S]*\]/);
+        if (m2) cleaned = m2[0];
+        subtopics = JSON.parse(cleaned);
+      } catch { subtopics = aiRes.text.split('\n').filter(function(l){ return l.trim().match(/^["\w]/); }).map(function(l){ return l.replace(/^[\d.-\s"']+|["'\s]+$/g, ''); }).filter(Boolean); }
+    }
     const uid = req.session.user.id;
     const results = [];
     for (const st of subtopics.slice(0, 10)) {
@@ -4944,7 +4956,7 @@ app.post('/api/study/subtopic/:id/content', isAuth, requirePaid, async (req, res
     const s = st.rows[0];
     const topic = await pool.query('SELECT * FROM study_topics WHERE id = $1', [s.topic_id]).catch(() => ({ rows: [] }));
     const topicName = topic.rows[0] ? (topic.rows[0].topic_name || topic.rows[0].title) : 'General';
-    const prompt = `You are a university tutor. Explain the subtopic "${s.subtopic_name || s.title}" which is part of the topic "${topicName}". Provide a clear, detailed explanation with key points, examples, and study tips. Use PLAIN TEXT only. Do NOT use markdown. No asterisks, no hashtags, no backticks. Short paragraphs separated by blank lines. Use simple numbered points like "1) ..." if needed.`;
+    const prompt = `You are a university tutor. Explain the subtopic "${s.subtopic_name || s.title}" which is part of the topic "${topicName}". Structure your explanation using these exact labels at the start of lines: "Key Point:" for important concepts, "Example:" for concrete illustrations, "Tip:" for study advice, "Note:" for additional context, "Important:" for critical warnings. Include at least 2 Key Points and 2 Examples. Use PLAIN TEXT only. Do NOT use markdown. No asterisks, no hashtags, no backticks. Short paragraphs separated by blank lines. Use simple numbered points like "1) ..." if needed.`;
     const aiRes = await openRouterPrompt(prompt);
     if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
     const clean = cleanAiText(aiRes.text);
@@ -5056,7 +5068,29 @@ app.post('/api/study/quiz/generate', isAuth, requirePaid, async (req, res) => {
     const prompt = `Generate ${count} ${typeGuide} about "${topicTitle || 'General Study'}" for university exam preparation. Each question: question text, options array (4 strings for MC, [] for theory), correctAnswer (letter for MC, text for theory), explanation. Return a JSON array of objects. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
     const aiRes = await openRouterPrompt(prompt, true);
     let questions = [];
-    try { questions = JSON.parse(aiRes.text.trim()); } catch { try { const cleaned = aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim(); questions = JSON.parse(cleaned); } catch { throw new Error('Failed to parse AI response. Please try again.'); } }
+    try {
+      var txt = aiRes.text.trim();
+      var m = txt.match(/\[[\s\S]*\]/);
+      if (m) txt = m[0];
+      questions = JSON.parse(txt);
+      questions.forEach(function(q) {
+        q.question = cleanLatex(q.question || '');
+        q.explanation = cleanLatex(q.explanation || '');
+        if (Array.isArray(q.options)) q.options = q.options.map(function(o) { return cleanLatex(o || ''); });
+      });
+    } catch (e) {
+      try {
+        var cleaned = aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim();
+        var m2 = cleaned.match(/\[[\s\S]*\]/);
+        if (m2) cleaned = m2[0];
+        questions = JSON.parse(cleaned);
+        questions.forEach(function(q) {
+          q.question = cleanLatex(q.question || '');
+          q.explanation = cleanLatex(q.explanation || '');
+          if (Array.isArray(q.options)) q.options = q.options.map(function(o) { return cleanLatex(o || ''); });
+        });
+      } catch { throw new Error('Failed to parse AI response. Please try again.'); }
+    }
     const attempt = await pool.query("INSERT INTO study_quiz_attempts (user_id, course_id, subtopic_id, question_type, question_count, time_limit, status) VALUES ($1, $2, $3, $4, $5, $6, 'in_progress') RETURNING *", [uid, courseId || 0, subtopicId || 0, questionType || 'multiple_choice', questions.length, timeLimit || 0]);
     const attemptId = attempt.rows[0].id;
     for (let i = 0; i < questions.length; i++) {
@@ -5114,7 +5148,19 @@ app.post('/api/study/flashcards/generate', isAuth, requirePaid, async (req, res)
     const prompt = `Generate 10 flashcards for studying "${topicTitle || 'this course'}". Each flashcard: front (question/term), back (answer/definition), image (short visual scene description for illustration, 5-10 words). Return a JSON array of objects. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
     const aiRes = await openRouterPrompt(prompt, true);
     let cards = [];
-    try { cards = JSON.parse(aiRes.text.trim()); } catch { try { const cleaned = aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim(); cards = JSON.parse(cleaned); } catch { throw new Error('Failed to generate flashcards'); } }
+    try {
+      var txt = aiRes.text.trim();
+      var m = txt.match(/\[[\s\S]*\]/);
+      if (m) txt = m[0];
+      cards = JSON.parse(txt);
+    } catch (e) {
+      try {
+        var cleaned = aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim();
+        var m2 = cleaned.match(/\[[\s\S]*\]/);
+        if (m2) cleaned = m2[0];
+        cards = JSON.parse(cleaned);
+      } catch { throw new Error('Failed to generate flashcards'); }
+    }
     for (const c of cards) {
       const front = cleanAiText(c.front);
       const back = cleanAiText(c.back);
@@ -5141,6 +5187,19 @@ app.get('/api/study/flashcards', isAuth, async (req, res) => {
 
 app.post('/api/study/flashcards/delete/:id', isAuth, requirePaid, async (req, res) => {
   try { await pool.query('DELETE FROM study_flashcards WHERE id = $1 AND user_id = $2', [req.params.id, req.session.user.id]); res.json({ success: true }); } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.post('/api/study/flashcards/delete-all', isAuth, requirePaid, async (req, res) => {
+  try {
+    const { courseId, subtopicId } = req.body;
+    const uid = req.session.user.id;
+    let q = 'DELETE FROM study_flashcards WHERE user_id = $1';
+    const p = [uid];
+    if (subtopicId) { q += ' AND subtopic_id = $' + (p.length + 1); p.push(parseInt(subtopicId)); }
+    else if (courseId) { q += ' AND course_id = $' + (p.length + 1); p.push(parseInt(courseId)); }
+    const r = await pool.query(q, p);
+    res.json({ success: true, deleted: r.rowCount });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
 // ==================== STUDY API: STATS & EXPORT ====================

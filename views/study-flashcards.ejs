@@ -72,6 +72,9 @@
             <button onclick="prevCard()"><i class="fas fa-chevron-left"></i></button>
             <button onclick="nextCard()"><i class="fas fa-chevron-right"></i></button>
         </div>
+        <div class="fc-nav" style="margin-top:6px">
+            <button onclick="deleteAllFlashcards()" style="color:var(--danger);border-color:#fecaca;background:#fef2f2"><i class="fas fa-trash"></i> Delete all</button>
+        </div>
     </div>
 
     <div style="height:40px"></div>
@@ -206,6 +209,19 @@ function flipCard(el) {
 
 function escapeHtml(text) {
     return (text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function deleteAllFlashcards() {
+    Swal.fire({ title: 'Delete all flashcards?', text: 'This cannot be undone for this course.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete all', confirmButtonColor: '#dc2626' }).then(function(res) {
+        if (res.isConfirmed) {
+            fetch('/api/study/flashcards/delete-all', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ courseId: courseId }) })
+            .then(function(r){ return r.json(); })
+            .then(function(d) {
+                if (d.success) { Swal.fire({ icon: 'success', text: d.deleted + ' flashcards deleted', timer: 1500, showConfirmButton: false }); loadFlashcards(); }
+                else Swal.fire({ icon: 'error', text: d.error });
+            });
+        }
+    });
 }
 
 loadFlashcards();
