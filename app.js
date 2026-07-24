@@ -3953,23 +3953,22 @@ app.post('/upload-pdf', upload.single('lecture_note'), async (req, res) => {
     }
 });
 
-// POST: Process and Generate Contextual Quizzes from PDFs with Gemini and OpenRouter Backup
-app.post('/generate-ai-quiz', isAuth, upload.single('lecture_note'), async (req, res) => {
+// POST: Process and Generate Contextual Quizzes from PDFs using pdfToText + OpenRouter
+app.post('/generate-ai-quiz', isAuth, requirePaid, upload.single('lecture_note'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: "No file uploaded." });
         }
 
         const numQuestions = parseInt(req.body.num_questions) || 5;
-        const quizDuration = parseInt(req.body.quiz_duration) || 5; 
-        const questionType = req.body.question_type || 'obj'; 
+        const quizDuration = parseInt(req.body.quiz_duration) || 5;
+        const questionType = req.body.question_type || 'obj';
         const difficulty = req.body.difficulty || 'medium';
         const originalFileName = req.file.originalname;
-        const pdfBase64 = req.file.buffer.toString("base64");
+        const pdfBuffer = req.file.buffer;
 
         console.log(`[AI ENGINE] Compiling exactly ${numQuestions} [Format: ${questionType.toUpperCase()}] [Difficulty: ${difficulty.toUpperCase()}] questions for "${originalFileName}"`);
 
-        // Strict style guidelines to prevent format bleeding and mixed questions
         let styleInstruction = "";
         if (questionType === 'obj') {
             styleInstruction = "You MUST generate ONLY standard 4-choice Multiple Choice Questions. Every item's 'type' field MUST be exactly 'obj'. Options array must have exactly 4 distinct text items.";
@@ -3984,159 +3983,68 @@ app.post('/generate-ai-quiz', isAuth, upload.single('lecture_note'), async (req,
         const difficultyMap = { easy: 'basic recall and comprehension level', medium: 'application and analysis level', hard: 'synthesis and evaluation level', expert: 'critical thinking and expert level' };
         const difficultyText = difficultyMap[difficulty] || 'application and analysis level';
 
-        const promptText = `You are an expert academic examiner. Analyze the attached PDF file context carefully.
-        Generate exactly ${numQuestions} unique, highly relevant academic questions based strictly on its contents.
-        
-        DIFFICULTY LEVEL: ${difficultyText} — adjust question complexity accordingly.
-        
-        CRITICAL STYLE RULE: ${styleInstruction}
-
-        You MUST respond with a raw JSON array matching this structure format:
-        [
-          {
-            "type": "${questionType === 'mixed' ? 'obj' : questionType}",
-            "question": "Question text here...",
-            "options": ["Option A", "Option B", "Option C", "Option D"],
-            "correct": "Correct option text or keyword answer definition",
-            "keywords": ["key1", "key2"],
-            "explanation": "Write a clear, thorough explanation of the correct answer. CRITICAL: Use PLAIN TEXT ONLY. NO markdown formatting whatsoever - no **bold**, no *italic*, no __underline__, no backticks, no headers. Use proper grammar and complete sentences. Structure the explanation logically in paragraphs. Include formulas using LaTeX like $E=mc^2$ if needed."
-          }
-        ]`;
-
-        // Native Gemini payload format
-        const geminiPayload = {
-            contents: [{
-                parts: [
-                    { text: promptText },
-                    { inlineData: { mimeType: "application/pdf", data: pdfBase64 } }
-                ]
-            }],
-            generationConfig: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: "ARRAY",
-                    description: `A list of exactly ${numQuestions} questions matching the configurations specified.`,
-                    items: {
-                        type: "OBJECT",
-                        properties: {
-                            type: { type: "STRING", enum: questionType === 'mixed' ? ["obj", "german", "theory"] : [questionType] },
-                            question: { type: "STRING" },
-                            options: { type: "ARRAY", items: { type: "STRING" } },
-                            correct: { type: "STRING" },
-                            keywords: { type: "ARRAY", items: { type: "STRING" } },
-                            explanation: { type: "STRING" }
-                        },
-                        required: ["type", "question", "options", "correct", "keywords", "explanation"]
-                    }
-                },
-                temperature: 0.15, 
-                maxOutputTokens: 8192 
-            }
-        };
-
-        // Mistral chat completions format
-        const mistralPayload = {
-            model: "pixtral-large-latest", 
-            messages: [
-                {
-                    role: "user",
-                    content: [
-                        { type: "text", text: promptText },
-                        {
-                            type: "image_url",
-                            image_url: { url: `data:application/pdf;base64,${pdfBase64}` }
-                        }
-                    ]
-                }
-            ],
-            response_format: { type: "json_object" }, 
-            temperature: 0.15
-        };
-
-        // The Router Queue Array (Ordered by your preference: Native first, Mistral last)
-        const activeEndpoints = [
-            { 
-                provider: 'gemini',
-                url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', 
-                key: process.env.GEMINI_API_KEY_PRIMARY 
-            },
-            { 
-                provider: 'gemini',
-                url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', 
-                key: process.env.GEMINI_API_KEY_SECONDARY 
-            },
-            { 
-                provider: 'mistral',
-                url: 'https://api.mistral.ai/v1/chat/completions', 
-                key: process.env.MISTRAL_API_KEY 
-            }
-        ].filter(endpoint => endpoint.key); // Drops any slots missing keys from env
-
-        let response;
-        let data;
-        let transmissionSuccess = false;
-        let connectionErrors = [];
-        let responseText = "";
-
-        // Core Fallback Processing Loop
-        for (let i = 0; i < activeEndpoints.length; i++) {
-            try {
-                const currentTarget = activeEndpoints[i];
-                console.log(`[AI ROUTER] Trying Route #${i + 1} (${currentTarget.provider.toUpperCase()})...`);
-
-                let requestUrl = "";
-                let requestBody = {};
-                let headers = { 'Content-Type': 'application/json' };
-
-                if (currentTarget.provider === 'gemini') {
-                    requestUrl = `${currentTarget.url}?key=${currentTarget.key}`;
-                    requestBody = geminiPayload;
-                } else if (currentTarget.provider === 'mistral') {
-                    requestUrl = currentTarget.url;
-                    headers['Authorization'] = `Bearer ${currentTarget.key}`;
-                    requestBody = mistralPayload;
-                }
-
-                response = await fetch(requestUrl, {
-                    method: 'POST',
-                    headers: headers,
-                    body: JSON.stringify(requestBody),
-                    signal: AbortSignal.timeout(50000) // 50s timeout limit before moving to next engine
+        // Extract text from PDF first
+        let pdfText = "";
+        try {
+            pdfText = await new Promise((resolve, reject) => {
+                pdfToText.pdfToText(pdfBuffer, (err, text) => {
+                    if (err) return reject(err);
+                    resolve(text || "");
                 });
-
-                if (response.ok) {
-                    data = await response.json();
-                    transmissionSuccess = true;
-                    console.log(`[AI ROUTER] Route #${i + 1} (${currentTarget.provider.toUpperCase()}) Succeeded!`);
-                    
-                    if (currentTarget.provider === 'gemini') {
-                        responseText = data.candidates[0].content.parts[0].text.trim();
-                    } else if (currentTarget.provider === 'mistral') {
-                        responseText = data.choices[0].message.content.trim();
-                    }
-                    break; // Exit loop on successful execution
-                } else {
-                    const statusText = await response.text();
-                    connectionErrors.push(`Route #${i + 1} failed (${response.status}): ${statusText}`);
-                }
-            } catch (err) {
-                connectionErrors.push(`Route #${i + 1} encountered an exception: ${err.message}`);
-            }
+            });
+        } catch (e) {
+            console.error("PDF text extraction failed:", e);
+            return res.status(500).json({ success: false, message: "Failed to extract text from PDF. Ensure it's a text-based PDF." });
         }
 
-        if (!transmissionSuccess) {
-            console.error("[AI ROUTER TOTAL SYSTEM FAILURE]", connectionErrors.join("\n"));
-            return res.status(500).json({ success: false, message: "All generation channels are busy. Please try again." });
+        if (!pdfText.trim()) {
+            return res.status(400).json({ success: false, message: "Could not extract readable text from PDF. Try a text-based PDF." });
         }
 
-        // Standard sanitization clean up for Markdown blocks if returned
+        // Truncate if too long
+        const maxChars = 12000;
+        if (pdfText.length > maxChars) pdfText = pdfText.substring(0, maxChars) + "\n...[truncated]";
+
+        const prompt = `You are an expert academic examiner. Analyze the following document content carefully.
+Generate exactly ${numQuestions} unique, highly relevant academic questions based strictly on its contents.
+
+DIFFICULTY LEVEL: ${difficultyText} — adjust question complexity accordingly.
+
+CRITICAL STYLE RULE: ${styleInstruction}
+
+You MUST respond with a raw JSON array matching this structure format:
+[
+  {
+    "type": "${questionType === 'mixed' ? 'obj' : questionType}",
+    "question": "Question text here...",
+    "options": ["Option A", "Option B", "Option C", "Option D"],
+    "correct": "Correct option text or keyword answer definition",
+    "keywords": ["key1", "key2"],
+    "explanation": "Write a clear, thorough explanation of the correct answer. CRITICAL: Use PLAIN TEXT ONLY. NO markdown formatting whatsoever - no **bold**, no *italic*, no __underline__, no backticks, no headers. Use proper grammar and complete sentences. Structure the explanation logically in paragraphs. Include formulas using LaTeX like $E=mc^2$ if needed."
+  }
+]
+
+DOCUMENT CONTENT:
+${pdfText}`;
+
+        const aiRes = await openRouterPrompt(prompt, true);
+        let responseText = aiRes.text.trim();
+
+        // Clean up markdown blocks if returned
         if (responseText.startsWith("```json")) responseText = responseText.replace(/^```json/, "").replace(/```$/, "");
         if (responseText.startsWith("```")) responseText = responseText.replace(/^```/, "").replace(/```$/, "");
 
-        let parsedData = JSON.parse(responseText.trim());
+        let parsedData;
+        try {
+            parsedData = JSON.parse(responseText);
+        } catch (e) {
+            console.error("Failed to parse AI response:", responseText.substring(0, 200));
+            throw new Error("Failed to parse AI response. Try again.");
+        }
+
         let structuredQuiz = Array.isArray(parsedData) ? parsedData : (parsedData.questions || parsedData.quiz || []);
 
-        // Strict mapping sanitization layout formatting
+        // Strict mapping sanitization
         structuredQuiz = structuredQuiz.map(q => {
             if (questionType !== 'mixed') q.type = questionType;
             if (!q.options) q.options = [];
@@ -4156,8 +4064,8 @@ app.post('/generate-ai-quiz', isAuth, upload.single('lecture_note'), async (req,
         });
 
     } catch (error) {
-        console.error("Critical Hybrid Routing Failure:", error);
-        res.status(500).json({ success: false, message: "Error compiling quiz matrix." });
+        console.error("Critical AI Quiz Generation Failure:", error);
+        res.status(500).json({ success: false, message: error.message || "Error compiling quiz matrix." });
     }
 });
 
@@ -4194,6 +4102,19 @@ app.post('/save-ai-quiz-results', isAuth, async (req, res) => {
     } catch (err) {
         console.error("Critical Database History Sync Error:", err);
         res.status(500).json({ success: false, message: "Internal server error persisting score profile." });
+    }
+});
+
+app.get('/api/ai-quiz/history', isAuth, async (req, res) => {
+    try {
+        const uid = req.session.user.id;
+        const r = await pool.query(
+            'SELECT id, title, score, total_questions, percentage, created_at FROM quiz_results WHERE user_id = $1 AND subject_id IS NULL ORDER BY created_at DESC LIMIT 30',
+            [uid]
+        );
+        res.json({ success: true, history: r.rows });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 
