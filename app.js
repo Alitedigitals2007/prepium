@@ -4685,7 +4685,7 @@ async function openRouterPrompt(prompt, jsonMode) {
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) return { text: 'AI not configured. Set OPENROUTER_API_KEY in .env' };
   try {
-    const body = { model: 'google/gemini-2.0-flash-exp:free', messages: [{ role: 'user', content: prompt }], temperature: 0.15 };
+    const body = { model: 'meta-llama/llama-3.3-70b-instruct:free', messages: [{ role: 'user', content: prompt }], temperature: 0.15 };
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}`, 'HTTP-Referer': 'https://theprepium.vercel.app', 'X-Title': 'Prepium' },
