@@ -83,9 +83,9 @@
                 </div>
                 <div style="display:flex;align-items:center;gap:6px">
                     <div style="flex:1;height:4px;background:#e2e8f0;border-radius:2px;overflow:hidden">
-                        <div id="topicProgressBar" style="width:<%= topicSubtopics ? Math.round(topicSubtopics.filter(function(st){ return st.status === 'completed'; }).length / topicSubtopics.length * 100) : 0 %>%;height:100%;background:linear-gradient(90deg,#3b82f6,#8b5cf6);border-radius:2px;transition:width 0.4s"></div>
+                        <div id="topicProgressBar" style="width:<% var ttl = (topicSubtopics || []).length; var don = (topicSubtopics || []).filter(function(st){ return st.status === 'completed'; }).length; %><%= ttl > 0 ? Math.round(don / ttl * 100) : 0 %>%;height:100%;background:linear-gradient(90deg,#3b82f6,#8b5cf6);border-radius:2px;transition:width 0.4s"></div>
                     </div>
-                    <span id="topicProgressText" style="font-size:0.6rem;font-weight:700;color:var(--text-sub);white-space:nowrap"><%= topicSubtopics ? topicSubtopics.filter(function(st){ return st.status === 'completed'; }).length + '/' + topicSubtopics.length : '0/0' %></span>
+                    <span id="topicProgressText" style="font-size:0.6rem;font-weight:700;color:var(--text-sub);white-space:nowrap"><%= don %>/<%= ttl %></span>
                 </div>
             </div>
         </div>
@@ -227,22 +227,26 @@ function explainRender(t) {
   lines.forEach(function(line) {
     var m = line.trim().match(/^(Key Points|Note|Example|Tip|Important):$/i);
     if (m) {
-      if (curHead) sections.push({ head: curHead, body: curBody.join('\n') });
+      if (curHead) sections.push({ head: curHead, body: curBody.join('\n').trim() });
       curHead = m[1]; curBody = [];
     } else { curBody.push(line); }
   });
-  if (curHead) sections.push({ head: curHead, body: curBody.join('\n') });
-  if (!sections.length) return '<div style="padding:10px;line-height:1.7;font-size:0.85rem">' + escapeHtml(clean) + '</div>';
-  var uid = Date.now();
+  if (curHead) sections.push({ head: curHead, body: curBody.join('\n').trim() });
+  if (!sections.length) return '<div style="padding:14px;line-height:1.8;font-size:0.88rem;color:#374151">' + escapeHtml(clean).replace(/\n\n/g, '</p><p style="margin:0 0 10px;line-height:1.8">').replace(/\n/g, '<br>') + '</div>';
   return sections.map(function(s, i) {
     var c = SEC_CFG[s.head] || { icon: 'fa-circle', color: '#6b7280', bg: '#f3f4f6' };
-    var body = s.body.split('\n').filter(function(l){ return l.trim(); }).map(function(l){ return '<p style="margin:0 0 6px;line-height:1.7">' + escapeHtml(l) + '</p>'; }).join('');
-    return '<div style="margin-bottom:8px;border-radius:10px;overflow:hidden;border:1px solid ' + c.color + '33">' +
-      '<div onclick="toggleSection(this)" style="padding:10px 14px;background:' + c.bg + ';cursor:pointer;display:flex;align-items:center;gap:10px;font-weight:700;font-size:0.82rem;color:' + c.color + ';user-select:none">' +
-      '<i class="fas ' + c.icon + '" style="font-size:0.85rem;width:18px"></i>' +
+    var paras = s.body.split(/\n{2,}/).filter(function(l){ return l.trim(); }).map(function(l){
+      var lines2 = l.split('\n').filter(function(l2){ return l2.trim(); });
+      var text = lines2.map(function(l2){ return escapeHtml(l2); }).join('<br>');
+      return '<p style="margin:0 0 10px;line-height:1.8">' + text + '</p>';
+    }).join('');
+    return '<div style="margin-bottom:10px;border-radius:12px;overflow:hidden;border:1px solid ' + c.color + '33;box-shadow:0 1px 3px rgba(0,0,0,0.04)">' +
+      '<div onclick="toggleSection(this)" style="padding:12px 16px;background:' + c.bg + ';cursor:pointer;display:flex;align-items:center;gap:10px;font-weight:700;font-size:0.85rem;color:' + c.color + ';user-select:none;border-bottom:1px solid ' + c.color + '15">' +
+      '<i class="fas ' + c.icon + '" style="font-size:0.9rem;width:20px;text-align:center"></i>' +
       '<span style="flex:1">' + s.head + '</span>' +
-      '<i class="fas fa-chevron-down" style="font-size:0.6rem;transition:transform 0.2s"></i></div>' +
-      '<div class="sec-body" style="padding:10px 14px;font-size:0.83rem;line-height:1.6;color:#374151">' + body + '</div></div>';
+      '<span style="font-size:0.6rem;color:' + c.color + '88;font-weight:600">Click to toggle</span>' +
+      '<i class="fas fa-chevron-down" style="font-size:0.6rem;transition:transform 0.2s;color:' + c.color + '88"></i></div>' +
+      '<div class="sec-body" style="padding:14px 16px;font-size:0.85rem;line-height:1.8;color:#374151">' + paras + '</div></div>';
   }).join('');
 }
 

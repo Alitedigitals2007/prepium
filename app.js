@@ -4958,18 +4958,18 @@ app.post('/api/study/subtopic/:id/content', isAuth, requirePaid, async (req, res
     const s = st.rows[0];
     const topic = await pool.query('SELECT * FROM study_topics WHERE id = $1', [s.topic_id]).catch(() => ({ rows: [] }));
     const topicName = topic.rows[0] ? (topic.rows[0].topic_name || topic.rows[0].title) : 'General';
-    const prompt = `You are a university tutor. Explain the subtopic "${s.subtopic_name || s.title}" which is part of the topic "${topicName}". Structure your explanation with exactly these 3 sections — use the exact headers on their own line:
+    const prompt = `You are a university tutor teaching a full lesson on "${s.subtopic_name || s.title}" (part of "${topicName}"). Write a comprehensive explanation with proper paragraphs separated by blank lines. Use exactly these 3 section headers on their own line:
 
 Key Points:
-(2-3 key concepts in full sentences)
+Write 3-4 paragraphs explaining the core concepts in detail. Each paragraph should be 2-4 sentences covering one idea. Use natural spacing between paragraphs.
 
 Note:
-(important things to remember, in full sentences)
+Write 2-3 paragraphs about important things to remember, common mistakes, and how these concepts connect to other topics. Space paragraphs properly.
 
 Example:
-(1-2 practical examples in full sentences)
+Write 2-3 paragraphs with detailed practical examples showing how the concepts apply. Each example should be 2-3 sentences.
 
-Keep each section brief. Use PLAIN TEXT only. No markdown. No asterisks, no hashtags, no backticks.`;
+Make each section substantial — at least 4-6 lines per section. Use PLAIN TEXT only. No markdown. No asterisks, no hashtags, no backticks. Separate paragraphs with blank lines.`;
     const aiRes = await openRouterPrompt(prompt);
     if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
     const clean = cleanAiText(aiRes.text);

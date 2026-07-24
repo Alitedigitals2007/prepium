@@ -120,9 +120,10 @@
                         <div style="font-size:0.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><%= t.topic_name || t.title %></div>
                         <div style="display:flex;align-items:center;gap:4px;margin-top:2px">
                             <div style="flex:1;max-width:80px;height:3px;background:#e2e8f0;border-radius:2px;overflow:hidden">
-                                <div style="width:<%= t.subtopics && t.subtopics.length > 0 ? Math.round(t.subtopics.filter(function(st){ return st.status === 'completed'; }).length / t.subtopics.length * 100) : 0 %>%;height:100%;background:linear-gradient(90deg,#3b82f6,#8b5cf6);border-radius:2px"></div>
+                                <% var sttl = (t.subtopics || []).length; var sdon = (t.subtopics || []).filter(function(st){ return st.status === 'completed'; }).length; %>
+                                <div style="width:<%= sttl > 0 ? Math.round(sdon / sttl * 100) : 0 %>%;height:100%;background:linear-gradient(90deg,#3b82f6,#8b5cf6);border-radius:2px"></div>
                             </div>
-                            <span style="font-size:0.55rem;font-weight:700;color:var(--text-sub)"><%= t.subtopics ? t.subtopics.filter(function(st){ return st.status === 'completed'; }).length + '/' + t.subtopics.length : '0/0' %></span>
+                            <span style="font-size:0.55rem;font-weight:700;color:var(--text-sub)"><%= sdon %>/<%= sttl %></span>
                         </div>
                     </div>
                     <div class="topic-actions">
