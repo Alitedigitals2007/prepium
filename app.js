@@ -4665,39 +4665,30 @@ function cleanAiText(t) {
   return s.trim();
 }
 
-async function studyPromptAI(prompt) {
-  const key = process.env.MISTRAL_API_KEY;
-  if (!key) return { text: 'AI not configured. Set MISTRAL_API_KEY in .env' };
-  try {
-    const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: 'mistral-small-latest', messages: [{ role: 'user', content: prompt }], temperature: 0.15 }),
-      signal: AbortSignal.timeout(45000)
-    });
-    if (!res.ok) { const t = await res.text().catch(()=>''); return { text: `AI error: ${res.status} ${t}` }; }
-    const data = await res.json();
-    return { text: cleanLatex(data.choices?.[0]?.message?.content) || 'AI returned empty response' };
-  } catch (e) { return { text: `AI error: ${e.message}` }; }
+const AI_MODELS = ['nvidia/nemotron-3-ultra-550b-a55b:free', 'google/gemma-4-26b-a4b-it:free'];
+
+async function openRouterPrompt(prompt, jsonMode) {
+  const key = process.env.OPENROUTER_API_KEY;
+  if (!key) return { text: 'AI not configured. Set OPENROUTER_API_KEY in .env' };
+  for (const model of AI_MODELS) {
+    try {
+      const body = { model, messages: [{ role: 'user', content: prompt }], temperature: 0.15 };
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}`, 'HTTP-Referer': 'https://theprepium.vercel.app', 'X-Title': 'Prepium' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(60000)
+      });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const raw = data.choices?.[0]?.message?.content;
+      if (raw) return { text: jsonMode ? raw : cleanLatex(raw) };
+    } catch (e) { continue; }
+  }
+  return { text: 'AI error: all models failed' };
 }
 
-async function nvidiaPrompt(prompt, jsonMode) {
-  const key = process.env.NVIDIA_API_KEY;
-  if (!key) return { text: 'AI not configured. Set NVIDIA_API_KEY in .env' };
-  try {
-    const body = { model: 'deepseek-ai/deepseek-v4-pro', messages: [{ role: 'user', content: prompt }], temperature: 0.15 };
-    const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(120000)
-    });
-    if (!res.ok) { const t = await res.text().catch(()=>''); return { text: `AI error: ${res.status} ${t}` }; }
-    const data = await res.json();
-    const raw = data.choices?.[0]?.message?.content || 'AI returned empty response';
-    return { text: jsonMode ? raw : cleanLatex(raw) };
-  } catch (e) { return { text: `AI error: ${e.message}` }; }
-}
+async function studyPromptAI(prompt) { return openRouterPrompt(prompt); }
 
 // Ensure study tables exist
 (async function initStudyDB() {
@@ -4899,7 +4890,7 @@ app.post('/api/study/subtopics/ai-generate', isAuth, requirePaid, async (req, re
   try {
     const { topicId, courseId, topicTitle, courseName } = req.body;
     const prompt = `For the topic "${topicTitle}" in the course "${courseName}", generate a list of 5-8 specific subtopics that should be studied. Return a JSON array of strings. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
-    const aiRes = await nvidiaPrompt(prompt, true);
+    const aiRes = await openRouterPrompt(prompt, true);
     if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
     let subtopics = [];
     try {
@@ -4957,7 +4948,7 @@ app.post('/api/study/subtopic/:id/content', isAuth, requirePaid, async (req, res
     const topic = await pool.query('SELECT * FROM study_topics WHERE id = $1', [s.topic_id]).catch(() => ({ rows: [] }));
     const topicName = topic.rows[0] ? (topic.rows[0].topic_name || topic.rows[0].title) : 'General';
     const prompt = `You are a university tutor. Explain the subtopic "${s.subtopic_name || s.title}" which is part of the topic "${topicName}". Structure your explanation using these exact labels at the start of lines: "Key Point:" for important concepts, "Example:" for concrete illustrations, "Tip:" for study advice, "Note:" for additional context, "Important:" for critical warnings. Include at least 2 Key Points and 2 Examples. Use PLAIN TEXT only. Do NOT use markdown. No asterisks, no hashtags, no backticks. Short paragraphs separated by blank lines. Use simple numbered points like "1) ..." if needed.`;
-    const aiRes = await nvidiaPrompt(prompt);
+    const aiRes = await openRouterPrompt(prompt);
     if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
     const clean = cleanAiText(aiRes.text);
     await pool.query('UPDATE study_subtopics SET content = $1 WHERE id = $2', [clean, req.params.id]);
@@ -4994,7 +4985,7 @@ app.post('/api/study/session/summarize', isAuth, requirePaid, async (req, res) =
     if (!notes || !notes.trim()) return res.json({ success: false, error: 'No notes to summarize.' });
     const ctx = courseName ? ` from a "${courseName}" study session` : '';
     const prompt = `Read these student study notes${ctx} and produce 3-6 short bullet points capturing the most important takeaways. Output PLAIN TEXT only. No markdown, no asterisks, no hashtags, no backticks. Each line should be a short key point. Lines separated by newline. Keep it concise (max 60 words total).\n\nNotes:\n"""${notes.slice(0, 4000)}"""\n\nKey points:`;
-    const aiRes = await nvidiaPrompt(prompt);
+    const aiRes = await openRouterPrompt(prompt);
     if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
     res.json({ success: true, summary: cleanAiText(aiRes.text) });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
@@ -5043,7 +5034,7 @@ app.post('/api/study/youtube/search', isAuth, requirePaid, async (req, res) => {
   try {
     const { query: searchQuery, subtopicId, courseId } = req.body;
     const prompt = `Generate a list of 5 YouTube video search queries for studying the topic: "${searchQuery}". Return a JSON array of strings. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
-    const aiRes = await nvidiaPrompt(prompt, true);
+    const aiRes = await openRouterPrompt(prompt, true);
     let terms = [];
     try { terms = JSON.parse(aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim()); } catch { terms = [searchQuery]; }
     const html = terms.map(function(t) {
@@ -5066,7 +5057,7 @@ app.post('/api/study/quiz/generate', isAuth, requirePaid, async (req, res) => {
     var qType = questionType || 'multiple_choice';
     var typeGuide = qType === 'mixed' ? 'Mix of multiple choice (with 4 options) and theory questions (options: [])' : (qType === 'theory' ? 'All theory questions (options: [], correctAnswer is the expected answer)' : 'All multiple choice with 4 options each');
     const prompt = `Generate ${count} ${typeGuide} about "${topicTitle || 'General Study'}" for university exam preparation. Each question: question text, options array (4 strings for MC, [] for theory), correctAnswer (letter for MC, text for theory), explanation. Return a JSON array of objects. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
-    const aiRes = await nvidiaPrompt(prompt, true);
+    const aiRes = await openRouterPrompt(prompt, true);
     let questions = [];
     try {
       var txt = aiRes.text.trim();
@@ -5146,7 +5137,7 @@ app.post('/api/study/flashcards/generate', isAuth, requirePaid, async (req, res)
     const { courseId, subtopicId, topicTitle } = req.body;
     const uid = req.session.user.id;
     const prompt = `Generate 10 flashcards for studying "${topicTitle || 'this course'}". Each flashcard: front (question/term), back (answer/definition), image (short visual scene description for illustration, 5-10 words). Return a JSON array of objects. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
-    const aiRes = await nvidiaPrompt(prompt, true);
+    const aiRes = await openRouterPrompt(prompt, true);
     let cards = [];
     try {
       var txt = aiRes.text.trim();
