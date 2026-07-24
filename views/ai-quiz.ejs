@@ -312,7 +312,12 @@ async function generateQuiz(e) {
     btn.disabled = true;
 
     try {
-        const formData = new FormData(document.getElementById('configForm') || document.getElementById('generateForm'));
+        const formData = new FormData();
+        formData.append('lecture_note', file);
+        formData.append('question_type', document.getElementById('question_type').value);
+        formData.append('num_questions', document.getElementById('num_questions').value);
+        formData.append('difficulty', document.getElementById('difficulty').value);
+        formData.append('quiz_duration', document.getElementById('quiz_duration').value);
         const res = await fetch('/generate-ai-quiz', { method: 'POST', body: formData });
         if (!res.ok) throw new Error('Failed to generate quiz');
         const data = await res.json();
@@ -521,11 +526,9 @@ function formatDate(iso) {
 }
 
 function escapeHtml(text) {
-    return (text||'').replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>');
+    return (text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// Form reference fix
-document.getElementById('configForm')?.addEventListener('submit', generateQuiz);
 </script>
 </body>
 </html>
