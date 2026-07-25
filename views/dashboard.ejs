@@ -40,8 +40,8 @@
         .streak-badge { display: flex; align-items: center; gap: 5px; padding: 8px 14px; border-radius: 12px; background: linear-gradient(135deg,#f97316,#ef4444); color: white; font-weight: 800; font-size: 0.75rem; box-shadow: 0 4px 12px rgba(239,68,68,0.25); }
         .streak-badge i { font-size: 0.85rem; }
 
-        .hero-strip { padding: 0 1.25rem 1.25rem; display: flex; gap: 10px; }
-        .hero-stat { flex: 1; background: white; border-radius: 18px; padding: 16px 12px; border: 1px solid rgba(226,232,240,0.5); box-shadow: var(--card-shadow); }
+        .hero-strip { padding: 0 1.25rem 1.25rem; display: flex; flex-wrap: wrap; gap: 8px; }
+        .hero-stat { flex: 1 1 calc(50% - 4px); min-width: 0; background: white; border-radius: 18px; padding: 14px 10px; border: 1px solid rgba(226,232,240,0.5); box-shadow: var(--card-shadow); }
         .hero-stat .stat-icon { width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; margin-bottom: 8px; }
         .hero-stat .stat-num { font-size: 1.3rem; font-weight: 800; line-height: 1; }
         .hero-stat .stat-label { font-size: 0.6rem; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 3px; }
@@ -143,6 +143,11 @@
             <div class="stat-num"><%= typeof studySessions !== 'undefined' ? studySessions : 0 %></div>
             <div class="stat-label">Study Sessions</div>
         </div>
+        <div class="hero-stat">
+            <div class="stat-icon" style="background:#f0fdf4;color:#16a34a;"><i class="fas fa-robot"></i></div>
+            <div class="stat-num"><%= typeof aiQuizCount !== 'undefined' ? aiQuizCount : 0 %></div>
+            <div class="stat-label">AI Quizzes</div>
+        </div>
     </div>
 
     <div class="quick-mood">
@@ -163,7 +168,7 @@
             <h4>Unlock Premium</h4>
             <p>AI tutors, CGPA tracker & more</p>
         </div>
-        <button class="us-btn" onclick="payWithPaystack()">₦1,000</button>
+        <button class="us-btn" onclick="payWithPaystack()">₦2,000</button>
     </div>
     <% } %>
 
@@ -186,6 +191,16 @@
             <div class="fc-body">
                 <div class="fc-label">Study with AI</div>
                 <div class="fc-desc">Courses, flashcards, quizzes & AI tutor</div>
+            </div>
+            <div class="fc-arrow"><i class="fas fa-arrow-right"></i></div>
+        </a>
+
+        <a href="/ai-quiz" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
+            <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
+            <div class="fc-icon" style="background:#f0fdf4;color:#16a34a;"><i class="fas fa-file-pdf"></i></div>
+            <div class="fc-body">
+                <div class="fc-label">Quiz Generator</div>
+                <div class="fc-desc">Upload PDF → AI questions</div>
             </div>
             <div class="fc-arrow"><i class="fas fa-arrow-right"></i></div>
         </a>
@@ -309,7 +324,7 @@ function payWithPaystack(e) {
     let handler = PaystackPop.setup({
         key: '<%= paystack_key %>',
         email: '<%= user.email %>',
-        amount: 1000 * 100,
+        amount: 2000 * 100,
         currency: 'NGN',
         callback: function(response) { window.location.href = "/verify-payment?reference=" + response.reference; },
         onClose: function() {}

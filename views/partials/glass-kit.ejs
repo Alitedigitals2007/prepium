@@ -1,0 +1,40 @@
+<style>
+:root {
+  --glass-bg: rgba(255,255,255,.72);
+  --glass-border: rgba(255,255,255,.3);
+  --glass-shadow: 0 8px 32px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --glass-bg: rgba(15,23,42,.72);
+    --glass-border: rgba(255,255,255,.07);
+    --glass-shadow: 0 8px 32px rgba(0,0,0,.25);
+  }
+}
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: clamp(10px,3vw,22px);
+}
+.flex-center { display:flex; align-items:center; justify-content:center; }
+.flex-gap { display:flex; gap:clamp(6px,1.5vw,12px); }
+.reveal { animation: fadeUp .45s ease both; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
+@keyframes fadeInScale { from { opacity:0; transform:scale(.94) } to { opacity:1; transform:scale(1) } }
+@keyframes shimmer { 0% { background-position:-200% 0 } 100%{ background-position:200% 0 } }
+.skeleton {
+  background: linear-gradient(90deg,var(--bg),var(--surface-solid),var(--bg));
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease infinite;
+  border-radius: 8px;
+}
+.skeleton-block { height:clamp(100px,20vw,160px); }
+.skeleton-text { height:12px; margin-bottom:6px; }
+.skeleton-card { height:180px; }
+@media (min-width:768px) {
+  .app-shell { margin: 12px auto; }
+}
+</style>

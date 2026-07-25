@@ -1,0 +1,51 @@
+<style>
+.gl-spinner {
+  display:inline-block;
+  width:clamp(20px,5vw,40px);
+  height:clamp(20px,5vw,40px);
+  border:3px solid var(--border);
+  border-top-color:var(--brand);
+  border-radius:50%;
+  animation:glSpin .65s linear infinite;
+}
+@keyframes glSpin { to { transform:rotate(360deg) } }
+.gl-dots {
+  display:inline-flex;
+  gap:4px;
+  align-items:center;
+}
+.gl-dots span {
+  width:clamp(4px,1.2vw,8px);
+  height:clamp(4px,1.2vw,8px);
+  border-radius:50%;
+  background:var(--text-sub);
+  animation:glDot 1s ease-in-out infinite;
+}
+.gl-dots span:nth-child(2) { animation-delay:.15s }
+.gl-dots span:nth-child(3) { animation-delay:.3s }
+@keyframes glDot {
+  0%,100% { opacity:.25; transform:translateY(0) }
+  50% { opacity:1; transform:translateY(-4px) }
+}
+.gl-bar {
+  height:4px;
+  background:var(--bg);
+  border-radius:2px;
+  overflow:hidden;
+  position:relative;
+}
+.gl-bar::after {
+  content:'';
+  position:absolute;
+  top:0;left:-40%;
+  width:40%;
+  height:100%;
+  background:linear-gradient(90deg,transparent,var(--brand),transparent);
+  animation:glBar 1.2s ease infinite;
+}
+@keyframes glBar {
+  0% { left:-40% }
+  100%{ left:100% }
+}
+</style>
+<div class="gl-spinner" style="display:<%= typeof hidden !== 'undefined' && hidden ? 'none' : 'inline-block' %>"></div>

@@ -96,7 +96,7 @@
             const handler = PaystackPop.setup({
                 key: '<%= paystack_key %>',
                 email: '<%= userEmail %>',
-                amount: 1000 * 100,
+                amount: 2000 * 100,
                 currency: 'NGN',
                 callback: function(response) {
                     window.location.href = "/verify-payment?reference=" + response.reference;

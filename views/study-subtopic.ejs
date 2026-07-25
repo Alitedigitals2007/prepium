@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="/css/style.css"
     <link rel="manifest" href="/manifest.json">>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <%- include('partials/mathjax') %>
     <style>
         .status-bar { height: env(safe-area-inset-top, 0px); }
         .page-content { padding: 0 1.5rem; }
@@ -328,6 +329,7 @@ function generateContent() {
         if (d.success) {
             display.style.display = 'block';
             document.getElementById('explanationText').innerHTML = explainRender(d.content);
+            mathRender(document.getElementById('explanationText'));
         } else {
             inlineErr.style.display = 'flex';
             document.getElementById('explainErrorText').textContent = d.error || 'Could not generate explanation';
@@ -402,6 +404,7 @@ function showCard() {
         '</div>' +
         '<div class="tap-hint" style="display:block;padding:0 16px 10px;font-size:0.6rem;color:var(--text-muted);font-weight:600">Tap to flip</div></div>' +
         '<div class="reveal" style="text-align:center;font-size:0.7rem;font-weight:600;color:var(--text-sub);margin-top:4px">' + (currentCard + 1) + ' / ' + flashcards.length + '</div>';
+    mathRender(document.getElementById('fcContainer'));
 }
 
 function prevCard() { if (currentCard > 0) { currentCard--; showCard(); } }
@@ -493,7 +496,10 @@ function startQuiz() {
 function escapeHtml(t) { return (t || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function updateTopicProgress() {
-  fetch('/api/study/subtopic/topic-progress?topicId=' + topicId)
+  var url = '/api/study/subtopic/topic-progress?';
+  if (topicId) url += 'topicId=' + topicId;
+  else url += 'subtopicId=' + subtopicId;
+  fetch(url)
     .then(function(r){ return r.json(); })
     .then(function(d) {
       if (d.subtopics) {
@@ -643,27 +649,25 @@ function sendChatMsg() {
     if (!msg) return;
     input.value = '';
     chAppend('user', chEscape(msg));
-    var pendingWrap = document.createElement('div');
-    pendingWrap.className = 'chat-msg ai';
-    var pendingBubble = document.createElement('div');
-    pendingBubble.className = 'bubble';
-    pendingBubble.innerHTML = '<span class="typing"></span><span class="typing"></span><span class="typing"></span>';
-    pendingWrap.appendChild(pendingBubble);
+    var aiMsg = document.createElement('div');
+    aiMsg.className = 'chat-msg ai';
+    var aiBub = document.createElement('div');
+    aiBub.className = 'bubble';
+    aiBub.innerHTML = '<div class="gl-dots"><span></span><span></span><span></span></div>';
+    aiMsg.appendChild(aiBub);
     var container = document.getElementById('chatMessages');
     if (container.querySelector('.fa-comments')) container.innerHTML = '';
-    container.appendChild(pendingWrap);
+    container.appendChild(aiMsg);
     container.scrollTop = container.scrollHeight;
-    var aiBubble = null;
-    var rawReply = '';
+    var raw = '';
     fetch('/api/study/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
         body: JSON.stringify({ message: msg, courseId: courseId, subtopicId: subtopicId, courseName: subtopicName })
     }).then(function(resp) {
         if (!resp.ok || !resp.body) {
-            pendingWrap.remove();
             return resp.json().catch(function(){ return { error: 'Bad response' }; }).then(function(j){
-                chAppend('ai', '<p style="color:#dc2626;margin:0">' + chEscape(j.error || resp.statusText) + '</p>');
+                aiBub.innerHTML = '<p style="color:#dc2626;margin:0">' + chEscape(j.error || resp.statusText) + '</p>';
             });
         }
         var reader = resp.body.getReader();
@@ -686,26 +690,19 @@ function sendChatMsg() {
                     if (!data) return;
                     try {
                         var obj = JSON.parse(data);
-                        if (event === 'error') {
-                            if (pendingWrap.parentNode) pendingWrap.remove();
-                            chAppend('ai', '<p style="color:#dc2626;margin:0">' + chEscape(obj.error || 'AI error') + '</p>');
-                            return;
-                        }
+                        if (event === 'error') { aiBub.innerHTML = '<p style="color:#dc2626;margin:0">' + chEscape(obj.error || 'AI error') + '</p>'; return; }
                         if (event === 'full') {
-                            if (pendingWrap.parentNode) pendingWrap.remove();
-                            chAppend('ai', chRender(obj.t || ''));
+                            var h = '<p style="margin:0">' + chEscape(obj.t || '') + '</p>';
+                            aiBub.innerHTML = h.replace(/\n/g, '<br>');
+                            container.scrollTop = container.scrollHeight;
                             return;
                         }
                         if (event === 'done' || obj.ok) return;
                         if (typeof obj.t === 'string') {
-                            rawReply += obj.t;
-                            if (pendingWrap.parentNode) {
-                                pendingWrap.remove();
-                                aiBubble = chAppend('ai', chRender(rawReply));
-                            } else if (aiBubble) {
-                                aiBubble.innerHTML = chRender(rawReply);
-                                container.scrollTop = container.scrollHeight;
-                            }
+                            raw += obj.t;
+                            var display = chEscape(raw);
+                            aiBub.innerHTML = display.replace(/\n/g, '<br>');
+                            container.scrollTop = container.scrollHeight;
                         }
                     } catch (e) { /* skip */ }
                 });
@@ -713,12 +710,10 @@ function sendChatMsg() {
             });
         }
         return pump().catch(function(err) {
-            if (pendingWrap.parentNode) pendingWrap.remove();
-            chAppend('ai', '<p style="color:#dc2626;margin:0">' + chEscape(err.message || 'stream error') + '</p>');
+            aiBub.innerHTML = '<p style="color:#dc2626;margin:0">' + chEscape(err.message || 'stream error') + '</p>';
         });
     }).catch(function(err) {
-        if (pendingWrap.parentNode) pendingWrap.remove();
-        chAppend('ai', '<p style="color:#dc2626;margin:0">' + chEscape(err.message || 'network error') + '</p>');
+        aiBub.innerHTML = '<p style="color:#dc2626;margin:0">' + chEscape(err.message || 'network error') + '</p>';
     });
 }
 

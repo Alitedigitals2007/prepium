@@ -660,7 +660,7 @@ app.get('/verify-payment', rateLimit(5, 300000), async (req, res) => {
 
             if (ambCheck.rows.length > 0) {
                 const ambassador = ambCheck.rows[0];
-                const commission = Math.round(1000 * 0.15);
+                const commission = Math.round(2000 * 0.15);
                 console.log(`[Referral Match] Adding ₦${commission} (15%) to Ambassador: ${ambassador.name}`);
 
                 await pool.query(
@@ -1179,6 +1179,8 @@ app.get('/dashboard', isStudent, async (req, res) => {
         const studySessions = parseInt(studyStatsRes.rows[0].s) || 0;
         const quizCount = parseInt(quizCountRes.rows[0].c) || 0;
         const avgScore = Math.round(parseFloat(avgScoreRes.rows[0].avg) || 0);
+        const aiQuizRes = await pool.query('SELECT COUNT(*) FROM quiz_results WHERE user_id = $1 AND subject_id IS NULL', [userId]);
+        const aiQuizCount = parseInt(aiQuizRes.rows[0].count) || 0;
 
         // 7. Get recent quiz
         const recentQuizRes = await pool.query('SELECT subject, score, total_questions, TO_CHAR(taken_at, \'YYYY-MM-DD\') as date_taken FROM results WHERE user_id = $1 ORDER BY taken_at DESC LIMIT 1', [userId]);
@@ -1194,6 +1196,7 @@ app.get('/dashboard', isStudent, async (req, res) => {
             studySessions,
             quizCount,
             avgScore,
+            aiQuizCount,
             recentQuiz: recentQuizRes.rows[0] || null,
             paystack_key: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_your_key',
             currentTime: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })
@@ -4027,17 +4030,14 @@ You MUST respond with a raw JSON array matching this structure format:
 DOCUMENT CONTENT:
 ${pdfText}`;
 
-        const aiRes = await cerebrasPrompt(prompt, true);
+        const aiRes = await studyPromptJSON(prompt);
         let responseText = (aiRes.text || '').trim();
-        if (!responseText || responseText.startsWith('AI error')) {
-          const fb = await studyPromptJSON(prompt);
-          responseText = (fb.text || '').trim();
-          if (!responseText) throw new Error('Failed to compile quiz questions. Try again.');
-        }
+        if (!responseText) throw new Error('Failed to compile quiz questions. Try again.');
 
         // Clean up markdown blocks if returned
         if (responseText.startsWith("```json")) responseText = responseText.replace(/^```json/, "").replace(/```$/, "");
         if (responseText.startsWith("```")) responseText = responseText.replace(/^```/, "").replace(/```$/, "");
+        responseText = extractJsonItems(responseText);
 
         let parsedData;
         try {
@@ -4722,7 +4722,33 @@ async function openRouterPrompt(prompt, jsonMode) {
 
 async function studyPromptAI(prompt) { return openRouterPrompt(prompt, false); }
 
-async function studyPromptJSON(prompt) { return openRouterPrompt(prompt, true); }
+function extractJsonItems(text) {
+  if (!text) return '';
+  const stripped = String(text).replace(/```json|```/g, '').trim();
+  const objMatch = stripped.match(/\{[\s\S]*\}/);
+  if (objMatch) {
+    try {
+      const obj = JSON.parse(objMatch[0]);
+      if (Array.isArray(obj)) return JSON.stringify(obj);
+      if (Array.isArray(obj.items)) return JSON.stringify(obj.items);
+      if (Array.isArray(obj.questions)) return JSON.stringify(obj.questions);
+      if (Array.isArray(obj.quiz)) return JSON.stringify(obj.quiz);
+      if (Array.isArray(obj.cards)) return JSON.stringify(obj.cards);
+      if (Array.isArray(obj.flashcards)) return JSON.stringify(obj.flashcards);
+      if (Array.isArray(obj.subtopics)) return JSON.stringify(obj.subtopics);
+      if (Array.isArray(obj.courses)) return JSON.stringify(obj.courses);
+      if (Array.isArray(obj.terms)) return JSON.stringify(obj.terms);
+    } catch (_) {}
+  }
+  const arrMatch = stripped.match(/\[[\s\S]*\]/);
+  if (arrMatch) return arrMatch[0];
+  return stripped;
+}
+
+async function studyPromptJSON(prompt) {
+  const wrapped = `${prompt.trim()}\n\nIMPORTANT: Return ONLY a single JSON object of the form { "items": [...the data array...] } Do not wrap in markdown. No prose outside JSON.`;
+  return openRouterPrompt(wrapped, true);
+}
 
 async function studyPromptSmart(prompt) {
   const cere = await cerebrasPrompt(prompt, false);
@@ -4984,9 +5010,15 @@ app.post('/api/study/subtopics/delete/:id', isAuth, requirePaid, async (req, res
 app.get('/api/study/subtopic/topic-progress', isAuth, async (req, res) => {
   try {
     const uid = req.session.user.id;
-    const { topicId } = req.query;
-    if (!topicId) return res.json({ subtopics: [] });
-    const r = await pool.query('SELECT id, status FROM study_subtopics WHERE topic_id = $1 AND user_id = $2', [parseInt(topicId), uid]);
+    const { topicId, subtopicId } = req.query;
+    if (!topicId && !subtopicId) return res.json({ subtopics: [] });
+    if (topicId) {
+      const r = await pool.query('SELECT id, status FROM study_subtopics WHERE topic_id = $1 AND user_id = $2', [parseInt(topicId), uid]);
+      return res.json({ subtopics: r.rows });
+    }
+    const st = await pool.query('SELECT topic_id FROM study_subtopics WHERE id = $1 AND user_id = $2', [parseInt(subtopicId), uid]);
+    if (!st.rows[0]) return res.json({ subtopics: [] });
+    const r = await pool.query('SELECT id, status FROM study_subtopics WHERE topic_id = $1 AND user_id = $2', [st.rows[0].topic_id, uid]);
     res.json({ subtopics: r.rows });
   } catch (err) { res.json({ subtopics: [] }); }
 });
