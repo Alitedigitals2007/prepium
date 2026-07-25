@@ -195,22 +195,6 @@
             <div class="fc-arrow"><i class="fas fa-arrow-right"></i></div>
         </a>
 
-        <a href="/ai-quiz" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
-            <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-            <div class="fc-icon" style="background:#f0fdf4;color:#16a34a;"><i class="fas fa-file-pdf"></i></div>
-            <div class="fc-body">
-                <div class="fc-label">Quiz Generator</div>
-                <div class="fc-desc">Upload PDF → AI questions</div>
-            </div>
-            <div class="fc-arrow"><i class="fas fa-arrow-right"></i></div>
-        </a>
-
-        <a href="/setup-test" class="feature-card">
-            <div class="fc-icon" style="background:#eef4ff;color:var(--brand);"><i class="fas fa-bolt"></i></div>
-            <div class="fc-label">Practice Quiz</div>
-            <div class="fc-desc"><%= user.has_paid ? 'Unlimited' : Math.max(0, 2 - (typeof quizAttempts !== 'undefined' ? quizAttempts : 0)) + ' free attempts left' %></div>
-        </a>
-
         <a href="/timetable" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
             <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
             <div class="fc-icon" style="background:#f3e8ff;color:#7c3aed;"><i class="fas fa-table"></i></div>
