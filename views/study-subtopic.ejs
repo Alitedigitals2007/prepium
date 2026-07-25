@@ -59,7 +59,10 @@
         .fc-nav { display: flex; gap: 8px; justify-content: center; margin-bottom: 10px; }
         .fc-nav button { padding: 10px 18px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-solid); font-family: inherit; font-weight: 700; font-size: 0.75rem; cursor: pointer; }
         .yt-card { background: var(--surface-solid); border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-bottom: 8px; cursor: pointer; display: flex; align-items: center; gap: 12px; }
-        .yt-card:active { transform: scale(0.98); }
+        .typing { display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--text-sub);margin:0 2px;animation:typingDot 1s infinite ease-in-out; }
+        .typing:nth-child(2) { animation-delay:.2s; }
+        .typing:nth-child(3) { animation-delay:.4s; }
+        @keyframes typingDot { 0%,80%,100%{opacity:.2;transform:translateY(0)} 40%{opacity:1;transform:translateY(-3px)} }        .yt-card:active { transform: scale(0.98); }
         .yt-card i { font-size: 1.5rem; color: #ff0000; }
         .yt-card h4 { font-size: 0.82rem; font-weight: 700; margin: 0; }
     </style>
@@ -640,18 +643,81 @@ function sendChatMsg() {
     if (!msg) return;
     input.value = '';
     chAppend('user', chEscape(msg));
-    var pending = chAppend('ai', '<i class="fas fa-spinner fa-spin"></i> Thinking…');
+    var pendingWrap = document.createElement('div');
+    pendingWrap.className = 'chat-msg ai';
+    var pendingBubble = document.createElement('div');
+    pendingBubble.className = 'bubble';
+    pendingBubble.innerHTML = '<span class="typing"></span><span class="typing"></span><span class="typing"></span>';
+    pendingWrap.appendChild(pendingBubble);
+    var container = document.getElementById('chatMessages');
+    if (container.querySelector('.fa-comments')) container.innerHTML = '';
+    container.appendChild(pendingWrap);
+    container.scrollTop = container.scrollHeight;
+    var aiBubble = null;
+    var rawReply = '';
     fetch('/api/study/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
         body: JSON.stringify({ message: msg, courseId: courseId, subtopicId: subtopicId, courseName: subtopicName })
-    }).then(function(r){ return r.json().catch(function(){ return { success:false, error:'Bad response' }; }); })
-    .then(function(d) {
-        if (pending && pending.parentNode) pending.remove();
-        if (d && d.success && d.reply) chAppend('ai', chRender(d.reply));
-        else chAppend('ai', '<p style="color:#dc2626;margin:0">' + chEscape((d && d.error) ? d.error : 'No response') + '</p>');
+    }).then(function(resp) {
+        if (!resp.ok || !resp.body) {
+            pendingWrap.remove();
+            return resp.json().catch(function(){ return { error: 'Bad response' }; }).then(function(j){
+                chAppend('ai', '<p style="color:#dc2626;margin:0">' + chEscape(j.error || resp.statusText) + '</p>');
+            });
+        }
+        var reader = resp.body.getReader();
+        var decoder = new TextDecoder();
+        var buf = '';
+        function pump() {
+            return reader.read().then(function(r){
+                if (r.done) return;
+                buf += decoder.decode(r.value, { stream: true });
+                var parts = buf.split('\n\n');
+                buf = parts.pop() || '';
+                parts.forEach(function(chunk) {
+                    var lines = chunk.split('\n');
+                    var event = 'message';
+                    var data = '';
+                    lines.forEach(function(l) {
+                        if (l.indexOf('event:') === 0) event = l.slice(6).trim();
+                        else if (l.indexOf('data:') === 0) data += l.slice(5).trim();
+                    });
+                    if (!data) return;
+                    try {
+                        var obj = JSON.parse(data);
+                        if (event === 'error') {
+                            if (pendingWrap.parentNode) pendingWrap.remove();
+                            chAppend('ai', '<p style="color:#dc2626;margin:0">' + chEscape(obj.error || 'AI error') + '</p>');
+                            return;
+                        }
+                        if (event === 'full') {
+                            if (pendingWrap.parentNode) pendingWrap.remove();
+                            chAppend('ai', chRender(obj.t || ''));
+                            return;
+                        }
+                        if (event === 'done' || obj.ok) return;
+                        if (typeof obj.t === 'string') {
+                            rawReply += obj.t;
+                            if (pendingWrap.parentNode) {
+                                pendingWrap.remove();
+                                aiBubble = chAppend('ai', chRender(rawReply));
+                            } else if (aiBubble) {
+                                aiBubble.innerHTML = chRender(rawReply);
+                                container.scrollTop = container.scrollHeight;
+                            }
+                        }
+                    } catch (e) { /* skip */ }
+                });
+                return pump();
+            });
+        }
+        return pump().catch(function(err) {
+            if (pendingWrap.parentNode) pendingWrap.remove();
+            chAppend('ai', '<p style="color:#dc2626;margin:0">' + chEscape(err.message || 'stream error') + '</p>');
+        });
     }).catch(function(err) {
-        if (pending && pending.parentNode) pending.remove();
+        if (pendingWrap.parentNode) pendingWrap.remove();
         chAppend('ai', '<p style="color:#dc2626;margin:0">' + chEscape(err.message || 'network error') + '</p>');
     });
 }

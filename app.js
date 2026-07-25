@@ -4027,8 +4027,13 @@ You MUST respond with a raw JSON array matching this structure format:
 DOCUMENT CONTENT:
 ${pdfText}`;
 
-        const aiRes = await openRouterPrompt(prompt, true);
-        let responseText = aiRes.text.trim();
+        const aiRes = await cerebrasPrompt(prompt, true);
+        let responseText = (aiRes.text || '').trim();
+        if (!responseText || responseText.startsWith('AI error')) {
+          const fb = await studyPromptJSON(prompt);
+          responseText = (fb.text || '').trim();
+          if (!responseText) throw new Error('Failed to compile quiz questions. Try again.');
+        }
 
         // Clean up markdown blocks if returned
         if (responseText.startsWith("```json")) responseText = responseText.replace(/^```json/, "").replace(/```$/, "");
@@ -4586,30 +4591,154 @@ function cleanAiText(t) {
   return s.trim();
 }
 
-const AI_MODELS = ['nvidia/nemotron-3-ultra-550b-a55b:free', 'google/gemma-4-26b-a4b-it:free'];
+const CEREBRAS_MODELS = ['llama-3.3-70b', 'llama-3.1-70b'];
+const GROQ_FAST = ['llama-3.1-8b-instant'];
+const GROQ_SMART = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
 
-async function openRouterPrompt(prompt, jsonMode) {
-  const key = process.env.OPENROUTER_API_KEY;
-  if (!key) return { text: 'AI not configured. Set OPENROUTER_API_KEY in .env' };
-  for (const model of AI_MODELS) {
+async function cerebrasPrompt(prompt, jsonMode) {
+  const key = process.env.CEREBRAS_API_KEY;
+  if (!key) return { text: '', provider: 'cerebras-no-key' };
+  for (const model of CEREBRAS_MODELS) {
     try {
-      const body = { model, messages: [{ role: 'user', content: prompt }], temperature: 0.15 };
-      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const body = {
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: jsonMode ? 0.15 : 0.25,
+        stream: false,
+        ...(jsonMode ? { response_format: { type: 'json_object' } } : {})
+      };
+      const res = await fetch('https://api.cerebras.ai/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}`, 'HTTP-Referer': 'https://theprepium.vercel.app', 'X-Title': 'Prepium' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(60000)
+        signal: AbortSignal.timeout(45000)
       });
       if (!res.ok) continue;
       const data = await res.json();
       const raw = data.choices?.[0]?.message?.content;
-      if (raw) return { text: jsonMode ? raw : cleanLatex(raw) };
-    } catch (e) { continue; }
+      if (raw) return { text: jsonMode ? raw : cleanLatex(raw), provider: 'cerebras:' + model };
+    } catch (_) { continue; }
   }
-  return { text: 'AI error: all models failed' };
+  return { text: '', provider: 'cerebras-failed' };
 }
 
-async function studyPromptAI(prompt) { return openRouterPrompt(prompt); }
+async function groqPrompt(prompt, jsonMode, smart) {
+  const key = process.env.GROQ_API_KEY;
+  if (!key) return { text: '', provider: 'groq-no-key' };
+  const list = smart ? GROQ_SMART : GROQ_FAST;
+  for (const model of list) {
+    try {
+      const body = {
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: jsonMode ? 0.15 : 0.3,
+        stream: false,
+        ...(jsonMode ? { response_format: { type: 'json_object' } } : {})
+      };
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(25000)
+      });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const raw = data.choices?.[0]?.message?.content;
+      if (raw) return { text: jsonMode ? raw : cleanLatex(raw), provider: 'groq:' + model };
+    } catch (_) { continue; }
+  }
+  return { text: '', provider: 'groq-failed' };
+}
+
+async function groqStream(prompt, onChunk) {
+  const key = process.env.GROQ_API_KEY;
+  if (!key) return false;
+  for (const model of GROQ_FAST) {
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.3,
+          stream: true
+        }),
+        signal: AbortSignal.timeout(25000)
+      });
+      if (!res.ok || !res.body) continue;
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop() || '';
+        for (const line of lines) {
+          const s = line.trim();
+          if (!s.startsWith('data:')) continue;
+          const payload = s.slice(5).trim();
+          if (payload === '[DONE]') return true;
+          try {
+            const obj = JSON.parse(payload);
+            const delta = obj.choices?.[0]?.delta?.content || '';
+            if (delta) onChunk(delta);
+          } catch (_) { continue; }
+        }
+      }
+      return true;
+    } catch (_) { continue; }
+  }
+  return false;
+}
+
+async function openRouterPrompt(prompt, jsonMode) {
+  const fast = await groqPrompt(prompt, jsonMode, false);
+  if (fast.text) return { text: fast.text, provider: fast.provider };
+  const big = await cerebrasPrompt(prompt, jsonMode);
+  if (big.text) return { text: big.text, provider: big.provider };
+  const smart = await groqPrompt(prompt, jsonMode, true);
+  if (smart.text) return { text: smart.text, provider: smart.provider };
+  const orKey = process.env.OPENROUTER_API_KEY;
+  if (orKey) {
+    try {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${orKey}`, 'HTTP-Referer': 'https://theprepium.vercel.app', 'X-Title': 'Prepium' },
+        body: JSON.stringify({ model: 'google/gemma-3-27b-it:free', messages: [{ role: 'user', content: prompt }], temperature: 0.3 }),
+        signal: AbortSignal.timeout(45000)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const raw = data.choices?.[0]?.message?.content;
+        if (raw) return { text: jsonMode ? raw : cleanLatex(raw), provider: 'openrouter' };
+      }
+    } catch (_) {}
+  }
+  return { text: 'AI error: all providers failed', provider: 'none' };
+}
+
+async function studyPromptAI(prompt) { return openRouterPrompt(prompt, false); }
+
+async function studyPromptJSON(prompt) { return openRouterPrompt(prompt, true); }
+
+async function studyPromptSmart(prompt) {
+  const cere = await cerebrasPrompt(prompt, false);
+  if (cere.text) return cere;
+  const smart = await groqPrompt(prompt, false, true);
+  if (smart.text) return smart;
+  return openRouterPrompt(prompt, false);
+}
+
+async function studyPromptFast(prompt) {
+  const fast = await groqPrompt(prompt, false, false);
+  if (fast.text) return fast;
+  const cere = await cerebrasPrompt(prompt, false);
+  if (cere.text) return cere;
+  return openRouterPrompt(prompt, false);
+}
 
 // Ensure study tables exist
 (async function initStudyDB() {
@@ -4812,7 +4941,7 @@ app.post('/api/study/subtopics/ai-generate', isAuth, requirePaid, async (req, re
   try {
     const { topicId, courseId, topicTitle, courseName } = req.body;
     const prompt = `For the topic "${topicTitle}" in the course "${courseName}", generate a list of 5-8 specific subtopics that should be studied. Return a JSON array of strings. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
-    const aiRes = await openRouterPrompt(prompt, true);
+    const aiRes = await studyPromptJSON(prompt);
     if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
     let subtopics = [];
     try {
@@ -4891,8 +5020,8 @@ Example:
 Write 2-3 paragraphs with detailed practical examples showing how the concepts apply. Each example should be 2-3 sentences.
 
 Make each section substantial — at least 4-6 lines per section. Use PLAIN TEXT only. No markdown. No asterisks, no hashtags, no backticks. Separate paragraphs with blank lines.`;
-    const aiRes = await openRouterPrompt(prompt);
-    if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
+    const aiRes = await studyPromptSmart(prompt);
+    if (!aiRes.text || aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text || 'AI error' });
     const clean = cleanAiText(aiRes.text);
     await pool.query('UPDATE study_subtopics SET content = $1 WHERE id = $2', [clean, req.params.id]);
     res.json({ success: true, subtopic: s.subtopic_name || s.title, content: clean });
@@ -4928,8 +5057,8 @@ app.post('/api/study/session/summarize', isAuth, requirePaid, async (req, res) =
     if (!notes || !notes.trim()) return res.json({ success: false, error: 'No notes to summarize.' });
     const ctx = courseName ? ` from a "${courseName}" study session` : '';
     const prompt = `Read these student study notes${ctx} and produce 3-6 short bullet points capturing the most important takeaways. Output PLAIN TEXT only. No markdown, no asterisks, no hashtags, no backticks. Each line should be a short key point. Lines separated by newline. Keep it concise (max 60 words total).\n\nNotes:\n"""${notes.slice(0, 4000)}"""\n\nKey points:`;
-    const aiRes = await openRouterPrompt(prompt);
-    if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
+    const aiRes = await studyPromptFast(prompt);
+    if (!aiRes.text || aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text || 'AI error' });
     res.json({ success: true, summary: cleanAiText(aiRes.text) });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
@@ -4942,7 +5071,7 @@ app.post('/api/study/sessions/update', isAuth, requirePaid, async (req, res) => 
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
-// ==================== STUDY API: AI CHAT ====================
+// ==================== STUDY API: AI CHAT (streaming SSE) ====================
 app.post('/api/study/chat', isAuth, requirePaid, async (req, res) => {
   try {
     const { message, courseId, subtopicId, courseName } = req.body;
@@ -4951,11 +5080,36 @@ app.post('/api/study/chat', isAuth, requirePaid, async (req, res) => {
     await pool.query('INSERT INTO study_chat_messages (user_id, course_id, subtopic_id, role, message) VALUES ($1, $2, $3, $4, $5)', [uid, courseId || 0, subtopicId || 0, 'user', cleanUser]);
     const ctx = courseName ? `Context: Student is studying "${courseName}". ` : '';
     const prompt = `${ctx}You are a helpful study assistant for university students. Answer the following question in PLAIN TEXT only. Do NOT use markdown bullets that start with asterisks or hashes. Use short paragraphs separated by blank lines. Keep formatting simple — no asterisks, no hashtags, no backticks.\n\nStudent's question: ${cleanUser}\n\nProvide a thorough, educational response in clean plain text.`;
-    const aiRes = await studyPromptAI(prompt);
-    const clean = cleanAiText(aiRes.text);
-    await pool.query('INSERT INTO study_chat_messages (user_id, course_id, subtopic_id, role, message) VALUES ($1, $2, $3, $4, $5)', [uid, courseId || 0, subtopicId || 0, 'ai', clean]);
-    res.json({ success: true, reply: clean });
-  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders && res.flushHeaders();
+    let raw = '';
+    const streamed = await groqStream(prompt, async function(delta) {
+      raw += delta;
+      res.write('data: ' + JSON.stringify({ t: delta }) + '\n\n');
+    });
+    if (!streamed) {
+      const fallback = await studyPromptFast(prompt);
+      if (!fallback.text || fallback.text.startsWith('AI error')) {
+        res.write('event: error\ndata: ' + JSON.stringify({ error: fallback.text || 'AI error' }) + '\n\n');
+        return res.end();
+      }
+      raw = fallback.text;
+      res.write('event: full\ndata: ' + JSON.stringify({ t: cleanAiText(raw) }) + '\n\n');
+    }
+    const clean = cleanAiText(raw);
+    try {
+      await pool.query('INSERT INTO study_chat_messages (user_id, course_id, subtopic_id, role, message) VALUES ($1, $2, $3, $4, $5)', [uid, courseId || 0, subtopicId || 0, 'ai', clean]);
+    } catch (e) { console.error('Chat message persist failed:', e.message); }
+    res.write('event: done\ndata: ' + JSON.stringify({ ok: true }) + '\n\n');
+    res.end();
+  } catch (err) {
+    if (!res.headersSent) return res.status(500).json({ success: false, error: err.message });
+    res.write('event: error\ndata: ' + JSON.stringify({ error: err.message }) + '\n\n');
+    res.end();
+  }
 });
 
 app.get('/api/study/chat/history', isAuth, async (req, res) => {
@@ -4977,7 +5131,7 @@ app.post('/api/study/youtube/search', isAuth, requirePaid, async (req, res) => {
   try {
     const { query: searchQuery, subtopicId, courseId } = req.body;
     const prompt = `Generate a list of 5 YouTube video search queries for studying the topic: "${searchQuery}". Return a JSON array of strings. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
-    const aiRes = await openRouterPrompt(prompt, true);
+    const aiRes = await studyPromptJSON(prompt);
     let terms = [];
     try { terms = JSON.parse(aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim()); } catch { terms = [searchQuery]; }
     const html = terms.map(function(t) {
@@ -5000,7 +5154,7 @@ app.post('/api/study/quiz/generate', isAuth, requirePaid, async (req, res) => {
     var qType = questionType || 'multiple_choice';
     var typeGuide = qType === 'mixed' ? 'Mix of multiple choice (with 4 options) and theory questions (options: [])' : (qType === 'theory' ? 'All theory questions (options: [], correctAnswer is the expected answer)' : 'All multiple choice with 4 options each');
     const prompt = `Generate ${count} ${typeGuide} about "${topicTitle || 'General Study'}" for university exam preparation. Each question: question text, options array (4 strings for MC, [] for theory), correctAnswer (letter for MC, text for theory), explanation. Return a JSON array of objects. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
-    const aiRes = await openRouterPrompt(prompt, true);
+    const aiRes = await studyPromptJSON(prompt);
     let questions = [];
     try {
       var txt = aiRes.text.trim();
@@ -5081,7 +5235,7 @@ app.post('/api/study/flashcards/generate', isAuth, requirePaid, async (req, res)
     const fcCount = parseInt(count) || 10;
     const uid = req.session.user.id;
     const prompt = `Generate ${fcCount} flashcards for studying "${topicTitle || 'this course'}". Each flashcard: front (question/term), back (answer/definition), image (short visual scene description for illustration, 5-10 words). Return a JSON array of objects. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
-    const aiRes = await openRouterPrompt(prompt, true);
+    const aiRes = await studyPromptJSON(prompt);
     let cards = [];
     try {
       var txt = aiRes.text.trim();
@@ -5252,8 +5406,8 @@ Recent courses (code | title | units | grade | level-sem):
 ${courses.rows.map(c => '- ' + c.course_code + ' | ' + (c.title||'') + ' | ' + c.credit_units + 'u | ' + c.grade + ' | L' + c.level_scope + 'S' + c.semester).join('\n')}
 
 Predict their likely GPA range next semester, identify subjects they are at risk of failing, and give 4 short practical study tips to lift their CGPA. Output PLAIN TEXT only (no markdown, no asterisks, no hashtags, no backticks). Use short paragraphs and numbered points as 1), 2), 3) where useful. Maximum 200 words.`;
-    const aiRes = await studyPromptAI(prompt);
-    if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
+    const aiRes = await studyPromptSmart(prompt);
+    if (!aiRes.text || aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text || 'AI error' });
     res.json({ success: true, prediction: cleanAiText(aiRes.text) });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
@@ -5278,8 +5432,8 @@ app.post('/api/cgpa/ai-whatif', isAuth, async (req, res) => {
     const newCGPA = (curPoints + addPts) / (curUnits + addU);
     const warn = newCGPA < curCGPA ? 'This would lower your CGPA. Consider aiming higher if possible.' : 'Good — this move improves your cumulative GPA.';
     const advicePrompt = `You are an academic advisor. The student asks: "If I take "${courseName}" (${addU} units) and aim for grade ${anticipatedGrade}, what's the impact?" Their current CGPA is ${curCGPA.toFixed(2)} / ${scale}. New CGPA would be ${newCGPA.toFixed(2)}. Give a 3-sentence plain-text answer about the impact and what to focus on to actually achieve ${anticipatedGrade}. No markdown, no asterisks.`;
-    const aiRes = await studyPromptAI(advicePrompt);
-    const advice = aiRes.text.startsWith('AI error') ? warn : cleanAiText(aiRes.text);
+    const aiRes = await studyPromptSmart(advicePrompt);
+    const advice = (!aiRes.text || aiRes.text.startsWith('AI error')) ? warn : cleanAiText(aiRes.text);
     res.json({ success: true, currentCGPA: curCGPA.toFixed(2), newCGPA: newCGPA.toFixed(2), advice: advice });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
@@ -5306,8 +5460,8 @@ app.post('/api/cgpa/ai-chat', isAuth, async (req, res) => {
       history.slice(-6).forEach(function(m){ convo += (m.role === 'user' ? 'Student' : 'Advisor') + ': ' + (m.text || '').slice(0, 500) + '\n'; });
     }
     const prompt = 'You are a helpful academic advisor chatbot. Answer clearly and practically. Output PLAIN TEXT only (no markdown, no asterisks, no hashtags, no backticks). Use short paragraphs. Maximum 180 words per reply.\n\n' + ctx + (convo ? 'Conversation so far:\n' + convo + '\n' : '') + 'Student: ' + cleanUser + '\nAdvisor:';
-    const aiRes = await studyPromptAI(prompt);
-    if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
+    const aiRes = await studyPromptFast(prompt);
+    if (!aiRes.text || aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text || 'AI error' });
     res.json({ success: true, reply: cleanAiText(aiRes.text) });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
