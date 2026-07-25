@@ -283,6 +283,11 @@ function closeEdit() { document.getElementById('editModal').classList.remove('sh
 
 function refreshTable() { if (currentTable) selectTable(currentTable); }
 
+function toggleSidebar() {
+    document.getElementById('adminSidebar').classList.toggle('open');
+    document.getElementById('sidebarOverlay').classList.toggle('show');
+}
+
 function runSql() {
     var sql = document.getElementById('sqlInput').value.trim();
     if (!sql) return;

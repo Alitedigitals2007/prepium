@@ -4212,13 +4212,13 @@ app.post('/upload-pdf', uploadMemory.single('lecture_note'), async (req, res) =>
     }
 });
 
-// POST: Process and Generate Contextual Quizzes from PDFs using pdfToText + OpenRouter
+// POST: Generate quizzes from client-extracted PDF text
 app.post('/generate-ai-quiz', isAuth, requirePaid, async (req, res) => {
     try {
-        const { pdfData, fileName, num_questions, quiz_duration, question_type, difficulty } = req.body;
+        const { pdfText, fileName, num_questions, quiz_duration, question_type, difficulty } = req.body;
 
-        if (!pdfData) {
-            return res.status(400).json({ success: false, message: "No PDF data received." });
+        if (!pdfText || !pdfText.trim()) {
+            return res.status(400).json({ success: false, message: "Could not extract text from PDF. Try a different file." });
         }
 
         const numQuestions = parseInt(num_questions) || 5;
@@ -4227,7 +4227,7 @@ app.post('/generate-ai-quiz', isAuth, requirePaid, async (req, res) => {
         const difficultyLevel = difficulty || 'medium';
         const originalFileName = fileName || 'document';
 
-        console.log(`[AI ENGINE] Scanning PDF via Gemini → generating ${numQuestions} questions for "${originalFileName}"`);
+        console.log(`[AI ENGINE] Generating ${numQuestions} questions from text "${originalFileName}"`);
 
         let styleInstruction = "";
         if (questionType === 'obj') {
@@ -4243,20 +4243,12 @@ app.post('/generate-ai-quiz', isAuth, requirePaid, async (req, res) => {
         const difficultyMap = { easy: 'basic recall and comprehension level', medium: 'application and analysis level', hard: 'synthesis and evaluation level', expert: 'critical thinking and expert level' };
         const difficultyText = difficultyMap[difficultyLevel] || 'application and analysis level';
 
-        // Step 1: Use Gemini to scan/extract text from PDF
-        const geminiPrompt = `Extract ALL the text content from this PDF document. Return ONLY the extracted text, no commentary. Preserve the original structure, paragraphs, and formatting as much as possible.`;
-        const geminiRes = await callGeminiWithImage(geminiPrompt, pdfData, 'application/pdf');
-
-        let pdfText = geminiRes.text || '';
-        if (!pdfText.trim()) {
-            return res.status(400).json({ success: false, message: "Could not extract text from PDF using AI. Try a different file." });
-        }
-
         // Truncate if too long
         const maxChars = 12000;
-        if (pdfText.length > maxChars) pdfText = pdfText.substring(0, maxChars) + "\n...[truncated]";
+        var cleanText = pdfText;
+        if (cleanText.length > maxChars) cleanText = cleanText.substring(0, maxChars) + "\n...[truncated]";
 
-        // Step 2: Use free AI APIs (Groq/Cerebras/OpenRouter) to generate questions
+        // Generate questions via AI
         const prompt = `You are an expert academic examiner. Analyze the following document content carefully.
 Generate exactly ${numQuestions} unique, highly relevant academic questions based strictly on its contents.
 
@@ -4279,7 +4271,7 @@ You MUST respond with a raw JSON array matching this structure (options WITHOUT 
 ]
 
 DOCUMENT CONTENT:
-${pdfText}`;
+${cleanText}`;
 
         const aiRes = await studyPromptJSON(prompt);
         let responseText = (aiRes.text || '').trim();

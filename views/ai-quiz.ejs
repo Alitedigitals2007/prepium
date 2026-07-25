@@ -12,6 +12,8 @@
     <link rel="stylesheet" href="/css/style.css">
     <link rel="manifest" href="/manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <%- include('partials/mathjax') %>
     <script>
         window.MathJax = {
@@ -312,22 +314,21 @@ async function generateQuiz(e) {
     btn.disabled = true;
 
     try {
-        var reader = new FileReader();
-        var base64Promise = new Promise(function(resolve, reject) {
-            reader.onload = function() {
-                var base64 = reader.result.split(',')[1];
-                resolve(base64);
-            };
-            reader.onerror = reject;
-        });
-        reader.readAsDataURL(file);
-        var pdfData = await base64Promise;
+        var arrayBuffer = await file.arrayBuffer();
+        var pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        var fullText = '';
+        for (var pi = 1; pi <= Math.min(pdfDoc.numPages, 30); pi++) {
+            var page = await pdfDoc.getPage(pi);
+            var tc = await page.getTextContent();
+            fullText += tc.items.map(function(item) { return item.str; }).join(' ') + '\n\n';
+        }
+        if (!fullText.trim()) throw new Error('Could not extract text from PDF');
 
         var res = await fetch('/generate-ai-quiz', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                pdfData: pdfData,
+                pdfText: fullText.substring(0, 15000),
                 fileName: file.name,
                 question_type: document.getElementById('question_type').value,
                 num_questions: document.getElementById('num_questions').value,
