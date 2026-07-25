@@ -93,16 +93,44 @@
     <script>
         document.getElementById('pay-link').addEventListener('click', function(e) {
             e.preventDefault();
-            const handler = PaystackPop.setup({
-                key: '<%= paystack_key %>',
-                email: '<%= userEmail %>',
-                amount: 2000 * 100,
-                currency: 'NGN',
-                callback: function(response) {
-                    window.location.href = "/verify-payment?reference=" + response.reference;
+            if (typeof PaystackPop === 'undefined') { alert('Payment system loading. Please try again.'); return; }
+            Swal.fire({
+                title: 'Have a coupon code?',
+                input: 'text',
+                inputPlaceholder: 'Enter code or leave blank',
+                showCancelButton: true,
+                confirmButtonText: 'Continue',
+                cancelButtonText: 'No coupon',
+                preConfirm: function(val) {
+                    if (!val || !val.trim()) return { code: null, amount: 2000 };
+                    return fetch('/api/coupon/validate', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ code: val.trim() })
+                    }).then(function(r) { return r.json(); }).then(function(d) {
+                        if (!d.valid) { Swal.showValidationMessage(d.message || 'Invalid code'); return false; }
+                        return { code: d.code, amount: d.final_amount, discountLabel: d.discountLabel };
+                    });
+                },
+                allowOutsideClick: false
+            }).then(function(result) {
+                if (!result || !result.isConfirmed || !result.value) return;
+                var info = result.value;
+                if (info.discountLabel) {
+                    Swal.fire({ icon: 'info', title: info.discountLabel + ' applied!', text: 'You pay ₦' + info.amount.toLocaleString(), timer: 2000, showConfirmButton: false });
                 }
+                var handler = PaystackPop.setup({
+                    key: '<%= paystack_key %>',
+                    email: '<%= userEmail %>',
+                    amount: (info.amount || 2000) * 100,
+                    currency: 'NGN',
+                    callback: function(response) {
+                        var dest = '/verify-payment?reference=' + response.reference;
+                        if (info.code) dest += '&coupon=' + encodeURIComponent(info.code);
+                        window.location.href = dest;
+                    }
+                });
+                setTimeout(function() { handler.openIframe(); }, info.discountLabel ? 2200 : 100);
             });
-            handler.openIframe();
         });
     </script>
     <script src="/js/animations.js"></script>

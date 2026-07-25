@@ -594,7 +594,58 @@ app.post('/auth/login', rateLimit(10, 60000), async (req, res) => {
     }
 });
 
-// Add this to your app.js / server file
+// ─── Coupon validate API ───
+app.post('/api/coupon/validate', async (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code || !code.trim()) return res.json({ valid: false, message: 'Enter a coupon code' });
+    const c = await pool.query('SELECT * FROM coupons WHERE LOWER(code) = LOWER($1) AND is_active = true AND (max_uses = 0 OR times_used < max_uses) AND (expires_at IS NULL OR expires_at > NOW())', [code.trim()]);
+    if (!c.rows[0]) return res.json({ valid: false, message: 'Invalid or expired coupon code' });
+    const coupon = c.rows[0];
+    let discountLabel = '';
+    let finalAmount = 2000;
+    if (coupon.discount_type === 'percent') {
+      const amt = Math.round(2000 * (100 - coupon.discount_value) / 100);
+      finalAmount = Math.max(100, amt);
+      discountLabel = coupon.discount_value + '% off';
+    } else {
+      finalAmount = Math.max(100, 2000 - coupon.discount_value);
+      discountLabel = '₦' + coupon.discount_value + ' off';
+    }
+    res.json({ valid: true, code: coupon.code, discount_type: coupon.discount_type, discount_value: coupon.discount_value, original_amount: 2000, final_amount: finalAmount, discountLabel });
+  } catch (e) { res.json({ valid: false, message: 'Server error' }); }
+});
+
+// ─── Admin: Coupons ───
+app.get('/admin/coupons', isAdmin, async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM coupons ORDER BY created_at DESC');
+    res.render('admin/coupons', { coupons: r.rows });
+  } catch (e) { res.status(500).send(e.message); }
+});
+
+app.post('/admin/coupons/add', isAdmin, async (req, res) => {
+  try {
+    const { code, discount_type, discount_value, max_uses, expires_at } = req.body;
+    if (!code || !discount_type || !discount_value) return res.redirect('/admin/coupons?error=Missing fields');
+    await pool.query('INSERT INTO coupons (code, discount_type, discount_value, max_uses, expires_at) VALUES ($1, $2, $3, $4, $5)', [code.toUpperCase(), discount_type, parseInt(discount_value), parseInt(max_uses) || 0, expires_at || null]);
+    res.redirect('/admin/coupons?msg=Created');
+  } catch (e) { res.redirect('/admin/coupons?error=' + encodeURIComponent(e.message)); }
+});
+
+app.post('/admin/coupons/toggle/:id', isAdmin, async (req, res) => {
+  try {
+    await pool.query('UPDATE coupons SET is_active = NOT is_active WHERE id = $1', [req.params.id]);
+    res.redirect('/admin/coupons');
+  } catch (e) { res.redirect('/admin/coupons?error=' + encodeURIComponent(e.message)); }
+});
+
+app.post('/admin/coupons/delete/:id', isAdmin, async (req, res) => {
+  try { await pool.query('DELETE FROM coupons WHERE id = $1', [req.params.id]); res.redirect('/admin/coupons'); }
+  catch (e) { res.redirect('/admin/coupons?error=' + encodeURIComponent(e.message)); }
+});
+
+// Verify Payment (modified to track coupon usage)
 app.get('/verify-payment', rateLimit(5, 300000), async (req, res) => {
     const { reference } = req.query;
 
@@ -641,8 +692,14 @@ app.get('/verify-payment', rateLimit(5, 300000), async (req, res) => {
         }
 
         // 3. Mark the user as activated (Paid)
-        await pool.query('UPDATE users SET has_paid = true WHERE id = $1', [userId]);
-        console.log(`[Paystack] Success: User ID ${userId} marked as paid.`);
+        const couponCode = req.query.coupon || null;
+        await pool.query('UPDATE users SET has_paid = true, used_coupon = COALESCE($1, used_coupon) WHERE id = $2', [couponCode, userId]);
+        console.log(`[Paystack] Success: User ID ${userId} marked as paid${couponCode ? ' (coupon: ' + couponCode + ')' : ''}.`);
+
+        // 3b. Increment coupon usage if a coupon was used
+        if (couponCode) {
+          try { await pool.query('UPDATE coupons SET times_used = times_used + 1 WHERE LOWER(code) = LOWER($1)', [couponCode]); } catch (_) {}
+        }
 
         // 4. Update the logged-in session right away
         req.session.user.has_paid = true;
@@ -3455,44 +3512,45 @@ app.post('/api/submit-arena', isAuth, async (req, res) => {
 
 app.get('/admin/analytics', isAdmin, async (req, res) => {
     try {
-        const [totals, signupTrend, popularPages] = await Promise.all([
-            // 1. Core Metrics for the top cards
+        const [totals, signupTrend, popularPages, couponStats] = await Promise.all([
             pool.query(`SELECT 
                 (SELECT COUNT(*) FROM users) as total_users,
                 (SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL '24 hours') as daily_signups,
                 (SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL '7 days') as weekly_signups,
                 (SELECT COUNT(*) FROM users WHERE has_paid = true) as premium_users,
-                (SELECT SUM(quiz_attempts) FROM users) as total_quizzes,
-                (SELECT COUNT(*) FROM daily_leaderboard) as active_battlers`),
+                (SELECT COUNT(*) FROM users WHERE has_paid = true AND created_at > NOW() - INTERVAL '7 days') as weekly_premium,
+                (SELECT COUNT(*) FROM results) as total_quizzes,
+                (SELECT COUNT(*) FROM study_quiz_attempts) as study_quiz_count,
+                (SELECT COUNT(*) FROM daily_leaderboard) as active_battlers,
+                (SELECT COUNT(*) FROM users WHERE used_coupon IS NOT NULL) as coupon_redemptions`),
 
-            // 2. Signup Trend for the Line Chart
             pool.query(`SELECT TO_CHAR(created_at, 'DD Mon') as date, COUNT(*) as count 
                         FROM users 
                         WHERE created_at > NOW() - INTERVAL '14 days'
                         GROUP BY date ORDER BY MIN(created_at) ASC`),
 
-            // 3. Most Visited Pages for the Bar Chart/List
             pool.query(`SELECT page_path, COUNT(*) as views 
                         FROM page_views 
-                        GROUP BY page_path ORDER BY views DESC LIMIT 6`).catch(() => ({ rows: [] }))
+                        GROUP BY page_path ORDER BY views DESC LIMIT 6`).catch(() => ({ rows: [] })),
+
+            pool.query(`SELECT code, discount_type, discount_value, times_used, max_uses, is_active 
+                        FROM coupons ORDER BY times_used DESC LIMIT 10`)
         ]);
 
-        const statsData = totals.rows[0];
+        const s = totals.rows[0];
+        const estimatedRevenue = (s.premium_users || 0) * 2000;
 
         res.render('admin/analytics', {
-            // Fixes the "signups is not defined" error
-            signups: {
-                daily: statsData.daily_signups || 0,
-                weekly: statsData.weekly_signups || 0
-            },
-            // Fixes the "stats is not defined" error
+            signups: { daily: s.daily_signups || 0, weekly: s.weekly_signups || 0 },
             stats: {
-                total_users: statsData.total_users || 0,
-                premium_users: statsData.premium_users || 0,
-                total_quizzes: statsData.total_quizzes || 0,
-                active_battlers: statsData.active_battlers || 0
+                total_users: s.total_users || 0,
+                premium_users: s.premium_users || 0,
+                weekly_premium: s.weekly_premium || 0,
+                total_quizzes: (s.total_quizzes || 0) + (s.study_quiz_count || 0),
+                active_battlers: s.active_battlers || 0
             },
-            // Data for the Graphics
+            revenue: { estimated: estimatedRevenue, coupon_redemptions: s.coupon_redemptions || 0 },
+            coupons: couponStats.rows,
             chartData: {
                 labels: signupTrend.rows.map(r => r.date),
                 values: signupTrend.rows.map(r => r.count)
@@ -5564,6 +5622,24 @@ app.use((err, req, res, next) => {
 const config = {
     maxDuration: 60,
 };
+
+(async function initCoupons() {
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS coupons (
+      id SERIAL PRIMARY KEY,
+      code VARCHAR(50) UNIQUE NOT NULL,
+      discount_type VARCHAR(10) NOT NULL DEFAULT 'percent' CHECK (discount_type IN ('percent','fixed')),
+      discount_value INTEGER NOT NULL,
+      max_uses INTEGER DEFAULT 0,
+      times_used INTEGER DEFAULT 0,
+      is_active BOOLEAN DEFAULT true,
+      expires_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    try { await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS used_coupon VARCHAR(50)"); } catch (_) {}
+    console.log('[Coupons] Table ready');
+  } catch(e) { console.error('[Coupons] Init:', e.message); }
+})();
 
 if (require.main === module) {
     const PORT = process.env.PORT || 3000;

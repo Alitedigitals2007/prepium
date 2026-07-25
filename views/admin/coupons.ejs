@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prepium | Coupons</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --brand: #0062ff; --bg: #f0f4f8; --sidebar: #0b1437;
+            --border: rgba(226,232,240,0.6); --card-bg: rgba(255,255,255,0.72);
+            --text-primary: #0f172a; --text-secondary: #64748b; --text-muted: #94a3b8;
+            --green: #10b981; --red: #f43f5e; --amber: #f59e0b;
+            --radius: 20px; --radius-sm: 14px;
+            --shadow-glass: 0 8px 32px rgba(15,23,42,0.07), inset 0 1px 0 rgba(255,255,255,0.6);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Plus Jakarta Sans',sans-serif; display:flex; background:var(--bg); color:var(--text-primary); min-height:100vh; -webkit-font-smoothing:antialiased; }
+        .sidebar { width:260px; background:var(--sidebar); height:100vh; color:white; position:fixed; display:flex; flex-direction:column; z-index:100; overflow-y:auto; }
+        .sidebar-inner { padding:2rem 1.25rem; display:flex; flex-direction:column; flex:1; }
+        .logo { display:flex; align-items:center; gap:2px; font-size:1.5rem; font-weight:800; color:white; text-decoration:none; margin-bottom:2.5rem; padding-left:6px; letter-spacing:-0.5px; }
+        .logo span { color:var(--brand); }
+        .nav-label { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:1.2px; color:rgba(255,255,255,0.3); padding:0 12px; margin-bottom:10px; margin-top:8px; }
+        .nav-item { display:flex; align-items:center; gap:12px; color:rgba(255,255,255,0.5); text-decoration:none; padding:11px 14px; border-radius:12px; font-size:0.85rem; font-weight:600; margin-bottom:3px; transition:all 0.2s; }
+        .nav-item i { width:20px; text-align:center; }
+        .nav-item:hover { background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.9); }
+        .nav-item.active { background:rgba(0,98,255,0.18); color:white; }
+        .nav-item.active::before { content:''; position:absolute; left:-12px; top:50%; transform:translateY(-50%); width:3px; height:20px; background:var(--brand); border-radius:0 4px 4px 0; }
+        .nav-divider { height:1px; background:rgba(255,255,255,0.06); margin:12px 14px; }
+        .main { margin-left:260px; padding:2.5rem; width:calc(100% - 260px); min-height:100vh; }
+        .header { margin-bottom:2rem; }
+        .header h1 { font-size:1.6rem; font-weight:800; letter-spacing:-0.5px; }
+        .header p { color:var(--text-secondary); font-size:0.88rem; font-weight:500; }
+        .glass { background:var(--card-bg); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.5); border-radius:var(--radius); box-shadow:var(--shadow-glass); padding:1.5rem; }
+        .form-row { display:flex; gap:12px; flex-wrap:wrap; align-items:end; }
+        .form-row label { font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-secondary); display:block; margin-bottom:4px; }
+        .form-row input, .form-row select { padding:10px 14px; border:1.5px solid var(--border); border-radius:var(--radius-sm); font-family:inherit; font-weight:600; font-size:0.85rem; outline:none; background:white; }
+        .form-row input:focus { border-color:var(--brand); }
+        .btn { padding:10px 20px; border:none; border-radius:var(--radius-sm); font-family:inherit; font-weight:700; font-size:0.82rem; cursor:pointer; transition:all 0.2s; }
+        .btn-primary { background:var(--brand); color:white; }
+        .btn-primary:hover { opacity:0.85; }
+        .btn-sm { padding:6px 14px; font-size:0.72rem; border-radius:8px; }
+        .btn-green { background:#d1fae5; color:#065f46; }
+        .btn-red { background:#fee2e2; color:#991b1b; }
+        .msg { padding:12px 16px; border-radius:var(--radius-sm); font-weight:600; font-size:0.82rem; margin-bottom:1rem; }
+        .msg.success { background:#d1fae5; color:#065f46; }
+        .msg.error { background:#fee2e2; color:#991b1b; }
+        table { width:100%; border-collapse:collapse; font-size:0.85rem; }
+        th { text-align:left; padding:12px 8px; font-weight:700; color:var(--text-secondary); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid var(--border); }
+        td { padding:12px 8px; border-bottom:1px solid var(--border); font-weight:600; }
+        .badge { display:inline-block; padding:4px 10px; border-radius:20px; font-size:0.68rem; font-weight:700; }
+        .badge.active { background:#d1fae5; color:#065f46; }
+        .badge.inactive { background:#f1f5f9; color:#64748b; }
+        @media (max-width:900px) { .sidebar { transform:translateX(-100%); } .main { margin-left:0; width:100%; padding:1.5rem; } }
+    </style>
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="sidebar-inner">
+            <a href="/admin/dashboard" class="logo">PREPIUM<span>.</span></a>
+            <div class="nav-label">Main</div>
+            <a href="/admin/dashboard" class="nav-item"><i class="fas fa-th-large"></i> Dashboard</a>
+            <a href="/admin/analytics" class="nav-item"><i class="fas fa-chart-line"></i> Analytics</a>
+            <div class="nav-label">Commerce</div>
+            <a href="/admin/coupons" class="nav-item active"><i class="fas fa-ticket"></i> Coupons</a>
+            <div class="nav-label">Management</div>
+            <a href="/admin/universities" class="nav-item"><i class="fas fa-landmark"></i> Universities</a>
+            <a href="/admin/subjects" class="nav-item"><i class="fas fa-book-open"></i> Subjects</a>
+            <a href="/admin/students" class="nav-item"><i class="fas fa-user-graduate"></i> Students</a>
+            <div class="nav-divider"></div>
+            <a href="/logout" class="nav-item" style="color:rgba(244,63,94,0.7)"><i class="fas fa-right-from-bracket"></i> Logout</a>
+        </div>
+    </nav>
+    <main class="main">
+        <div class="header">
+            <h1>Coupon Management</h1>
+            <p>Create and manage discount codes.</p>
+        </div>
+
+        <% if (typeof msg !== 'undefined' && msg) { %><div class="msg success"><%= msg %></div><% } %>
+        <% if (typeof error !== 'undefined' && error) { %><div class="msg error"><%= error %></div><% } %>
+
+        <div class="glass" style="margin-bottom:1.5rem;">
+            <h3 style="font-size:0.95rem;font-weight:700;margin-bottom:1rem;">Create Coupon</h3>
+            <form method="POST" action="/admin/coupons/add" class="form-row">
+                <div><label>Code</label><input name="code" placeholder="STUDENT50" required></div>
+                <div><label>Type</label><select name="discount_type">
+                    <option value="percent">Percentage (%)</option>
+                    <option value="fixed">Fixed (₦)</option>
+                </select></div>
+                <div><label>Value</label><input name="discount_value" type="number" placeholder="50" required></div>
+                <div><label>Max Uses (0 = unlimited)</label><input name="max_uses" type="number" value="0"></div>
+                <div><label>Expires (optional)</label><input name="expires_at" type="date"></div>
+                <div><button class="btn btn-primary">Create</button></div>
+            </form>
+        </div>
+
+        <div class="glass">
+            <h3 style="font-size:0.95rem;font-weight:700;margin-bottom:1rem;">All Coupons</h3>
+            <% if (coupons && coupons.length > 0) { %>
+                <table>
+                    <thead><tr>
+                        <th>Code</th>
+                        <th>Discount</th>
+                        <th>Used</th>
+                        <th>Max</th>
+                        <th>Status</th>
+                        <th>Expires</th>
+                        <th>Actions</th>
+                    </tr></thead>
+                    <tbody>
+                        <% coupons.forEach(function(c) { %>
+                            <tr>
+                                <td><strong><%= c.code %></strong></td>
+                                <td><%= c.discount_type === 'percent' ? c.discount_value + '%' : '₦' + c.discount_value %></td>
+                                <td><%= c.times_used %></td>
+                                <td><%= c.max_uses || '∞' %></td>
+                                <td><span class="badge <%= c.is_active ? 'active' : 'inactive' %>"><%= c.is_active ? 'Active' : 'Disabled' %></span></td>
+                                <td><%= c.expires_at ? new Date(c.expires_at).toLocaleDateString('en-GB') : '—' %></td>
+                                <td style="display:flex;gap:6px;">
+                                    <form method="POST" action="/admin/coupons/toggle/<%= c.id %>" style="display:inline;">
+                                        <button class="btn btn-sm <%= c.is_active ? 'btn-red' : 'btn-green' %>"><%= c.is_active ? 'Disable' : 'Enable' %></button>
+                                    </form>
+                                    <form method="POST" action="/admin/coupons/delete/<%= c.id %>" style="display:inline;" onsubmit="return confirm('Delete this coupon?')">
+                                        <button class="btn btn-sm btn-red">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            <% } else { %>
+                <div style="text-align:center;padding:3rem;color:var(--text-muted);font-size:0.85rem;">
+                    <i class="fas fa-ticket" style="font-size:2rem;display:block;margin-bottom:10px;opacity:0.3;"></i>
+                    No coupons yet. Create one above.
+                </div>
+            <% } %>
+        </div>
+    </main>
+</body>
+</html>

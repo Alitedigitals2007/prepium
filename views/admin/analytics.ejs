@@ -423,6 +423,9 @@
             <a href="/admin/subjects" class="nav-item"><i class="fas fa-book-open"></i> Subjects</a>
             <a href="/admin/students" class="nav-item"><i class="fas fa-user-graduate"></i> Students</a>
 
+            <div class="nav-label">Commerce</div>
+            <a href="/admin/coupons" class="nav-item"><i class="fas fa-ticket"></i> Coupons</a>
+
             <div class="nav-label">System</div>
             <a href="/admin/notifications" class="nav-item"><i class="fas fa-bell"></i> Notifications</a>
 
@@ -439,24 +442,53 @@
 
         <div class="metrics-grid">
             <div class="metric-card glass accent-blue">
-                <div class="icon-wrap"><i class="fas fa-user-plus"></i></div>
-                <small>Daily Signups</small>
-                <span class="value blue"><%= signups.daily %></span>
+                <div class="icon-wrap"><i class="fas fa-users"></i></div>
+                <small>Total Users</small>
+                <span class="value blue"><%= stats.total_users %></span>
             </div>
             <div class="metric-card glass accent-green">
-                <div class="icon-wrap"><i class="fas fa-crown"></i></div>
-                <small>Premium Conversion</small>
-                <span class="value green"><%= stats.premium_users %></span>
-            </div>
-            <div class="metric-card glass accent-red">
-                <div class="icon-wrap"><i class="fas fa-shield-halved"></i></div>
-                <small>Arena Activity</small>
-                <span class="value red"><%= stats.active_battlers %></span>
+                <div class="icon-wrap"><i class="fas fa-user-plus"></i></div>
+                <small>Signups Today / Week</small>
+                <span class="value green"><%= signups.daily %> / <%= signups.weekly %></span>
             </div>
             <div class="metric-card glass accent-amber">
-                <div class="icon-wrap"><i class="fas fa-circle-question"></i></div>
-                <small>Total Quizzes</small>
-                <span class="value amber"><%= stats.total_quizzes %></span>
+                <div class="icon-wrap"><i class="fas fa-crown"></i></div>
+                <small>Premium (Total / 7d)</small>
+                <span class="value amber"><%= stats.premium_users %> / <%= stats.weekly_premium %></span>
+            </div>
+            <div class="metric-card glass accent-red">
+                <div class="icon-wrap"><i class="fas fa-question-circle"></i></div>
+                <small>Total Quizzes Taken</small>
+                <span class="value red"><%= stats.total_quizzes %></span>
+            </div>
+        </div>
+
+        <div class="charts-row" style="margin-bottom:22px;">
+            <div class="card glass">
+                <div class="card-header">
+                    <h3>Estimated Revenue</h3>
+                    <span class="badge">₦<%= (revenue.estimated || 0).toLocaleString() %></span>
+                </div>
+                <div style="padding:0.5rem 0;font-size:0.85rem;color:var(--text-secondary);">
+                    Coupon redemptions: <strong><%= revenue.coupon_redemptions || 0 %></strong>
+                </div>
+            </div>
+            <div class="card glass">
+                <div class="card-header">
+                    <h3>Top Coupons</h3>
+                </div>
+                <% if (coupons && coupons.length > 0) { %>
+                    <div class="traffic-list">
+                        <% coupons.forEach(function(c) { %>
+                            <div class="traffic-item">
+                                <span class="path"><%= c.code %></span>
+                                <span class="hits"><%= c.times_used %> <small>/ <%= c.max_uses || '∞' %></small></span>
+                            </div>
+                        <% }) %>
+                    </div>
+                <% } else { %>
+                    <div class="empty-state"><i class="fas fa-ticket"></i> No coupons created yet.</div>
+                <% } %>
             </div>
         </div>
 
