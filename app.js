@@ -1103,6 +1103,162 @@ app.post('/admin/questions/update', isAdmin, async (req, res) => {
 });
 
 // ==========================================
+// ADMIN AI QUIZ SYSTEM (GES/GST Courses)
+// ==========================================
+
+app.get('/admin/ai-quiz', isAdmin, async (req, res) => {
+  try {
+    const unis = await pool.query('SELECT * FROM universities ORDER BY name ASC');
+    const courses = await pool.query(`SELECT c.*, u.name as university_name FROM ai_courses c JOIN universities u ON c.university_id = u.id ORDER BY u.name, c.course_code`);
+    const msg = req.query.msg || null;
+    res.render('admin/ai-quiz', { universities: unis.rows, courses: courses.rows, msg, user: req.session.user });
+  } catch (err) { res.status(500).send('Error: ' + err.message); }
+});
+
+app.post('/admin/ai-quiz/generate-courses', isAdmin, async (req, res) => {
+  try {
+    const { university_id } = req.body;
+    if (!university_id) return res.redirect('/admin/ai-quiz?msg=Select+a+university');
+    const uni = await pool.query('SELECT name FROM universities WHERE id = $1', [university_id]);
+    if (!uni.rows[0]) return res.redirect('/admin/ai-quiz?msg=University+not+found');
+    const existing = await pool.query('SELECT COUNT(*) as c FROM ai_courses WHERE university_id = $1', [university_id]);
+    if (parseInt(existing.rows[0].c) > 0) return res.redirect('/admin/ai-quiz?msg=Courses+already+generated+for+this+university');
+    const prompt = `You are a Nigerian university curriculum expert. Generate a comprehensive list of GES (General Studies) and GST (Entrepreneurship/GST) courses for "${uni.rows[0].name}". These are compulsory general courses taken by all Nigerian university students.
+Return ONLY a JSON array of objects with:
+- course_code (e.g. "GES 101", "GST 101")
+- course_title (e.g. "Communication in English", "Use of Library")
+
+Include ALL of these standard courses (and more if relevant):
+GES 101: Communication in English I
+GES 102: Communication in English II
+GES 103: Philosophy and Logic
+GES 104: Science and Society
+GES 105: Nigerian Peoples and Culture
+GES 106: History and Philosophy of Science
+GES 107: Use of Library
+GES 108: Peace and Conflict Resolution
+GST 101: Entrepreneurship I
+GST 102: Entrepreneurship II
+GST 103: Computer Appreciation
+GST 104: Environmental Studies
+
+Also add any other GES/GST courses specific to ${uni.rows[0].name}. Do NOT wrap in markdown. ONLY output raw JSON array.`;
+    const aiRes = await studyPromptJSON(prompt);
+    let list = [];
+    try {
+      const txt = aiRes.text.trim();
+      const m = txt.match(/\[[\s\S]*\]/);
+      list = JSON.parse(m ? m[0] : txt);
+    } catch { return res.redirect('/admin/ai-quiz?msg=AI+failed+to+generate+courses.+Try+again.'); }
+    for (const item of list) {
+      if (item.course_code && item.course_title) {
+        await pool.query('INSERT INTO ai_courses (university_id, course_code, course_title, created_by) VALUES ($1, $2, $3, $4)', [university_id, item.course_code, item.course_title, req.session.user.id]);
+      }
+    }
+    res.redirect('/admin/ai-quiz?msg=Generated+' + list.length + '+courses+successfully');
+  } catch (err) { res.redirect('/admin/ai-quiz?msg=Error: ' + encodeURIComponent(err.message)); }
+});
+
+app.post('/admin/ai-quiz/course/add', isAdmin, async (req, res) => {
+  try {
+    const { university_id, course_code, course_title, question_count } = req.body;
+    if (!course_code || !course_title) return res.redirect('/admin/ai-quiz?msg=Course+code+and+title+required');
+    await pool.query('INSERT INTO ai_courses (university_id, course_code, course_title, question_count, created_by) VALUES ($1, $2, $3, $4, $5)', [university_id, course_code.toUpperCase().trim(), course_title.trim(), parseInt(question_count) || 10, req.session.user.id]);
+    res.redirect('/admin/ai-quiz?msg=Course+added');
+  } catch (err) { res.redirect('/admin/ai-quiz?msg=' + encodeURIComponent(err.message)); }
+});
+
+app.post('/admin/ai-quiz/course/delete/:id', isAdmin, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM ai_questions WHERE course_id = $1', [req.params.id]);
+    await pool.query('DELETE FROM ai_courses WHERE id = $1', [req.params.id]);
+    res.redirect('/admin/ai-quiz?msg=Course+deleted');
+  } catch (err) { res.redirect('/admin/ai-quiz?msg=' + encodeURIComponent(err.message)); }
+});
+
+app.post('/admin/ai-quiz/course/update/:id', isAdmin, async (req, res) => {
+  try {
+    const { course_title, question_count } = req.body;
+    await pool.query('UPDATE ai_courses SET course_title = $1, question_count = $2 WHERE id = $3', [course_title.trim(), parseInt(question_count) || 10, req.params.id]);
+    res.redirect('/admin/ai-quiz?msg=Course+updated');
+  } catch (err) { res.redirect('/admin/ai-quiz?msg=' + encodeURIComponent(err.message)); }
+});
+
+app.post('/admin/ai-quiz/generate-questions/:courseId', isAdmin, async (req, res) => {
+  try {
+    const course = await pool.query('SELECT * FROM ai_courses WHERE id = $1', [req.params.courseId]);
+    if (!course.rows[0]) return res.redirect('/admin/ai-quiz?msg=Course+not+found');
+    const c = course.rows[0];
+    const existingQ = await pool.query('SELECT COUNT(*) as c FROM ai_questions WHERE course_id = $1', [c.id]);
+    if (parseInt(existingQ.rows[0].c) > 0) return res.redirect('/admin/ai-quiz?msg=Questions+already+generated.+Delete+existing+ones+first');
+    const prompt = `You are a Nigerian university examiner for "${c.course_code}: ${c.course_title}". Generate exactly ${c.question_count} multiple choice questions (4 options each) based on the standard Nigerian university syllabus for this course.
+Each question must:
+- Be accurate and exam-relevant for Nigerian university students
+- Include an explanation (educational, in plain text)
+- Options must be labeled A, B, C, D
+- Correct answer must match one of the options exactly
+
+Return ONLY a raw JSON array with NO markdown wrapping:
+[{"question": "...", "options": ["A) ...", "B) ...", "C) ...", "D) ..."], "correct": "A) ...", "explanation": "..."}]`;
+    const aiRes = await studyPromptJSON(prompt);
+    let questions = [];
+    try {
+      const txt = aiRes.text.trim();
+      const m = txt.match(/\[[\s\S]*\]/);
+      questions = JSON.parse(m ? m[0] : txt);
+    } catch { return res.redirect('/admin/ai-quiz?msg=AI+failed+to+generate+questions.+Try+again.'); }
+    for (const q of questions) {
+      if (q.question) {
+        await pool.query('INSERT INTO ai_questions (course_id, question_text, options, correct_answer, explanation) VALUES ($1, $2, $3, $4, $5)', [c.id, q.question, JSON.stringify(q.options || []), q.correct || '', q.explanation || '']);
+      }
+    }
+    res.redirect('/admin/ai-quiz?msg=Generated+' + questions.length + '+questions+for+' + c.course_code);
+  } catch (err) { res.redirect('/admin/ai-quiz?msg=Error: ' + encodeURIComponent(err.message)); }
+});
+
+app.post('/admin/ai-quiz/question/delete/:id', isAdmin, async (req, res) => {
+  try {
+    const q = await pool.query('SELECT course_id FROM ai_questions WHERE id = $1', [req.params.id]);
+    if (!q.rows[0]) return res.redirect('/admin/ai-quiz?msg=Question+not+found');
+    await pool.query('DELETE FROM ai_questions WHERE id = $1', [req.params.id]);
+    res.redirect('/admin/ai-quiz?msg=Question+deleted&courseId=' + q.rows[0].course_id);
+  } catch (err) { res.redirect('/admin/ai-quiz?msg=' + encodeURIComponent(err.message)); }
+});
+
+app.post('/admin/ai-quiz/question/regenerate/:id', isAdmin, async (req, res) => {
+  try {
+    const old = await pool.query('SELECT q.*, c.course_code, c.course_title FROM ai_questions q JOIN ai_courses c ON q.course_id = c.id WHERE q.id = $1', [req.params.id]);
+    if (!old.rows[0]) return res.redirect('/admin/ai-quiz?msg=Question+not+found');
+    const o = old.rows[0];
+    const prompt = `Generate a new multiple choice question for "${o.course_code}: ${o.course_title}" (Nigerian university exam).
+Return ONLY raw JSON: {"question": "...", "options": ["A) ...", "B) ...", "C) ...", "D) ..."], "correct": "A) ...", "explanation": "..."}`;
+    const aiRes = await studyPromptJSON(prompt);
+    let qd;
+    try {
+      const txt = aiRes.text.trim();
+      const m3 = txt.match(/\{[\s\S]*\}/);
+      qd = JSON.parse(m3 ? m3[0] : txt);
+    } catch { return res.redirect('/admin/ai-quiz?msg=Regeneration+failed'); }
+    await pool.query('UPDATE ai_questions SET question_text = $1, options = $2, correct_answer = $3, explanation = $4 WHERE id = $5', [qd.question || o.question_text, JSON.stringify(qd.options || o.options), qd.correct || o.correct_answer, qd.explanation || o.explanation, req.params.id]);
+    res.redirect('/admin/ai-quiz?msg=Question+regenerated&courseId=' + o.course_id);
+  } catch (err) { res.redirect('/admin/ai-quiz?msg=' + encodeURIComponent(err.message)); }
+});
+
+app.get('/admin/ai-quiz/course/:id/questions', isAdmin, async (req, res) => {
+  try {
+    const questions = await pool.query('SELECT * FROM ai_questions WHERE course_id = $1 ORDER BY id ASC', [req.params.id]);
+    res.json(questions.rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ==========================================
+// PREMIUM UPGRADE PAGE
+// ==========================================
+app.get('/upgrade', isAuth, async (req, res) => {
+  res.render('upgrade', { user: req.session.user });
+});
+
+// ==========================================
 // 4. API FOR THE STUDENT APP
 // ==========================================
 
@@ -4015,20 +4171,21 @@ app.post('/upload-pdf', uploadMemory.single('lecture_note'), async (req, res) =>
 });
 
 // POST: Process and Generate Contextual Quizzes from PDFs using pdfToText + OpenRouter
-app.post('/generate-ai-quiz', isAuth, requirePaid, uploadMemory.single('lecture_note'), async (req, res) => {
+app.post('/generate-ai-quiz', isAuth, requirePaid, async (req, res) => {
     try {
-        if (!req.file) {
-            return res.status(400).json({ success: false, message: "No file uploaded." });
+        const { pdfData, fileName, num_questions, quiz_duration, question_type, difficulty } = req.body;
+
+        if (!pdfData) {
+            return res.status(400).json({ success: false, message: "No PDF data received." });
         }
 
-        const numQuestions = parseInt(req.body.num_questions) || 5;
-        const quizDuration = parseInt(req.body.quiz_duration) || 5;
-        const questionType = req.body.question_type || 'obj';
-        const difficulty = req.body.difficulty || 'medium';
-        const originalFileName = req.file.originalname;
-        const pdfBuffer = req.file.buffer;
+        const numQuestions = parseInt(num_questions) || 5;
+        const quizDuration = parseInt(quiz_duration) || 5;
+        const questionType = question_type || 'obj';
+        const difficultyLevel = difficulty || 'medium';
+        const originalFileName = fileName || 'document';
 
-        console.log(`[AI ENGINE] Compiling exactly ${numQuestions} [Format: ${questionType.toUpperCase()}] [Difficulty: ${difficulty.toUpperCase()}] questions for "${originalFileName}"`);
+        console.log(`[AI ENGINE] Scanning PDF via Gemini → generating ${numQuestions} questions for "${originalFileName}"`);
 
         let styleInstruction = "";
         if (questionType === 'obj') {
@@ -4042,36 +4199,30 @@ app.post('/generate-ai-quiz', isAuth, requirePaid, uploadMemory.single('lecture_
         }
 
         const difficultyMap = { easy: 'basic recall and comprehension level', medium: 'application and analysis level', hard: 'synthesis and evaluation level', expert: 'critical thinking and expert level' };
-        const difficultyText = difficultyMap[difficulty] || 'application and analysis level';
+        const difficultyText = difficultyMap[difficultyLevel] || 'application and analysis level';
 
-        // Extract text from PDF first
-        let pdfText = "";
-        try {
-            pdfText = await new Promise((resolve, reject) => {
-                pdfToText.pdfToText(pdfBuffer, (err, text) => {
-                    if (err) return reject(err);
-                    resolve(text || "");
-                });
-            });
-        } catch (e) {
-            console.error("PDF text extraction failed:", e);
-            return res.status(500).json({ success: false, message: "Failed to extract text from PDF. Ensure it's a text-based PDF." });
-        }
+        // Step 1: Use Gemini to scan/extract text from PDF
+        const geminiPrompt = `Extract ALL the text content from this PDF document. Return ONLY the extracted text, no commentary. Preserve the original structure, paragraphs, and formatting as much as possible.`;
+        const geminiRes = await callGeminiWithImage(geminiPrompt, pdfData, 'application/pdf');
 
+        let pdfText = geminiRes.text || '';
         if (!pdfText.trim()) {
-            return res.status(400).json({ success: false, message: "Could not extract readable text from PDF. Try a text-based PDF." });
+            return res.status(400).json({ success: false, message: "Could not extract text from PDF using AI. Try a different file." });
         }
 
         // Truncate if too long
         const maxChars = 12000;
         if (pdfText.length > maxChars) pdfText = pdfText.substring(0, maxChars) + "\n...[truncated]";
 
+        // Step 2: Use free AI APIs (Groq/Cerebras/OpenRouter) to generate questions
         const prompt = `You are an expert academic examiner. Analyze the following document content carefully.
 Generate exactly ${numQuestions} unique, highly relevant academic questions based strictly on its contents.
 
 DIFFICULTY LEVEL: ${difficultyText} — adjust question complexity accordingly.
 
 CRITICAL STYLE RULE: ${styleInstruction}
+
+IMPORTANT: Each question MUST include an "explanation" field with a clear, educational explanation.
 
 You MUST respond with a raw JSON array matching this structure format:
 [
@@ -4081,7 +4232,7 @@ You MUST respond with a raw JSON array matching this structure format:
     "options": ["Option A", "Option B", "Option C", "Option D"],
     "correct": "Correct option text or keyword answer definition",
     "keywords": ["key1", "key2"],
-    "explanation": "Write a clear, thorough explanation of the correct answer. CRITICAL: Use PLAIN TEXT ONLY. NO markdown formatting whatsoever - no **bold**, no *italic*, no __underline__, no backticks, no headers. Use proper grammar and complete sentences. Structure the explanation logically in paragraphs. Include formulas using LaTeX like $E=mc^2$ if needed."
+    "explanation": "Write a clear, thorough explanation of the correct answer. Use PLAIN TEXT ONLY. Include formulas using LaTeX like $E=mc^2$ if needed."
   }
 ]
 
@@ -4092,7 +4243,6 @@ ${pdfText}`;
         let responseText = (aiRes.text || '').trim();
         if (!responseText) throw new Error('Failed to compile quiz questions. Try again.');
 
-        // Clean up markdown blocks if returned
         if (responseText.startsWith("```json")) responseText = responseText.replace(/^```json/, "").replace(/```$/, "");
         if (responseText.startsWith("```")) responseText = responseText.replace(/^```/, "").replace(/```$/, "");
         responseText = extractJsonItems(responseText);
@@ -4107,12 +4257,10 @@ ${pdfText}`;
 
         let structuredQuiz = Array.isArray(parsedData) ? parsedData : (parsedData.questions || parsedData.quiz || []);
 
-        // Strict mapping sanitization
         structuredQuiz = structuredQuiz.map(q => {
             if (questionType !== 'mixed') q.type = questionType;
             if (!q.options) q.options = [];
             if (!q.keywords) q.keywords = [];
-            
             if (questionType === 'obj' && q.options.length === 0) {
                 q.options = ["Option A", "Option B", "Option C", "Option D"];
             }
@@ -5236,7 +5384,7 @@ app.post('/api/study/quiz/generate', isAuth, requirePaid, async (req, res) => {
       const st = await pool.query('SELECT content FROM study_subtopics WHERE id = $1', [subtopicId]).catch(() => ({ rows: [] }));
       if (st.rows[0] && st.rows[0].content) notes = '\n\nStudy material for reference:\n' + String(st.rows[0].content).slice(0, 4000);
     }
-    const prompt = `Generate ${count} ${typeGuide} about "${topicTitle || 'General Study'}" for university exam preparation. Each question: question text, options array (4 strings for MC, [] for theory), correctAnswer (letter for MC, text for theory), explanation. Return a JSON array of objects. Do NOT wrap in markdown code blocks. ONLY output raw JSON.${notes}`;
+    const prompt = `Generate ${count} ${typeGuide} about "${topicTitle || 'General Study'}" for university exam preparation. You MUST use JSON key "question" for the question text, "options" for the options array, "correctAnswer" for the correct answer, "explanation" for the explanation. Return a JSON array of objects. Do NOT wrap in markdown. ONLY output raw JSON.${notes}`;
     const aiRes = await studyPromptJSON(prompt);
     let questions = [];
     try {
@@ -5244,24 +5392,25 @@ app.post('/api/study/quiz/generate', isAuth, requirePaid, async (req, res) => {
       var m = txt.match(/\[[\s\S]*\]/);
       if (m) txt = m[0];
       questions = JSON.parse(txt);
-      questions.forEach(function(q) {
-        q.question = cleanLatex(q.question || '');
-        q.explanation = cleanLatex(q.explanation || '');
-        if (Array.isArray(q.options)) q.options = q.options.map(function(o) { return cleanLatex(o || ''); });
-      });
     } catch (e) {
       try {
         var cleaned = aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim();
         var m2 = cleaned.match(/\[[\s\S]*\]/);
         if (m2) cleaned = m2[0];
         questions = JSON.parse(cleaned);
-        questions.forEach(function(q) {
-          q.question = cleanLatex(q.question || '');
-          q.explanation = cleanLatex(q.explanation || '');
-          if (Array.isArray(q.options)) q.options = q.options.map(function(o) { return cleanLatex(o || ''); });
-        });
       } catch { throw new Error('Failed to parse AI response. Please try again.'); }
     }
+    // Normalize question key (handle AI using 'text' or 'questionText' instead of 'question')
+    questions = questions.map(function(q) {
+      var normQ = q.question || q.text || q.questionText || q.question_text || '';
+      var normExp = q.explanation || q.exp || '';
+      return {
+        question: cleanLatex(normQ),
+        options: Array.isArray(q.options) ? q.options.map(function(o) { return cleanLatex(o || ''); }) : [],
+        correctAnswer: q.correctAnswer || q.correct || q.answer || '',
+        explanation: cleanLatex(normExp)
+      };
+    }).filter(function(q) { return q.question; });
     const attempt = await pool.query("INSERT INTO study_quiz_attempts (user_id, course_id, subtopic_id, question_type, question_count, time_limit, status) VALUES ($1, $2, $3, $4, $5, $6, 'in_progress') RETURNING *", [uid, courseId || 0, subtopicId || 0, questionType || 'multiple_choice', questions.length, timeLimit || 0]);
     const attemptId = attempt.rows[0].id;
     for (let i = 0; i < questions.length; i++) {
@@ -5615,6 +5764,30 @@ app.use((err, req, res, next) => {
 const config = {
     maxDuration: 60,
 };
+
+(async function initAIQuiz() {
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS ai_courses (
+      id SERIAL PRIMARY KEY,
+      university_id INTEGER NOT NULL,
+      course_code VARCHAR(50) NOT NULL,
+      course_title VARCHAR(500) NOT NULL,
+      question_count INTEGER DEFAULT 10,
+      created_by INTEGER DEFAULT 0,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS ai_questions (
+      id SERIAL PRIMARY KEY,
+      course_id INTEGER NOT NULL,
+      question_text TEXT NOT NULL,
+      options JSONB DEFAULT '[]',
+      correct_answer VARCHAR(500),
+      explanation TEXT DEFAULT '',
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    console.log('[AI Quiz] Tables ready');
+  } catch(e) { console.error('[AI Quiz] Init:', e.message); }
+})();
 
 (async function initCoupons() {
   try {

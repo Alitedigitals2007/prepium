@@ -185,7 +185,7 @@
                 <div class="upload-zone" id="uploadZone">
                     <span class="upload-icon"><i class="fas fa-file-pdf"></i></span>
                     <div class="upload-text">Tap to upload PDF</div>
-                    <div class="upload-hint">Lecture notes, textbooks, past questions (max 100MB)</div>
+                    <div class="upload-hint">Lecture notes, textbooks, past questions (max 50MB)</div>
                     <input type="file" id="lecture_note" name="lecture_note" accept="application/pdf" required>
                 </div>
 
@@ -302,26 +302,43 @@ document.getElementById('lecture_note').addEventListener('change', e => {
 async function generateQuiz(e) {
     e.preventDefault();
     hideInlineError();
-    const btn = document.getElementById('generateBtn');
-    const file = document.getElementById('lecture_note').files[0];
+    var btn = document.getElementById('generateBtn');
+    var file = document.getElementById('lecture_note').files[0];
     if (!file) { showInlineError('Please select a PDF file'); return; }
+    if (file.size > 50 * 1024 * 1024) { showInlineError('File too large. Maximum is 50MB.'); return; }
 
     document.getElementById('setupStep').style.display = 'none';
     document.getElementById('loaderStep').style.display = 'block';
     btn.disabled = true;
 
     try {
-        const formData = new FormData();
-        formData.append('lecture_note', file);
-        formData.append('question_type', document.getElementById('question_type').value);
-        formData.append('num_questions', document.getElementById('num_questions').value);
-        formData.append('difficulty', document.getElementById('difficulty').value);
-        formData.append('quiz_duration', document.getElementById('quiz_duration').value);
-        const res = await fetch('/generate-ai-quiz', { method: 'POST', body: formData });
-        let data = null;
-        try { data = await res.json(); } catch(_) { /* ignore non-json */ }
+        var reader = new FileReader();
+        var base64Promise = new Promise(function(resolve, reject) {
+            reader.onload = function() {
+                var base64 = reader.result.split(',')[1];
+                resolve(base64);
+            };
+            reader.onerror = reject;
+        });
+        reader.readAsDataURL(file);
+        var pdfData = await base64Promise;
+
+        var res = await fetch('/generate-ai-quiz', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                pdfData: pdfData,
+                fileName: file.name,
+                question_type: document.getElementById('question_type').value,
+                num_questions: document.getElementById('num_questions').value,
+                difficulty: document.getElementById('difficulty').value,
+                quiz_duration: document.getElementById('quiz_duration').value
+            })
+        });
+        var data = null;
+        try { data = await res.json(); } catch(_) {}
         if (!res.ok) {
-            const msg = (data && data.message) ? data.message : ('Upload failed (HTTP ' + res.status + ')');
+            var msg = (data && data.message) ? data.message : ('Generation failed (HTTP ' + res.status + ')');
             throw new Error(msg);
         }
         examQuestions = (data && data.questions) || [];

@@ -6,8 +6,8 @@
     <title>Prepium | Exam Setup</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/css/style.css"
-    <link rel="manifest" href="/manifest.json">>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="manifest" href="/manifest.json">
 
     <style>
         .app-shell { padding-bottom: 240px; }
@@ -191,31 +191,16 @@
 <%- include('partials/sidebar') %>
 
     <div class="app-shell">
-        <div class="header-glass">
-            <div class="top-row">
-                <a href="/dashboard" class="back-circle"><i class="fas fa-chevron-left"></i></a>
-                <span class="page-title">Setup Exam</span>
-                <div class="view-switcher">
-                    <button class="v-btn active" id="gBtn" onclick="toggleLayout('grid')"><i class="fas fa-th-large"></i></button>
-                    <button class="v-btn" id="lBtn" onclick="toggleLayout('list')"><i class="fas fa-list"></i></button>
-                </div>
-            </div>
+        <div class="header-nav">
+            <a href="/dashboard" class="back-circle" title="Back"><i class="fas fa-arrow-left"></i></a>
+            <div class="header-title">Practice Quiz</div>
+            <div style="width:42px"></div>
+        </div>
 
-            <div class="guide-box">
-                <div class="guide-head"><i class="fas fa-info-circle guide-icon"></i> How to set up your test</div>
-                <ul class="guide-steps">
-                    <li><span class="step-num">1</span> Select up to <strong>4 courses</strong> by tapping the checkbox</li>
-                    <li><span class="step-num">2</span> For each course, enter how many questions you want</li>
-                    <li><span class="step-num">3</span> Set the total <strong>duration</strong> (in minutes) for the test</li>
-                    <li><span class="step-num">4</span> Tap <strong>"Generate Test"</strong> to begin — your timer starts immediately</li>
-                </ul>
-            </div>
-
-            <div class="search-row">
-                <div class="search-bar">
-                    <i class="fas fa-search" style="color: var(--text-sub); font-size: 0.85rem;"></i>
-                    <input type="text" id="courseSearch" placeholder="Search courses..." onkeyup="doSearch()">
-                </div>
+        <div style="padding: 0 14px; margin-bottom: 12px;">
+            <div class="search-bar" style="background:rgba(255,255,255,0.8);border:1px solid rgba(255,255,255,0.9);border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:10px;">
+                <i class="fas fa-search" style="color: var(--text-sub); font-size: 0.85rem;"></i>
+                <input type="text" id="courseSearch" placeholder="Search courses..." onkeyup="doSearch()" style="border:none;background:transparent;width:100%;font-family:inherit;font-weight:600;font-size:0.85rem;color:var(--text-dark);outline:none;">
             </div>
         </div>
 
