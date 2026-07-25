@@ -26,13 +26,13 @@ const upload = multer({
             cb(null, uniqueName);
         }
     }),
-    limits: { fileSize: 50 * 1024 * 1024 }
+    limits: { fileSize: 100 * 1024 * 1024 }
 });
 
 // Memory storage for timetable extraction (need buffer)
 const uploadMemory = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 50 * 1024 * 1024 }
+    limits: { fileSize: 100 * 1024 * 1024 }
 });
 
 const pgSession = require('connect-pg-simple')(session);
@@ -372,8 +372,8 @@ const transporter = (process.env.EMAIL_USER && process.env.EMAIL_PASS)
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '200mb' }));
+app.use(express.urlencoded({ extended: true, limit: '200mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Add this line directly ABOVE your app.use(session({...})) middleware declaration
@@ -3989,7 +3989,7 @@ app.get('/api/daily-task/weekly-report', isAuth, async (req, res) => {
     }
 });
 
-app.post('/upload-pdf', upload.single('lecture_note'), async (req, res) => {
+app.post('/upload-pdf', uploadMemory.single('lecture_note'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: "No file uploaded." });
@@ -4015,7 +4015,7 @@ app.post('/upload-pdf', upload.single('lecture_note'), async (req, res) => {
 });
 
 // POST: Process and Generate Contextual Quizzes from PDFs using pdfToText + OpenRouter
-app.post('/generate-ai-quiz', isAuth, requirePaid, upload.single('lecture_note'), async (req, res) => {
+app.post('/generate-ai-quiz', isAuth, requirePaid, uploadMemory.single('lecture_note'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: "No file uploaded." });
@@ -5170,35 +5170,23 @@ app.post('/api/study/chat', isAuth, requirePaid, async (req, res) => {
     await pool.query('INSERT INTO study_chat_messages (user_id, course_id, subtopic_id, role, message) VALUES ($1, $2, $3, $4, $5)', [uid, courseId || 0, subtopicId || 0, 'user', cleanUser]);
     const ctx = courseName ? `Context: Student is studying "${courseName}". ` : '';
     const prompt = `${ctx}You are a helpful study assistant for university students. Answer the following question in PLAIN TEXT only. Do NOT use markdown bullets that start with asterisks or hashes. Use short paragraphs separated by blank lines. Keep formatting simple — no asterisks, no hashtags, no backticks.\n\nStudent's question: ${cleanUser}\n\nProvide a thorough, educational response in clean plain text.`;
-    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache, no-transform');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
-    res.flushHeaders && res.flushHeaders();
-    let raw = '';
-    const streamed = await groqStream(prompt, async function(delta) {
-      raw += delta;
-      res.write('data: ' + JSON.stringify({ t: delta }) + '\n\n');
-    });
-    if (!streamed) {
+    let reply = '';
+    const streamed = await groqStream(prompt, async function(delta) { reply += delta; });
+    if (streamed) {
+      reply = cleanAiText(reply);
+    } else {
       const fallback = await studyPromptFast(prompt);
       if (!fallback.text || fallback.text.startsWith('AI error')) {
-        res.write('event: error\ndata: ' + JSON.stringify({ error: fallback.text || 'AI error' }) + '\n\n');
-        return res.end();
+        return res.json({ success: false, error: fallback.text || 'AI error' });
       }
-      raw = fallback.text;
-      res.write('event: full\ndata: ' + JSON.stringify({ t: cleanAiText(raw) }) + '\n\n');
+      reply = cleanAiText(fallback.text);
     }
-    const clean = cleanAiText(raw);
     try {
-      await pool.query('INSERT INTO study_chat_messages (user_id, course_id, subtopic_id, role, message) VALUES ($1, $2, $3, $4, $5)', [uid, courseId || 0, subtopicId || 0, 'ai', clean]);
+      await pool.query('INSERT INTO study_chat_messages (user_id, course_id, subtopic_id, role, message) VALUES ($1, $2, $3, $4, $5)', [uid, courseId || 0, subtopicId || 0, 'ai', reply]);
     } catch (e) { console.error('Chat message persist failed:', e.message); }
-    res.write('event: done\ndata: ' + JSON.stringify({ ok: true }) + '\n\n');
-    res.end();
+    res.json({ success: true, reply: reply });
   } catch (err) {
-    if (!res.headersSent) return res.status(500).json({ success: false, error: err.message });
-    res.write('event: error\ndata: ' + JSON.stringify({ error: err.message }) + '\n\n');
-    res.end();
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -5609,12 +5597,12 @@ app.use((err, req, res, next) => {
     console.error('Global error handler:', err);
     if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
-            return res.status(400).json({ success: false, message: 'File too large. Maximum size is 50MB.' });
+            return res.status(413).json({ success: false, message: 'File too large. Maximum size is 100MB.' });
         }
-        return res.status(400).json({ success: false, message: err.message });
+        return res.status(413).json({ success: false, message: err.message });
     }
     if (err.type === 'entity.too.large') {
-        return res.status(400).json({ success: false, message: 'File too large. Maximum size is 50MB.' });
+        return res.status(413).json({ success: false, message: 'File too large. Maximum size is 100MB.' });
     }
     res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
 });
