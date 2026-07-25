@@ -4222,17 +4222,17 @@ DIFFICULTY LEVEL: ${difficultyText} — adjust question complexity accordingly.
 
 CRITICAL STYLE RULE: ${styleInstruction}
 
-IMPORTANT: Each question MUST include an "explanation" field with a clear, educational explanation.
+IMPORTANT: Use JSON key "question" for the question text. Each question MUST include an "explanation" key with a clear explanation.
 
-You MUST respond with a raw JSON array matching this structure format:
+You MUST respond with a raw JSON array matching this structure:
 [
   {
     "type": "${questionType === 'mixed' ? 'obj' : questionType}",
     "question": "Question text here...",
-    "options": ["Option A", "Option B", "Option C", "Option D"],
-    "correct": "Correct option text or keyword answer definition",
+    "options": ["A) Option A", "B) Option B", "C) Option C", "D) Option D"],
+    "correct": "A) Option A",
     "keywords": ["key1", "key2"],
-    "explanation": "Write a clear, thorough explanation of the correct answer. Use PLAIN TEXT ONLY. Include formulas using LaTeX like $E=mc^2$ if needed."
+    "explanation": "Clear explanation in plain text."
   }
 ]
 
@@ -4255,17 +4255,22 @@ ${pdfText}`;
             throw new Error("Failed to parse AI response. Try again.");
         }
 
-        let structuredQuiz = Array.isArray(parsedData) ? parsedData : (parsedData.questions || parsedData.quiz || []);
+        let rawList = Array.isArray(parsedData) ? parsedData : (parsedData.questions || parsedData.quiz || []);
 
-        structuredQuiz = structuredQuiz.map(q => {
-            if (questionType !== 'mixed') q.type = questionType;
-            if (!q.options) q.options = [];
-            if (!q.keywords) q.keywords = [];
-            if (questionType === 'obj' && q.options.length === 0) {
-                q.options = ["Option A", "Option B", "Option C", "Option D"];
-            }
-            return q;
-        });
+        let structuredQuiz = rawList.map(q => {
+            var question = q.question || q.text || q.questionText || q.question_text || '';
+            var options = Array.isArray(q.options) && q.options.length ? q.options : (Array.isArray(q.choices) ? q.choices : []);
+            var t = questionType;
+            if (t === 'mixed') t = q.type || 'obj';
+            return {
+                type: t,
+                question: question,
+                options: options,
+                correct: q.correct || q.correctAnswer || q.answer || q.correct_option || '',
+                keywords: q.keywords || [],
+                explanation: q.explanation || q.exp || ''
+            };
+        }).filter(q => q.question);
 
         res.json({ 
             success: true, 
