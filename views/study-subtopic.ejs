@@ -651,69 +651,27 @@ function sendChatMsg() {
     chAppend('user', chEscape(msg));
     var aiMsg = document.createElement('div');
     aiMsg.className = 'chat-msg ai';
-    var aiBub = document.createElement('div');
-    aiBub.className = 'bubble';
-    aiBub.innerHTML = '<div class="gl-dots"><span></span><span></span><span></span></div>';
-    aiMsg.appendChild(aiBub);
+    var bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.innerHTML = '<i class="fas fa-spinner fa-pulse" style="color:var(--brand)"></i>';
+    aiMsg.appendChild(bubble);
     var container = document.getElementById('chatMessages');
     if (container.querySelector('.fa-comments')) container.innerHTML = '';
     container.appendChild(aiMsg);
     container.scrollTop = container.scrollHeight;
-    var raw = '';
     fetch('/api/study/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: msg, courseId: courseId, subtopicId: subtopicId, courseName: subtopicName })
-    }).then(function(resp) {
-        if (!resp.ok || !resp.body) {
-            return resp.json().catch(function(){ return { error: 'Bad response' }; }).then(function(j){
-                aiBub.innerHTML = '<p style="color:#dc2626;margin:0">' + chEscape(j.error || resp.statusText) + '</p>';
-            });
+    }).then(function(r){ return r.json(); }).then(function(d) {
+        if (d && d.success && d.reply) {
+            bubble.innerHTML = d.reply.replace(/\n/g, '<br>');
+        } else {
+            bubble.innerHTML = '<p style="color:#dc2626;margin:0">' + chEscape((d && d.error) ? d.error : 'Sorry, I could not process that.') + '</p>';
         }
-        var reader = resp.body.getReader();
-        var decoder = new TextDecoder();
-        var buf = '';
-        function pump() {
-            return reader.read().then(function(r){
-                if (r.done) return;
-                buf += decoder.decode(r.value, { stream: true });
-                var parts = buf.split('\n\n');
-                buf = parts.pop() || '';
-                parts.forEach(function(chunk) {
-                    var lines = chunk.split('\n');
-                    var event = 'message';
-                    var data = '';
-                    lines.forEach(function(l) {
-                        if (l.indexOf('event:') === 0) event = l.slice(6).trim();
-                        else if (l.indexOf('data:') === 0) data += l.slice(5).trim();
-                    });
-                    if (!data) return;
-                    try {
-                        var obj = JSON.parse(data);
-                        if (event === 'error') { aiBub.innerHTML = '<p style="color:#dc2626;margin:0">' + chEscape(obj.error || 'AI error') + '</p>'; return; }
-                        if (event === 'full') {
-                            var h = '<p style="margin:0">' + chEscape(obj.t || '') + '</p>';
-                            aiBub.innerHTML = h.replace(/\n/g, '<br>');
-                            container.scrollTop = container.scrollHeight;
-                            return;
-                        }
-                        if (event === 'done' || obj.ok) return;
-                        if (typeof obj.t === 'string') {
-                            raw += obj.t;
-                            var display = chEscape(raw);
-                            aiBub.innerHTML = display.replace(/\n/g, '<br>');
-                            container.scrollTop = container.scrollHeight;
-                        }
-                    } catch (e) { /* skip */ }
-                });
-                return pump();
-            });
-        }
-        return pump().catch(function(err) {
-            aiBub.innerHTML = '<p style="color:#dc2626;margin:0">' + chEscape(err.message || 'stream error') + '</p>';
-        });
+        container.scrollTop = container.scrollHeight;
     }).catch(function(err) {
-        aiBub.innerHTML = '<p style="color:#dc2626;margin:0">' + chEscape(err.message || 'network error') + '</p>';
+        bubble.innerHTML = '<p style="color:#dc2626;margin:0">' + chEscape(err.message || 'network error') + '</p>';
     });
 }
 
