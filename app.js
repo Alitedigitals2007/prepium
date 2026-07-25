@@ -1072,7 +1072,11 @@ app.post('/admin/questions/bulk-import', isAdmin, async (req, res) => {
 // DELETE QUESTION
 app.post('/admin/questions/delete/:id/:subject_id', isAdmin, async (req, res) => {
     await pool.query('DELETE FROM questions WHERE id = $1', [req.params.id]);
-    res.redirect(`/admin/questions/manage/${req.params.subject_id}`);
+    if (parseInt(req.params.subject_id) > 0) {
+        res.redirect(`/admin/questions/manage/${req.params.subject_id}`);
+    } else {
+        res.redirect('/admin/ai-quiz?msg=Question+deleted');
+    }
 });
 
 // GET EDIT PAGE
@@ -1110,8 +1114,23 @@ app.get('/admin/ai-quiz', isAdmin, async (req, res) => {
   try {
     const unis = await pool.query('SELECT * FROM universities ORDER BY name ASC');
     const courses = await pool.query(`SELECT c.*, u.name as university_name FROM ai_courses c JOIN universities u ON c.university_id = u.id ORDER BY u.name, c.course_code`);
+    const presetQ = await pool.query(`
+      SELECT q.*, s.name as subject_name, u.name as university_name
+      FROM questions q
+      LEFT JOIN subjects s ON q.subject_id = s.id
+      LEFT JOIN universities u ON q.university_id = u.id OR s.university_id = u.id
+      ORDER BY q.id DESC LIMIT 200
+    `);
+    const subjects = await pool.query('SELECT * FROM subjects ORDER BY name ASC');
     const msg = req.query.msg || null;
-    res.render('admin/ai-quiz', { universities: unis.rows, courses: courses.rows, msg, user: req.session.user });
+    res.render('admin/ai-quiz', {
+      universities: unis.rows,
+      courses: courses.rows,
+      presetQuestions: presetQ.rows,
+      subjects: subjects.rows,
+      msg,
+      user: req.session.user
+    });
   } catch (err) { res.status(500).send('Error: ' + err.message); }
 });
 
@@ -1195,11 +1214,11 @@ app.post('/admin/ai-quiz/generate-questions/:courseId', isAdmin, async (req, res
 Each question must:
 - Be accurate and exam-relevant for Nigerian university students
 - Include an explanation (educational, in plain text)
-- Options must be labeled A, B, C, D
-- Correct answer must match one of the options exactly
+- Options must NOT have letter prefixes (just the text)
+- Correct answer must be the LETTER ONLY (e.g., "A")
 
 Return ONLY a raw JSON array with NO markdown wrapping:
-[{"question": "...", "options": ["A) ...", "B) ...", "C) ...", "D) ..."], "correct": "A) ...", "explanation": "..."}]`;
+[{"question": "...", "options": ["Option text A", "Option text B", "Option text C", "Option text D"], "correct": "A", "explanation": "..."}]`;
     const aiRes = await studyPromptJSON(prompt);
     let questions = [];
     try {
@@ -1207,9 +1226,21 @@ Return ONLY a raw JSON array with NO markdown wrapping:
       const m = txt.match(/\[[\s\S]*\]/);
       questions = JSON.parse(m ? m[0] : txt);
     } catch { return res.redirect('/admin/ai-quiz?msg=AI+failed+to+generate+questions.+Try+again.'); }
+    const normOpts = function(opts) { return (opts || []).map(function(o) { return String(o).replace(/^[A-Da-d1-4][\.\)]\s*/, ''); }); };
+    const ansLetter = function(val, opts) {
+      if (!val) return 'A';
+      var s = String(val).trim(), m = s.match(/^([A-Da-d])[\.\)]\s*/);
+      if (m) return m[1].toUpperCase();
+      if (/^[A-Da-d]$/i.test(s)) return s.toUpperCase();
+      var n = parseInt(s);
+      if (!isNaN(n)) return String.fromCharCode(65 + (n >= 1 && n <= 4 ? n - 1 : n));
+      if (Array.isArray(opts)) { for (var i = 0; i < opts.length; i++) { if (opts[i].toLowerCase() === s.toLowerCase()) return String.fromCharCode(65 + i); } }
+      return 'A';
+    };
     for (const q of questions) {
       if (q.question) {
-        await pool.query('INSERT INTO ai_questions (course_id, question_text, options, correct_answer, explanation) VALUES ($1, $2, $3, $4, $5)', [c.id, q.question, JSON.stringify(q.options || []), q.correct || '', q.explanation || '']);
+        var cleanOpts = normOpts(q.options);
+        await pool.query('INSERT INTO ai_questions (course_id, question_text, options, correct_answer, explanation) VALUES ($1, $2, $3, $4, $5)', [c.id, q.question, JSON.stringify(cleanOpts), ansLetter(q.correct || q.correctAnswer || q.answer || q.correct_option || '', cleanOpts), q.explanation || '']);
       }
     }
     res.redirect('/admin/ai-quiz?msg=Generated+' + questions.length + '+questions+for+' + c.course_code);
@@ -1231,7 +1262,7 @@ app.post('/admin/ai-quiz/question/regenerate/:id', isAdmin, async (req, res) => 
     if (!old.rows[0]) return res.redirect('/admin/ai-quiz?msg=Question+not+found');
     const o = old.rows[0];
     const prompt = `Generate a new multiple choice question for "${o.course_code}: ${o.course_title}" (Nigerian university exam).
-Return ONLY raw JSON: {"question": "...", "options": ["A) ...", "B) ...", "C) ...", "D) ..."], "correct": "A) ...", "explanation": "..."}`;
+Return ONLY raw JSON: {"question": "...", "options": ["Option text A", "Option text B", "Option text C", "Option text D"], "correct": "A", "explanation": "..."}`;
     const aiRes = await studyPromptJSON(prompt);
     let qd;
     try {
@@ -1239,7 +1270,18 @@ Return ONLY raw JSON: {"question": "...", "options": ["A) ...", "B) ...", "C) ..
       const m3 = txt.match(/\{[\s\S]*\}/);
       qd = JSON.parse(m3 ? m3[0] : txt);
     } catch { return res.redirect('/admin/ai-quiz?msg=Regeneration+failed'); }
-    await pool.query('UPDATE ai_questions SET question_text = $1, options = $2, correct_answer = $3, explanation = $4 WHERE id = $5', [qd.question || o.question_text, JSON.stringify(qd.options || o.options), qd.correct || o.correct_answer, qd.explanation || o.explanation, req.params.id]);
+    var cleanOpts = (qd.options || o.options || []).map(function(x) { return String(x).replace(/^[A-Da-d1-4][\.\)]\s*/, ''); });
+    var correctAns = (function(v, opts) {
+      if (!v) return 'A';
+      var s = String(v).trim(), m = s.match(/^([A-Da-d])[\.\)]\s*/);
+      if (m) return m[1].toUpperCase();
+      if (/^[A-Da-d]$/i.test(s)) return s.toUpperCase();
+      var n = parseInt(s);
+      if (!isNaN(n)) return String.fromCharCode(65 + (n >= 1 && n <= 4 ? n - 1 : n));
+      if (Array.isArray(opts)) { for (var i = 0; i < opts.length; i++) { if (opts[i].toLowerCase() === s.toLowerCase()) return String.fromCharCode(65 + i); } }
+      return 'A';
+    })(qd.correct || o.correct_answer, cleanOpts);
+    await pool.query('UPDATE ai_questions SET question_text = $1, options = $2, correct_answer = $3, explanation = $4 WHERE id = $5', [qd.question || o.question_text, JSON.stringify(cleanOpts), correctAns, qd.explanation || o.explanation, req.params.id]);
     res.redirect('/admin/ai-quiz?msg=Question+regenerated&courseId=' + o.course_id);
   } catch (err) { res.redirect('/admin/ai-quiz?msg=' + encodeURIComponent(err.message)); }
 });
@@ -4224,13 +4266,13 @@ CRITICAL STYLE RULE: ${styleInstruction}
 
 IMPORTANT: Use JSON key "question" for the question text. Each question MUST include an "explanation" key with a clear explanation.
 
-You MUST respond with a raw JSON array matching this structure:
+You MUST respond with a raw JSON array matching this structure (options WITHOUT letter prefixes, correct is LETTER ONLY):
 [
   {
     "type": "${questionType === 'mixed' ? 'obj' : questionType}",
     "question": "Question text here...",
-    "options": ["A) Option A", "B) Option B", "C) Option C", "D) Option D"],
-    "correct": "A) Option A",
+    "options": ["Option A text", "Option B text", "Option C text", "Option D text"],
+    "correct": "A",
     "keywords": ["key1", "key2"],
     "explanation": "Clear explanation in plain text."
   }
@@ -4257,16 +4299,33 @@ ${pdfText}`;
 
         let rawList = Array.isArray(parsedData) ? parsedData : (parsedData.questions || parsedData.quiz || []);
 
+        function cleanOptPrefix(o) { return String(o).replace(/^[A-Da-d1-4][\.\)]\s*/, ''); }
+        function answerLetter(val, opts) {
+            if (!val) return 'A';
+            var s = String(val).trim();
+            var m = s.match(/^([A-Da-d])[\.\)]\s*/);
+            if (m) return m[1].toUpperCase();
+            if (/^[A-Da-d]$/i.test(s)) return s.toUpperCase();
+            var n = parseInt(s);
+            if (!isNaN(n)) return String.fromCharCode(65 + (n >= 1 && n <= 4 ? n - 1 : n));
+            if (Array.isArray(opts)) {
+                for (var i = 0; i < opts.length; i++) {
+                    if (cleanOptPrefix(opts[i]).toLowerCase() === s.toLowerCase() || opts[i].toLowerCase() === s.toLowerCase()) return String.fromCharCode(65 + i);
+                }
+            }
+            return 'A';
+        }
         let structuredQuiz = rawList.map(q => {
             var question = q.question || q.text || q.questionText || q.question_text || '';
             var options = Array.isArray(q.options) && q.options.length ? q.options : (Array.isArray(q.choices) ? q.choices : []);
+            var cleanOpts = options.map(function(o) { return cleanOptPrefix(o); });
             var t = questionType;
             if (t === 'mixed') t = q.type || 'obj';
             return {
                 type: t,
                 question: question,
-                options: options,
-                correct: q.correct || q.correctAnswer || q.answer || q.correct_option || '',
+                options: cleanOpts,
+                correct: answerLetter(q.correct || q.correctAnswer || q.answer || q.correct_option || '', cleanOpts),
                 keywords: q.keywords || [],
                 explanation: q.explanation || q.exp || ''
             };
@@ -5026,6 +5085,66 @@ async function studyPromptFast(prompt) {
   } catch(e) { console.error('[Study] Table init:', e.message); }
 })();
 
+// ==================== DB MANAGER ====================
+const DB_PIN = process.env.DB_MANAGER_PIN || '1030';
+const DB_PASS = process.env.DB_MANAGER_PASS || 'prepiumdb';
+
+app.get('/admin/db-manager', isAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT table_name FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+      ORDER BY table_name
+    `);
+    const tables = result.rows.map(r => r.table_name);
+    res.render('admin/db-manager', { tables, msg: req.query.msg || null, user: req.session.user });
+  } catch (err) { res.status(500).send('Error: ' + err.message); }
+});
+
+app.post('/admin/db-manager/verify-pin', isAdmin, async (req, res) => {
+  const { pin, password } = req.body;
+  if (pin === DB_PIN && (!password || password === DB_PASS)) {
+    res.json({ success: true });
+  } else {
+    res.json({ success: false });
+  }
+});
+
+app.get('/admin/db-manager/data/:table', isAdmin, async (req, res) => {
+  try {
+    const table = req.params.table.replace(/[^a-zA-Z0-9_]/g, '');
+    const result = await pool.query(`SELECT * FROM "${table}" LIMIT 200`);
+    const columns = result.fields.map(f => f.name);
+    res.json({ success: true, rows: result.rows, columns });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.post('/admin/db-manager/update', isAdmin, async (req, res) => {
+  try {
+    const { table, columns, row, pkCol, pkVal } = req.body;
+    const safeTable = table.replace(/[^a-zA-Z0-9_]/g, '');
+    const sets = columns.filter(c => c !== pkCol).map((c, i) => `"${c}" = $${i + 1}`);
+    const vals = columns.filter(c => c !== pkCol).map(c => row[c] === '' ? null : row[c]);
+    vals.push(pkVal);
+    const idx = sets.length + 1;
+    await pool.query(`UPDATE "${safeTable}" SET ${sets.join(', ')} WHERE "${pkCol}" = $${idx}`, vals);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.post('/admin/db-manager/query', isAdmin, async (req, res) => {
+  try {
+    const { sql } = req.body;
+    const lower = sql.trim().toLowerCase();
+    if (!/^\s*(select|show|describe|explain)\b/i.test(sql)) {
+      return res.status(400).json({ success: false, error: 'Only SELECT queries allowed' });
+    }
+    const result = await pool.query(sql);
+    const columns = result.fields ? result.fields.map(f => f.name) : [];
+    res.json({ success: true, rows: result.rows, columns });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
 // ==================== STUDY DASHBOARD ====================
 app.get('/study', isAuth, requirePaid, async (req, res) => {
   try {
@@ -5077,7 +5196,7 @@ app.get('/study/quiz/:attemptId', isAuth, requirePaid, async (req, res) => {
     let questions = (await pool.query('SELECT id, question, options, order_index FROM study_quiz_questions WHERE attempt_id = $1 ORDER BY order_index ASC', [req.params.attemptId])).rows;
     questions = questions.map(function(q) {
       q.question = cleanLatex(q.question);
-      if (q.options && Array.isArray(q.options)) q.options = q.options.map(function(o) { return cleanLatex(o); });
+      if (q.options && Array.isArray(q.options)) q.options = q.options.map(function(o) { return cleanLatex(o).replace(/^[A-Da-d1-4][\.\)]\s*/, ''); });
       return q;
     });
     res.render('study-quiz', { user: req.session.user, attempt: attempt.rows[0], questions: questions });
@@ -5389,7 +5508,7 @@ app.post('/api/study/quiz/generate', isAuth, requirePaid, async (req, res) => {
       const st = await pool.query('SELECT content FROM study_subtopics WHERE id = $1', [subtopicId]).catch(() => ({ rows: [] }));
       if (st.rows[0] && st.rows[0].content) notes = '\n\nStudy material for reference:\n' + String(st.rows[0].content).slice(0, 4000);
     }
-    const prompt = `Generate ${count} ${typeGuide} about "${topicTitle || 'General Study'}" for university exam preparation. You MUST use JSON key "question" for the question text, "options" for the options array, "correctAnswer" for the correct answer, "explanation" for the explanation. Return a JSON array of objects. Do NOT wrap in markdown. ONLY output raw JSON.${notes}`;
+    const prompt = `Generate ${count} ${typeGuide} about "${topicTitle || 'General Study'}" for university exam preparation. Use JSON key "question" for text, "options" array for choices (do NOT prefix options with A), "correctAnswer" must be the LETTER ONLY (e.g., "A", not the full text), "explanation" for explanation. Return a JSON array. Do NOT wrap in markdown. ONLY output raw JSON.${notes}`;
     const aiRes = await studyPromptJSON(prompt);
     let questions = [];
     try {
@@ -5405,14 +5524,34 @@ app.post('/api/study/quiz/generate', isAuth, requirePaid, async (req, res) => {
         questions = JSON.parse(cleaned);
       } catch { throw new Error('Failed to parse AI response. Please try again.'); }
     }
-    // Normalize question key (handle AI using 'text' or 'questionText' instead of 'question')
+    // Normalize question keys and extract answer letter
+    function cleanOptPrefix(o) {
+      return String(o).replace(/^[A-Da-d1-4][\.\)]\s*/, '');
+    }
+    function answerLetter(val, options) {
+      if (!val) return 'A';
+      var s = String(val).trim();
+      var m = s.match(/^([A-Da-d])[\.\)]\s*/);
+      if (m) return m[1].toUpperCase();
+      if (/^[A-Da-d]$/i.test(s)) return s.toUpperCase();
+      var n = parseInt(s);
+      if (!isNaN(n)) return String.fromCharCode(65 + (n >= 1 && n <= 4 ? n - 1 : n));
+      if (Array.isArray(options)) {
+        for (var i = 0; i < options.length; i++) {
+          if (cleanOptPrefix(options[i]).toLowerCase() === s.toLowerCase() || options[i].toLowerCase() === s.toLowerCase()) return String.fromCharCode(65 + i);
+        }
+      }
+      return 'A';
+    }
     questions = questions.map(function(q) {
       var normQ = q.question || q.text || q.questionText || q.question_text || '';
       var normExp = q.explanation || q.exp || '';
+      var raw = q.options || q.choices || [];
+      var cleaned = Array.isArray(raw) ? raw.map(function(o) { return cleanLatex(cleanOptPrefix(o)); }) : [];
       return {
         question: cleanLatex(normQ),
-        options: Array.isArray(q.options) ? q.options.map(function(o) { return cleanLatex(o || ''); }) : [],
-        correctAnswer: q.correctAnswer || q.correct || q.answer || '',
+        options: cleaned,
+        correctAnswer: answerLetter(q.correctAnswer || q.correct || q.answer || '', cleaned),
         explanation: cleanLatex(normExp)
       };
     }).filter(function(q) { return q.question; });

@@ -252,8 +252,16 @@ function loadResults() {
                 var isCorrect = q.is_correct;
                 var statusClass = isCorrect ? 'correct' : 'wrong';
                 var statusIcon = isCorrect ? '<i class="fas fa-check-circle" style="color:var(--success)"></i>' : '<i class="fas fa-times-circle" style="color:var(--danger)"></i>';
+                var optHtml = opts.length ? opts.map(function(o,i) {
+                    var letter = String.fromCharCode(65+i);
+                    var isUser = letter === (q.user_answer||'').toUpperCase();
+                    var isCorrectOpt = letter === (q.correct_answer||'').toUpperCase();
+                    var cls = isUser && isCorrectOpt ? 'correct' : (isUser ? 'wrong' : '');
+                    return '<span class="r-opt ' + cls + '" style="display:inline-block;margin-right:10px;padding:2px 6px;border-radius:4px;">' + letter + ') ' + o + '</span>';
+                }).join('') : '';
                 container.innerHTML += '<div class="review-item">' +
                     '<div class="r-q">' + statusIcon + ' ' + q.question + '</div>' +
+                    (optHtml ? '<div style="margin:6px 0;font-size:0.78rem;">' + optHtml + '</div>' : '') +
                     '<div class="r-answer ' + statusClass + '">Your answer: ' + (q.user_answer || 'Not answered') + '</div>' +
                     (q.correct_answer ? '<div class="r-correct-ans">Correct answer: ' + q.correct_answer + '</div>' : '') +
                     (q.explanation ? '<div class="r-explain">' + q.explanation + '</div>' : '') +
