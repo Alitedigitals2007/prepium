@@ -1,35 +1,47 @@
 <%- include('install-banner') %>
-<nav class="fixed bottom-0 left-0 w-full z-50 rounded-t-xl bg-surface-container-lowest shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.04)] px-4 pb-4 pt-2 flex justify-around items-center">
-<a href="/dashboard" class="flex flex-col items-center justify-center <%= typeof activeNav !== 'undefined' && activeNav === 'dashboard' ? 'bg-secondary-container text-on-secondary-container rounded-full px-4 py-1' : 'text-on-surface-variant hover:text-academic-navy' %> active:scale-90 transition-all duration-200">
-<span class="material-symbols-outlined<%= typeof activeNav !== 'undefined' && activeNav === 'dashboard' ? "' style='font-variation-settings: \"FILL\" 1;'" : '' %>">home</span>
-<span class="font-label-sm text-[10px]">Home</span>
-</a>
-<a href="/setup-test" class="flex flex-col items-center justify-center <%= typeof activeNav !== 'undefined' && activeNav === 'quiz' ? 'bg-secondary-container text-on-secondary-container rounded-full px-4 py-1' : 'text-on-surface-variant hover:text-academic-navy' %> active:scale-90 transition-all duration-200">
-<span class="material-symbols-outlined<%= typeof activeNav !== 'undefined' && activeNav === 'quiz' ? "' style='font-variation-settings: \"FILL\" 1;'" : '' %>">quiz</span>
-<span class="font-label-sm text-[10px]">Tests</span>
-</a>
-<a href="/study" class="flex flex-col items-center justify-center <%= typeof activeNav !== 'undefined' && activeNav === 'study' ? 'bg-secondary-container text-on-secondary-container rounded-full px-4 py-1' : 'text-on-surface-variant hover:text-academic-navy' %> active:scale-90 transition-all duration-200">
-<span class="material-symbols-outlined<%= typeof activeNav !== 'undefined' && activeNav === 'study' ? "' style='font-variation-settings: \"FILL\" 1;'" : '' %>">auto_stories</span>
-<span class="font-label-sm text-[10px]">Hub</span>
-</a>
-<a href="/cgpa" class="flex flex-col items-center justify-center <%= typeof activeNav !== 'undefined' && activeNav === 'cgpa' ? 'bg-secondary-container text-on-secondary-container rounded-full px-4 py-1' : 'text-on-surface-variant hover:text-academic-navy' %> active:scale-90 transition-all duration-200">
-<span class="material-symbols-outlined<%= typeof activeNav !== 'undefined' && activeNav === 'cgpa' ? "' style='font-variation-settings: \"FILL\" 1;'" : '' %>">monitoring</span>
-<span class="font-label-sm text-[10px]">Tracker</span>
-</a>
-<a href="/profile" class="flex flex-col items-center justify-center <%= typeof activeNav !== 'undefined' && activeNav === 'profile' ? 'bg-secondary-container text-on-secondary-container rounded-full px-4 py-1' : 'text-on-surface-variant hover:text-academic-navy' %> active:scale-90 transition-all duration-200">
-<span class="material-symbols-outlined<%= typeof activeNav !== 'undefined' && activeNav === 'profile' ? "' style='font-variation-settings: \"FILL\" 1;'" : '' %>">menu</span>
-<span class="font-label-sm text-[10px]">More</span>
-</a>
+<style>
+    /* Re-declare here to guarantee fixed positioning even if style.css wasn't loaded
+       or a local <style> in the page overrode .bottom-nav */
+    .bottom-nav.fixed-nav {
+        position: fixed !important;
+        bottom: 16px !important;
+        left: 50% !important;
+        right: auto !important;
+        transform: translateX(-50%) !important;
+        width: calc(100% - 32px) !important;
+        max-width: 398px !important;
+        z-index: 9999 !important;
+    }
+</style>
+<nav class="bottom-nav fixed-nav" id="prepium-bottom-nav">
+    <a href="/dashboard" class="nav-link <%= typeof activeNav !== 'undefined' && activeNav === 'dashboard' ? 'active' : '' %>">
+        <i class="fas fa-home"></i><span>Home</span>
+    </a>
+    <a href="/study" class="nav-link <%= typeof activeNav !== 'undefined' && activeNav === 'study' ? 'active' : '' %>">
+        <i class="fas fa-graduation-cap"></i><span>Study</span>
+    </a>
+    <a href="/setup-test" class="nav-center-btn <%= typeof activeNav !== 'undefined' && activeNav === 'quiz' ? 'active' : '' %>">
+        <i class="fas fa-plus"></i>
+    </a>
+    <a href="/history" class="nav-link <%= typeof activeNav !== 'undefined' && activeNav === 'history' ? 'active' : '' %>">
+        <i class="fas fa-chart-bar"></i><span>Stats</span>
+    </a>
+    <a href="/profile" class="nav-link <%= typeof activeNav !== 'undefined' && activeNav === 'profile' ? 'active' : '' %>">
+        <i class="fas fa-user-circle"></i><span>Profile</span>
+    </a>
 </nav>
 <script>
-(function() {
-  var nav = document.querySelector('.fixed.bottom-0');
-  if (nav && nav.parentElement !== document.body) {
-    document.addEventListener('DOMContentLoaded', function() {
-      if (nav.parentElement !== document.body) {
-        document.body.appendChild(nav);
-      }
-    });
-  }
-})();
+    // Lift the bottom nav out of any container so `position: fixed` works
+    // reliably on every page. Done at parse-end to keep the markup valid.
+    (function () {
+        var nav = document.getElementById('prepium-bottom-nav');
+        if (!nav) return;
+        // Move to body root on next tick — restores position:fixed behaviour
+        // even if an ancestor has stacking-context quirks
+        document.addEventListener('DOMContentLoaded', function () {
+            if (nav.parentElement !== document.body) {
+                document.body.appendChild(nav);
+            }
+        });
+    })();
 </script>
