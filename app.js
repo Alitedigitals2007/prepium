@@ -467,6 +467,10 @@ app.get('/', (req, res) => {
     res.render('index');
 });
 
+app.get('/guide', (req, res) => {
+    res.render('guide', { user: req.session.user || null });
+});
+
 // Auth Routes
 app.get('/signup', async (req, res) => {
     try {
