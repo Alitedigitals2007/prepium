@@ -599,10 +599,17 @@ app.post('/auth/login', rateLimit(10, 60000), async (req, res) => {
 });
 
 // ─── Coupon validate API ───
-app.post('/api/coupon/validate', async (req, res) => {
+app.post('/api/coupon/validate', isAuth, async (req, res) => {
   try {
     const { code } = req.body;
+    const uid = req.session.user.id;
     if (!code || !code.trim()) return res.json({ valid: false, message: 'Enter a coupon code' });
+
+    // Check if this user already used a coupon
+    const userCheck = await pool.query('SELECT used_coupon, has_paid FROM users WHERE id = $1', [uid]);
+    if (userCheck.rows[0]?.used_coupon) return res.json({ valid: false, message: 'You already used a coupon' });
+    if (userCheck.rows[0]?.has_paid) return res.json({ valid: false, message: 'Account is already premium' });
+
     const c = await pool.query('SELECT * FROM coupons WHERE LOWER(code) = LOWER($1) AND is_active = true AND (max_uses = 0 OR times_used < max_uses) AND (expires_at IS NULL OR expires_at > NOW())', [code.trim()]);
     if (!c.rows[0]) return res.json({ valid: false, message: 'Invalid or expired coupon code' });
     const coupon = c.rows[0];
@@ -665,15 +672,28 @@ app.get('/verify-payment', rateLimit(5, 300000), async (req, res) => {
 
     try {
         // 0. Verify the transaction with Paystack API
+        const paystackSecret = process.env.PAYSTACK_SECRET_KEY;
+        if (!paystackSecret) {
+            console.error('[Paystack] Missing PAYSTACK_SECRET_KEY');
+            return res.redirect('/dashboard?payment=failed&reason=server_misconfigured');
+        }
         const paystackRes = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
             headers: {
-                'Authorization': `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+                'Authorization': `Bearer ${paystackSecret}`,
                 'Content-Type': 'application/json'
             }
         });
         const paystackData = await paystackRes.json();
 
-        if (!paystackData.status || paystackData.data.status !== 'success') {
+        // Basic sanity check on the response shape
+        if (!paystackData || !paystackData.status || !paystackData.data) {
+            console.error('[Paystack] Unexpected response:', JSON.stringify(paystackData).slice(0, 500));
+            return res.redirect('/dashboard?payment=failed&reason=invalid_response');
+        }
+
+        // Accept both 'success' and any other finalised statuses (e.g. 'abandoned' is not success)
+        if (paystackData.data.status !== 'success') {
+            console.log(`[Paystack] Transaction ${reference} status: ${paystackData.data.status}`);
             return res.redirect('/dashboard?payment=failed&reason=transaction_not_successful');
         }
 
@@ -697,16 +717,23 @@ app.get('/verify-payment', rateLimit(5, 300000), async (req, res) => {
 
         // 3. Mark the user as activated (Paid)
         const couponCode = req.query.coupon || null;
-        await pool.query('UPDATE users SET has_paid = true, used_coupon = COALESCE($1, used_coupon) WHERE id = $2', [couponCode, userId]);
-        console.log(`[Paystack] Success: User ID ${userId} marked as paid${couponCode ? ' (coupon: ' + couponCode + ')' : ''}.`);
+        // Only set used_coupon if not already set (prevents overwriting)
+        const userCouponCheck = await pool.query('SELECT used_coupon FROM users WHERE id = $1', [userId]);
+        const finalCoupon = (!userCouponCheck.rows[0]?.used_coupon && couponCode) ? couponCode : null;
+        const updateRes = await pool.query(
+            'UPDATE users SET has_paid = COALESCE(has_paid, false), used_coupon = COALESCE($1, used_coupon) WHERE id = $2 RETURNING has_paid',
+            [finalCoupon, userId]
+        );
+        console.log(`[Paystack] Success: User ID ${userId} marked as paid (has_paid=${updateRes.rows[0]?.has_paid})${finalCoupon ? ' (coupon: ' + finalCoupon + ')' : ''}.`);
 
-        // 3b. Increment coupon usage if a coupon was used
-        if (couponCode) {
-          try { await pool.query('UPDATE coupons SET times_used = times_used + 1 WHERE LOWER(code) = LOWER($1)', [couponCode]); } catch (_) {}
+        // 3b. Increment coupon usage if a coupon was used (only on first-time coupon use)
+        if (finalCoupon) {
+          try { await pool.query('UPDATE coupons SET times_used = times_used + 1 WHERE LOWER(code) = LOWER($1)', [finalCoupon]); } catch (_) {}
         }
 
         // 4. Update the logged-in session right away
         req.session.user.has_paid = true;
+        req.session.save(function() { /* session persisted */ });
 
         // 5. Credit the Ambassador if a referral code was used
         if (user.unique_code) {
@@ -3538,6 +3565,237 @@ app.get('/ai-quiz', isAuth, (req, res) => {
     });
 });
 
+// ─── PRACTICE QUIZ (Student) ────────────────────────────────────────────────
+app.get('/practice-quiz', isAuth, async (req, res) => {
+    try {
+        const uid = req.session.user.id;
+        const profile = await pool.query('SELECT university_id, current_level FROM users WHERE id = $1', [uid]);
+        const uniId = profile.rows[0]?.university_id;
+        const lvl = profile.rows[0]?.current_level;
+        const courses = uniId ? await pool.query(
+            `SELECT c.id, c.course_code, c.course_title, s.status, s.id as session_id
+             FROM admin_quiz_courses c JOIN admin_quiz_sessions s ON c.session_id = s.id
+             WHERE c.status = 'approved' AND s.status = 'published' AND s.university_id = $1 AND s.level = $2
+             ORDER BY c.course_code`, [uniId, lvl]
+        ) : { rows: [] };
+        const freeUsed = await pool.query(
+            'SELECT COUNT(*) as cnt FROM student_quiz_attempts WHERE user_id = $1', [uid]
+        );
+        const freeLeft = Math.max(0, 2 - parseInt(freeUsed.rows[0]?.cnt || 0));
+        res.render('practice-quiz', {
+            user: req.session.user,
+            courses: courses.rows,
+            freeLeft,
+            isPaid: req.session.user.has_paid
+        });
+    } catch (e) { res.status(500).send(e.message); }
+});
+
+app.post('/api/quiz/start', isAuth, async (req, res) => {
+    try {
+        const uid = req.session.user.id;
+        const { courseId } = req.body;
+        const freeUsed = await pool.query('SELECT COUNT(*) as cnt FROM student_quiz_attempts WHERE user_id = $1', [uid]);
+        const freeLeft = Math.max(0, 2 - parseInt(freeUsed.rows[0]?.cnt || 0));
+        if (freeLeft <= 0 && !req.session.user.has_paid) return res.json({ error: 'Free limit reached. Upgrade to premium.' });
+        if (!courseId) return res.json({ error: 'Select a course.' });
+        const questions = await pool.query(
+            'SELECT id, question_text, options, question_type, diagram_url FROM admin_quiz_questions WHERE course_id = $1 ORDER BY RANDOM() LIMIT 20',
+            [courseId]
+        );
+        if (questions.rows.length === 0) return res.json({ error: 'No questions available for this course yet.' });
+        const attempt = await pool.query(
+            'INSERT INTO student_quiz_attempts (user_id, course_id, total, data) VALUES ($1, $2, $3, $4) RETURNING id',
+            [uid, courseId, questions.rows.length, JSON.stringify(questions.rows)]
+        );
+        res.json({ success: true, attemptId: attempt.rows[0].id, questions: questions.rows });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/quiz/submit', isAuth, async (req, res) => {
+    try {
+        const { attemptId, answers } = req.body;
+        const attempt = await pool.query('SELECT * FROM student_quiz_attempts WHERE id = $1 AND user_id = $2', [attemptId, req.session.user.id]);
+        if (!attempt.rows[0]) return res.json({ error: 'Attempt not found.' });
+        if (attempt.rows[0].completed) return res.json({ error: 'Already submitted.' });
+        const questions = attempt.rows[0].data;
+        let score = 0;
+        const results = questions.map((q, i) => {
+            const userAns = answers[i] || '';
+            const correct = q.correct_answer;
+            const isCorrect = userAns.toString().toUpperCase() === correct.toString().toUpperCase();
+            if (isCorrect) score++;
+            return { question: q.question_text, userAnswer: userAns, correctAnswer: correct, isCorrect, explanation: q.explanation || '' };
+        });
+        await pool.query('UPDATE student_quiz_attempts SET score = $1, completed = true WHERE id = $2', [score, attemptId]);
+        res.json({ success: true, score, total: questions.length, results });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── MY FILES (Student) ────────────────────────────────────────────────────
+app.get('/my-files', isAuth, async (req, res) => {
+    try {
+        const files = await pool.query('SELECT * FROM student_files WHERE user_id = $1 ORDER BY created_at DESC', [req.session.user.id]);
+        res.render('my-files', { user: req.session.user, files: files.rows });
+    } catch (e) { res.status(500).send(e.message); }
+});
+
+const uploadDir = path.join(__dirname, 'public', 'uploads');
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+const filesStorage = multer.diskStorage({
+    destination: (r, f, cb) => cb(null, uploadDir),
+    filename: (r, f, cb) => cb(null, Date.now() + '-' + f.originalname)
+});
+const filesUpload = multer({ storage: filesStorage, limits: { fileSize: 50 * 1024 * 1024 }, fileFilter: (r, f, cb) => {
+    const ok = ['.pdf', '.pptx', '.ppt', '.docx', '.doc'].includes(path.extname(f.originalname).toLowerCase());
+    cb(null, ok);
+}});
+
+app.post('/api/files/upload', isAuth, filesUpload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) return res.json({ error: 'Invalid file. Only PDF, PPTX, DOCX allowed.' });
+        const displayName = req.body.name || req.file.originalname;
+        const result = await pool.query(
+            'INSERT INTO student_files (user_id, file_name, display_name, file_path, mime_type, file_size) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
+            [req.session.user.id, req.file.originalname, displayName, '/uploads/' + req.file.filename, req.file.mimetype, req.file.size]
+        );
+        res.json({ success: true, id: result.rows[0].id, url: '/uploads/' + req.file.filename });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/files/delete', isAuth, async (req, res) => {
+    try {
+        const file = await pool.query('SELECT * FROM student_files WHERE id = $1 AND user_id = $2', [req.body.id, req.session.user.id]);
+        if (!file.rows[0]) return res.json({ error: 'Not found.' });
+        const fp = path.join(__dirname, 'public', file.rows[0].file_path);
+        if (fs.existsSync(fp)) fs.unlinkSync(fp);
+        await pool.query('DELETE FROM student_files WHERE id = $1', [req.body.id]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── ADMIN QUIZ GENERATOR ─────────────────────────────────────────────────
+const isAdminQuiz = (r, res, n) => {
+    if (r.session.user && r.session.user.is_admin) return n();
+    res.redirect('/admin/login');
+};
+
+app.get('/admin/quiz-generator', isAdminQuiz, async (req, res) => {
+    try {
+        const unis = await pool.query('SELECT id, name FROM universities ORDER BY name');
+        const sessions = await pool.query(
+            `SELECT s.*, u.name as uni_name FROM admin_quiz_sessions s JOIN universities u ON s.university_id = u.id ORDER BY s.created_at DESC`
+        );
+        res.render('admin/quiz-generator', { user: req.session.user, universities: unis.rows, sessions: sessions.rows });
+    } catch (e) { res.status(500).send(e.message); }
+});
+
+app.post('/api/admin/quiz/create-session', isAdminQuiz, async (req, res) => {
+    try {
+        const { university_id, level } = req.body;
+        const r = await pool.query(
+            'INSERT INTO admin_quiz_sessions (admin_id, university_id, level) VALUES ($1,$2,$3) RETURNING id',
+            [req.session.user.id, university_id, level]
+        );
+        res.json({ success: true, id: r.rows[0].id });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/admin/quiz/generate-courses', isAdminQuiz, async (req, res) => {
+    try {
+        const { sessionId } = req.body;
+        const sess = await pool.query('SELECT * FROM admin_quiz_sessions WHERE id = $1', [sessionId]);
+        if (!sess.rows[0]) return res.json({ error: 'Session not found' });
+        const s = sess.rows[0];
+        const uni = await pool.query('SELECT name FROM universities WHERE id = $1', [s.university_id]);
+        const uniName = uni.rows[0]?.name || 'University';
+        const prompt = `You are a Nigerian university curriculum expert. List the standard courses offered by ${uniName} at ${s.level} Level across all departments following CCMAS and BMAS standards.
+Return ONLY a raw JSON array (no markdown, no code fences) with objects:
+[{"code":"CourseCode","title":"Full Course Title","department":"Department Name"}]
+Include at least 15-20 courses covering different departments.`;
+        const aiRes = await studyPromptSmart(prompt);
+        if (!aiRes.text || aiRes.text.startsWith('AI error')) return res.json({ error: 'AI could not generate courses. ' + (aiRes.text || '') });
+        let courses;
+        try { courses = JSON.parse(aiRes.text); } catch(_) {
+            const m = aiRes.text.match(/\[[\s\S]*\]/);
+            if (m) try { courses = JSON.parse(m[0]); } catch(_2) { return res.json({ error: 'AI returned invalid data.' }); }
+            else return res.json({ error: 'AI returned invalid data.' });
+        }
+        for (const c of courses) {
+            await pool.query(
+                'INSERT INTO admin_quiz_courses (session_id, course_code, course_title, department) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING',
+                [sessionId, c.code, c.title, c.department || '']
+            );
+        }
+        await pool.query('UPDATE admin_quiz_sessions SET status = $1 WHERE id = $2', ['courses_ready', sessionId]);
+        res.json({ success: true, count: courses.length });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/admin/quiz/update-course', isAdminQuiz, async (req, res) => {
+    try {
+        const { id, status, course_code, course_title } = req.body;
+        await pool.query(
+            'UPDATE admin_quiz_courses SET status = $1, course_code = COALESCE($2, course_code), course_title = COALESCE($3, course_title) WHERE id = $4',
+            [status || 'pending', course_code || null, course_title || null, id]
+        );
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/admin/quiz/courses/:sessionId', isAdminQuiz, async (req, res) => {
+    try {
+        const courses = await pool.query(
+            'SELECT * FROM admin_quiz_courses WHERE session_id = $1 ORDER BY status, course_code',
+            [req.params.sessionId]
+        );
+        res.json({ courses: courses.rows });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/admin/quiz/generate-questions', isAdminQuiz, async (req, res) => {
+    try {
+        const { sessionId, questionCount } = req.body;
+        const courses = await pool.query(
+            "SELECT * FROM admin_quiz_courses WHERE session_id = $1 AND status = 'approved'", [sessionId]
+        );
+        if (courses.rows.length === 0) return res.json({ error: 'No approved courses.' });
+        const count = parseInt(questionCount) || 10;
+        let total = 0;
+        for (const course of courses.rows) {
+            const prompt = `You are a Nigerian university examiner. Generate exactly ${count} multiple-choice questions for the course "${course.course_code} - ${course.course_title}" at the university level. Each question must have 4 options (A-D), one correct answer, a clear explanation, and optionally a diagram description.
+Return ONLY a raw JSON array (no markdown):
+[{"question":"Question text here","options":["Option A","Option B","Option C","Option D"],"correct":"A","explanation":"Why this is correct","diagram":"description if needed or empty string"}]
+Make questions exam-standard, some with diagrams where applicable (circuits, graphs, structures).`;
+            const aiRes = await studyPromptSmart(prompt);
+            if (aiRes.text && !aiRes.text.startsWith('AI error')) {
+                let qs;
+                try { qs = JSON.parse(aiRes.text); } catch(_) {
+                    const m = aiRes.text.match(/\[[\s\S]*\]/);
+                    if (m) try { qs = JSON.parse(m[0]); } catch(_2) { continue; }
+                    else continue;
+                }
+                for (const q of qs) {
+                    await pool.query(
+                        'INSERT INTO admin_quiz_questions (course_id, question_text, options, correct_answer, explanation, diagram_url) VALUES ($1,$2,$3,$4,$5,$6)',
+                        [course.id, q.question, JSON.stringify(q.options || []), q.correct, q.explanation || '', q.diagram || '']
+                    );
+                }
+                total += qs.length;
+            }
+        }
+        await pool.query('UPDATE admin_quiz_sessions SET status = $1 WHERE id = $2', ['questions_ready', sessionId]);
+        res.json({ success: true, total });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/admin/quiz/publish', isAdminQuiz, async (req, res) => {
+    try {
+        await pool.query('UPDATE admin_quiz_sessions SET status = $1 WHERE id = $2', ['published', req.body.sessionId]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ─── DAILY TASK DASHBOARD ──────────────────────────────────────────────────
 
 app.get('/daily-task', isAuth, async (req, res) => {
@@ -5630,6 +5888,65 @@ const config = {
     try { await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS used_coupon VARCHAR(50)"); } catch (_) {}
     console.log('[Coupons] Table ready');
   } catch(e) { console.error('[Coupons] Init:', e.message); }
+})();
+
+(async function initAdminQuiz() {
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS admin_quiz_sessions (
+      id SERIAL PRIMARY KEY,
+      admin_id INTEGER NOT NULL,
+      university_id INTEGER NOT NULL,
+      level VARCHAR(10) NOT NULL,
+      status VARCHAR(20) DEFAULT 'draft',
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS admin_quiz_courses (
+      id SERIAL PRIMARY KEY,
+      session_id INTEGER NOT NULL,
+      course_code VARCHAR(50),
+      course_title VARCHAR(500),
+      department VARCHAR(200) DEFAULT '',
+      status VARCHAR(20) DEFAULT 'pending',
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS admin_quiz_questions (
+      id SERIAL PRIMARY KEY,
+      course_id INTEGER NOT NULL,
+      question_text TEXT,
+      options JSONB DEFAULT '[]',
+      correct_answer VARCHAR(500),
+      explanation TEXT DEFAULT '',
+      question_type VARCHAR(20) DEFAULT 'mcq',
+      diagram_url TEXT DEFAULT '',
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS student_quiz_attempts (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      course_id INTEGER DEFAULT 0,
+      score INTEGER DEFAULT 0,
+      total INTEGER DEFAULT 0,
+      data JSONB DEFAULT '[]',
+      completed BOOLEAN DEFAULT false,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS student_files (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      file_name VARCHAR(500) NOT NULL,
+      display_name VARCHAR(500) NOT NULL,
+      file_path TEXT DEFAULT '',
+      google_drive_id TEXT DEFAULT '',
+      mime_type VARCHAR(100) DEFAULT '',
+      file_size INTEGER DEFAULT 0,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    // Drop old subject_groups and preset questions
+    await pool.query('DROP TABLE IF EXISTS subject_groups CASCADE').catch(()=>{});
+    await pool.query('DROP TABLE IF EXISTS preset_questions CASCADE').catch(()=>{});
+    await pool.query('DROP TABLE IF EXISTS group_questions CASCADE').catch(()=>{});
+    console.log('[Admin Quiz] Tables ready');
+  } catch(e) { console.error('[Admin Quiz] Init:', e.message); }
 })();
 
 if (require.main === module) {
