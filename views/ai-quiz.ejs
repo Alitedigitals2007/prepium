@@ -373,7 +373,7 @@ async function submitQuiz() {
                 score = hits/q.keywords.length; pass = score>=0.7;
             }
             pts+=score;
-            detail = `<div class="review-detail">Your answer: ${uv||'No answer'}<br>Expected: <span style="color:var(--success)">${q.correct}</span><br>Keywords: ${pills||'N/A'}</div>`;
+            detail = `<div class="review-detail">Your answer: ${uv||'No answer'}<br>Keywords: ${pills||'N/A'}</div>`;
         }
         html += `
             <div class="review-card reveal">

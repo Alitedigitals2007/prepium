@@ -114,13 +114,6 @@
             <div class="fc-desc">Target calculator</div>
         </a>
 
-        <a href="/ai-quiz" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
-            <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-            <div class="fc-icon" style="background:#f0fdf4;color:#16a34a;"><i class="fas fa-wand-magic-sparkles"></i></div>
-            <div class="fc-label">AI Quiz Generator</div>
-            <div class="fc-desc">Generate quizzes from PDF</div>
-        </a>
-
         <a href="/history" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
             <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
             <div class="fc-icon" style="background:#fef3c7;color:#f59e0b;"><i class="fas fa-chart-bar"></i></div>

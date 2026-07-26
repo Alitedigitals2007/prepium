@@ -3861,9 +3861,16 @@ app.post('/generate-ai-quiz', isAuth, requirePaid, async (req, res) => {
         if (cleanText.length > maxChars) cleanText = cleanText.substring(0, maxChars) + "\n...[truncated]";
 
         // Generate questions via AI
-        let jsonStructure = '';
-        if (questionType === 'obj' || questionType === 'mixed') {
-            jsonStructure = `You MUST respond with a raw JSON array matching this structure:
+        const prompt = `You are an expert academic examiner. Analyze the following document content carefully.
+Generate exactly ${numQuestions} unique, highly relevant academic questions based strictly on its contents.
+
+DIFFICULTY LEVEL: ${difficultyText} — adjust question complexity accordingly.
+
+CRITICAL STYLE RULE: ${styleInstruction}
+
+IMPORTANT: Use JSON key "question" for the question text. Each question MUST include an "explanation" key with a clear explanation.
+
+You MUST respond with a raw JSON array matching this structure (options WITHOUT letter prefixes, correct is LETTER ONLY):
 [
   {
     "type": "${questionType === 'mixed' ? 'obj' : questionType}",
@@ -3874,45 +3881,6 @@ app.post('/generate-ai-quiz', isAuth, requirePaid, async (req, res) => {
     "explanation": "Clear explanation in plain text."
   }
 ]
-For 'obj' type, "correct" MUST be the LETTER of the correct option (A, B, C, or D).`;
-        } else if (questionType === 'german') {
-            jsonStructure = `You MUST respond with a raw JSON array matching this structure:
-[
-  {
-    "type": "german",
-    "question": "Text with a blank like ____ here",
-    "options": [],
-    "correct": "the exact expected answer text",
-    "keywords": ["key1", "key2"],
-    "explanation": "Clear explanation in plain text."
-  }
-]
-For 'german' type, "correct" MUST be the exact word or phrase that fills the blank. "options" MUST be an empty array [].`;
-        } else if (questionType === 'theory') {
-            jsonStructure = `You MUST respond with a raw JSON array matching this structure:
-[
-  {
-    "type": "theory",
-    "question": "Essay question text here...",
-    "options": [],
-    "correct": "key point that should be mentioned",
-    "keywords": ["expected keyword 1", "expected keyword 2"],
-    "explanation": "Clear explanation in plain text."
-  }
-]
-For 'theory' type, "correct" should be the main expected point, "options" MUST be an empty array [], and "keywords" should contain key terms to look for.`;
-        }
-
-        const prompt = `You are an expert academic examiner. Analyze the following document content carefully.
-Generate exactly ${numQuestions} unique, highly relevant academic questions based strictly on its contents.
-
-DIFFICULTY LEVEL: ${difficultyText} — adjust question complexity accordingly.
-
-CRITICAL STYLE RULE: ${styleInstruction}
-
-IMPORTANT: Use JSON key "question" for the question text. Each question MUST include an "explanation" key with a clear explanation.
-
-${jsonStructure}
 
 DOCUMENT CONTENT:
 ${cleanText}`;
@@ -3961,7 +3929,7 @@ ${cleanText}`;
                 type: t,
                 question: question,
                 options: cleanOpts,
-                correct: (t === 'german' || t === 'theory') ? (q.correct || q.correctAnswer || q.answer || '') : answerLetter(q.correct || q.correctAnswer || q.answer || q.correct_option || '', cleanOpts),
+                correct: answerLetter(q.correct || q.correctAnswer || q.answer || q.correct_option || '', cleanOpts),
                 keywords: q.keywords || [],
                 explanation: q.explanation || q.exp || ''
             };
@@ -5366,7 +5334,6 @@ app.post('/api/cgpa/forecast', isAuth, async (req, res) => {
     const scenarios = [];
     const grades = scale === 5 ? ['A','B','C','D','E','F'] : ['A','B','C','D','F'];
     const targetCourses = visible.rows.filter(c => c.grade === 'F' || c.grade === 'E' || c.grade === 'D');
-    const weakCoursesList = targetCourses.map(c => ({ code: c.course_code || c.title || 'Course', title: c.title || c.course_code || '', grade: c.grade, units: parseInt(c.credit_units)||0 }));
     if (targetCourses.length > 0) {
       for (const g of ['A', 'B', 'C']) {
         let newPoints = curPoints;
@@ -5401,7 +5368,7 @@ app.post('/api/cgpa/forecast', isAuth, async (req, res) => {
       targetData = { target: tgt, deficit: deficit.toFixed(1), unitsNeededA, coursesNeededA: Math.ceil(unitsNeededA / 3) };
     }
 
-    res.json({ success: true, currentCGPA: currentCGPA.toFixed(2), scenarios, addScenarios, targetData, weakCourses: weakCoursesList });
+    res.json({ success: true, currentCGPA: currentCGPA.toFixed(2), scenarios, addScenarios, targetData });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

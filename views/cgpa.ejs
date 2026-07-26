@@ -1122,18 +1122,8 @@ function loadForecast() {
         html += '<div style="font-size:0.65rem;font-weight:700;color:var(--text-sub);text-transform:uppercase;margin-bottom:4px;">Current CGPA</div>';
         html += '<div style="font-size:1.4rem;font-weight:800;color:var(--text-dark);">' + d.currentCGPA + '</div></div>';
 
-        if (d.weakCourses && d.weakCourses.length > 0) {
-            html += '<div style="font-size:0.7rem;font-weight:700;color:var(--text-sub);margin-bottom:6px;">Courses Dragging CGPA Down</div>';
-            d.weakCourses.forEach(function(c) {
-                html += '<div style="display:flex;justify-content:space-between;padding:6px 10px;background:white;border:1px solid var(--border);border-radius:8px;margin-bottom:3px;font-size:0.75rem;font-weight:600;">';
-                html += '<span>' + aiEscape(c.code) + ' — ' + aiEscape(c.title) + '</span>';
-                html += '<span style="color:var(--danger)">' + c.grade + ' (' + c.units + ' units)</span>';
-                html += '</div>';
-            });
-        }
-
         if (d.scenarios && d.scenarios.length > 0) {
-            html += '<div style="font-size:0.7rem;font-weight:700;color:var(--text-sub);margin:8px 0 6px;">Improve Weak Grades</div>';
+            html += '<div style="font-size:0.7rem;font-weight:700;color:var(--text-sub);margin-bottom:6px;">Improve Weak Grades</div>';
             d.scenarios.forEach(function(s) {
                 var change = parseFloat(s.change);
                 var color = change >= 0 ? 'var(--success)' : 'var(--danger)';
