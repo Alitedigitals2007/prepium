@@ -333,9 +333,23 @@
     color: var(--text-sub); cursor: pointer; font-size: .85rem;
 }
 
-/* ══ DESKTOP OVERRIDES ══ */
+/* ══ RESPONSIVE ══ */
 @media (min-width: 1024px) {
     .overlay .ov-inner { padding-left: 220px; }
+    .app-shell { max-width: 580px; margin: 0 auto; background: transparent; backdrop-filter: none; border: none; }
+    .wizard-wrap { max-width: 580px; margin: 0 auto; }
+    .hero { max-width: 580px; margin-left: auto; margin-right: auto; }
+    .tiles { max-width: 580px; margin-left: auto; margin-right: auto; }
+    .analytics { max-width: 580px; margin-left: auto; margin-right: auto; }
+    .filters { max-width: 580px; margin-left: auto; margin-right: auto; }
+    .course-card { max-width: 580px; margin-left: auto; margin-right: auto; }
+    .reset-section { max-width: 580px; margin-left: auto; margin-right: auto; }
+}
+@media (max-width: 380px) {
+    .hero-cgpa { font-size: 4rem; }
+    .tiles { grid-template-columns: 1fr 1fr; }
+    .grade-chips { grid-template-columns: repeat(3,1fr); }
+    .grid2 { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -589,30 +603,37 @@
     <p style="font-size:0.72rem;color:var(--text-sub);font-weight:500;line-height:1.5;">Auto-import courses from your Study Hub into CGPA tracker. Existing courses are skipped.</p>
 </div>
 
-<!-- What-If Analysis -->
+<!-- AI Course Advisor with multi-course What-If -->
 <div class="analytics reveal" style="margin-top:10px;">
-    <div class="section-head" onclick="toggleForecast()" style="cursor:pointer;">
-        <div class="section-label"><i class="fas fa-chart-line"></i> What-If Analysis</div>
-        <span style="font-size:0.7rem;color:var(--brand);font-weight:700;" id="forecastToggle"><i class="fas fa-chevron-down"></i></span>
-    </div>
-    <div id="forecastBody" style="display:none;">
-        <div id="forecastLoading" style="text-align:center;padding:1rem;color:var(--text-muted);font-size:0.75rem;"><i class="fas fa-spinner fa-spin"></i> Loading forecast...</div>
-        <div id="forecastContent" style="display:none;"></div>
-    </div>
-</div>
-
-<!-- AI: What-If Advisor + Predict -->
-<div class="analytics reveal" style="margin-top:10px;">
-    <div class="section-head" style="cursor:pointer;" onclick="document.getElementById('aiWhatifBox').style.display = document.getElementById('aiWhatifBox').style.display === 'block' ? 'none' : 'block'">
+    <div class="section-head" onclick="toggleAdvisor()" style="cursor:pointer;">
         <div class="section-label"><i class="fas fa-robot"></i> AI Course Advisor</div>
-        <span style="font-size:0.7rem;color:var(--brand);font-weight:700;">Open <i class="fas fa-arrow-right" style="font-size:0.6rem;"></i></span>
+        <span style="font-size:0.7rem;color:var(--brand);font-weight:700;" id="advisorToggle"><i class="fas fa-chevron-down"></i></span>
     </div>
-    <div id="aiWhatifBox" style="display:none;">
-        <div style="display:flex;gap:6px;margin-bottom:10px">
+    <div id="advisorBody" style="display:none;">
+        <div style="display:flex;gap:6px;margin-bottom:12px;">
             <button type="button" onclick="aiPredictGpa()" style="flex:1;padding:11px;border:none;background:linear-gradient(135deg,#0062ff,#003fcc);color:white;border-radius:10px;font-weight:700;font-size:0.78rem;cursor:pointer"><i class="fas fa-magic"></i> Predict next semester</button>
-            <button type="button" onclick="aiWhatif()" style="flex:1;padding:11px;border:none;background:#0f172a;color:white;border-radius:10px;font-weight:700;font-size:0.78rem;cursor:pointer"><i class="fas fa-calculator"></i> What-if a course</button>
+            <button type="button" onclick="advisorWhatif()" style="flex:1;padding:11px;border:none;background:#0f172a;color:white;border-radius:10px;font-weight:700;font-size:0.78rem;cursor:pointer"><i class="fas fa-calculator"></i> What-If Builder</button>
         </div>
-        <div id="aiPredictResult" style="display:none;background:#f8fafc;border-radius:10px;padding:12px;font-size:0.85rem;color:#0f172a;line-height:1.55;white-space:pre-wrap"></div>
+
+        <div id="aiPredictResult" style="display:none;background:#f8fafc;border-radius:10px;padding:12px;font-size:0.85rem;color:#0f172a;line-height:1.55;white-space:pre-wrap;margin-bottom:10px;"></div>
+
+        <div id="whatifBuilder" style="display:none;">
+            <div class="section-label" style="font-size:0.75rem;margin-bottom:8px;"><i class="fas fa-plus-circle"></i> Add courses to see CGPA impact</div>
+            <div id="whatifCourseList" style="margin-bottom:8px;"></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <input type="text" id="wiCourseName" placeholder="Course name" style="flex:2;min-width:100px;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-weight:600;font-size:0.75rem;">
+                <select id="wiCourseUnits" style="flex:1;min-width:60px;padding:9px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-weight:600;font-size:0.75rem;background:white;">
+                    <% for(var uu=1;uu<=8;uu++){ %><option value="<%= uu %>" <%= uu===3?'selected':'' %>><%= uu %>u</option><% } %>
+                </select>
+                <select id="wiCourseGrade" style="flex:1;min-width:50px;padding:9px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-weight:600;font-size:0.75rem;background:white;">
+                    <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option><option value="E">E</option><option value="F">F</option>
+                </select>
+                <button onclick="addAdvisorCourse()" style="padding:9px 14px;border:none;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;font-weight:700;font-size:0.7rem;cursor:pointer;color:var(--text-dark);"><i class="fas fa-plus"></i> Add</button>
+            </div>
+            <div id="whatifImpact" style="margin-top:8px;"></div>
+            <button id="calcImpactBtn" onclick="calcAdvisorImpact()" style="display:none;width:100%;margin-top:8px;padding:12px;border:none;background:var(--brand-gradient);color:white;border-radius:10px;font-weight:700;font-size:0.82rem;cursor:pointer;"><i class="fas fa-calculator"></i> Calculate Impact</button>
+        </div>
+
         <div id="aiWhatifResult" style="display:none;background:#f8fafc;border-radius:10px;padding:12px;font-size:0.85rem;color:#0f172a;line-height:1.55;margin-top:8px"></div>
     </div>
 </div>
@@ -1099,90 +1120,106 @@ function importFromStudy() {
     });
 }
 
-/* ── What-If Forecast ────────────────────── */
-function toggleForecast() {
-    const body = document.getElementById('forecastBody');
-    const tog = document.getElementById('forecastToggle');
-    if (body.style.display === 'none') {
-        body.style.display = 'block';
-        tog.innerHTML = '<i class="fas fa-chevron-up"></i>';
-        loadForecast();
-    } else {
-        body.style.display = 'none';
-        tog.innerHTML = '<i class="fas fa-chevron-down"></i>';
+/* ── AI Course Advisor Toggle ─────────────── */
+var advisorOpen = false;
+function toggleAdvisor() {
+    var body = document.getElementById('advisorBody');
+    var tog = document.getElementById('advisorToggle');
+    advisorOpen = !advisorOpen;
+    body.style.display = advisorOpen ? 'block' : 'none';
+    tog.innerHTML = advisorOpen ? '<i class="fas fa-chevron-up"></i>' : '<i class="fas fa-chevron-down"></i>';
+}
+
+/* ── Advisor: Multi-Course What-If ───────── */
+var advisorCourses = [];
+
+function addAdvisorCourse() {
+    var name = document.getElementById('wiCourseName').value.trim() || ('Course ' + (advisorCourses.length + 1));
+    var units = parseInt(document.getElementById('wiCourseUnits').value) || 3;
+    var grade = document.getElementById('wiCourseGrade').value;
+    advisorCourses.push({ name: name, units: units, grade: grade });
+    renderAdvisorCourses();
+    document.getElementById('wiCourseName').value = '';
+}
+
+function removeAdvisorCourse(idx) {
+    advisorCourses.splice(idx, 1);
+    renderAdvisorCourses();
+}
+
+function renderAdvisorCourses() {
+    var container = document.getElementById('whatifCourseList');
+    var btn = document.getElementById('calcImpactBtn');
+    if (advisorCourses.length === 0) {
+        container.innerHTML = '<div style="font-size:0.7rem;color:var(--text-muted);font-weight:600;padding:6px 0;">No courses added. Add courses above to see their impact.</div>';
+        if (btn) btn.style.display = 'none';
+        return;
     }
+    var html = '';
+    for (var i = 0; i < advisorCourses.length; i++) {
+        var c = advisorCourses[i];
+        var gc = c.grade === 'A' ? 'var(--success)' : c.grade === 'F' ? 'var(--danger)' : c.grade === 'B' ? 'var(--brand)' : 'var(--text-dark)';
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:white;border:1px solid var(--border);border-radius:8px;margin-bottom:4px;font-size:0.75rem;font-weight:600;animation:rowIn .2s ease;">';
+        html += '<span>' + aiEscape(c.name) + ' <span style="color:var(--text-muted);font-weight:600;">' + c.units + ' units</span> <span style="color:' + gc + ';">(' + c.grade + ')</span></span>';
+        html += '<button onclick="removeAdvisorCourse(' + i + ')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.75rem;padding:4px;transition:.15s;" onmouseover="this.style.color=\'var(--danger)\'" onmouseout="this.style.color=\'\'"><i class="fas fa-times-circle"></i></button>';
+        html += '</div>';
+    }
+    container.innerHTML = html;
+    if (btn) btn.style.display = 'block';
 }
 
-function loadForecast() {
-    document.getElementById('forecastLoading').style.display = 'block';
-    document.getElementById('forecastContent').style.display = 'none';
-    fetch('/api/cgpa/forecast', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) })
-    .then(r => r.json()).then(d => {
-        document.getElementById('forecastLoading').style.display = 'none';
-        if (!d.success) { document.getElementById('forecastContent').innerHTML = '<p style="color:var(--text-muted);font-size:0.75rem;">' + (d.error || 'Could not load forecast') + '</p>'; document.getElementById('forecastContent').style.display = 'block'; return; }
-        var html = '';
-        html += '<div style="margin-bottom:12px;padding:12px;background:var(--bg);border-radius:var(--radius-sm);">';
-        html += '<div style="font-size:0.65rem;font-weight:700;color:var(--text-sub);text-transform:uppercase;margin-bottom:4px;">Current CGPA</div>';
-        html += '<div style="font-size:1.4rem;font-weight:800;color:var(--text-dark);">' + d.currentCGPA + '</div></div>';
-
-        if (d.weakCourses && d.weakCourses.length > 0) {
-            html += '<div style="font-size:0.7rem;font-weight:700;color:var(--text-sub);margin-bottom:6px;">Courses Dragging CGPA Down</div>';
-            d.weakCourses.forEach(function(c) {
-                html += '<div style="display:flex;justify-content:space-between;padding:6px 10px;background:white;border:1px solid var(--border);border-radius:8px;margin-bottom:3px;font-size:0.75rem;font-weight:600;">';
-                html += '<span>' + aiEscape(c.code) + ' — ' + aiEscape(c.title) + '</span>';
-                html += '<span style="color:var(--danger)">' + c.grade + ' (' + c.units + ' units)</span>';
-                html += '</div>';
-            });
-        }
-
-        if (d.scenarios && d.scenarios.length > 0) {
-            html += '<div style="font-size:0.7rem;font-weight:700;color:var(--text-sub);margin:8px 0 6px;">Improve Weak Grades</div>';
-            d.scenarios.forEach(function(s) {
-                var change = parseFloat(s.change);
-                var color = change >= 0 ? 'var(--success)' : 'var(--danger)';
-                html += '<div style="display:flex;justify-content:space-between;padding:8px 10px;background:white;border:1px solid var(--border);border-radius:8px;margin-bottom:4px;font-size:0.78rem;font-weight:600;">';
-                html += '<span>' + s.label + '</span>';
-                html += '<span><strong>' + s.cgpa + '</strong> <span style="color:' + color + ';font-size:0.7rem;">(' + (change >= 0 ? '+' : '') + s.change + ')</span></span>';
-                html += '</div>';
-            });
-        }
-
-        if (d.addScenarios && d.addScenarios.length > 0) {
-            html += '<div style="font-size:0.7rem;font-weight:700;color:var(--text-sub);margin:10px 0 6px;">Add New Courses (All A)</div>';
-            d.addScenarios.forEach(function(s) {
-                html += '<div style="display:flex;justify-content:space-between;padding:8px 10px;background:white;border:1px solid var(--border);border-radius:8px;margin-bottom:4px;font-size:0.78rem;font-weight:600;">';
-                html += '<span>' + s.courses + ' courses (' + s.units + ' units)</span>';
-                html += '<span><strong>' + s.cgpa + '</strong></span>';
-                html += '</div>';
-            });
-        }
-
-        html += '<div style="margin-top:12px;">';
-        html += '<div style="font-size:0.7rem;font-weight:700;color:var(--text-sub);margin-bottom:6px;">Target CGPA Calculator</div>';
-        html += '<div style="display:flex;gap:6px;">';
-        html += '<input type="number" id="targetInput" step="0.01" min="0" max="5" placeholder="Target CGPA" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-weight:600;font-size:0.8rem;">';
-        html += '<button onclick="calcTarget()" style="padding:10px 16px;border-radius:8px;border:none;background:var(--brand-gradient);color:white;font-weight:700;cursor:pointer;font-size:0.75rem;">Calculate</button>';
-        html += '</div>';
-        html += '<div id="targetResult" style="margin-top:6px;"></div>';
-        html += '</div>';
-
-        document.getElementById('forecastContent').innerHTML = html;
-        document.getElementById('forecastContent').style.display = 'block';
-    });
-}
-
-function calcTarget() {
-    var val = document.getElementById('targetInput').value;
-    if (!val) return;
-    fetch('/api/cgpa/forecast', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetCGPA: val }) })
-    .then(r => r.json()).then(d => {
-        var el = document.getElementById('targetResult');
-        if (d.targetData) {
-            el.innerHTML = '<div style="padding:10px;background:#d1fae5;border-radius:8px;font-size:0.78rem;font-weight:600;color:#065f46;">To achieve <strong>' + d.targetData.target + '</strong>, you need ' + d.targetData.unitsNeededA + ' more units of A\'s (~' + d.targetData.coursesNeededA + ' courses).</div>';
+function calcAdvisorImpact() {
+    if (advisorCourses.length === 0) return;
+    var btn = document.getElementById('calcImpactBtn');
+    var result = document.getElementById('whatifImpact');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calculating...';
+    result.innerHTML = '';
+    fetch('/api/cgpa/bulk-whatif', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ courses: advisorCourses })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-calculator"></i> Calculate Impact';
+        if (d.success) {
+            var color = parseFloat(d.change) >= 0 ? '#16a34a' : '#dc2626';
+            var sign = parseFloat(d.change) >= 0 ? '+' : '';
+            var bg = parseFloat(d.change) >= 0 ? '#f0fdf4' : '#fef2f2';
+            var bd = parseFloat(d.change) >= 0 ? 'rgba(16,185,129,.15)' : 'rgba(239,68,68,.15)';
+            result.innerHTML =
+                '<div style="background:' + bg + ';border:1px solid ' + bd + ';border-radius:12px;padding:14px;animation:pop .3s cubic-bezier(.34,1.56,.64,1);">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
+                '<span style="font-size:0.65rem;font-weight:700;color:var(--text-sub);text-transform:uppercase;">Current CGPA</span>' +
+                '<span style="font-size:0.65rem;font-weight:700;color:var(--text-sub);text-transform:uppercase;">With Additions</span></div>' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+                '<span style="font-size:1.6rem;font-weight:900;color:#0f172a;">' + d.currentCGPA + '</span>' +
+                '<span style="font-size:0.7rem;color:var(--text-muted);font-weight:600;"><i class="fas fa-arrow-right"></i></span>' +
+                '<span style="font-size:1.6rem;font-weight:900;color:' + color + ';">' + d.newCGPA + '</span></div>' +
+                '<div style="margin-top:8px;padding-top:8px;border-top:1px solid ' + (parseFloat(d.change) >= 0 ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)') + ';display:flex;justify-content:space-between;align-items:center;">' +
+                '<span style="font-size:0.75rem;font-weight:600;color:var(--text-sub);">' + d.totalUnits + ' units → ' + d.newTotalUnits + ' units</span>' +
+                '<span style="font-size:0.85rem;font-weight:800;color:' + color + ';">' + sign + d.change + '</span></div></div>';
         } else {
-            el.innerHTML = '<div style="padding:10px;background:#fef3c7;border-radius:8px;font-size:0.78rem;font-weight:600;color:#92400e;">' + (d.error || 'Target must be higher than current CGPA (' + d.currentCGPA + ')') + '</div>';
+            result.innerHTML = '<div style="padding:10px;font-size:0.75rem;color:var(--danger);font-weight:600;background:#fef2f2;border-radius:8px;">' + aiEscape(d.error || 'Could not calculate.') + '</div>';
         }
+    })
+    .catch(function(err) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-calculator"></i> Calculate Impact';
+        result.innerHTML = '<div style="padding:10px;font-size:0.75rem;color:var(--danger);font-weight:600;background:#fef2f2;border-radius:8px;">Network error: ' + aiEscape(err.message) + '</div>';
     });
+}
+
+/* ── Advisor: What-If button opens builder ── */
+function advisorWhatif() {
+    if (!advisorOpen) toggleAdvisor();
+    var builder = document.getElementById('whatifBuilder');
+    var aiRes = document.getElementById('aiWhatifResult');
+    builder.style.display = 'block';
+    aiRes.style.display = 'none';
+    builder.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 /* ── Transcript Download ─────────────────── */
@@ -1313,6 +1350,7 @@ if (pdfBtn) pdfBtn.addEventListener('click', downloadTranscript);
 /* ── CGPA AI Functions ──────────────────── */
 function aiEscape(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+/* ── Advisor: Predict next semester ──────── */
 function aiPredictGpa() {
     var box = document.getElementById('aiPredictResult');
     box.style.display = 'block';
@@ -1331,51 +1369,6 @@ function aiPredictGpa() {
     })
     .catch(function(err) {
         box.innerHTML = '<p style="color:#dc2626;margin:0">Network error: ' + aiEscape(err.message) + '</p>';
-    });
-}
-
-function aiWhatif() {
-    Swal.fire({
-        title: 'What-If Advisor',
-        html:
-            '<div style="text-align:left;font-size:0.78rem;color:#475569;font-weight:600;margin-bottom:4px">Course name</div>' +
-            '<input id="wi-name" type="text" placeholder="e.g. PHY 301" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #cbd5e1;font-family:inherit;font-weight:600;margin-bottom:10px">' +
-            '<div style="text-align:left;font-size:0.78rem;color:#475569;font-weight:600;margin-bottom:4px">Credit units</div>' +
-            '<input id="wi-units" type="number" min="1" max="8" value="3" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #cbd5e1;font-family:inherit;font-weight:600;margin-bottom:10px">' +
-            '<div style="text-align:left;font-size:0.78rem;color:#475569;font-weight:600;margin-bottom:4px">Anticipated grade</div>' +
-            '<select id="wi-grade" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #cbd5e1;font-family:inherit;font-weight:600;margin-bottom:10px">' +
-            '<option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option><option value="E">E</option><option value="F">F</option></select>',
-        showCancelButton: true,
-        confirmButtonText: 'Check Impact',
-        showLoaderOnConfirm: true,
-        preConfirm: function() {
-            var name = document.getElementById('wi-name').value.trim() || 'Course';
-            var units = parseInt(document.getElementById('wi-units').value) || 3;
-            var grade = document.getElementById('wi-grade').value;
-            return fetch('/api/cgpa/ai-whatif', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ courseName: name, units: units, anticipatedGrade: grade })
-            }).then(function(r){ return r.json(); }).then(function(d) {
-                if (d && d.success) return d;
-                throw new Error((d && d.error) ? d.error : 'What-if failed');
-            });
-        }
-    }).then(function(res) {
-        if (res && res.isConfirmed && res.value) {
-            var v = res.value;
-            var box = document.getElementById('aiWhatifResult');
-            box.style.display = 'block';
-            box.innerHTML =
-                '<div style="background:white;border-radius:8px;padding:10px;margin-bottom:8px">' +
-                '<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:#475569;font-weight:600">Current CGPA</span><strong>' + v.currentCGPA + '</strong></div>' +
-                '<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:#475569;font-weight:600">New CGPA</span><strong style="color:' + (parseFloat(v.newCGPA) >= parseFloat(v.currentCGPA) ? '#16a34a' : '#dc2626') + '">' + v.newCGPA + '</strong></div>' +
-                '<div style="display:flex;justify-content:space-between"><span style="color:#475569;font-weight:600">Change</span><strong>' + (parseFloat(v.newCGPA) - parseFloat(v.currentCGPA)).toFixed(3) + '</strong></div>' +
-                '</div>' +
-                '<div style="background:#f1f5f9;border-radius:8px;padding:10px;font-size:0.82rem;line-height:1.55;color:#0f172a">' + v.advice.split(/\n/).map(function(l){ return l.trim() ? '<p style="margin:0 0 4px">' + aiEscape(l) + '</p>' : ''; }).join('') + '</div>';
-        }
-    }).catch(function(err) {
-        Swal.fire({ icon: 'error', text: err.message });
     });
 }
 

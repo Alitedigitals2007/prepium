@@ -4661,6 +4661,8 @@ async function studyPromptSmart(prompt) {
   if (cere.text) return cere;
   const smart = await groqPrompt(prompt, false, true);
   if (smart.text) return smart;
+  const gemini = await callGeminiWithText(prompt, '');
+  if (gemini.success && gemini.text) return { text: gemini.text, provider: 'gemini' };
   return openRouterPrompt(prompt, false);
 }
 
@@ -5448,6 +5450,44 @@ app.post('/api/cgpa/ai-whatif', isAuth, async (req, res) => {
     const aiRes = await studyPromptSmart(advicePrompt);
     const advice = (!aiRes.text || aiRes.text.startsWith('AI error')) ? warn : cleanAiText(aiRes.text);
     res.json({ success: true, currentCGPA: curCGPA.toFixed(2), newCGPA: newCGPA.toFixed(2), advice: advice });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.post('/api/cgpa/bulk-whatif', isAuth, async (req, res) => {
+  try {
+    const { courses: whatifCourses } = req.body;
+    if (!whatifCourses || !Array.isArray(whatifCourses) || whatifCourses.length === 0)
+      return res.json({ success: false, error: 'Add at least one course.' });
+    const uid = req.session.user.id;
+    const profile = await pool.query('SELECT * FROM public.cgpa_profiles WHERE user_id = $1', [uid]);
+    if (!profile.rows[0]) return res.json({ success: false, error: 'Set up your CGPA profile first.' });
+    const p = profile.rows[0];
+    const scale = p.grading_scale || 5;
+    const gpMap = scale === 5 ? { A:5, B:4, C:3, D:2, E:1, F:0 } : { A:4, B:3, C:2, D:1, F:0 };
+    const courses = await pool.query("SELECT credit_units, grade FROM public.cgpa_courses WHERE user_id = $1 AND deleted = false AND is_hidden = false", [uid]);
+    let curUnits = parseInt(p.prev_units) || 0;
+    let curPoints = parseFloat(p.prev_gp) || 0;
+    courses.rows.forEach(c => { const u = parseInt(c.credit_units)||0; curUnits += u; curPoints += (gpMap[c.grade]||0) * u; });
+    const curCGPA = curUnits > 0 ? (curPoints / curUnits) : 0;
+    let addUnits = 0, addPoints = 0;
+    const detail = [];
+    for (const c of whatifCourses) {
+      const u = parseInt(c.units) || 3;
+      const g = String(c.grade || 'A').toUpperCase();
+      addUnits += u;
+      addPoints += (gpMap[g] || 0) * u;
+      detail.push({ name: c.name || 'Course', units: u, grade: g });
+    }
+    const newCGPA = (curPoints + addPoints) / (curUnits + addUnits);
+    res.json({
+      success: true,
+      currentCGPA: curCGPA.toFixed(2),
+      newCGPA: newCGPA.toFixed(2),
+      change: (newCGPA - curCGPA).toFixed(3),
+      totalUnits: curUnits,
+      newTotalUnits: curUnits + addUnits,
+      detail
+    });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
