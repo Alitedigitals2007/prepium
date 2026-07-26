@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Prepium | User Guide</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: #f8fafc; }
+        .app-shell { background: transparent; backdrop-filter: none; border: none; padding-bottom: 100px; }
+
+        .gd-header { padding: 1.5rem 1.25rem 1rem; display: flex; align-items: center; gap: 12px; }
+        .gd-back { width: 38px; height: 38px; border-radius: 12px; background: white; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; color: #475569; text-decoration: none; font-size: 0.85rem; flex-shrink: 0; }
+        .gd-title { font-size: 1.15rem; font-weight: 800; }
+
+        .gd-search { margin: 0 1.25rem 1rem; padding: 11px 14px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; display: flex; align-items: center; gap: 8px; }
+        .gd-search input { flex: 1; border: none; outline: none; font-family: inherit; font-weight: 600; font-size: 0.82rem; color: #0f172a; background: transparent; }
+        .gd-search i { color: #94a3b8; font-size: 0.85rem; }
+
+        .gd-section { margin: 0 1.25rem 1rem; background: white; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; }
+        .gd-section-head { padding: 16px 18px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
+        .gd-section-head h3 { font-size: 0.85rem; font-weight: 800; display: flex; align-items: center; gap: 8px; margin: 0; }
+        .gd-section-head h3 i { width: 20px; text-align: center; }
+        .gd-section-head .gd-toggle { color: #94a3b8; font-size: 0.75rem; transition: transform .2s; }
+        .gd-section-head .gd-toggle.open { transform: rotate(180deg); }
+
+        .gd-body { padding: 0 18px 16px; display: none; }
+        .gd-body.open { display: block; animation: fadeIn .2s ease; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+        .gd-body p { font-size: 0.78rem; color: #475569; line-height: 1.65; margin: 0 0 10px; font-weight: 500; }
+        .gd-body ul { margin: 0 0 10px; padding-left: 18px; }
+        .gd-body li { font-size: 0.76rem; color: #475569; line-height: 1.6; font-weight: 500; margin-bottom: 4px; }
+        .gd-body li strong { color: #0f172a; }
+        .gd-tip { background: #f0fdf4; border: 1px solid rgba(16,185,129,.15); border-radius: 10px; padding: 12px; font-size: 0.74rem; color: #065f46; font-weight: 600; margin: 8px 0; display: flex; gap: 8px; align-items: flex-start; }
+        .gd-tip i { color: #16a34a; font-size: 0.85rem; margin-top: 2px; }
+        .gd-tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
+        .gd-tag.free { background: #d1fae5; color: #065f46; }
+        .gd-tag.premium { background: #fef3c7; color: #92400e; }
+        .gd-tag.admin { background: #e0e7ff; color: #3730a3; }
+
+        .gd-quick-links { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 1.25rem 1rem; }
+        .gd-quick-link { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; text-decoration: none; color: inherit; text-align: center; }
+        .gd-quick-link i { font-size: 1.2rem; display: block; margin-bottom: 4px; }
+        .gd-quick-link span { font-size: 0.7rem; font-weight: 700; display: block; }
+
+        @media (min-width: 1024px) {
+            .app-shell { max-width: 600px; margin: 0 auto; }
+        }
+    </style>
+</head>
+<body>
+<%- include('partials/sidebar') %>
+<div class="app-shell">
+
+    <div class="gd-header">
+        <a href="/dashboard" class="gd-back"><i class="fas fa-arrow-left"></i></a>
+        <div class="gd-title">User Guide</div>
+    </div>
+
+    <div class="gd-search">
+        <i class="fas fa-search"></i>
+        <input type="text" id="gdFilter" placeholder="Search features..." oninput="filterGuide(this.value)">
+    </div>
+
+    <div class="gd-quick-links">
+        <a href="#gs" class="gd-quick-link"><i class="fas fa-rocket"></i><span>Getting Started</span></a>
+        <a href="#study" class="gd-quick-link"><i class="fas fa-graduation-cap"></i><span>Study Hub</span></a>
+        <a href="#quiz" class="gd-quick-link"><i class="fas fa-bolt"></i><span>Quizzes</span></a>
+        <a href="#cgpa" class="gd-quick-link"><i class="fas fa-chart-line"></i><span>CGPA</span></a>
+        <a href="#timetable" class="gd-quick-link"><i class="fas fa-table"></i><span>Timetable</span></a>
+        <a href="#daily" class="gd-quick-link"><i class="fas fa-tasks"></i><span>Daily Task</span></a>
+        <a href="#challenge" class="gd-quick-link"><i class="fas fa-trophy"></i><span>Challenges</span></a>
+        <a href="#refer" class="gd-quick-link"><i class="fas fa-gift"></i><span>Refer & Earn</span></a>
+    </div>
+
+    <!-- Getting Started -->
+    <div class="gd-section" id="gs">
+        <div class="gd-section-head" onclick="toggleSec(this)">
+            <h3><i class="fas fa-rocket" style="color:#0062ff;"></i> Getting Started</h3>
+            <i class="fas fa-chevron-down gd-toggle open"></i>
+        </div>
+        <div class="gd-body open">
+            <p>Welcome to Prepium — your all-in-one academic companion. This guide covers every feature to help you study smarter, track your performance, and earn rewards.</p>
+            <ul>
+                <li><strong>Sign Up</strong> — Create an account with your email and university details.</li>
+                <li><strong>Dashboard</strong> — Your central hub. View your stats, quick actions, and recent activity.</li>
+                <li><strong>Subscription</strong> — Some features are free, others require a premium plan (₦2,000). Tap any locked card to upgrade.</li>
+            </ul>
+            <div class="gd-tip"><i class="fas fa-lightbulb"></i> Complete your profile to unlock personalized recommendations.</div>
+        </div>
+    </div>
+
+    <!-- Study Hub -->
+    <div class="gd-section" id="study">
+        <div class="gd-section-head" onclick="toggleSec(this)">
+            <h3><i class="fas fa-graduation-cap" style="color:#0062ff;"></i> Study Hub <span class="gd-tag premium">Premium</span></h3>
+            <i class="fas fa-chevron-down gd-toggle"></i>
+        </div>
+        <div class="gd-body">
+            <p>The Study Hub is your personal learning space. Create courses, study with AI-powered tools, and track your progress.</p>
+            <ul>
+                <li><strong>Courses</strong> — Add courses manually or import from your CGPA tracker. Each course has topics and subtopics.</li>
+                <li><strong>AI Tutor</strong> — Chat with an AI tutor about any topic. Ask questions, get explanations, or request practice problems.</li>
+                <li><strong>Flashcards</strong> — AI generates flashcards from your course material. Review and master key concepts.</li>
+                <li><strong>Study Quizzes</strong> — Take AI-generated quizzes on any topic. Get instant feedback and explanations.</li>
+                <li><strong>Study Timer</strong> — Track your study sessions with the built-in timer. View weekly analytics.</li>
+            </ul>
+            <div class="gd-tip"><i class="fas fa-lightbulb"></i> Use the AI chat to break down difficult topics — it adapts to your level.</div>
+        </div>
+    </div>
+
+    <!-- Quizzes -->
+    <div class="gd-section" id="quiz">
+        <div class="gd-section-head" onclick="toggleSec(this)">
+            <h3><i class="fas fa-bolt" style="color:#f59e0b;"></i> Practice Quizzes</h3>
+            <i class="fas fa-chevron-down gd-toggle"></i>
+        </div>
+        <div class="gd-body">
+            <p>Test your knowledge with multiple-choice quizzes across various subjects and difficulty levels.</p>
+            <ul>
+                <li><strong>Setup Test</strong> — Choose a subject, difficulty, and number of questions. Get instant results with explanations.</li>
+                <li><strong>AI Quiz Generator</strong> <span class="gd-tag premium">Premium</span> — Upload a PDF document. The AI reads it and generates a custom quiz based on the content.</li>
+                <li><strong>History</strong> <span class="gd-tag premium">Premium</span> — View your past quiz attempts, scores, and performance trends.</li>
+            </ul>
+            <div class="gd-tip"><i class="fas fa-lightbulb"></i> Review incorrect answers in History to identify weak areas.</div>
+        </div>
+    </div>
+
+    <!-- CGPA Tracker -->
+    <div class="gd-section" id="cgpa">
+        <div class="gd-section-head" onclick="toggleSec(this)">
+            <h3><i class="fas fa-chart-line" style="color:#7c3aed;"></i> CGPA Tracker <span class="gd-tag premium">Premium</span></h3>
+            <i class="fas fa-chevron-down gd-toggle"></i>
+        </div>
+        <div class="gd-body">
+            <p>Track your academic performance semester by semester. The CGPA Tracker supports both 4-point and 5-point grading scales.</p>
+            <ul>
+                <li><strong>Setup</strong> — Enter your department, level, and grading scale. Import previous CGPA or start fresh.</li>
+                <li><strong>Add Courses</strong> — Log each course with its code, title, credit units, and grade. Filter by level and semester.</li>
+                <li><strong>Forecast</strong> — See what-if scenarios: how your CGPA changes if you improve weak grades.</li>
+                <li><strong>AI Advisor</strong> — Predict your next semester GPA or use the What-If Builder to add multiple hypothetical courses and see their combined impact.</li>
+                <li><strong>Transcript</strong> — Generate a formatted academic transcript PDF.</li>
+                <li><strong>Import from Study Hub</strong> — Automatically sync courses from your Study Hub into the tracker.</li>
+            </ul>
+            <div class="gd-tip"><i class="fas fa-lightbulb"></i> Use the What-If Builder in AI Advisor to plan which courses to retake.</div>
+        </div>
+    </div>
+
+    <!-- Timetable -->
+    <div class="gd-section" id="timetable">
+        <div class="gd-section-head" onclick="toggleSec(this)">
+            <h3><i class="fas fa-table" style="color:#7c3aed;"></i> Timetable <span class="gd-tag premium">Premium</span></h3>
+            <i class="fas fa-chevron-down gd-toggle"></i>
+        </div>
+        <div class="gd-body">
+            <p>Generate an AI-powered weekly study schedule based on your courses and available time slots.</p>
+            <ul>
+                <li><strong>AI Schedule</strong> — Tell the AI your available hours and courses, and it creates a balanced timetable.</li>
+                <li><strong>Reading Schedule</strong> <span class="gd-tag premium">Premium</span> — A smart study plan that spreads your reading across weeks, optimized for retention.</li>
+            </ul>
+            <div class="gd-tip"><i class="fas fa-lightbulb"></i> Timetables auto-adjust when you mark topics as completed.</div>
+        </div>
+    </div>
+
+    <!-- Daily Task -->
+    <div class="gd-section" id="daily">
+        <div class="gd-section-head" onclick="toggleSec(this)">
+            <h3><i class="fas fa-tasks" style="color:#0d9488;"></i> Daily Task</h3>
+            <i class="fas fa-chevron-down gd-toggle"></i>
+        </div>
+        <div class="gd-body">
+            <p>Your personal productivity hub. Manage tasks, set goals, track deadlines, and view weekly reports.</p>
+            <ul>
+                <li><strong>Tasks</strong> — Add, complete, and organize daily study tasks.</li>
+                <li><strong>Goals</strong> — Set weekly academic goals and track your progress.</li>
+                <li><strong>Deadlines</strong> <span class="gd-tag premium">Premium</span> — Track assignment and exam deadlines with countdowns.</li>
+                <li><strong>Weekly Report</strong> — View a summary of your completed tasks, study time, and goal achievement.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Daily Challenge & Live Arena -->
+    <div class="gd-section" id="challenge">
+        <div class="gd-section-head" onclick="toggleSec(this)">
+            <h3><i class="fas fa-trophy" style="color:#f59e0b;"></i> Challenges & Arena</h3>
+            <i class="fas fa-chevron-down gd-toggle"></i>
+        </div>
+        <div class="gd-body">
+            <p>Compete with peers and test your knowledge in real-time.</p>
+            <ul>
+                <li><strong>Daily Challenge</strong> — Free daily quiz with 10 questions. Compete on the leaderboard for bragging rights.</li>
+                <li><strong>Live Arena</strong> <span class="gd-tag premium">Premium</span> — Real-time ranked quizzes against other students. Climb the leaderboard and earn your rank.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Refer & Earn -->
+    <div class="gd-section" id="refer">
+        <div class="gd-section-head" onclick="toggleSec(this)">
+            <h3><i class="fas fa-gift" style="color:#10b981;"></i> Refer & Earn</h3>
+            <i class="fas fa-chevron-down gd-toggle"></i>
+        </div>
+        <div class="gd-body">
+            <p>Earn money by referring friends to Prepium.</p>
+            <ul>
+                <li><strong>Commission</strong> — Earn 15% commission on every referral that upgrades to premium.</li>
+                <li><strong>Dashboard</strong> — Track your referrals, earnings, and payout history.</li>
+                <li><strong>Withdraw</strong> — Request payouts once you reach the minimum threshold.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Ambassador -->
+    <div class="gd-section" id="ambassador">
+        <div class="gd-section-head" onclick="toggleSec(this)">
+            <h3><i class="fas fa-handshake" style="color:#0062ff;"></i> Ambassador Program</h3>
+            <i class="fas fa-chevron-down gd-toggle"></i>
+        </div>
+        <div class="gd-body">
+            <p>Become a Prepium campus ambassador and earn while promoting learning on your campus.</p>
+            <ul>
+                <li><strong>Apply</strong> — Sign up as an ambassador from the ambassador login page.</li>
+                <li><strong>Earn</strong> — Get a unique referral link and earn commissions on every signup and upgrade.</li>
+                <li><strong>Track</strong> — View your earnings, referral stats, and payout history from your ambassador dashboard.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Notifications -->
+    <div class="gd-section" id="notifications">
+        <div class="gd-section-head" onclick="toggleSec(this)">
+            <h3><i class="fas fa-bell" style="color:#f59e0b;"></i> Notifications</h3>
+            <i class="fas fa-chevron-down gd-toggle"></i>
+        </div>
+        <div class="gd-body">
+            <p>Stay updated with important alerts and announcements.</p>
+            <ul>
+                <li><strong>System Alerts</strong> — Receive updates about new features, maintenance, and promotions.</li>
+                <li><strong>Challenge Reminders</strong> — Get notified when daily challenges and arena events start.</li>
+                <li><strong>Deadline Alerts</strong> <span class="gd-tag premium">Premium</span> — Reminders for upcoming assignment and exam deadlines.</li>
+            </ul>
+            <div class="gd-tip"><i class="fas fa-lightbulb"></i> Check the bell icon on your dashboard for unread notifications.</div>
+        </div>
+    </div>
+
+    <!-- Account & Profile -->
+    <div class="gd-section" id="account">
+        <div class="gd-section-head" onclick="toggleSec(this)">
+            <h3><i class="fas fa-user-circle" style="color:#0062ff;"></i> Account & Profile</h3>
+            <i class="fas fa-chevron-down gd-toggle"></i>
+        </div>
+        <div class="gd-body">
+            <p>Manage your account settings and personal information.</p>
+            <ul>
+                <li><strong>Profile</strong> — View and edit your name, email, university, and profile picture.</li>
+                <li><strong>Subscription</strong> — View your plan status and upgrade to premium.</li>
+                <li><strong>Password</strong> — Change your password or reset it if forgotten.</li>
+                <li><strong>Logout</strong> — Sign out from your account securely.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Need Help -->
+    <div class="gd-section" id="help">
+        <div class="gd-section-head" onclick="toggleSec(this)">
+            <h3><i class="fas fa-circle-question" style="color:#64748b;"></i> Need Help?</h3>
+            <i class="fas fa-chevron-down gd-toggle"></i>
+        </div>
+        <div class="gd-body">
+            <p>Have questions or feedback? We're here to help.</p>
+            <ul>
+                <li><strong>Feedback</strong> — Use the Feedback page to send us your thoughts and suggestions.</li>
+                <li><strong>Report Issues</strong> — Found a bug? Let us know through the Feedback form and we'll fix it.</li>
+                <li><strong>Feature Requests</strong> — Suggest new features you'd like to see on Prepium.</li>
+            </ul>
+            <div class="gd-tip"><i class="fas fa-lightbulb"></i> Your feedback directly shapes what we build next!</div>
+        </div>
+    </div>
+
+    <div style="text-align:center;padding:0.5rem 1.25rem 6rem;font-size:0.7rem;color:#94a3b8;font-weight:600;">
+        Prepium v2.0 &middot; Built for students &middot; <a href="/suggestions" style="color:var(--brand);text-decoration:none;">Send Feedback</a>
+    </div>
+
+</div>
+<%- include('partials/bottom-nav', { activeNav: 'guide' }) %>
+
+<script>
+function toggleSec(el) {
+    var head = el.classList.contains('gd-section-head') ? el : el.closest('.gd-section-head');
+    var body = head.nextElementSibling;
+    var toggle = head.querySelector('.gd-toggle');
+    body.classList.toggle('open');
+    toggle.classList.toggle('open');
+}
+
+function filterGuide(val) {
+    var sections = document.querySelectorAll('.gd-section');
+    var q = val.toLowerCase().trim();
+    sections.forEach(function(s) {
+        if (!q) {
+            s.style.display = '';
+            return;
+        }
+        var text = s.textContent.toLowerCase();
+        s.style.display = text.indexOf(q) > -1 ? '' : 'none';
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var hash = window.location.hash;
+    if (hash) {
+        var target = document.querySelector(hash);
+        if (target) {
+            var head = target.querySelector('.gd-section-head');
+            if (head) {
+                var body = head.nextElementSibling;
+                var toggle = head.querySelector('.gd-toggle');
+                body.classList.add('open');
+                toggle.classList.add('open');
+                setTimeout(function() { target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
+            }
+        }
+    }
+});
+</script>
+</body>
+</html>

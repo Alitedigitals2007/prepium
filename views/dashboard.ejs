@@ -223,6 +223,12 @@
             <div class="fc-desc">Generate quizzes from PDF</div>
         </a>
 
+        <a href="/guide" class="feature-card">
+            <div class="fc-icon" style="background:#e0e7ff;color:#3730a3;"><i class="fas fa-book"></i></div>
+            <div class="fc-label">User Guide</div>
+            <div class="fc-desc">How to use every feature</div>
+        </a>
+
         <a href="/history" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
             <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
             <div class="fc-icon" style="background:#fef3c7;color:#f59e0b;"><i class="fas fa-chart-bar"></i></div>

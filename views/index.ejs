@@ -255,20 +255,16 @@
         </nav>
 
         <div class="mobile-menu" id="mobileMenu">
-            <a href="#features" class="menu-link" onclick="toggleMenu()">🛡️ Core Features</a>
-            <a href="#testimonials" class="menu-link" onclick="toggleMenu()">💬 Testimonials</a>
-            
-            <% if (locals.user && user.role === 'admin') { %>
-                <a href="/admin/analytics" class="menu-link" style="color: var(--brand)">📊 Strategic Intel</a>
-            <% } %>
-
-            <a href="/login" class="menu-link">🔐 Sign In</a>
+            <a href="#features" class="menu-link" onclick="toggleMenu()">Core Features</a>
+            <a href="/guide" class="menu-link" onclick="toggleMenu()">User Guide</a>
+            <a href="#testimonials" class="menu-link" onclick="toggleMenu()">Testimonials</a>
+            <a href="/login" class="menu-link" onclick="toggleMenu()">Sign In</a>
         </div>
 
         <header class="hero">
-            <span class="hero-badge">🚀 Continuous Assessment Portal</span>
+            <span class="hero-badge">Smart Learning Platform</span>
             <h1>Prepium</h1>
-            <p class="tagline">The ultimate CBT practice engine for ambitious students.</p>
+            <p class="tagline">AI-powered study tools, CGPA tracking, quizzes & more — all in one place.</p>
         </header>
 
       <div class="section-title reveal">Partnering Universities</div>
@@ -342,20 +338,48 @@
     </div>
 </div>
 
-        <div class="section-title reveal" id="features">Why Prepium?</div>
+        <div class="section-title reveal" id="features">Everything in Prepium</div>
         <section class="features-grid">
             <div class="card reveal">
-                <div style="font-size: 1.5rem;">⚡</div>
+                <div style="font-size: 1.5rem;">📚</div>
                 <div>
-                    <h3 style="margin:0; font-size:0.95rem;">Fast-Track Mastery</h3>
-                    <p style="margin:3px 0 0; font-size:0.8rem; color:var(--text-muted);">Clean, distraction-free test environments.</p>
+                    <h3 style="margin:0; font-size:0.95rem;">Study Hub</h3>
+                    <p style="margin:3px 0 0; font-size:0.8rem; color:var(--text-muted);">Courses, AI tutor, flashcards, and study quizzes.</p>
+                </div>
+            </div>
+            <div class="card reveal">
+                <div style="font-size: 1.5rem;">🧠</div>
+                <div>
+                    <h3 style="margin:0; font-size:0.95rem;">AI Quiz Generator</h3>
+                    <p style="margin:3px 0 0; font-size:0.8rem; color:var(--text-muted);">Upload PDFs and generate custom quizzes instantly.</p>
+                </div>
+            </div>
+            <div class="card reveal">
+                <div style="font-size: 1.5rem;">📊</div>
+                <div>
+                    <h3 style="margin:0; font-size:0.95rem;">CGPA Tracker</h3>
+                    <p style="margin:3px 0 0; font-size:0.8rem; color:var(--text-muted);">Track semesters, forecast grades, AI advisor.</p>
                 </div>
             </div>
             <div class="card reveal">
                 <div style="font-size: 1.5rem;">🎯</div>
                 <div>
-                    <h3 style="margin:0; font-size:0.95rem;">Mixed Topics</h3>
-                    <p style="margin:3px 0 0; font-size:0.8rem; color:var(--text-muted);">Combine subjects into one custom attempt.</p>
+                    <h3 style="margin:0; font-size:0.95rem;">Practice Quizzes</h3>
+                    <p style="margin:3px 0 0; font-size:0.8rem; color:var(--text-muted);">Subject-based tests with instant grading.</p>
+                </div>
+            </div>
+            <div class="card reveal">
+                <div style="font-size: 1.5rem;">📅</div>
+                <div>
+                    <h3 style="margin:0; font-size:0.95rem;">Daily Task & Timetable</h3>
+                    <p style="margin:3px 0 0; font-size:0.8rem; color:var(--text-muted);">AI schedules, deadlines, goals & weekly reports.</p>
+                </div>
+            </div>
+            <div class="card reveal">
+                <div style="font-size: 1.5rem;">🏆</div>
+                <div>
+                    <h3 style="margin:0; font-size:0.95rem;">Challenges & Arena</h3>
+                    <p style="margin:3px 0 0; font-size:0.8rem; color:var(--text-muted);">Daily free challenges + live ranked competition.</p>
                 </div>
             </div>
         </section>
@@ -383,12 +407,20 @@
         <div class="section-title reveal">Common Questions</div>
         <section class="faq-list reveal">
             <div class="faq-item">
-                <div class="faq-question" onclick="toggleFaq(this)">Is my payment renewable? <span>+</span></div>
-                <div class="faq-answer">No, its a one-time payment.</div>
+                <div class="faq-question" onclick="toggleFaq(this)">Is premium a one-time payment? <span>+</span></div>
+                <div class="faq-answer">Yes. Pay once at ₦2,000 and unlock all premium features forever.</div>
             </div>
             <div class="faq-item">
-                <div class="faq-question" onclick="toggleFaq(this)">Can I use it on mobile? <span>+</span></div>
-                <div class="faq-answer">Prepium is fully optimized for mobile browsers with an app-like experience.</div>
+                <div class="faq-question" onclick="toggleFaq(this)">Can I use Prepium on mobile? <span>+</span></div>
+                <div class="faq-answer">Fully optimized for mobile with an app-like experience. Works on any browser.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">How does the AI quiz generator work? <span>+</span></div>
+                <div class="faq-answer">Upload any PDF document and our AI reads it to generate custom multiple-choice, theory, and fill-in-the-blank questions.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">How do I track my CGPA? <span>+</span></div>
+                <div class="faq-answer">Set up your profile with your grading scale (4 or 5 point), add courses with grades, and track semester by semester. Use the AI What-If Builder to plan improvements.</div>
             </div>
         </section>
 
