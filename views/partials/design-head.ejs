@@ -1,0 +1,121 @@
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<script id="tailwind-config">
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        "inverse-surface": "#2d3133",
+        "error-red": "#E74C3C",
+        "tertiary": "#251400",
+        "secondary": "#006d37",
+        "inverse-primary": "#b6c6f0",
+        "on-error-container": "#93000a",
+        "on-tertiary-fixed": "#2b1700",
+        "tertiary-fixed-dim": "#ffb961",
+        "on-primary-container": "#8293ba",
+        "on-secondary-fixed-variant": "#005228",
+        "academic-navy": "#1A2B4C",
+        "primary-container": "#1a2b4c",
+        "surface-container-low": "#f2f4f6",
+        "primary-fixed-dim": "#b6c6f0",
+        "action-orange": "#F39C12",
+        "tertiary-container": "#412600",
+        "on-tertiary-fixed-variant": "#663e00",
+        "on-primary-fixed": "#071b3b",
+        "background": "#f7f9fb",
+        "on-primary": "#ffffff",
+        "success-green": "#2ECC71",
+        "inverse-on-surface": "#eff1f3",
+        "on-surface-variant": "#44474e",
+        "outline": "#75777f",
+        "surface-dim": "#d8dadc",
+        "outline-variant": "#c5c6cf",
+        "on-primary-fixed-variant": "#364669",
+        "surface-container-high": "#e6e8ea",
+        "surface": "#f7f9fb",
+        "surface-container": "#eceef0",
+        "tertiary-fixed": "#ffddb9",
+        "primary-fixed": "#d8e2ff",
+        "on-background": "#191c1e",
+        "surface-container-highest": "#e0e3e5",
+        "surface-variant": "#e0e3e5",
+        "on-secondary": "#ffffff",
+        "secondary-container": "#6bfe9c",
+        "surface-container-lowest": "#ffffff",
+        "text-main": "#1E293B",
+        "on-surface": "#191c1e",
+        "surface-gray": "#F1F5F9",
+        "on-error": "#ffffff",
+        "error-container": "#ffdad6",
+        "on-secondary-container": "#00743a",
+        "surface-tint": "#4e5e82",
+        "error": "#ba1a1a",
+        "on-tertiary": "#ffffff",
+        "secondary-fixed": "#6bfe9c",
+        "secondary-fixed-dim": "#4ae183",
+        "primary": "#031636",
+        "on-secondary-fixed": "#00210c",
+        "on-tertiary-container": "#ce8200",
+        "surface-bright": "#f7f9fb"
+      },
+      borderRadius: {
+        DEFAULT: "0.25rem",
+        lg: "0.5rem",
+        xl: "0.75rem",
+        full: "9999px"
+      },
+      spacing: {
+        "stack-sm": "0.5rem",
+        gutter: "1.5rem",
+        "stack-md": "1rem",
+        "container-max": "1200px",
+        "margin-mobile": "1rem",
+        "stack-lg": "2rem"
+      },
+      fontFamily: {
+        sans: ["Inter", "system-ui", "sans-serif"],
+        "label-md": ["Inter"],
+        "headline-lg-mobile": ["Inter"],
+        "label-sm": ["Inter"],
+        "headline-lg": ["Inter"],
+        "body-md": ["Inter"],
+        "headline-md": ["Inter"],
+        "display-lg": ["Inter"],
+        "title-lg": ["Inter"],
+        "body-lg": ["Inter"]
+      },
+      fontSize: {
+        "label-md": ["14px", { lineHeight: "20px", letterSpacing: "0.01em", fontWeight: "500" }],
+        "headline-lg-mobile": ["28px", { lineHeight: "36px", fontWeight: "700" }],
+        "label-sm": ["12px", { lineHeight: "16px", letterSpacing: "0.05em", fontWeight: "600" }],
+        "headline-lg": ["32px", { lineHeight: "40px", fontWeight: "700" }],
+        "body-md": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+        "headline-md": ["24px", { lineHeight: "32px", fontWeight: "600" }],
+        "display-lg": ["48px", { lineHeight: "56px", letterSpacing: "-0.02em", fontWeight: "700" }],
+        "title-lg": ["20px", { lineHeight: "28px", fontWeight: "600" }],
+        "body-lg": ["18px", { lineHeight: "28px", fontWeight: "400" }]
+      }
+    }
+  }
+}
+</script>
+<style>
+body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+.glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.3); }
+.scroll-hide::-webkit-scrollbar { display: none; }
+.scroll-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.bento-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.bento-card:active { transform: scale(0.98); }
+.reveal { animation: fadeUp .45s ease both; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
+@keyframes pulse-red { 0% { color: #1A2B4C; } 50% { color: #E74C3C; } 100% { color: #1A2B4C; } }
+.timer-warning { animation: pulse-red 2s infinite; }
+</style>
+<meta name="theme-color" content="#f7f9fb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="/manifest.json">

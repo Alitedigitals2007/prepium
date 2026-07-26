@@ -3,157 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Prepium | Quiz Generator</title>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/css/style.css">
-    <link rel="manifest" href="/manifest.json">
+    <%- include('partials/design-head') %>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <%- include('partials/mathjax') %>
-    <script>
-        window.MathJax = {
-            tex: { inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]']] },
-            options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea'] }
-        };
-    </script>
+    <script>window.MathJax = { tex: { inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]']] }, options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea'] } };</script>
     <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-
     <style>
-        .status-bar { height: env(safe-area-inset-top, 0px); }
-        .page-content { padding: 0 1.5rem 1.5rem; }
-
-        .tab-bar { display: flex; gap: 6px; margin-bottom: 1rem; background: var(--bg); border-radius: 12px; padding: 4px; }
-        .tab-pill { flex: 1; padding: 10px; border-radius: 8px; background: transparent; border: none; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 0.72rem; color: var(--text-sub); transition: var(--transition); display: flex; align-items: center; justify-content: center; gap: 5px; }
-        .tab-pill.active { background: var(--surface-solid); color: var(--text-dark); box-shadow: var(--shadow-sm); }
-
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-
-        /* Upload Zone */
-        .upload-zone {
-            border: 2px dashed var(--border); border-radius: 16px; padding: 24px 16px;
-            text-align: center; cursor: pointer; transition: var(--transition);
-            background: var(--surface-solid); margin-bottom: 1rem;
-        }
-        .upload-zone:hover { border-color: var(--brand); background: var(--brand-soft); transform: translateY(-2px); }
-        .upload-zone:active { transform: scale(0.98); }
-        .upload-zone.has-file { border-color: var(--brand); background: var(--brand-soft); }
-        .upload-icon { font-size: 2rem; color: var(--brand); margin-bottom: 8px; display: block; }
-        .upload-text { font-size: 0.85rem; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; }
-        .upload-hint { font-size: 0.7rem; color: var(--text-muted); }
-        .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-
-        /* Form Fields */
-        .field { margin-bottom: 1rem; }
-        .field-label { 
-            display: block; font-size: 0.6rem; font-weight: 700; color: var(--text-sub);
-            text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px;
-        }
-        .field-select {
-            width: 100%; background: var(--surface-solid); border: 1.5px solid var(--border);
-            border-radius: 12px; padding: 12px; font-size: 0.85rem; font-weight: 600;
-            color: var(--text-dark); outline: none; appearance: none; -webkit-appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23a3aed0'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
-            background-repeat: no-repeat; background-position: right 14px center; background-size: 16px;
-            padding-right: 40px; transition: var(--transition);
-        }
-        .field-select:focus { border-color: var(--brand); background-color: var(--surface-solid); box-shadow: 0 0 0 4px rgba(0, 98, 255, 0.1); }
-
-        /* Generate Button */
-        .generate-btn {
-            width: 100%; padding: 14px; border-radius: 14px; border: none;
-            background: var(--brand-gradient); color: white; font-family: inherit;
-            font-weight: 700; font-size: 0.85rem; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-            transition: var(--transition);
-        }
-        .generate-btn:active { transform: scale(0.98); }
-        .generate-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-        /* Inline error */
-        .inline-error { padding: 12px 16px; border-radius: var(--radius-sm); background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; font-size: 0.78rem; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
-        .inline-error button { padding: 6px 14px; border-radius: 6px; border: none; background: #dc2626; color: white; font-family: inherit; font-weight: 700; font-size: 0.7rem; cursor: pointer; white-space: nowrap; }
-        @media (prefers-color-scheme: dark) {
-            .inline-error { background: #450a0a; border-color: #7f1d1d; color: #fca5a5; }
-            .inline-error button { background: #ef4444; }
-        }
-
-        /* Quiz Arena */
-        .quiz-card { background: var(--surface-solid); border: 1.5px solid var(--border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 1rem; }
-        .quiz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-        .quiz-counter { font-size: 0.75rem; font-weight: 800; color: var(--brand); background: var(--brand-soft); padding: 6px 14px; border-radius: 20px; }
-        .quiz-timer { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 800; color: var(--danger); background: #fef2f2; padding: 6px 12px; border-radius: 20px; animation: pulse 2s ease-in-out infinite; }
-        @media (prefers-color-scheme: dark) { .quiz-timer { background: #450a0a; color: #fca5a5; } }
-        .question-text { font-size: 1rem; font-weight: 700; line-height: 1.6; margin-bottom: 1.5rem; }
-
-        .quiz-progress { height: 6px; background: var(--border); border-radius: 3px; margin-bottom: 1.5rem; overflow: hidden; }
-        .quiz-progress-fill { height: 100%; background: var(--brand-gradient); border-radius: 3px; transition: width 0.5s ease; }
-
-        /* Option Cards */
-        .option-card { border: 1.5px solid var(--border); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: var(--transition); background: var(--surface-solid); }
-        .option-card:hover { border-color: var(--brand); background: var(--brand-soft); transform: translateX(4px); }
-        .option-card:active { transform: scale(0.98); }
-        .option-card.selected { border-color: var(--brand); background: var(--brand-soft); box-shadow: 0 4px 12px rgba(0, 98, 255, 0.15); }
-        .option-letter { width: 36px; height: 36px; border-radius: 12px; background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800; color: var(--text-sub); transition: var(--transition); }
-        .option-card.selected .option-letter { background: var(--brand); color: white; transform: scale(1.1); }
-        .option-text { font-size: 0.9rem; font-weight: 600; flex: 1; color: var(--text-dark); }
-
-        /* Navigation */
-        .quiz-nav { display: flex; gap: 8px; margin-top: 1rem; }
-        .nav-btn { flex: 1; padding: 12px; border-radius: 12px; border: none; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: var(--transition); }
-        .nav-btn.prev { background: var(--bg); color: var(--text-dark); border: 1.5px solid var(--border); }
-        .nav-btn.prev:hover { background: var(--border-solid); }
-        .nav-btn.next { background: var(--brand-gradient); color: white; }
-        .nav-btn.next:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
-        .nav-btn.finish { background: var(--success); color: white; }
-        .nav-btn.finish:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3); }
-        .nav-btn:active { transform: scale(0.97); }
-        .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-        /* Fill-in-the-blank / Theory input */
-        .field-input { width: 100%; background: var(--surface-solid); border: 1.5px solid var(--border); border-radius: 12px; padding: 14px; font-size: 0.9rem; font-weight: 500; color: var(--text-dark); outline: none; font-family: inherit; transition: var(--transition); }
-        .field-input:focus { border-color: var(--brand); box-shadow: 0 0 0 4px rgba(0, 98, 255, 0.1); }
-        .field-textarea { min-height: 100px; resize: vertical; }
-
-        /* Results */
-        .result-hero { background: linear-gradient(135deg, var(--success) 0%, #059669 100%); border-radius: var(--radius-xl); padding: 32px 24px; text-align: center; color: white; margin-bottom: 1rem; position: relative; overflow: hidden; }
-        .result-hero::before { content: ''; position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: rgba(255,255,255,0.1); border-radius: 50%; }
-        .result-hero::after { content: ''; position: absolute; bottom: -30px; left: -30px; width: 100px; height: 100px; background: rgba(255,255,255,0.08); border-radius: 50%; }
-        .result-score { font-size: 4rem; font-weight: 800; position: relative; z-index: 1; }
-        .result-label { font-size: 0.8rem; opacity: 0.8; font-weight: 600; margin-top: 4px; position: relative; z-index: 1; }
-
-        .review-card { background: var(--surface-solid); border: 1.5px solid var(--border); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 10px; }
-        .review-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .review-badge { font-size: 0.6rem; font-weight: 800; padding: 4px 10px; border-radius: 6px; text-transform: uppercase; }
-        .review-badge.pass { background: #dcfce7; color: #15803d; }
-        .review-badge.fail { background: #fee2e2; color: #b91c1c; }
-        @media (prefers-color-scheme: dark) { .review-badge.pass { background: #064e3b; color: #34d399; } .review-badge.fail { background: #450a0a; color: #f87171; } }
-        .review-q { font-size: 0.85rem; font-weight: 700; margin-bottom: 6px; color: var(--text-dark); }
-        .review-detail { font-size: 0.75rem; color: var(--text-sub); line-height: 1.5; }
-        .review-explain { font-size: 0.78rem; color: var(--text-dark); background: var(--bg); padding: 12px; border-radius: 10px; margin-top: 8px; line-height: 1.6; border-left: 3px solid var(--brand); }
-
-        /* History List */
-        .history-item { background: var(--surface-solid); border: 1.5px solid var(--border); border-radius: var(--radius-lg); padding: 14px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
-        .history-info { flex: 1; }
-        .history-title { font-size: 0.8rem; font-weight: 700; color: var(--text-dark); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .history-meta { font-size: 0.65rem; color: var(--text-sub); display: flex; gap: 10px; }
-        .history-score { text-align: right; }
-        .history-pct { font-size: 1.2rem; font-weight: 800; color: var(--brand); line-height: 1; }
-        .history-fraction { font-size: 0.7rem; color: var(--text-sub); }
-
-        .empty-history { text-align: center; padding: 3rem 1.5rem; color: var(--text-muted); }
-        .empty-history i { font-size: 2.5rem; display: block; margin-bottom: 0.8rem; opacity: 0.4; }
-
-        /* Header icon for AI quiz */
-        .header-title-row { display: flex; align-items: center; gap: 8px; }
-        .ai-badge { font-size: 0.6rem; font-weight: 800; background: var(--brand-gradient); color: white; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-
-        @media (min-width: 431px) { .app-shell { border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); margin: 0 auto; } }
+        .tab-bar { display:flex;gap:6px;margin-bottom:1rem;background:var(--bg);border-radius:12px;padding:4px; }
+        .tab-pill { flex:1;padding:10px;border-radius:8px;background:transparent;border:none;cursor:pointer;font-family:inherit;font-weight:700;font-size:0.72rem;color:var(--text-sub);transition:var(--transition);display:flex;align-items:center;justify-content:center;gap:5px; }
+        .tab-pill.active { background:var(--surface-solid);color:var(--text-dark);box-shadow:var(--shadow-sm); }
+        .tab-content { display:none; }
+        .tab-content.active { display:block; }
+        .upload-zone { border:2px dashed var(--border);border-radius:16px;padding:24px 16px;text-align:center;cursor:pointer;transition:var(--transition);background:var(--surface-solid);margin-bottom:1rem; }
+        .upload-zone.has-file { border-color:var(--brand);background:var(--brand-soft); }
+        .upload-icon { font-size:2rem;color:var(--brand);margin-bottom:8px;display:block; }
+        .upload-text { font-size:0.85rem;font-weight:700;color:var(--text-dark);margin-bottom:4px; }
+        .upload-hint { font-size:0.7rem;color:var(--text-muted); }
+        .field { margin-bottom:1rem; }
+        .field-label { display:block;font-size:0.6rem;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px; }
+        .field-select { width:100%;background:var(--surface-solid);border:1.5px solid var(--border);border-radius:12px;padding:12px;font-size:0.85rem;font-weight:600;color:var(--text-dark);outline:none;appearance:none; }
+        .generate-btn { width:100%;padding:14px;border-radius:14px;border:none;background:var(--brand-gradient);color:white;font-family:inherit;font-weight:700;font-size:0.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:var(--transition); }
+        .generate-btn:active { transform:scale(0.98); }
+        .inline-error { padding:12px 16px;border-radius:var(--radius-sm);background:#fef2f2;border:1px solid #fecaca;color:#dc2626;font-size:0.78rem;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:10px; }
+        .quiz-card { background:var(--surface-solid);border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:1rem; }
+        .quiz-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem; }
+        .quiz-counter { font-size:0.75rem;font-weight:800;color:var(--brand);background:var(--brand-soft);padding:6px 14px;border-radius:20px; }
+        .quiz-timer { display:flex;align-items:center;gap:6px;font-size:0.8rem;font-weight:800;color:var(--danger);background:#fef2f2;padding:6px 12px;border-radius:20px; }
+        .question-text { font-size:1rem;font-weight:700;line-height:1.6;margin-bottom:1.5rem; }
+        .quiz-progress { height:6px;background:var(--border);border-radius:3px;margin-bottom:1.5rem;overflow:hidden; }
+        .quiz-progress-fill { height:100%;background:var(--brand-gradient);border-radius:3px;transition:width 0.5s ease; }
+        .option-card { border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:var(--transition);background:var(--surface-solid); }
+        .option-card.selected { border-color:var(--brand);background:var(--brand-soft);box-shadow:0 4px 12px rgba(0,98,255,0.15); }
+        .option-letter { width:36px;height:36px;border-radius:12px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:800;color:var(--text-sub);transition:var(--transition); }
+        .option-card.selected .option-letter { background:var(--brand);color:white; }
+        .option-text { font-size:0.9rem;font-weight:600;flex:1;color:var(--text-dark); }
+        .quiz-nav { display:flex;gap:8px;margin-top:1rem; }
+        .nav-btn { flex:1;padding:12px;border-radius:12px;border:none;font-size:0.8rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:var(--transition); }
+        .nav-btn.next { background:var(--brand-gradient);color:white; }
+        .nav-btn.finish { background:var(--success);color:white; }
+        .field-input { width:100%;background:var(--surface-solid);border:1.5px solid var(--border);border-radius:12px;padding:14px;font-size:0.9rem;font-weight:500;color:var(--text-dark);outline:none;font-family:inherit;transition:var(--transition); }
+        .field-textarea { min-height:100px;resize:vertical; }
+        .result-hero { background:linear-gradient(135deg,var(--success) 0%,#059669 100%);border-radius:var(--radius-xl);padding:32px 24px;text-align:center;color:white;margin-bottom:1rem;overflow:hidden; }
+        .result-score { font-size:4rem;font-weight:800; }
+        .review-card { background:var(--surface-solid);border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:10px; }
+        .review-badge { font-size:0.6rem;font-weight:800;padding:4px 10px;border-radius:6px;text-transform:uppercase; }
+        .review-badge.pass { background:#dcfce7;color:#15803d; }
+        .review-badge.fail { background:#fee2e2;color:#b91c1c; }
+        .review-q { font-size:0.85rem;font-weight:700;margin-bottom:6px; }
+        .review-explain { font-size:0.78rem;background:var(--bg);padding:12px;border-radius:10px;margin-top:8px;line-height:1.6;border-left:3px solid var(--brand); }
+        .history-item { background:var(--surface-solid);border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between; }
+        .history-pct { font-size:1.2rem;font-weight:800;color:var(--brand); }
+        .empty-history { text-align:center;padding:3rem 1.5rem;color:var(--text-muted); }
+        .ai-badge { font-size:0.6rem;font-weight:800;background:var(--brand-gradient);color:white;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:0.5px; }
     </style>
 </head>
 <body>

@@ -3,7 +3,7 @@
 Stop jumping between WhatsApp, USB drives, and photocopy shops to find past questions. Prepium puts everything you need in one place on your phone.
 
 **Live App**: https://theprepium.vercel.app
-**Price**: ₦1,000 one-time (you get 2 free tests to try first)
+**Price**: ₦2,000 one-time (you get 2 free tests to try first)
 
 ---
 
@@ -101,8 +101,8 @@ Go to https://theprepium.vercel.app/signup, pick your university, enter your nam
 ### 2. Try 2 free tests
 Go to the practice test page, pick your subjects, and take a test. No payment needed for the first 2.
 
-### 3. Pay once (₦1,000)
-When you're ready, pay ₦1,000 via Paystack. You get **lifetime access** to all features — no monthly subscriptions.
+### 3. Pay once (₦2,000)
+When you're ready, pay ₦2,000 via Paystack. You get **lifetime access** to all features — no monthly subscriptions.
 
 ### 4. Start studying
 - Upload PDFs → AI generates questions
@@ -123,7 +123,7 @@ When you're ready, pay ₦1,000 via Paystack. You get **lifetime access** to all
 | No study schedule, no accountability | AI creates a personalized reading timetable |
 | No timer, no focus | Pomodoro study timer with session tracking |
 | You study alone | AI tutor, community chat, flashcards, quizzes |
-| Photocopy costs add up | ₦1,000 once, forever |
+| Photocopy costs add up | ₦2,000 once, forever |
 | Manual flashcard creation | AI generates flashcards from any topic |
 | No deadline reminders | Email alerts 1 hour before deadlines |
 | Can't track your progress | Full history, stats, and weekly analytics |
