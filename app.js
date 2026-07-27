@@ -3569,9 +3569,10 @@ app.get('/ai-quiz', isAuth, (req, res) => {
 app.get('/practice-quiz', isAuth, async (req, res) => {
     try {
         const uid = req.session.user.id;
-        const profile = await pool.query('SELECT university_id, current_level FROM users WHERE id = $1', [uid]);
-        const uniId = profile.rows[0]?.university_id;
-        const lvl = profile.rows[0]?.current_level;
+        const user = await pool.query('SELECT university_id FROM users WHERE id = $1', [uid]);
+        const cgpa = await pool.query('SELECT current_level FROM cgpa_profiles WHERE user_id = $1', [uid]);
+        const uniId = user.rows[0]?.university_id;
+        const lvl = cgpa.rows[0]?.current_level || null;
         const courses = uniId ? await pool.query(
             `SELECT c.id, c.course_code, c.course_title, s.status, s.id as session_id
              FROM admin_quiz_courses c JOIN admin_quiz_sessions s ON c.session_id = s.id
@@ -4430,6 +4431,7 @@ app.post('/cgpa/setup', isAuth, requirePaid, async (req, res) => {
                 updated_at    = NOW()`,
             [userId, department ? department.trim() : 'General', parseInt(current_level) || 300, scale, pUnits, pGP, pCGPA]
         );
+        await pool.query('UPDATE users SET current_level = $1 WHERE id = $2', [parseInt(current_level) || 300, userId]);
         
         res.redirect('/cgpa?msg=Profile configured successfully!');
     } catch (err) {
@@ -5886,6 +5888,7 @@ const config = {
       created_at TIMESTAMP DEFAULT NOW()
     )`);
     try { await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS used_coupon VARCHAR(50)"); } catch (_) {}
+    try { await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS current_level INTEGER DEFAULT 0"); } catch (_) {}
     console.log('[Coupons] Table ready');
   } catch(e) { console.error('[Coupons] Init:', e.message); }
 })();

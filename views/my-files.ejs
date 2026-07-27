@@ -78,8 +78,8 @@
                     <div class="fi-meta">{{ fileSize(f.file_size) }} &middot; {{ timeAgo(f.created_at) }}</div>
                 </div>
                 <div class="fi-actions">
-                    <button class="view-btn" @click="viewFile(f)"><i class="fas fa-eye"></i></button>
-                    <button class="del-btn" @click="deleteFile(f)"><i class="fas fa-trash"></i></button>
+                    <button class="view-btn" @click="openFile(f)" title="Open"><i class="fas fa-eye"></i></button>
+                    <button class="del-btn" @click="deleteFile(f)" title="Delete"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
         </div>
@@ -185,6 +185,13 @@ new Vue({
             Swal.fire({ icon: 'success', title: 'Uploaded!', timer: 1500, showConfirmButton: false });
         },
         viewFile(f) { this.viewerFile = f; },
+        openFile(f) {
+            if (f.mime_type === 'application/pdf') {
+                window.open(f.file_path, '_blank');
+            } else {
+                this.viewerFile = f;
+            }
+        },
         async deleteFile(f) {
             const c = await Swal.fire({ title: 'Delete?', text: f.display_name, icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete' });
             if (!c.isConfirmed) return;
