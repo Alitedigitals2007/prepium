@@ -5373,18 +5373,33 @@ app.post('/api/study/subtopic/:id/content', isAuth, requirePaid, async (req, res
     const s = st.rows[0];
     const topic = await pool.query('SELECT * FROM study_topics WHERE id = $1', [s.topic_id]).catch(() => ({ rows: [] }));
     const topicName = topic.rows[0] ? (topic.rows[0].topic_name || topic.rows[0].title) : 'General';
-    const prompt = `You are a university tutor teaching a full lesson on "${s.subtopic_name || s.title}" (part of "${topicName}"). Write a comprehensive explanation with proper paragraphs separated by blank lines. Use exactly these 3 section headers on their own line:
+    const prompt = `You are a university tutor teaching a full lesson on "${s.subtopic_name || s.title}" (part of "${topicName}"). Structure your response using EXACTLY these section headers (each on its own line ending with a colon). Skip a section ONLY if it does not apply. Use PLAIN TEXT only — no markdown, no asterisks, no hashtags, no backticks. Separate paragraphs with blank lines.
 
-Key Points:
-Write 3-4 paragraphs explaining the core concepts in detail. Each paragraph should be 2-4 sentences covering one idea. Use natural spacing between paragraphs.
+Overview:
+2-4 sentences — what this topic is, why it matters, where it fits in the course.
 
-Note:
-Write 2-3 paragraphs about important things to remember, common mistakes, and how these concepts connect to other topics. Space paragraphs properly.
+Key Terms:
+Bullet each term on its own line starting with a dash. Format: "- term: definition". Cover every term the learner needs to know.
 
-Example:
-Write 2-3 paragraphs with detailed practical examples showing how the concepts apply. Each example should be 2-3 sentences.
+Full Explanation:
+Break the concept into logical sub-parts using short paragraphs. Use plain language first, then technical terms. Use analogies where helpful.
 
-Make each section substantial — at least 4-6 lines per section. Use PLAIN TEXT only. No markdown. No asterisks, no hashtags, no backticks. Separate paragraphs with blank lines.`;
+Formula:
+If this topic has formulas, present each on its own line. Explain what each symbol means and when to use it. Skip if no formulas apply.
+
+Worked Example:
+At least one full step-by-step example with reasoning at each step. Use realistic numbers. State the final answer clearly.
+
+Common Mistakes:
+Describe 1-2 common errors or misconceptions. Show the wrong approach, explain why it is wrong, contrast with the correct approach. Use "Wrong:" and "Right:" labels.
+
+Practice Problems:
+Write 2-3 practice questions with increasing difficulty. Show the full worked solution for each.
+
+Quick Recap:
+5-8 bullet points (each starting with a dash) summarizing the most important takeaways. This is the "remember this" section.
+
+Make each section substantial — at least 4-6 lines each where the topic warrants it. Use blank lines between sections and between paragraphs. Use proper line spacing.`;
     const aiRes = await studyPromptSmart(prompt);
     if (!aiRes.text || aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text || 'AI error' });
     const clean = cleanAiText(aiRes.text);

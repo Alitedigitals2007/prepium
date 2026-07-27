@@ -35,15 +35,28 @@
         .btn-prev { background: #f1f5f9; color: var(--text-dark); }
         .btn-next { background: var(--brand); color: white; }
         .btn-submit { background: #10b981; color: white; }
-        .result-card { background: white; border-radius: 20px; padding: 24px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
-        .result-card .score-big { font-size: 3rem; font-weight: 800; }
-        .result-card .score-label { font-size: 0.7rem; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.5px; }
-        .result-card .result-item { text-align: left; padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
-        .result-card .result-item:last-child { border: none; }
-        .result-card .ri-q { font-size: 0.8rem; font-weight: 600; margin-bottom: 4px; }
-        .result-card .ri-ans { font-size: 0.72rem; }
-        .result-card .ri-ans.correct { color: #10b981; }
-        .result-card .ri-ans.wrong { color: #ef4444; }
+        .result-summary { background: linear-gradient(135deg, #0b1437, #1a2744); border-radius: 24px; padding: 32px 24px; text-align: center; margin-bottom: 20px; }
+        .result-summary .rs-label { font-size: 0.72rem; font-weight: 700; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 1px; }
+        .result-summary .rs-score { font-size: 3.2rem; font-weight: 800; color: white; line-height: 1.1; margin: 4px 0; }
+        .result-summary .rs-percent { font-size: 1rem; font-weight: 600; display: inline-block; padding: 4px 16px; border-radius: 20px; margin-top: 4px; }
+        .result-summary .rs-detail { display: flex; justify-content: center; gap: 32px; margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1); }
+        .result-summary .rs-detail div { text-align: center; }
+        .result-summary .rs-detail .rs-num { font-size: 1.1rem; font-weight: 800; color: white; }
+        .result-summary .rs-detail .rs-lbl { font-size: 0.6rem; font-weight: 700; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.5px; }
+        .rq-card { background: white; border-radius: 18px; padding: 18px; margin-bottom: 12px; border: 1px solid #eef2f6; box-shadow: 0 2px 8px rgba(0,0,0,0.04); text-align: left; }
+        .rq-header { display: flex; align-items: flex-start; gap: 12px; }
+        .rq-icon { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; flex-shrink: 0; margin-top: 1px; }
+        .rq-icon.correct { background: #dcfce7; color: #16a34a; }
+        .rq-icon.wrong { background: #fee2e2; color: #dc2626; }
+        .rq-body { flex: 1; min-width: 0; }
+        .rq-num { font-size: 0.6rem; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.3px; }
+        .rq-text { font-size: 0.85rem; font-weight: 600; line-height: 1.5; margin: 4px 0 10px; }
+        .rq-answer { font-size: 0.75rem; font-weight: 600; padding: 8px 12px; border-radius: 10px; margin-bottom: 10px; }
+        .rq-answer.correct { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+        .rq-answer.wrong { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        .rq-answer .rq-label { font-weight: 700; }
+        .rq-explanation { font-size: 0.76rem; line-height: 1.6; color: #475569; background: #f8fafc; border-radius: 12px; padding: 12px 14px; border: 1px solid #eef2f6; }
+        .rq-explanation strong { color: var(--text); }
         .empty-state { text-align: center; padding: 3rem 1rem; }
         .empty-state i { font-size: 2.5rem; color: var(--text-muted); margin-bottom: 1rem; }
         .empty-state h3 { font-size: 1rem; font-weight: 700; }
@@ -103,22 +116,36 @@
         </div>
 
         <div v-if="finished">
-            <div class="result-card">
-                <div class="score-label">Your Score</div>
-                <div class="score-big" :style="{ color: result.percent >= 50 ? '#10b981' : '#ef4444' }">{{ result.score }} / {{ result.total }}</div>
-                <div style="margin: 8px 0 16px;font-size:0.82rem;font-weight:600;color:var(--text-sub);">{{ result.percent }}%</div>
-                <div v-for="(r, ri) in result.results" :key="ri" class="result-item">
-                    <div class="ri-q">{{ ri + 1 }}. {{ r.question }}</div>
-                    <div class="ri-ans" :class="r.isCorrect ? 'correct' : 'wrong'">
-                        Your answer: {{ r.userAnswer || '(none)' }}
-                        <span v-if="!r.isCorrect"> — Correct: {{ r.correctAnswer }}</span>
-                    </div>
-                    <div v-if="r.explanation" style="font-size:0.7rem;color:var(--text-sub);margin-top:2px;">{{ r.explanation }}</div>
+            <div class="result-summary">
+                <div class="rs-label">Your Score</div>
+                <div class="rs-score">{{ result.score }} / {{ result.total }}</div>
+                <div class="rs-percent" :style="{ background: result.percent >= 50 ? '#dcfce7' : '#fee2e2', color: result.percent >= 50 ? '#16a34a' : '#dc2626' }">{{ result.percent }}%</div>
+                <div class="rs-detail">
+                    <div><div class="rs-num" style="color:#16a34a;">{{ result.results.filter(r => r.isCorrect).length }}</div><div class="rs-lbl">Correct</div></div>
+                    <div><div class="rs-num" style="color:#dc2626;">{{ result.results.filter(r => !r.isCorrect).length }}</div><div class="rs-lbl">Wrong</div></div>
                 </div>
-                <button class="btn btn-primary" style="width:100%;margin-top:1rem;padding:14px;border-radius:14px;font-weight:700;" @click="reset">
-                    <i class="fas fa-redo"></i> Try Another Quiz
-                </button>
             </div>
+            <div v-for="(r, ri) in result.results" :key="ri" class="rq-card">
+                <div class="rq-header">
+                    <div class="rq-icon" :class="r.isCorrect ? 'correct' : 'wrong'">
+                        <i :class="r.isCorrect ? 'fas fa-check' : 'fas fa-times'"></i>
+                    </div>
+                    <div class="rq-body">
+                        <div class="rq-num">Question {{ ri + 1 }}</div>
+                        <div class="rq-text">{{ r.question }}</div>
+                        <div class="rq-answer" :class="r.isCorrect ? 'correct' : 'wrong'">
+                            <span class="rq-label">{{ r.isCorrect ? 'Your answer' : 'Your answer' }}:</span> {{ r.userAnswer || '(none)' }}
+                            <span v-if="!r.isCorrect"><br><span class="rq-label">Correct answer:</span> {{ r.correctAnswer }}</span>
+                        </div>
+                        <div v-if="r.explanation" class="rq-explanation">
+                            <strong>Explanation:</strong> {{ r.explanation }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button class="btn btn-primary" style="width:100%;margin-top:1rem;padding:14px;border-radius:18px;font-weight:700;font-size:0.9rem;" @click="reset">
+                <i class="fas fa-redo"></i> Try Another Quiz
+            </button>
         </div>
     </div>
 </div>

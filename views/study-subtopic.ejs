@@ -24,13 +24,14 @@
         .session-timer-bar .st-btn.pause { background: #f59e0b; color: white; }
         .session-timer-bar .st-btn.stop { background: #ef4444; color: white; }
         .breadcrumb a { color: var(--brand); text-decoration: none; }
-        .content-card { background: linear-gradient(135deg, #fefce8 0%, #fef3c7 50%, #fef9c3 100%); border: 1.5px solid #fde68a; border-radius: 22px; padding: 24px; margin-bottom: 1rem; box-shadow: 0 4px 20px rgba(245,158,11,0.12); }
-        @media (prefers-color-scheme: dark) { .content-card { background: linear-gradient(135deg, #422006 0%, #451a03 50%, #422006 100%); border-color: #78350f; box-shadow: 0 4px 20px rgba(0,0,0,0.3); } }
-        .content-card .exp-header { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; font-weight: 800; color: #92400e; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 2px dashed #fde68a; }
-        @media (prefers-color-scheme: dark) { .content-card .exp-header { color: #fbbf24; border-bottom-color: #78350f; } }
-        .content-card .body-text { font-size: 0.85rem; font-weight: 500; line-height: 1.8; color: #78350f; white-space: pre-wrap; }
-        @media (prefers-color-scheme: dark) { .content-card .body-text { color: #fde68a; } }
-        .content-card .body-text p { margin: 0 0 10px; }
+        .content-card { background: white; border: 1px solid #eef2f6; border-radius: 24px; padding: 28px; margin-bottom: 1.25rem; box-shadow: 0 4px 24px rgba(0,0,0,0.05); }
+        @media (prefers-color-scheme: dark) { .content-card { background: #0f172a; border-color: #1e293b; box-shadow: 0 4px 24px rgba(0,0,0,0.3); } }
+        .content-card .exp-header { display: flex; align-items: center; gap: 12px; font-size: 0.95rem; font-weight: 800; color: var(--text); margin-bottom: 16px; padding-bottom: 14px; border-bottom: 2px solid #eef2f6; }
+        @media (prefers-color-scheme: dark) { .content-card .exp-header { border-bottom-color: #1e293b; } }
+        .content-card .body-text { font-size: 0.9rem; font-weight: 500; line-height: 1.9; color: var(--text-dark); white-space: pre-wrap; }
+        .content-card .body-text p { margin: 0 0 12px; }
+        .content-card .body-text .sec-body { padding: 18px 20px !important; font-size: 0.88rem !important; line-height: 1.9 !important; }
+        .content-card .body-text .sec-body p { margin: 0 0 14px !important; }
         .gen-btn { width: 100%; padding: 14px; border-radius: 14px; border: none; background: var(--brand-gradient); color: white; font-family: inherit; font-weight: 700; font-size: 0.85rem; cursor: pointer; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; gap: 8px; transition: var(--transition); }
         .gen-btn:active { transform: scale(0.98); }
         .gen-btn.secondary { background: var(--bg); color: var(--text-dark); border: 1.5px solid var(--border); }
@@ -244,20 +245,26 @@ function toggleSection(header) {
 }
 
 var SEC_CFG = {
-  'Key Points': { icon: 'fa-list-check', color: '#3b82f6', bg: '#eff6ff' },
-  'Note': { icon: 'fa-sticky-note', color: '#f59e0b', bg: '#fffbeb' },
-  'Example': { icon: 'fa-flask', color: '#8b5cf6', bg: '#f5f3ff' },
-  'Tip': { icon: 'fa-lightbulb', color: '#10b981', bg: '#ecfdf5' },
-  'Important': { icon: 'fa-triangle-exclamation', color: '#ef4444', bg: '#fef2f2' }
+  'Overview': { icon: 'fa-eye', color: '#3b82f6', bg: '#eff6ff' },
+  'Key Terms': { icon: 'fa-book', color: '#8b5cf6', bg: '#f5f3ff' },
+  'Full Explanation': { icon: 'fa-list-check', color: '#059669', bg: '#ecfdf5' },
+  'Formula': { icon: 'fa-square-root-variable', color: '#f59e0b', bg: '#fffbeb' },
+  'Worked Example': { icon: 'fa-flask', color: '#8b5cf6', bg: '#f5f3ff' },
+  'Common Mistakes': { icon: 'fa-triangle-exclamation', color: '#ef4444', bg: '#fef2f2' },
+  'Practice Problems': { icon: 'fa-pen-to-square', color: '#f59e0b', bg: '#fffbeb' },
+  'Quick Recap': { icon: 'fa-list', color: '#3b82f6', bg: '#eff6ff' }
 };
 
 (function applyDarkSecCfg() {
   if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    SEC_CFG['Key Points'].bg = '#1e3a5f'; SEC_CFG['Key Points'].color = '#60a5fa';
-    SEC_CFG['Note'].bg = '#422006'; SEC_CFG['Note'].color = '#fbbf24';
-    SEC_CFG['Example'].bg = '#2e1065'; SEC_CFG['Example'].color = '#a78bfa';
-    SEC_CFG['Tip'].bg = '#064e3b'; SEC_CFG['Tip'].color = '#34d399';
-    SEC_CFG['Important'].bg = '#450a0a'; SEC_CFG['Important'].color = '#f87171';
+    SEC_CFG['Overview'].bg = '#1e3a5f'; SEC_CFG['Overview'].color = '#60a5fa';
+    SEC_CFG['Key Terms'].bg = '#2e1065'; SEC_CFG['Key Terms'].color = '#a78bfa';
+    SEC_CFG['Full Explanation'].bg = '#064e3b'; SEC_CFG['Full Explanation'].color = '#34d399';
+    SEC_CFG['Formula'].bg = '#422006'; SEC_CFG['Formula'].color = '#fbbf24';
+    SEC_CFG['Worked Example'].bg = '#2e1065'; SEC_CFG['Worked Example'].color = '#a78bfa';
+    SEC_CFG['Common Mistakes'].bg = '#450a0a'; SEC_CFG['Common Mistakes'].color = '#f87171';
+    SEC_CFG['Practice Problems'].bg = '#422006'; SEC_CFG['Practice Problems'].color = '#fbbf24';
+    SEC_CFG['Quick Recap'].bg = '#1e3a5f'; SEC_CFG['Quick Recap'].color = '#60a5fa';
   }
 })();
 
@@ -284,7 +291,7 @@ function explainRender(t) {
   var lines = clean.split('\n');
   var curHead = ''; var curBody = [];
   lines.forEach(function(line) {
-    var m = line.trim().match(/^(Key Points|Note|Example|Tip|Important):$/i);
+    var m = line.trim().match(/^(Overview|Key Terms|Full Explanation|Formula|Worked Example|Common Mistakes|Practice Problems|Quick Recap):$/i);
     if (m) {
       if (curHead) sections.push({ head: curHead, body: curBody.join('\n').trim() });
       curHead = m[1]; curBody = [];
