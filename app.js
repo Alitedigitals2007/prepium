@@ -770,21 +770,19 @@ app.get('/verify-payment', rateLimit(5, 300000), async (req, res) => {
 
         // Basic sanity check on the response shape
         if (!paystackData || !paystackData.status || !paystackData.data) {
-            console.error('[Paystack] Unexpected response:', JSON.stringify(paystackData).slice(0, 500));
+            console.error(`[Paystack] Unexpected response for ${reference}:`, JSON.stringify(paystackData).slice(0, 800));
             return res.redirect('/dashboard?payment=failed&reason=invalid_response');
         }
 
-        // Accept both 'success' and any other finalised statuses (e.g. 'abandoned' is not success)
+        console.log(`[Paystack] Verify ${reference}: status=${paystackData.data.status}, amount=${paystackData.data.amount}, currency=${paystackData.data.currency}`);
         if (paystackData.data.status !== 'success') {
-            console.log(`[Paystack] Transaction ${reference} status: ${paystackData.data.status}`);
             return res.redirect('/dashboard?payment=failed&reason=transaction_not_successful');
         }
 
-        // Server-side amount validation
+        // Server-side amount validation (minimum N100 floor — prevents 1 kobo fraud)
         const paidAmount = paystackData.data.amount / 100;
-        const minExpected = Math.max(100, Math.round(PREMIUM_PRICE * 0.5));
-        if (paidAmount < minExpected) {
-            console.error(`[Paystack] Amount mismatch for ${reference}: paid ${paidAmount}, minimum expected ${minExpected}`);
+        if (paidAmount < 100) {
+            console.error(`[Paystack] Amount too low for ${reference}: paid N${paidAmount}`);
             return res.redirect('/dashboard?payment=failed&reason=invalid_amount');
         }
 
