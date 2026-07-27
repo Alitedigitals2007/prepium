@@ -3668,116 +3668,6 @@ app.get('/ai-quiz', isAuth, (req, res) => {
     });
 });
 
-// ─── PRACTICE QUIZ (Student) ────────────────────────────────────────────────
-app.get('/practice-quiz', isAuth, async (req, res) => {
-    try {
-        const uid = req.session.user.id;
-        const user = await pool.query('SELECT university_id FROM users WHERE id = $1', [uid]);
-        const cgpa = await pool.query('SELECT current_level FROM cgpa_profiles WHERE user_id = $1', [uid]);
-        const uniId = user.rows[0]?.university_id;
-        const lvl = cgpa.rows[0]?.current_level || null;
-        const courses = uniId ? await pool.query(
-            `SELECT c.id, c.course_code, c.course_title, s.status, s.id as session_id
-             FROM admin_quiz_courses c JOIN admin_quiz_sessions s ON c.session_id = s.id
-             WHERE c.status = 'approved' AND s.status = 'published' AND s.university_id = $1 AND s.level = $2
-             ORDER BY c.course_code`, [uniId, lvl]
-        ) : { rows: [] };
-        const freeUsed = await pool.query(
-            'SELECT COUNT(*) as cnt FROM student_quiz_attempts WHERE user_id = $1', [uid]
-        );
-        const freeLeft = Math.max(0, 2 - parseInt(freeUsed.rows[0]?.cnt || 0));
-        res.render('practice-quiz', {
-            user: req.session.user,
-            courses: courses.rows,
-            freeLeft,
-            isPaid: req.session.user.has_paid
-        });
-    } catch (e) { res.status(500).send(e.message); }
-});
-
-app.post('/api/quiz/start', isAuth, async (req, res) => {
-    try {
-        const uid = req.session.user.id;
-        const { courseId } = req.body;
-        const freeUsed = await pool.query('SELECT COUNT(*) as cnt FROM student_quiz_attempts WHERE user_id = $1', [uid]);
-        const freeLeft = Math.max(0, 2 - parseInt(freeUsed.rows[0]?.cnt || 0));
-        if (freeLeft <= 0 && !req.session.user.has_paid) return res.json({ error: 'Free limit reached. Upgrade to premium.' });
-        if (!courseId) return res.json({ error: 'Select a course.' });
-        const questions = await pool.query(
-            'SELECT id, question_text, options, question_type, diagram_url FROM admin_quiz_questions WHERE course_id = $1 ORDER BY RANDOM() LIMIT 20',
-            [courseId]
-        );
-        if (questions.rows.length === 0) return res.json({ error: 'No questions available for this course yet.' });
-        const attempt = await pool.query(
-            'INSERT INTO student_quiz_attempts (user_id, course_id, total, data) VALUES ($1, $2, $3, $4) RETURNING id',
-            [uid, courseId, questions.rows.length, JSON.stringify(questions.rows)]
-        );
-        res.json({ success: true, attemptId: attempt.rows[0].id, questions: questions.rows });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.post('/api/quiz/submit', isAuth, async (req, res) => {
-    try {
-        const { attemptId, answers } = req.body;
-        const attempt = await pool.query('SELECT * FROM student_quiz_attempts WHERE id = $1 AND user_id = $2', [attemptId, req.session.user.id]);
-        if (!attempt.rows[0]) return res.json({ error: 'Attempt not found.' });
-        if (attempt.rows[0].completed) return res.json({ error: 'Already submitted.' });
-        const questions = attempt.rows[0].data;
-        let score = 0;
-        const results = questions.map((q, i) => {
-            const userAns = answers[i] || '';
-            const correct = q.correct_answer;
-            const isCorrect = userAns.toString().toUpperCase() === correct.toString().toUpperCase();
-            if (isCorrect) score++;
-            return { question: q.question_text, userAnswer: userAns, correctAnswer: correct, isCorrect, explanation: q.explanation || '' };
-        });
-        await pool.query('UPDATE student_quiz_attempts SET score = $1, completed = true WHERE id = $2', [score, attemptId]);
-        res.json({ success: true, score, total: questions.length, results });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// ─── MY FILES (Student) ────────────────────────────────────────────────────
-app.get('/my-files', isAuth, async (req, res) => {
-    try {
-        const files = await pool.query('SELECT * FROM student_files WHERE user_id = $1 ORDER BY created_at DESC', [req.session.user.id]);
-        res.render('my-files', { user: req.session.user, files: files.rows });
-    } catch (e) { res.status(500).send(e.message); }
-});
-
-const uploadDir = path.join(__dirname, 'public', 'uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-const filesStorage = multer.diskStorage({
-    destination: (r, f, cb) => cb(null, uploadDir),
-    filename: (r, f, cb) => cb(null, Date.now() + '-' + f.originalname)
-});
-const filesUpload = multer({ storage: filesStorage, limits: { fileSize: 50 * 1024 * 1024 }, fileFilter: (r, f, cb) => {
-    const ok = ['.pdf', '.pptx', '.ppt', '.docx', '.doc'].includes(path.extname(f.originalname).toLowerCase());
-    cb(null, ok);
-}});
-
-app.post('/api/files/upload', isAuth, filesUpload.single('file'), async (req, res) => {
-    try {
-        if (!req.file) return res.json({ error: 'Invalid file. Only PDF, PPTX, DOCX allowed.' });
-        const displayName = req.body.name || req.file.originalname;
-        const result = await pool.query(
-            'INSERT INTO student_files (user_id, file_name, display_name, file_path, mime_type, file_size) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
-            [req.session.user.id, req.file.originalname, displayName, '/uploads/' + req.file.filename, req.file.mimetype, req.file.size]
-        );
-        res.json({ success: true, id: result.rows[0].id, url: '/uploads/' + req.file.filename });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.post('/api/files/delete', isAuth, async (req, res) => {
-    try {
-        const file = await pool.query('SELECT * FROM student_files WHERE id = $1 AND user_id = $2', [req.body.id, req.session.user.id]);
-        if (!file.rows[0]) return res.json({ error: 'Not found.' });
-        const fp = path.join(__dirname, 'public', file.rows[0].file_path);
-        if (fs.existsSync(fp)) fs.unlinkSync(fp);
-        await pool.query('DELETE FROM student_files WHERE id = $1', [req.body.id]);
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
 // ─── ADMIN QUIZ GENERATOR ─────────────────────────────────────────────────
 const isAdminQuiz = (r, res, n) => {
     if (r.session.user && r.session.user.is_admin) return n();
@@ -4102,7 +3992,7 @@ app.post('/api/daily-task/generate-tasks', isAuth, async (req, res) => {
 
         // If nothing generated, create default tasks
         if (count === 0) {
-            const defaults = ['Review lecture notes', 'Complete practice quiz', 'Read a chapter'];
+            const defaults = ['Review lecture notes', 'Read a chapter'];
             for (const label of defaults) {
                 await pool.query(
                     `INSERT INTO daily_task_items (user_id, task_date, task_type, task_label)
@@ -4816,6 +4706,28 @@ async function checkDeadlineNotifications() {
 setInterval(checkDeadlineNotifications, 5 * 60 * 1000);
 // Also run once on startup (after a short delay to let the server fully start)
 setTimeout(checkDeadlineNotifications, 10000);
+
+// ─── MONTHLY LEADERBOARD RESET ──────────────────────────────────────────────
+async function resetMonthlyLeaderboard() {
+    try {
+        const now = new Date();
+        const currentMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+        const r = await pool.query("SELECT value FROM app_config WHERE key = 'last_leaderboard_month'");
+        const lastMonth = r.rows[0]?.value;
+        if (lastMonth === currentMonth) return;
+        await pool.query('DELETE FROM daily_leaderboard');
+        await pool.query(
+            "INSERT INTO app_config (key, value) VALUES ('last_leaderboard_month', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
+            [currentMonth]
+        );
+        console.log('[Leaderboard] Reset for month', currentMonth);
+    } catch (e) {
+        console.error('[Leaderboard] Reset error:', e.message);
+    }
+}
+// Check every 30 minutes
+setInterval(resetMonthlyLeaderboard, 30 * 60 * 1000);
+setTimeout(resetMonthlyLeaderboard, 5000);
 
 // ======================== STUDY HUB ROUTES ========================
 
@@ -6071,16 +5983,9 @@ const config = {
       completed BOOLEAN DEFAULT false,
       created_at TIMESTAMP DEFAULT NOW()
     )`);
-    await pool.query(`CREATE TABLE IF NOT EXISTS student_files (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER NOT NULL,
-      file_name VARCHAR(500) NOT NULL,
-      display_name VARCHAR(500) NOT NULL,
-      file_path TEXT DEFAULT '',
-      google_drive_id TEXT DEFAULT '',
-      mime_type VARCHAR(100) DEFAULT '',
-      file_size INTEGER DEFAULT 0,
-      created_at TIMESTAMP DEFAULT NOW()
+    await pool.query(`CREATE TABLE IF NOT EXISTS app_config (
+      key VARCHAR(100) PRIMARY KEY,
+      value TEXT NOT NULL
     )`);
     // Drop old subject_groups and preset questions
     await pool.query('DROP TABLE IF EXISTS subject_groups CASCADE').catch(()=>{});
