@@ -186,11 +186,7 @@ new Vue({
         },
         viewFile(f) { this.viewerFile = f; },
         openFile(f) {
-            if (f.mime_type === 'application/pdf') {
-                window.open(f.file_path, '_blank');
-            } else {
-                this.viewerFile = f;
-            }
+            window.open(f.file_path, '_blank');
         },
         async deleteFile(f) {
             const c = await Swal.fire({ title: 'Delete?', text: f.display_name, icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete' });

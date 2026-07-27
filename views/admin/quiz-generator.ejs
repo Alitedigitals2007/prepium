@@ -173,7 +173,7 @@
                 </table>
                 <div class="row" style="margin-top:12px;">
                     <button class="btn btn-green" @click="approveAll">Approve All</button>
-                    <button class="btn btn-primary" @click="testQuestionsPopup" :disabled="approvedCount === 0 || QuestionCount <= 0">Generate Questions</button>
+                    <button class="btn btn-primary" @click="testQuestions" :disabled="approvedCount === 0">Generate Questions</button>
                 </div>
             </div>
 
@@ -183,14 +183,27 @@
                 <div class="row" style="align-items:flex-end;">
                     <div class="form-group" style="max-width:200px;">
                         <label>Questions per course</label>
-                        <input type="number" v-model="questionCount" min="5" max="50" style="width:100px;">
+                        <input type="number" v-model.number="questionCount" min="5" max="50" style="width:100px;">
+                    </div>
+                    <div style="display:flex;align-items:flex-end;">
+                        <button class="btn btn-primary" @click="generateQuestions" :disabled="generating">
+                            <i class="fas fa-wand-magic"></i> {{ generating ? 'Generating...' : 'Generate Questions' }}
+                        </button>
                     </div>
                 </div>
             </div>
 
             <!-- Step 4: Publish -->
+            <div class="card" v-if="isQuestionsReady">
+                <h2><i class="fas fa-rocket"></i> Step 4: Publish Quiz</h2>
+                <p style="font-size:0.75rem;color:var(--sub);">Questions are ready. Students can access once published.</p>
+                <button class="btn btn-green" @click="publishSession" :disabled="publishing">
+                    <i class="fas fa-upload"></i> {{ publishing ? 'Publishing...' : 'Publish Quiz' }}
+                </button>
+            </div>
+
             <div class="card" v-if="isPublished">
-                <h2><i class="fas fa-rocket"></i> Published & Live</h2>
+                <h2><i class="fas fa-check-circle" style="color:#10b981;"></i> Published & Live</h2>
                 <p style="font-size:0.75rem;color:var(--sub);">Students at {{ activeSessionData.uni_name }}, {{ activeSessionData.level }} can now access this quiz.</p>
             </div>
         </div>
@@ -212,7 +225,9 @@ new Vue({
         loadingCourses: false,
         generatedCourses: false,
         questionCount: 10,
-        generateQuestionsClicked: false
+        generateQuestionsClicked: false,
+        generating: false,
+        publishing: false
     },
     computed: {
         activeS() {
@@ -226,6 +241,9 @@ new Vue({
         },
         approvedCount() {
             return this.activeSessionData.courses.filter(c => c.status === 'approved').length;
+        },
+        isQuestionsReady() {
+            return this.activeStatus === 'questions_ready';
         },
         isPublished() {
             return this.activeStatus === 'published';
@@ -302,9 +320,38 @@ new Vue({
             });
             course.status = status;
         },
+        async approveAll() {
+            const pending = this.activeSessionData.courses.filter(c => c.status !== 'approved');
+            for (const c of pending) {
+                await this.updateCourse(c, 'approved');
+            }
+            Swal.fire({ icon: 'success', title: 'All approved', timer: 1000, showConfirmButton: false });
+        },
+        async saveCourseEdits(c) {
+            await fetch('/api/admin/quiz/update-course', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: c.id, course_code: c.course_code, course_title: c.course_title })
+            });
+            Swal.fire({ icon: 'success', title: 'Saved', timer: 1000, showConfirmButton: false });
+        },
         testQuestions() {
             this.showQCountSelect = true;
             this.generateQuestionsClicked = true;
+        },
+        async publishSession() {
+            this.publishing = true;
+            const r = await fetch('/api/admin/quiz/publish', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId: this.activeSession })
+            });
+            const d = await r.json();
+            this.publishing = false;
+            if (d.error) return Swal.fire({ icon: 'error', text: d.error });
+            const s = this.sessions.find(s => s.id === this.activeSession);
+            if (s) s.status = 'published';
+            Swal.fire({ icon: 'success', title: 'Published!', text: 'Quiz is now live for students.' });
         },
         async generateQuestions() {
             if (this.approvedCount === 0) return Swal.fire({ icon: 'warn', text: 'Approve at least one course first.' });
