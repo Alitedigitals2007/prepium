@@ -699,13 +699,13 @@ app.post('/api/coupon/validate', isAuth, async (req, res) => {
     let discountLabel = '';
     let finalAmount = PREMIUM_PRICE;
     if (coupon.discount_type === 'percent') {
-      const amt = Math.round(PREMIUM_PRICE * (100 - coupon.discount_value) / 100);
-      finalAmount = Math.max(100, amt);
+      finalAmount = Math.round(PREMIUM_PRICE * (100 - coupon.discount_value) / 100);
       discountLabel = coupon.discount_value + '% off';
     } else {
-      finalAmount = Math.max(100, PREMIUM_PRICE - coupon.discount_value);
+      finalAmount = PREMIUM_PRICE - coupon.discount_value;
       discountLabel = '₦' + coupon.discount_value + ' off';
     }
+    finalAmount = Math.max(50, finalAmount);
     res.json({ valid: true, code: coupon.code, discount_type: coupon.discount_type, discount_value: coupon.discount_value, original_amount: PREMIUM_PRICE, final_amount: finalAmount, discountLabel });
   } catch (e) { res.json({ valid: false, message: 'Server error' }); }
 });
@@ -779,9 +779,9 @@ app.get('/verify-payment', rateLimit(5, 300000), async (req, res) => {
             return res.redirect('/dashboard?payment=failed&reason=transaction_not_successful');
         }
 
-        // Server-side amount validation (minimum N100 floor — prevents 1 kobo fraud)
+        // Server-side amount validation (minimum N50 floor — prevents kobo fraud)
         const paidAmount = paystackData.data.amount / 100;
-        if (paidAmount < 100) {
+        if (paidAmount < 50) {
             console.error(`[Paystack] Amount too low for ${reference}: paid N${paidAmount}`);
             return res.redirect('/dashboard?payment=failed&reason=invalid_amount');
         }
