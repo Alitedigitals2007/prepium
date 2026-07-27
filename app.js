@@ -12,6 +12,9 @@ const path = require('path');
 const crypto = require('crypto');
 const { Pool } = require('pg');
 
+// Premium price (configurable via env)
+const PREMIUM_PRICE = parseInt(process.env.PREMIUM_PRICE) || 2000;
+
 const pdfToText = require('pdf-to-text');
 
 const upload = multer({ 
@@ -372,6 +375,72 @@ const transporter = (process.env.EMAIL_USER && process.env.EMAIL_PASS)
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+
+// Paystack webhook needs raw body BEFORE express.json() consumes it
+app.post('/paystack-webhook', express.raw({ type: '*/*' }), async (req, res) => {
+    try {
+        const secret = process.env.PAYSTACK_SECRET_KEY;
+        if (!secret) return res.status(500).send('Server config missing');
+
+        const hash = crypto.createHmac('sha512', secret).update(req.body).digest('hex');
+        if (hash !== req.headers['x-paystack-signature']) {
+            return res.status(401).send('Invalid signature');
+        }
+
+        const event = JSON.parse(req.body.toString());
+        if (event.event === 'charge.success') {
+            const data = event.data;
+            const ref = data.reference;
+            const userId = data.metadata?.user_id;
+            const couponCode = data.metadata?.coupon_code || null;
+
+            if (!userId) {
+                console.log('[Paystack Webhook] No user_id in metadata for', ref);
+                return res.sendStatus(200);
+            }
+
+            const userCheck = await pool.query('SELECT has_paid, used_coupon FROM users WHERE id = $1', [userId]);
+            if (userCheck.rows[0]?.has_paid) return res.sendStatus(200);
+
+            const finalCoupon = (!userCheck.rows[0]?.used_coupon && couponCode) ? couponCode : null;
+            await pool.query(
+                'UPDATE users SET has_paid = true, used_coupon = COALESCE($1, used_coupon) WHERE id = $2',
+                [finalCoupon, userId]
+            );
+
+            const amount = data.amount || 0;
+            try {
+                await pool.query(
+                    `INSERT INTO payments (user_id, reference, amount, currency, status, coupon_code, channel, metadata, verified_at)
+                     VALUES ($1,$2,$3,$4,'success',$5,$6,$7,NOW())
+                     ON CONFLICT (reference) DO UPDATE SET status='success', verified_at=NOW()`,
+                    [userId, ref, amount, data.currency || 'NGN', finalCoupon || '', data.channel || '', JSON.stringify(data)]
+                );
+            } catch (_) {}
+
+            if (finalCoupon) {
+                try { await pool.query('UPDATE coupons SET times_used = times_used + 1 WHERE LOWER(code) = LOWER($1)', [finalCoupon]); } catch (_) {}
+            }
+
+            const uniqueCode = await pool.query('SELECT unique_code FROM users WHERE id = $1', [userId]);
+            if (uniqueCode.rows[0]?.unique_code) {
+                const codeClean = uniqueCode.rows[0].unique_code.trim().toLowerCase();
+                const amb = await pool.query('SELECT id, name FROM ambassadors WHERE LOWER(TRIM(unique_code)) = $1', [codeClean]);
+                if (amb.rows[0]) {
+                    const commission = Math.round(PREMIUM_PRICE * 0.15);
+                    await pool.query('UPDATE ambassadors SET total_earned = CAST(COALESCE(total_earned,0) AS INTEGER) + $1, total_referrals = CAST(COALESCE(total_referrals,0) AS INTEGER) + 1 WHERE id = $2', [commission, amb.rows[0].id]);
+                }
+            }
+
+            console.log(`[Paystack Webhook] User ${userId} activated via webhook (ref: ${ref})`);
+        }
+        res.sendStatus(200);
+    } catch (e) {
+        console.error('[Paystack Webhook] Error:', e.message);
+        res.sendStatus(200);
+    }
+});
+
 app.use(express.json({ limit: '200mb' }));
 app.use(express.urlencoded({ extended: true, limit: '200mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -410,8 +479,18 @@ const hasPaid = (req, res, next) => {
     res.redirect('/dashboard');
 };
 
-const requirePaid = (req, res, next) => {
-    if (req.session.user && req.session.user.has_paid === true) return next();
+const requirePaid = async (req, res, next) => {
+    if (!req.session.user) {
+        return res.redirect('/login');
+    }
+    if (req.session.user.has_paid === true) return next();
+    try {
+        const dbUser = await pool.query('SELECT has_paid FROM users WHERE id = $1', [req.session.user.id]);
+        if (dbUser.rows[0]?.has_paid) {
+            req.session.user.has_paid = true;
+            return next();
+        }
+    } catch (_) {}
     if (req.xhr || (req.headers.accept && req.headers.accept.includes('json')) || req.path.startsWith('/api/')) {
         return res.status(402).json({ success: false, message: 'Premium required', premium_required: true });
     }
@@ -614,16 +693,16 @@ app.post('/api/coupon/validate', isAuth, async (req, res) => {
     if (!c.rows[0]) return res.json({ valid: false, message: 'Invalid or expired coupon code' });
     const coupon = c.rows[0];
     let discountLabel = '';
-    let finalAmount = 2000;
+    let finalAmount = PREMIUM_PRICE;
     if (coupon.discount_type === 'percent') {
-      const amt = Math.round(2000 * (100 - coupon.discount_value) / 100);
+      const amt = Math.round(PREMIUM_PRICE * (100 - coupon.discount_value) / 100);
       finalAmount = Math.max(100, amt);
       discountLabel = coupon.discount_value + '% off';
     } else {
-      finalAmount = Math.max(100, 2000 - coupon.discount_value);
+      finalAmount = Math.max(100, PREMIUM_PRICE - coupon.discount_value);
       discountLabel = '₦' + coupon.discount_value + ' off';
     }
-    res.json({ valid: true, code: coupon.code, discount_type: coupon.discount_type, discount_value: coupon.discount_value, original_amount: 2000, final_amount: finalAmount, discountLabel });
+    res.json({ valid: true, code: coupon.code, discount_type: coupon.discount_type, discount_value: coupon.discount_value, original_amount: PREMIUM_PRICE, final_amount: finalAmount, discountLabel });
   } catch (e) { res.json({ valid: false, message: 'Server error' }); }
 });
 
@@ -697,6 +776,14 @@ app.get('/verify-payment', rateLimit(5, 300000), async (req, res) => {
             return res.redirect('/dashboard?payment=failed&reason=transaction_not_successful');
         }
 
+        // Server-side amount validation
+        const paidAmount = paystackData.data.amount / 100;
+        const minExpected = Math.max(100, Math.round(PREMIUM_PRICE * 0.5));
+        if (paidAmount < minExpected) {
+            console.error(`[Paystack] Amount mismatch for ${reference}: paid ${paidAmount}, minimum expected ${minExpected}`);
+            return res.redirect('/dashboard?payment=failed&reason=invalid_amount');
+        }
+
         // 1. Fetch user data
         const userQuery = await pool.query(
             'SELECT unique_code, has_paid FROM users WHERE id = $1', 
@@ -726,7 +813,18 @@ app.get('/verify-payment', rateLimit(5, 300000), async (req, res) => {
         );
         console.log(`[Paystack] Success: User ID ${userId} marked as paid (has_paid=${updateRes.rows[0]?.has_paid})${finalCoupon ? ' (coupon: ' + finalCoupon + ')' : ''}.`);
 
-        // 3b. Increment coupon usage if a coupon was used (only on first-time coupon use)
+        // 3b. Log payment to payments table
+        try {
+            await pool.query(
+                `INSERT INTO payments (user_id, reference, amount, currency, status, coupon_code, channel, metadata, verified_at)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
+                 ON CONFLICT (reference) DO UPDATE SET status = 'success', verified_at = NOW()`,
+                [userId, reference, paidAmount * 100, paystackData.data.currency || 'NGN', 'success',
+                 finalCoupon || '', paystackData.data.channel || '', JSON.stringify(paystackData.data)]
+            );
+        } catch (_) {}
+
+        // 3c. Increment coupon usage if a coupon was used (only on first-time coupon use)
         if (finalCoupon) {
           try { await pool.query('UPDATE coupons SET times_used = times_used + 1 WHERE LOWER(code) = LOWER($1)', [finalCoupon]); } catch (_) {}
         }
@@ -748,7 +846,7 @@ app.get('/verify-payment', rateLimit(5, 300000), async (req, res) => {
 
             if (ambCheck.rows.length > 0) {
                 const ambassador = ambCheck.rows[0];
-                const commission = Math.round(2000 * 0.15);
+                const commission = Math.round(PREMIUM_PRICE * 0.15);
                 console.log(`[Referral Match] Adding ₦${commission} (15%) to Ambassador: ${ambassador.name}`);
 
                 await pool.query(
@@ -1097,6 +1195,7 @@ app.get('/dashboard', isStudent, async (req, res) => {
             aiQuizCount,
             recentQuiz: recentQuizRes.rows[0] || null,
             paystack_key: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_your_key',
+            premiumPrice: PREMIUM_PRICE,
             currentTime: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })
         });
     } catch (err) {
@@ -1296,6 +1395,7 @@ app.get('/setup-test', isStudent, async (req, res) => {
                 user: { ...req.session.user, ...userStatus },
                 message: "You've used up your 2 free quiz attempts. Upgrade to Prepium Pro for unlimited practice tests!",
                 paystack_key: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_your_key',
+                premiumPrice: PREMIUM_PRICE,
                 userEmail: req.session.user.email
             });
         }
@@ -1342,6 +1442,7 @@ app.post('/start-quiz', isStudent, async (req, res) => {
                 user: { ...req.session.user, ...userStatus },
                 message: "You've used up your 2 free quiz attempts. Upgrade to Prepium Pro for unlimited practice tests!",
                 paystack_key: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_your_key',
+                premiumPrice: PREMIUM_PRICE,
                 userEmail: req.session.user.email
             });
         }
@@ -5891,6 +5992,26 @@ const config = {
     try { await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS current_level INTEGER DEFAULT 0"); } catch (_) {}
     console.log('[Coupons] Table ready');
   } catch(e) { console.error('[Coupons] Init:', e.message); }
+})();
+
+// Payments log table
+(async function initPayments() {
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS payments (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      reference VARCHAR(100) UNIQUE NOT NULL,
+      amount INTEGER NOT NULL,
+      currency VARCHAR(10) DEFAULT 'NGN',
+      status VARCHAR(30) NOT NULL DEFAULT 'pending',
+      coupon_code VARCHAR(50) DEFAULT '',
+      channel VARCHAR(50) DEFAULT '',
+      metadata JSONB DEFAULT '{}',
+      verified_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    console.log('[Payments] Table ready');
+  } catch(e) { console.error('[Payments] Init:', e.message); }
 })();
 
 (async function initAdminQuiz() {

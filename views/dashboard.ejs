@@ -334,7 +334,7 @@
 function payWithPaystack(e, presets) {
     if (e) { e.preventDefault(); }
     if (typeof PaystackPop === 'undefined') { alert('Payment system loading. Please try again.'); return; }
-    var pAmount = (presets && presets.amount) || 2000;
+    var pAmount = (presets && presets.amount) || <%= premiumPrice %>;
     var pCoupon = (presets && presets.coupon) || '';
     Swal.fire({
         title: 'Have a coupon code?',

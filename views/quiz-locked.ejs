@@ -102,7 +102,7 @@
                 confirmButtonText: 'Continue',
                 cancelButtonText: 'No coupon',
                 preConfirm: function(val) {
-                    if (!val || !val.trim()) return { code: null, amount: 2000 };
+                    if (!val || !val.trim()) return { code: null, amount: <%= premiumPrice %> };
                     return fetch('/api/coupon/validate', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ code: val.trim() })
@@ -121,7 +121,7 @@
                 var handler = PaystackPop.setup({
                     key: '<%= paystack_key %>',
                     email: '<%= userEmail %>',
-                    amount: (info.amount || 2000) * 100,
+                    amount: (info.amount || <%= premiumPrice %>) * 100,
                     currency: 'NGN',
                     callback: function(response) {
                         var dest = '/verify-payment?reference=' + response.reference;
