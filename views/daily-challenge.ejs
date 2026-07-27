@@ -226,12 +226,12 @@
             <div class="card" style="background:linear-gradient(135deg,#0f172a,#1e293b);color:white;padding:20px;border-radius:20px;margin-bottom:1rem;">
                 <div style="display:flex;justify-content:space-between;align-items:center;">
                     <div>
-                        <small style="opacity:0.6;font-weight:700;text-transform:uppercase;font-size:0.6rem;letter-spacing:1px;">Season Leaderboard</small>
+                        <small style="opacity:0.6;font-weight:700;text-transform:uppercase;font-size:0.6rem;letter-spacing:1px;">Weekly Leaderboard</small>
                         <div style="font-size:1.2rem;font-weight:800;margin-top:2px;">Top Battlers</div>
                     </div>
                     <div style="text-align:right;">
                         <small style="opacity:0.6;font-weight:700;text-transform:uppercase;font-size:0.6rem;letter-spacing:1px;">Resets In</small>
-                        <div id="monthly-timer" style="font-size:0.95rem;font-weight:800;margin-top:2px;">--d --h</div>
+                        <div id="weekly-timer" style="font-size:0.95rem;font-weight:800;margin-top:2px;">--d --h</div>
                     </div>
                 </div>
             </div>
@@ -469,12 +469,14 @@ function updateCountdowns() {
     const resEl = document.getElementById('reset-timer');
     if (resEl) resEl.textContent = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 
-    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    const mDiff = nextMonth - now;
-    const mD = Math.floor(mDiff / (1000 * 60 * 60 * 24));
-    const mM = Math.floor((mDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const monEl = document.getElementById('monthly-timer');
-    if (monEl) monEl.textContent = `${mD}d ${mM}h`;
+    const nextMonday = new Date(now);
+    nextMonday.setDate(nextMonday.getDate() + ((8 - nextMonday.getDay()) % 7 || 7));
+    nextMonday.setHours(0, 0, 0, 0);
+    const wDiff = nextMonday - now;
+    const wD = Math.floor(wDiff / (1000 * 60 * 60 * 24));
+    const wH = Math.floor((wDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const weekEl = document.getElementById('weekly-timer');
+    if (weekEl) weekEl.textContent = `${wD}d ${wH}h`;
 }
 setInterval(updateCountdowns, 1000);
 updateCountdowns();

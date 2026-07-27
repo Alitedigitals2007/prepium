@@ -4653,27 +4653,33 @@ setInterval(checkDeadlineNotifications, 5 * 60 * 1000);
 // Also run once on startup (after a short delay to let the server fully start)
 setTimeout(checkDeadlineNotifications, 10000);
 
-// ─── MONTHLY LEADERBOARD RESET ──────────────────────────────────────────────
-async function resetMonthlyLeaderboard() {
+// ─── WEEKLY LEADERBOARD RESET ───────────────────────────────────────────────
+function getWeekKey(d) {
+    const tmp = new Date(d);
+    tmp.setHours(0,0,0,0);
+    tmp.setDate(tmp.getDate() - tmp.getDay());
+    return tmp.getFullYear() + '-W' + String(Math.ceil((tmp.getDate() + 1) / 7)).padStart(2, '0');
+}
+async function resetWeeklyLeaderboard() {
     try {
         const now = new Date();
-        const currentMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
-        const r = await pool.query("SELECT value FROM app_config WHERE key = 'last_leaderboard_month'");
-        const lastMonth = r.rows[0]?.value;
-        if (lastMonth === currentMonth) return;
+        const currentWeek = getWeekKey(now);
+        const r = await pool.query("SELECT value FROM app_config WHERE key = 'last_leaderboard_week'");
+        const lastWeek = r.rows[0]?.value;
+        if (lastWeek === currentWeek) return;
         await pool.query('DELETE FROM daily_leaderboard');
         await pool.query(
-            "INSERT INTO app_config (key, value) VALUES ('last_leaderboard_month', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
-            [currentMonth]
+            "INSERT INTO app_config (key, value) VALUES ('last_leaderboard_week', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
+            [currentWeek]
         );
-        console.log('[Leaderboard] Reset for month', currentMonth);
+        console.log('[Leaderboard] Reset for week', currentWeek);
     } catch (e) {
         console.error('[Leaderboard] Reset error:', e.message);
     }
 }
 // Check every 30 minutes
-setInterval(resetMonthlyLeaderboard, 30 * 60 * 1000);
-setTimeout(resetMonthlyLeaderboard, 5000);
+setInterval(resetWeeklyLeaderboard, 30 * 60 * 1000);
+setTimeout(resetWeeklyLeaderboard, 5000);
 
 // ======================== STUDY HUB ROUTES ========================
 
