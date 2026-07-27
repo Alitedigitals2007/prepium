@@ -479,22 +479,26 @@ const hasPaid = (req, res, next) => {
     res.redirect('/dashboard');
 };
 
-const requirePaid = async (req, res, next) => {
+const requirePaid = (req, res, next) => {
     if (!req.session.user) {
         return res.redirect('/login');
     }
     if (req.session.user.has_paid === true) return next();
-    try {
-        const dbUser = await pool.query('SELECT has_paid FROM users WHERE id = $1', [req.session.user.id]);
+    pool.query('SELECT has_paid FROM users WHERE id = $1', [req.session.user.id]).then(function(dbUser) {
         if (dbUser.rows[0]?.has_paid) {
             req.session.user.has_paid = true;
             return next();
         }
-    } catch (_) {}
-    if (req.xhr || (req.headers.accept && req.headers.accept.includes('json')) || req.path.startsWith('/api/')) {
-        return res.status(402).json({ success: false, message: 'Premium required', premium_required: true });
-    }
-    return res.redirect('/dashboard?msg=Premium+feature.+Tap+%22Unlock+Premium%22+to+continue');
+        if (req.xhr || (req.headers.accept && req.headers.accept.includes('json')) || req.path.startsWith('/api/')) {
+            return res.status(402).json({ success: false, message: 'Premium required', premium_required: true });
+        }
+        return res.redirect('/dashboard?msg=Premium+feature.+Tap+%22Unlock+Premium%22+to+continue');
+    }).catch(function() {
+        if (req.xhr || (req.headers.accept && req.headers.accept.includes('json')) || req.path.startsWith('/api/')) {
+            return res.status(402).json({ success: false, message: 'Premium required', premium_required: true });
+        }
+        return res.redirect('/dashboard?msg=Premium+feature.+Tap+%22Unlock+Premium%22+to+continue');
+    });
 };
 
 const isAdmin = (req, res, next) => {

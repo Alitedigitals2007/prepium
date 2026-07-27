@@ -6,8 +6,8 @@
     <title>Prepium | Become an Ambassador</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/css/style.css"
-    <link rel="manifest" href="/manifest.json">>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="manifest" href="/manifest.json">
     <style>
         :root { 
             --brand-light: #e6efff;
@@ -175,7 +175,7 @@
                 </div>
             </div>
 
-            <button class="btn-action" onclick="goToStep(2)">Proceed to Form ➔</button>
+            <button class="btn-action" onclick="goToStep(2)">Proceed to Form âž”</button>
             <div class="login-toggle-link" onclick="goToStep('login')">Already registered? <span>Sign in</span></div>
         </div>
 
@@ -194,9 +194,9 @@
                     <textarea id="bank_details" placeholder="OPay | 9154681851 | Atilola Israel" required></textarea>
                 </div>
 
-                <button type="submit" class="btn-action" id="submitBtn">Generate Unique ID ➔</button>
+                <button type="submit" class="btn-action" id="submitBtn">Generate Unique ID âž”</button>
             </form>
-            <div class="login-toggle-link" onclick="goToStep(1)" style="margin-top: 1.25rem;">❮ Go Back</div>
+            <div class="login-toggle-link" onclick="goToStep(1)" style="margin-top: 1.25rem;">â® Go Back</div>
         </div>
 
         <div class="step-panel" id="stepLogin">
@@ -212,9 +212,9 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn-action" id="loginBtn">Log in to Portal ➔</button>
+                <button type="submit" class="btn-action" id="loginBtn">Log in to Portal âž”</button>
             </form>
-            <div class="login-toggle-link" onclick="goToStep(1)" style="margin-top: 1.25rem;">❮ Back to Registration</div>
+            <div class="login-toggle-link" onclick="goToStep(1)" style="margin-top: 1.25rem;">â® Back to Registration</div>
         </div>
 
         <div class="step-panel success-box" id="step3">
@@ -315,9 +315,9 @@
                     generateCertificate(data.name, data.referral_code);
 
                     const waText = encodeURIComponent(
-                        `Hi! 👋 I have officially registered as a Prepium Ambassador!\n\n` +
+                        `Hi! ðŸ‘‹ I have officially registered as a Prepium Ambassador!\n\n` +
                         `Use my referral code to prepare for your exams: *${data.referral_code}*\n\n` +
-                        `Register on Prepium and let's ace our exams together! 🚀`
+                        `Register on Prepium and let's ace our exams together! ðŸš€`
                     );
                     document.getElementById('waShareBtn').href = `https://wa.me/?text=${waText}`;
 
@@ -325,14 +325,14 @@
                 } else {
                     alert(data.error || "An error occurred. Please try again.");
                     submitBtn.disabled = false;
-                    submitBtn.textContent = "Generate Unique ID ➔";
+                    submitBtn.textContent = "Generate Unique ID âž”";
                 }
             })
             .catch(err => {
                 console.error(err);
                 alert("Please check your connection and try again.");
                 submitBtn.disabled = false;
-                submitBtn.textContent = "Generate Unique ID ➔";
+                submitBtn.textContent = "Generate Unique ID âž”";
             });
         });
 
@@ -365,14 +365,14 @@
                 } else {
                     alert(data.error || "Login failed. Please check your code.");
                     loginBtn.disabled = false;
-                    loginBtn.textContent = "Log in to Portal ➔";
+                    loginBtn.textContent = "Log in to Portal âž”";
                 }
             })
             .catch(err => {
                 console.error(err);
                 alert("Please check your internet connection.");
                 loginBtn.disabled = false;
-                loginBtn.textContent = "Log in to Portal ➔";
+                loginBtn.textContent = "Log in to Portal âž”";
             });
         });
 

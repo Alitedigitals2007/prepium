@@ -7,8 +7,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/css/style.css"
-    <link rel="manifest" href="/manifest.json">>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="manifest" href="/manifest.json">
     <style>
         :root { 
             --sub: #64748b; 
@@ -218,11 +218,11 @@
         </header>
 
         <div class="action-row">
-            <button class="btn-action btn-add" onclick="openModal()"><i>➕</i> Add Course</button>
+            <button class="btn-action btn-add" onclick="openModal()"><i>âž•</i> Add Course</button>
             <button class="btn-action btn-extract" onclick="openExtractModal()">
                 <i class="fas fa-magic"></i> AI Extract
             </button>
-            <button class="btn-action btn-print" onclick="printTimetable()"><i>📥</i> Download PDF</button>
+            <button class="btn-action btn-print" onclick="printTimetable()"><i>ðŸ“¥</i> Download PDF</button>
         </div>
 
         <div id="todayBox" class="today-box">
@@ -252,10 +252,10 @@
                             <div class="slot-info">
                                 <b><%= slot.course %></b>
                                 <p>
-                                    <% if (slot.course_code) { %><%= slot.course_code %> · <% } %>
+                                    <% if (slot.course_code) { %><%= slot.course_code %> Â· <% } %>
                                     <%= slot.unit %> Credits
-                                    · 📍 <%= slot.venue %>
-                                    · <%= slot.start_time %>-<%= slot.end_time %>
+                                    Â· ðŸ“ <%= slot.venue %>
+                                    Â· <%= slot.start_time %>-<%= slot.end_time %>
                                 </p>
                             </div>
                             <form action="/timetable/delete/<%= slot.id %>" method="POST" style="margin:0;" onsubmit="return confirm('Delete this slot?')">
@@ -458,7 +458,7 @@
             document.getElementById('extract-modal').classList.remove('open');
         }
 
-        // ─── Wizard Step 1: Course Management ───
+        // â”€â”€â”€ Wizard Step 1: Course Management â”€â”€â”€
         function addWizardCourse() {
             const name = document.getElementById('wizCourseName').value.trim();
             const code = document.getElementById('wizCourseCode').value.trim();
@@ -488,7 +488,7 @@
                     <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:#f8fafc; border-radius:12px; margin-bottom:6px; border:1px solid #f1f5f9;">
                         <div>
                             <strong style="font-size:0.85rem;">${c.course_name}</strong>
-                            <span style="font-size:0.72rem; color:#64748b; margin-left:6px;">${c.course_code} · ${c.unit} Credits</span>
+                            <span style="font-size:0.72rem; color:#64748b; margin-left:6px;">${c.course_code} Â· ${c.unit} Credits</span>
                         </div>
                         <button onclick="removeWizardCourse(${i})" style="background:none; border:none; color:#ef4444; cursor:pointer; padding:4px 8px;"><i class="fas fa-times"></i></button>
                     </div>
@@ -497,7 +497,7 @@
             }
         }
 
-        // ─── Wizard Step Navigation ───
+        // â”€â”€â”€ Wizard Step Navigation â”€â”€â”€
         function wizardNextStep() {
             if (wizardCourses.length === 0) { alert('Add at least one course first.'); return; }
             // Save courses to backend for persistence
@@ -667,7 +667,7 @@
             return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         }
 
-        /* ── Today Box + Now Indicator ────────── */
+        /* â”€â”€ Today Box + Now Indicator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
         function initTodayBox() {
             var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
             var now = new Date();
@@ -680,7 +680,7 @@
             var dayGroup = document.querySelector('.day-group');
             if (!dayGroup) {
                 document.getElementById('todayStatus').innerHTML = 'No classes scheduled today';
-                document.getElementById('todaySlotContainer').innerHTML = '<div class="today-empty"><i class="fas fa-calendar-check"></i> Rest day — no classes today</div>';
+                document.getElementById('todaySlotContainer').innerHTML = '<div class="today-empty"><i class="fas fa-calendar-check"></i> Rest day â€” no classes today</div>';
                 return;
             }
 
@@ -698,7 +698,7 @@
 
             if (!todayGroup) {
                 document.getElementById('todayStatus').innerHTML = 'No classes today';
-                document.getElementById('todaySlotContainer').innerHTML = '<div class="today-empty"><i class="fas fa-calendar-check"></i> Rest day — no classes scheduled</div>';
+                document.getElementById('todaySlotContainer').innerHTML = '<div class="today-empty"><i class="fas fa-calendar-check"></i> Rest day â€” no classes scheduled</div>';
                 return;
             }
 

@@ -8,8 +8,8 @@
     <title>Prepium | Study Session</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/css/style.css"
-    <link rel="manifest" href="/manifest.json">>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="manifest" href="/manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         .status-bar { height: env(safe-area-inset-top, 0px); }
@@ -322,7 +322,7 @@ function sendChat() {
     if (!msg) return;
     input.value = '';
     chatAppend('user', chatEscape(msg));
-    var pending = chatAppend('ai', '<i class="fas fa-spinner fa-spin"></i> Thinking…');
+    var pending = chatAppend('ai', '<i class="fas fa-spinner fa-spin"></i> Thinkingâ€¦');
     if (chatAbort) try { chatAbort.abort(); } catch(e){}
     chatAbort = ('AbortController' in window) ? new AbortController() : null;
     var fetchOpts = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg, courseId: courseId, courseName: courseName }) };
@@ -363,7 +363,7 @@ function loadNotes() {
 document.getElementById('notesArea').value = '<%= session ? (session.notes || "").replace(/'/g, "\\'").replace(/\n/g, "\\n") : '' %>';
 }
 
-/* ── Session start prompt on load ── */
+/* â”€â”€ Session start prompt on load â”€â”€ */
 (function autoInit() {
   var prompted = sessionStorage.getItem('study_session_prompted');
   if (!prompted) {
@@ -571,13 +571,13 @@ function endSession() {
             if (notes && notes.length > 20) {
                 var box = document.getElementById('aiExtracted');
                 box.style.display = 'block';
-                box.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Extracting key points from your notes…';
+                box.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Extracting key points from your notesâ€¦';
             }
             document.getElementById('aiSummarize').onclick = function() {
                 if (!notes || !notes.trim()) return Swal.fire({ icon: 'warning', text: 'No notes to extract from yet.' });
                 var box = document.getElementById('aiExtracted');
                 box.style.display = 'block';
-                box.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Asking AI to summarize your notes…';
+                box.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Asking AI to summarize your notesâ€¦';
                 fetch('/api/study/session/summarize', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -597,7 +597,7 @@ function endSession() {
             };
             document.getElementById('aiTipsClose').onclick = function() {
                 var ta = document.getElementById('summaryPoints');
-                ta.value = (ta.value ? ta.value + '\n' : '') + '- Keep up the momentum — 25 mins tomorrow too.\n- Review key formulas once today.';
+                ta.value = (ta.value ? ta.value + '\n' : '') + '- Keep up the momentum â€” 25 mins tomorrow too.\n- Review key formulas once today.';
                 Swal.fire({ icon: 'success', text: 'Added a quick motivation note.', timer: 1200, showConfirmButton: false });
             };
         },

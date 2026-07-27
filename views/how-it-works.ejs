@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Prepium | How It Works</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/style.css"
-    <link rel="manifest" href="/manifest.json">>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="manifest" href="/manifest.json">
     <style>
         :root { 
             --sub: #64748b; 
@@ -214,18 +214,18 @@
         <p class="guide-intro">Tap on any feature below to view its purpose and step-by-step workflow.</p>
 
         <div class="tab-slider">
-            <button class="slider-btn active" onclick="showSlide(0)">✨ The Center FAB (+)</button>
-            <button class="slider-btn" onclick="showSlide(1)">📚 Library</button>
-            <button class="slider-btn" onclick="showSlide(2)">📊 Stats</button>
-            <button class="slider-btn" onclick="showSlide(3)">🏆 Arena</button>
-            <button class="slider-btn" onclick="showSlide(4)">⏳ Deadlines</button>
-            <button class="slider-btn" onclick="showSlide(5)">⏱️ Pomodoro</button>
-            <button class="slider-btn" onclick="showSlide(6)">📅 Planner</button>
+            <button class="slider-btn active" onclick="showSlide(0)">âœ¨ The Center FAB (+)</button>
+            <button class="slider-btn" onclick="showSlide(1)">ðŸ“š Library</button>
+            <button class="slider-btn" onclick="showSlide(2)">ðŸ“Š Stats</button>
+            <button class="slider-btn" onclick="showSlide(3)">ðŸ† Arena</button>
+            <button class="slider-btn" onclick="showSlide(4)">â³ Deadlines</button>
+            <button class="slider-btn" onclick="showSlide(5)">â±ï¸ Pomodoro</button>
+            <button class="slider-btn" onclick="showSlide(6)">ðŸ“… Planner</button>
         </div>
 
         <div class="deck-container">
             <div class="motion-card active-card" id="slide-0">
-                <i class="card-header-icon" style="background: #0f172a; color: white;">➕</i>
+                <i class="card-header-icon" style="background: #0f172a; color: white;">âž•</i>
                 <h3>Center FAB (+) Setup</h3>
                 <p>The core engine of Prepium. Instantly configure and start custom timed CBT practice sessions.</p>
                 <div class="workflow-box">
@@ -243,11 +243,11 @@
                         <span class="step-desc">Launch the CBT test directly to start active test mode.</span>
                     </div>
                 </div>
-                <a href="<%= user.has_paid ? '/setup-test' : '/dashboard' %>" class="cta-action-btn fab-color">Launch New Test Now ➔</a>
+                <a href="<%= user.has_paid ? '/setup-test' : '/dashboard' %>" class="cta-action-btn fab-color">Launch New Test Now âž”</a>
             </div>
 
             <div class="motion-card" id="slide-1">
-                <i class="card-header-icon">📚</i>
+                <i class="card-header-icon">ðŸ“š</i>
                 <h3>Study Library</h3>
                 <p>Access and read registered course textbooks directly inside the platform.</p>
                 <div class="workflow-box">
@@ -265,11 +265,11 @@
                         <span class="step-desc">Track and read through course materials step-by-step.</span>
                     </div>
                 </div>
-                <a href="<%= user.has_paid ? '/subjects' : '/dashboard' %>" class="cta-action-btn">Visit Study Library ➔</a>
+                <a href="<%= user.has_paid ? '/subjects' : '/dashboard' %>" class="cta-action-btn">Visit Study Library âž”</a>
             </div>
 
             <div class="motion-card" id="slide-2">
-                <i class="card-header-icon">📊</i>
+                <i class="card-header-icon">ðŸ“Š</i>
                 <h3>Performance Stats</h3>
                 <p>Review completed tests to monitor your accuracy and overall speed.</p>
                 <div class="workflow-box">
@@ -287,11 +287,11 @@
                         <span class="step-desc">Use generated scores to evaluate overall exam readiness.</span>
                     </div>
                 </div>
-                <a href="<%= user.has_paid ? '/history' : '/dashboard' %>" class="cta-action-btn">View My Stats ➔</a>
+                <a href="<%= user.has_paid ? '/history' : '/dashboard' %>" class="cta-action-btn">View My Stats âž”</a>
             </div>
 
             <div class="motion-card" id="slide-3">
-                <i class="card-header-icon">🏆</i>
+                <i class="card-header-icon">ðŸ†</i>
                 <h3>Live Arena</h3>
                 <p>Compete in timed mock challenges and track your global rank standings.</p>
                 <div class="workflow-box">
@@ -309,11 +309,11 @@
                         <span class="step-desc">Climb higher up the rank leaderboard with every correct answer.</span>
                     </div>
                 </div>
-                <a href="<%= user.has_paid ? '/competition' : '/dashboard' %>" class="cta-action-btn">Enter the Arena ➔</a>
+                <a href="<%= user.has_paid ? '/competition' : '/dashboard' %>" class="cta-action-btn">Enter the Arena âž”</a>
             </div>
 
             <div class="motion-card" id="slide-4">
-                <i class="card-header-icon">⏳</i>
+                <i class="card-header-icon">â³</i>
                 <h3>Deadlines</h3>
                 <p>Track test countdowns, CAs, and exams using real-time timers.</p>
                 <div class="workflow-box">
@@ -331,11 +331,11 @@
                         <span class="step-desc">Stay organized by prioritizing study tasks for high-priority tests.</span>
                     </div>
                 </div>
-                <a href="<%= user.has_paid ? '/deadlines' : '/dashboard' %>" class="cta-action-btn">Check Deadlines ➔</a>
+                <a href="<%= user.has_paid ? '/deadlines' : '/dashboard' %>" class="cta-action-btn">Check Deadlines âž”</a>
             </div>
 
             <div class="motion-card" id="slide-5">
-                <i class="card-header-icon">⏱️</i>
+                <i class="card-header-icon">â±ï¸</i>
                 <h3>Pomodoro Timer</h3>
                 <p>Optimize your reading and study sprints using custom focus intervals.</p>
                 <div class="workflow-box">
@@ -353,11 +353,11 @@
                         <span class="step-desc">Follow focus alarms to complete intervals without distractions.</span>
                     </div>
                 </div>
-                <a href="/dashboard" class="cta-action-btn">Get Started ➔</a>
+                <a href="/dashboard" class="cta-action-btn">Get Started âž”</a>
             </div>
 
             <div class="motion-card" id="slide-6">
-                <i class="card-header-icon">📅</i>
+                <i class="card-header-icon">ðŸ“…</i>
                 <h3>Timetable</h3>
                 <p>Organize custom study and lecture schedules with high-quality PDF downloads.</p>
                 <div class="workflow-box">
@@ -375,7 +375,7 @@
                         <span class="step-desc">Download your timetable as a PDF featuring Prepium branding.</span>
                     </div>
                 </div>
-                <a href="<%= user.has_paid ? '/timetable' : '/timetable' %>" class="cta-action-btn">Open Timetable ➔</a>
+                <a href="<%= user.has_paid ? '/timetable' : '/timetable' %>" class="cta-action-btn">Open Timetable âž”</a>
             </div>
         </div>
 

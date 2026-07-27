@@ -9,8 +9,8 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/css/style.css"
-    <link rel="manifest" href="/manifest.json">>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="manifest" href="/manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
@@ -322,7 +322,7 @@
                             </div>
                             <div class="material-info">
                                 <h4><%= mat.name %></h4>
-                                <p><%= mat.upload_date %> • <%= (mat.file_size / 1024).toFixed(1) %>KB</p>
+                                <p><%= mat.upload_date %> â€¢ <%= (mat.file_size / 1024).toFixed(1) %>KB</p>
                             </div>
                             <div class="material-actions">
                                 <button class="mat-btn view" onclick="viewMaterial(<%= mat.id %>)" title="View">

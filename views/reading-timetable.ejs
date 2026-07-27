@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Prepium | Reading Timetable</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/css/style.css"
-    <link rel="manifest" href="/manifest.json">>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="manifest" href="/manifest.json">
     <style>
         :root { --sub: #64748b; }
         .app-shell { padding-bottom: 110px; }
@@ -271,7 +271,7 @@
                                         <div class="time"><%= slot.start_time %> - <%= slot.end_time %></div>
                                         <div class="info">
                                             <b><%= slot.course %></b>
-                                            <small><%= slot.course_code ? slot.course_code + ' · ' : '' %><%= slot.unit %> Credits</small>
+                                            <small><%= slot.course_code ? slot.course_code + ' Â· ' : '' %><%= slot.unit %> Credits</small>
                                         </div>
                                         <form action="/reading-timetable/delete/<%= slot.id %>" method="POST" style="margin:0;" onsubmit="return deleteReadingSlot(event, this)">
                                             <button type="submit" style="background:none; border:none; color:#ef4444; cursor:pointer; padding:4px;"><i class="fas fa-times"></i></button>
@@ -304,7 +304,7 @@
 
     <script>
         let currentMode = 'school';
-        let excludedCourses = []; // always start empty — user ticks manually
+        let excludedCourses = []; // always start empty â€” user ticks manually
 
         function toggleWizard() {
             var body = document.getElementById('wizBody');
@@ -448,7 +448,7 @@
                                 <div class="time">${slot.start_time} - ${slot.end_time}</div>
                                 <div class="info">
                                     <b>${slot.course}</b>
-                                    <small>${slot.course_code ? slot.course_code + ' · ' : ''}${slot.unit} Credits</small>
+                                    <small>${slot.course_code ? slot.course_code + ' Â· ' : ''}${slot.unit} Credits</small>
                                 </div>
                                 <form action="/reading-timetable/delete/${slot.id}" method="POST" style="margin:0;" onsubmit="return deleteReadingSlot(event, this)">
                                     <button type="submit" style="background:none; border:none; color:#ef4444; cursor:pointer; padding:4px;"><i class="fas fa-times"></i></button>
