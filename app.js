@@ -810,7 +810,7 @@ app.get('/verify-payment', rateLimit(5, 300000), async (req, res) => {
         const userCouponCheck = await pool.query('SELECT used_coupon FROM users WHERE id = $1', [userId]);
         const finalCoupon = (!userCouponCheck.rows[0]?.used_coupon && couponCode) ? couponCode : null;
         const updateRes = await pool.query(
-            'UPDATE users SET has_paid = COALESCE(has_paid, false), used_coupon = COALESCE($1, used_coupon) WHERE id = $2 RETURNING has_paid',
+            'UPDATE users SET has_paid = true, used_coupon = COALESCE($1, used_coupon) WHERE id = $2 RETURNING has_paid',
             [finalCoupon, userId]
         );
         console.log(`[Paystack] Success: User ID ${userId} marked as paid (has_paid=${updateRes.rows[0]?.has_paid})${finalCoupon ? ' (coupon: ' + finalCoupon + ')' : ''}.`);
