@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2563eb">
     <title>Prepium | Become an Ambassador</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -11,8 +12,8 @@
     <style>
         :root { 
             --brand-light: #e6efff;
-            --sub: #64748b;
-            --white: #ffffff;
+            --sub: var(--text-secondary);
+            --white: var(--surface-solid);
         }
 
         .app-shell { 
@@ -92,7 +93,7 @@
         textarea { resize: none; height: 110px; }
 
         .btn-action {
-            background: var(--brand); color: white; border: none; width: 100%; padding: 1.15rem;
+            background: var(--brand); color: var(--surface-solid); border: none; width: 100%; padding: 1.15rem;
             border-radius: 20px; font-size: 0.95rem; font-weight: 800; cursor: pointer; display: flex;
             justify-content: center; align-items: center; gap: 10px; margin-top: auto;
             box-shadow: 0 8px 24px rgba(0, 98, 255, 0.18); transition: all 0.25s; text-decoration: none;
@@ -126,13 +127,13 @@
         canvas { width: 100%; border-radius: 16px; border: 1px solid var(--border); display: block; margin-bottom: 12px; }
         
         .download-btn {
-            background: white; border: 1.5px solid var(--brand); color: var(--brand); width: 100%;
+            background: var(--surface-solid); border: 1.5px solid var(--brand); color: var(--brand); width: 100%;
             padding: 0.95rem; border-radius: 16px; font-size: 0.88rem; font-weight: 800; cursor: pointer;
             display: flex; justify-content: center; align-items: center; gap: 10px; transition: all 0.25s;
         }
         .download-btn:hover { background: #f4f8ff; }
 
-        .whatsapp-btn { background: #25d366; color: white; box-shadow: 0 8px 24px rgba(37, 211, 102, 0.22); margin-top: 1rem; }
+        .whatsapp-btn { background: #25d366; color: var(--surface-solid); box-shadow: 0 8px 24px rgba(37, 211, 102, 0.22); margin-top: 1rem; }
         .whatsapp-btn:hover { background: #1ebd5b; }
 
         .login-toggle-link {
@@ -141,6 +142,7 @@
         }
         .login-toggle-link span { color: var(--brand); font-weight: 800; }
     </style>
+    <%- include('partials/theme-toggle') %>
 </head>
 <body>
 
@@ -157,13 +159,13 @@
 
         <div class="step-panel active" id="step1">
             <h1>Ambassador Perks</h1>
-            <p class="desc">Earn commissions directly, build your network, and access premium exam prep tools.</p>
+            <p class="desc">Earn commissions, build your network, and access premium exam tools.</p>
 
             <div class="perk-card">
                 <i class="fas fa-wallet"></i>
                 <div>
                     <div class="perk-title">Instant Rewards</div>
-                    <div class="perk-desc">Direct payouts straight into your preferred bank account for every student signup.</div>
+                    <div class="perk-desc">Get paid directly for every student you refer.</div>
                 </div>
             </div>
 
@@ -171,7 +173,7 @@
                 <i class="fas fa-file-invoice"></i>
                 <div>
                     <div class="perk-title">Digital Certificate</div>
-                    <div class="perk-desc">An official personalized digital Prepium Brand Ambassador Certificate.</div>
+                    <div class="perk-desc">Receive an official Prepium Brand Ambassador certificate.</div>
                 </div>
             </div>
 
@@ -181,7 +183,7 @@
 
         <div class="step-panel" id="step2">
             <h1>Create Your Profile</h1>
-            <p class="desc">Fill in your full name and bank account details to start earning directly.</p>
+            <p class="desc">Enter your name and bank details to start earning.</p>
 
             <form id="ambassadorForm">
                 <div class="form-group">
@@ -201,7 +203,7 @@
 
         <div class="step-panel" id="stepLogin">
             <h1>Ambassador Portal</h1>
-            <p class="desc">Access your portal with your unique referral code.</p>
+            <p class="desc">Sign in with your unique referral code.</p>
 
             <form id="loginForm">
                 <div class="form-group">
@@ -220,7 +222,7 @@
         <div class="step-panel success-box" id="step3">
             <span class="success-icon"><i class="fas fa-circle-check"></i></span>
             <h1>Success!</h1>
-            <p class="desc">You are now an officially registered Prepium Ambassador!</p>
+            <p class="desc">You are now a Prepium Ambassador!</p>
 
             <p style="font-size: 0.72rem; font-weight: 800; color: var(--sub); text-transform: uppercase;">Your Referral Code</p>
             <div class="code-display" id="refCodeText" onclick="copyReferralCode()">000000</div>
@@ -228,7 +230,7 @@
 
             <div class="info-panel">
                 <i class="fas fa-info-circle" style="color: var(--brand); margin-right: 6px;"></i>
-                To track your earnings, referral stats, and withdrawals, log in to your dashboard anytime via <a id="dynamicPortalLink" href="#"><strong>Sign In Here</strong></a> using your unique referral code.
+                Track your earnings, referrals, and withdrawals from your dashboard. <a id="dynamicPortalLink" href="#"><strong>Sign in here</strong></a> with your referral code.
             </div>
 
             <div class="cert-container">
@@ -383,7 +385,7 @@
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            ctx.strokeStyle = '#0062ff';
+            ctx.strokeStyle = '#2563eb';
             ctx.lineWidth = 16;
             ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
 
@@ -391,7 +393,7 @@
             ctx.lineWidth = 2;
             ctx.strokeRect(34, 34, canvas.width - 68, canvas.height - 68);
 
-            ctx.fillStyle = '#0062ff';
+            ctx.fillStyle = '#2563eb';
             ctx.font = '800 28px "Plus Jakarta Sans", sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText('PREPIUM.', canvas.width / 2, 105);
@@ -415,7 +417,7 @@
             ctx.font = '600 15px "Plus Jakarta Sans", sans-serif';
             ctx.fillText('HAS OFFICIALLY REGISTERED AS AN AUTHORIZED', canvas.width / 2, 380);
 
-            ctx.fillStyle = '#0062ff';
+            ctx.fillStyle = '#2563eb';
             ctx.font = '800 24px "Plus Jakarta Sans", sans-serif';
             ctx.fillText('PREPIUM BRAND AMBASSADOR', canvas.width / 2, 420);
 

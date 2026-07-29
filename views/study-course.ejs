@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#2563eb">
     <title>Prepium | <%= course ? course.course_name : 'Course' %></title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -29,7 +30,7 @@
         .q-btn:active { transform: scale(0.95); }
         .q-btn.primary { background: var(--brand-gradient); color: white; border: none; }
         .q-btn.primary i { color: white; }
-        .q-btn.primary:hover { box-shadow: 0 6px 20px rgba(0, 98, 255, 0.35); }
+        .q-btn.primary:hover { box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35); }
 
         .section-label { font-size: 0.62rem; font-weight: 800; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; padding: 0.5rem 1.5rem 0.5rem; display: flex; justify-content: space-between; align-items: center; }
         .section-label .action-link { font-size: 0.68rem; text-transform: none; letter-spacing: 0; color: var(--brand); cursor: pointer; font-weight: 700; background: none; border: none; font-family: inherit; }
@@ -42,7 +43,7 @@
         .topic-name { flex: 1; font-weight: 700; font-size: 0.82rem; }
         .topic-actions { display: flex; gap: 4px; }
         .topic-actions button { width: 32px; height: 32px; border-radius: 8px; border: none; background: transparent; cursor: pointer; color: var(--text-sub); font-size: 0.75rem; transition: var(--transition); display: flex; align-items: center; justify-content: center; }
-        .topic-actions button:hover { background: #f1f5f9; }
+        .topic-actions button:hover { background: var(--bg); }
         .topic-actions .del-btn:hover { color: var(--danger); background: #fef2f2; }
 
         .subtopic-list { padding: 0 14px 12px; display: none; }
@@ -50,7 +51,7 @@
         .subtopic-chip { display: flex; align-items: center; gap: 8px; padding: 10px; margin-bottom: 4px; background: var(--bg); border-radius: 8px; border: 1px solid var(--border); font-size: 0.75rem; font-weight: 600; }
         .subtopic-chip .chip-actions { margin-left: auto; display: flex; gap: 4px; }
         .subtopic-chip .chip-actions button { width: 28px; height: 28px; border-radius: 6px; border: none; background: transparent; cursor: pointer; font-size: 0.7rem; color: var(--text-sub); }
-        .subtopic-chip .chip-actions button:hover { background: #f1f5f9; }
+        .subtopic-chip .chip-actions button:hover { background: var(--bg); }
         .subtopic-chip .chip-actions .accept-btn:hover { color: var(--success); }
         .subtopic-chip .chip-actions .edit-btn:hover { color: var(--brand); }
         .subtopic-chip .chip-actions .reject-btn:hover { color: var(--danger); }
@@ -74,6 +75,7 @@
 
         @media (min-width: 431px) { .app-shell { border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); margin: 0 auto; } }
     </style>
+    <%- include('partials/theme-toggle') %>
 </head>
 <body>
 <%- include('partials/sidebar') %>
@@ -121,7 +123,7 @@
                     <div class="topic-name" style="flex:1;min-width:0">
                         <div style="font-size:0.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><%= t.topic_name || t.title %></div>
                         <div style="display:flex;align-items:center;gap:4px;margin-top:2px">
-                            <div style="flex:1;max-width:80px;height:3px;background:#e2e8f0;border-radius:2px;overflow:hidden">
+                            <div style="flex:1;max-width:80px;height:3px;background:var(--border-solid);border-radius:2px;overflow:hidden">
                                 <% var sttl = (t.subtopics || []).length; var sdon = (t.subtopics || []).filter(function(st){ return st.status === 'completed'; }).length; %>
                                 <div style="width:<%= sttl > 0 ? Math.round(sdon / sttl * 100) : 0 %>%;height:100%;background:linear-gradient(90deg,#3b82f6,#8b5cf6);border-radius:2px"></div>
                             </div>
@@ -164,7 +166,7 @@
         <% } else { %>
             <div class="empty-topics">
                 <i class="fas fa-list"></i>
-                <p>No topics added yet. Add manually or use AI to generate.</p>
+                <p>No topics yet. Add manually or use AI.</p>
             </div>
         <% } %>
     </div>
@@ -177,6 +179,7 @@
 <script>
 var courseId = <%= course ? course.id : 0 %>;
 var courseName = '<%= course ? course.course_name.replace(/'/g, "\\'") : '' %>';
+var courseCode = '<%= course ? course.course_code.replace(/'/g, "\\'") : '' %>';
 
 function toggleSubtopicList(header) {
     header.nextElementSibling.classList.toggle('open');
@@ -219,7 +222,7 @@ function generateSubtopicAI(topicId) {
     fetch('/api/study/subtopics/ai-generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topicId: topicId, courseId: courseId, topicTitle: topicTitle, courseName: courseName })
+        body: JSON.stringify({ topicId: topicId, courseId: courseId, topicTitle: topicTitle, courseName: courseName, courseCode: courseCode })
     }).then(r => r.json()).then(function(d) {
         if (d.success) { Swal.fire({ icon: 'success', text: (d.subtopics ? d.subtopics.length : 0) + ' subtopics generated!', timer: 1500, showConfirmButton: false }); setTimeout(function() { location.reload(); }, 1500); }
         else Swal.fire({ icon: 'error', text: d.error });
@@ -272,18 +275,18 @@ function showQuizSetup() {
     Swal.fire({
         title: 'Quick Quiz',
         html:
-            '<select id="swal-subtopic" style="width:100%;padding:10px;border-radius:10px;border:1px solid #e2e8f0;font-family:inherit;font-weight:600;margin-bottom:8px">' +
+            '<select id="swal-subtopic" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--border-solid);font-family:inherit;font-weight:600;margin-bottom:8px">' +
             '<option value="">All Subtopics</option>' +
             '<% if (topics) { topics.forEach(function(t) { if (t.subtopics) { t.subtopics.forEach(function(st) { %>' +
             '<option value="<%= st.id %>"><%= st.subtopic_name || st.title %></option>' +
             '<% }); } }); } %>' +
             '</select>' +
-            '<select id="swal-type" style="width:100%;padding:10px;border-radius:10px;border:1px solid #e2e8f0;font-family:inherit;font-weight:600;margin-bottom:8px">' +
+            '<select id="swal-type" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--border-solid);font-family:inherit;font-weight:600;margin-bottom:8px">' +
             '<option value="mixed">Mixed Questions</option><option value="multiple_choice">Multiple Choice</option><option value="theory">Theory</option>' +
             '</select>' +
             '<div style="display:flex;gap:8px">' +
-            '<input id="swal-count" type="number" value="5" min="1" max="20" style="flex:1;padding:10px;border-radius:10px;border:1px solid #e2e8f0;font-family:inherit;font-weight:600;text-align:center">' +
-            '<select id="swal-timed" style="width:auto;padding:10px;border-radius:10px;border:1px solid #e2e8f0;font-family:inherit;font-weight:600">' +
+            '<input id="swal-count" type="number" value="5" min="1" max="20" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border-solid);font-family:inherit;font-weight:600;text-align:center">' +
+            '<select id="swal-timed" style="width:auto;padding:10px;border-radius:10px;border:1px solid var(--border-solid);font-family:inherit;font-weight:600">' +
             '<option value="0">Untimed</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option>' +
             '</select></div>',
         showCancelButton: true, confirmButtonText: 'Start Quiz', showLoaderOnConfirm: true,
@@ -330,7 +333,7 @@ function aiFmt(text) {
 
 function aiAppend(box, html) {
     var div = document.createElement('div');
-    div.style.cssText = 'background:#f8fafc;border-radius:12px;padding:11px 13px;margin-bottom:10px;font-size:0.85rem;line-height:1.55;color:#1e293b;white-space:normal';
+    div.style.cssText = 'background:var(--bg);border-radius:12px;padding:11px 13px;margin-bottom:10px;font-size:0.85rem;line-height:1.55;color:var(--text-primary);white-space:normal';
     div.innerHTML = html;
     box.appendChild(div);
     box.scrollTop = box.scrollHeight;
@@ -340,12 +343,12 @@ function aiAppend(box, html) {
 function openAIClass() {
     var safeCourse = aiEscape(courseName || 'this course');
     var chatBox = '<div id="aiClassChat" style="text-align:left;max-height:380px;overflow-y:auto;padding:4px"></div>' +
-        '<div id="aiClassPending" style="display:none;background:#f8fafc;border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:0.85rem"><i class="fas fa-spinner fa-spin"></i> Thinking...</div>' +
+        '<div id="aiClassPending" style="display:none;background:var(--bg);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:0.85rem"><i class="fas fa-spinner fa-spin"></i> Thinking...</div>' +
         '<div style="display:flex;gap:6px;margin-top:8px">' +
-        '<input id="aiClassInput" type="text" placeholder="Ask anything about this course..." style="flex:1;padding:11px 13px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:0.85rem;font-weight:600;outline:none">' +
-        '<button id="aiClassSend" type="button" aria-label="Send" style="padding:11px 14px;border:none;background:linear-gradient(135deg,#0062ff,#003fcc);color:white;font-weight:700;border-radius:10px;cursor:pointer"><i class="fas fa-paper-plane"></i></button>' +
+        '<input id="aiClassInput" type="text" placeholder="Ask anything about this course..." style="flex:1;padding:11px 13px;border:1.5px solid var(--border-solid);border-radius:10px;font-family:inherit;font-size:0.85rem;font-weight:600;outline:none">' +
+        '<button id="aiClassSend" type="button" aria-label="Send" style="padding:11px 14px;border:none;background:linear-gradient(135deg,var(--brand),#1d4ed8);color:white;font-weight:700;border-radius:10px;cursor:pointer"><i class="fas fa-paper-plane"></i></button>' +
         '</div>' +
-        '<div style="font-size:0.68rem;color:#94a3b8;margin-top:6px;font-weight:600">AI can make mistakes. Verify important details.</div>';
+        '<div style="font-size:0.68rem;color:var(--text-muted);margin-top:6px;font-weight:600">AI can make mistakes. Verify important details.</div>';
 
     Swal.fire({
         title: '<span style="font-weight:800">AI Class &mdash; ' + safeCourse + '</span>',
@@ -358,9 +361,9 @@ function openAIClass() {
             var pending = document.getElementById('aiClassPending');
             aiAppend(box,
                 '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
-                '<div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#0062ff,#003fcc);display:flex;align-items:center;justify-content:center;color:white;font-size:0.75rem"><i class="fas fa-robot"></i></div>' +
-                '<strong style="font-size:0.78rem;color:#1e293b">AI Tutor</strong></div>' +
-                '<div style="color:#1e293b">Hi! I&apos;m your AI tutor for <em>' + safeCourse + '</em>. Ask me anything and I&apos;ll explain step by step with examples.</div>'
+                '<div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--brand),#1d4ed8);display:flex;align-items:center;justify-content:center;color:white;font-size:0.75rem"><i class="fas fa-robot"></i></div>' +
+                '<strong style="font-size:0.78rem;color:var(--text-primary)">AI Tutor</strong></div>' +
+                '<div style="color:var(--text-primary)">Hi! I&apos;m your AI tutor for <em>' + safeCourse + '</em>. Ask me anything and I&apos;ll explain step by step with examples.</div>'
             );
 
             var inp = document.getElementById('aiClassInput');
@@ -371,9 +374,9 @@ function openAIClass() {
                 if (!q) return;
                 aiAppend(box,
                     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;justify-content:flex-end">' +
-                    '<strong style="font-size:0.78rem;color:#1e293b">You</strong>' +
-                    '<div style="width:28px;height:28px;border-radius:50%;background:#0062ff;display:flex;align-items:center;justify-content:center;color:white;font-size:0.7rem"><i class="fas fa-user"></i></div></div>' +
-                    '<div style="color:#1e293b">' + aiEscape(q) + '</div>'
+                    '<strong style="font-size:0.78rem;color:var(--text-primary)">You</strong>' +
+                    '<div style="width:28px;height:28px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;color:white;font-size:0.7rem"><i class="fas fa-user"></i></div></div>' +
+                    '<div style="color:var(--text-primary)">' + aiEscape(q) + '</div>'
                 );
                 pending.style.display = 'block';
                 inp.value = '';
@@ -390,8 +393,8 @@ function openAIClass() {
                     if (d && d.success && d.reply) {
                         aiAppend(box,
                             '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
-                            '<div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#0062ff,#003fcc);display:flex;align-items:center;justify-content:center;color:white;font-size:0.75rem"><i class="fas fa-robot"></i></div>' +
-                            '<strong style="font-size:0.78rem;color:#1e293b">AI Tutor</strong></div>' +
+                            '<div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--brand),#1d4ed8);display:flex;align-items:center;justify-content:center;color:white;font-size:0.75rem"><i class="fas fa-robot"></i></div>' +
+                            '<strong style="font-size:0.78rem;color:var(--text-primary)">AI Tutor</strong></div>' +
                             aiFmt(d.reply)
                         );
                     } else {

@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        :root { --brand: #0062ff; --bg: #f0f4f8; --text: #0f172a; --border: #e2e8f0; }
+        :root { --brand: #2563eb; --bg: #f0f4f8; --text: #0f172a; --border: #e2e8f0; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1.5rem; }
         .main { max-width: 1000px; margin: 0 auto; }
@@ -40,6 +40,8 @@
         .msg.error { background: #fee2e2; color: #b91c1c; }
         @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } .top-bar { flex-direction: column; align-items: flex-start; } }
     </style>
+<meta name="theme-color" content="#2563eb">
+<%- include('partials/theme-toggle') %>
 </head>
 <body>
 <div class="main">

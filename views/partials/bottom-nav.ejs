@@ -1,7 +1,5 @@
 <%- include('install-banner') %>
 <style>
-    /* Re-declare here to guarantee fixed positioning even if style.css wasn't loaded
-       or a local <style> in the page overrode .bottom-nav */
     .bottom-nav.fixed-nav {
         position: fixed !important;
         bottom: 16px !important;
@@ -20,9 +18,9 @@
     <a href="/study" class="nav-link <%= typeof activeNav !== 'undefined' && activeNav === 'study' ? 'active' : '' %>">
         <i class="fas fa-graduation-cap"></i><span>Study</span>
     </a>
-    <a href="/history" class="nav-link <%= typeof activeNav !== 'undefined' && activeNav === 'history' ? 'active' : '' %>">
-        <i class="fas fa-chart-bar"></i><span>Stats</span>
-    </a>
+    <button class="nav-link" onclick="toggleTheme()" style="background:none;border:none;font-family:inherit;cursor:pointer;">
+        <i class="fas fa-circle-half-stroke" id="navThemeIcon"></i><span>Theme</span>
+    </button>
     <a href="/profile" class="nav-link <%= typeof activeNav !== 'undefined' && activeNav === 'profile' ? 'active' : '' %>">
         <i class="fas fa-user-circle"></i><span>Profile</span>
     </a>
@@ -31,13 +29,9 @@
     </a>
 </nav>
 <script>
-    // Lift the bottom nav out of any container so `position: fixed` works
-    // reliably on every page. Done at parse-end to keep the markup valid.
     (function () {
         var nav = document.getElementById('prepium-bottom-nav');
         if (!nav) return;
-        // Move to body root on next tick — restores position:fixed behaviour
-        // even if an ancestor has stacking-context quirks
         document.addEventListener('DOMContentLoaded', function () {
             if (nav.parentElement !== document.body) {
                 document.body.appendChild(nav);

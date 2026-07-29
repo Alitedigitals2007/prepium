@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2563eb">
     <title>Prepium | <%= (subtopic.subtopic_name || subtopic.title) %></title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -11,63 +12,134 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <%- include('partials/mathjax') %>
     <style>
-        .status-bar { height: env(safe-area-inset-top, 0px); }
-        .page-content { padding: 0 1.5rem; }
-        .subtopic-title { font-size: 1.3rem; font-weight: 800; margin: 1rem 0 0.3rem; letter-spacing: -0.3px; }
-        .breadcrumb { font-size: 0.7rem; font-weight: 600; color: var(--text-sub); margin-bottom: 1.25rem; }
-        .session-timer-bar { display: flex; align-items: center; gap: 10px; background: #1e293b; border-radius: 14px; padding: 10px 16px; margin-bottom: 1rem; color: white; }
-        @media (prefers-color-scheme: dark) { .session-timer-bar { background: #0f172a; } }
-        .session-timer-bar .st-time { font-size: 1.1rem; font-weight: 800; font-variant-numeric: tabular-nums; flex: 1; }
-        .session-timer-bar .st-btn { width: 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; transition: var(--transition); }
-        .session-timer-bar .st-btn:active { transform: scale(0.9); }
-        .session-timer-bar .st-btn.play { background: #22c55e; color: white; }
-        .session-timer-bar .st-btn.pause { background: #f59e0b; color: white; }
-        .session-timer-bar .st-btn.stop { background: #ef4444; color: white; }
-        .breadcrumb a { color: var(--brand); text-decoration: none; }
-        .content-card { background: white; border: 1px solid #eef2f6; border-radius: 24px; padding: 28px; margin-bottom: 1.25rem; box-shadow: 0 4px 24px rgba(0,0,0,0.05); }
-        @media (prefers-color-scheme: dark) { .content-card { background: #0f172a; border-color: #1e293b; box-shadow: 0 4px 24px rgba(0,0,0,0.3); } }
-        .content-card .exp-header { display: flex; align-items: center; gap: 12px; font-size: 0.95rem; font-weight: 800; color: var(--text); margin-bottom: 16px; padding-bottom: 14px; border-bottom: 2px solid #eef2f6; }
-        @media (prefers-color-scheme: dark) { .content-card .exp-header { border-bottom-color: #1e293b; } }
-        .content-card .body-text { font-size: 0.9rem; font-weight: 500; line-height: 1.9; color: var(--text-dark); white-space: pre-wrap; }
-        .content-card .body-text p { margin: 0 0 12px; }
-        .content-card .body-text .sec-body { padding: 18px 20px !important; font-size: 0.88rem !important; line-height: 1.9 !important; }
-        .content-card .body-text .sec-body p { margin: 0 0 14px !important; }
-        .gen-btn { width: 100%; padding: 14px; border-radius: 14px; border: none; background: var(--brand-gradient); color: white; font-family: inherit; font-weight: 700; font-size: 0.85rem; cursor: pointer; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; gap: 8px; transition: var(--transition); }
-        .gen-btn:active { transform: scale(0.98); }
-        .gen-btn.secondary { background: var(--bg); color: var(--text-dark); border: 1.5px solid var(--border); }
-        .chat-box { background: var(--surface-solid); border: 1.5px solid var(--border); border-radius: 14px; overflow: hidden; }
-        .chat-messages { max-height: 320px; overflow-y: auto; padding: 12px 14px; }
-        .chat-msg { margin-bottom: 8px; display: flex; gap: 8px; }
-        .chat-msg.ai { flex-direction: row; }
-        .chat-msg.user { flex-direction: row-reverse; }
-        .chat-msg .bubble { max-width: 82%; padding: 10px 13px; border-radius: 12px; font-size: 0.8rem; font-weight: 500; line-height: 1.5; }
-        .chat-msg.ai .bubble { background: var(--bg); border: 1px solid var(--border); }
-        .chat-msg.user .bubble { background: var(--brand); color: white; }
-        .chat-input-row { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--border); }
-        .chat-input-row input { flex: 1; padding: 11px 13px; border: 1.5px solid var(--border-solid); border-radius: 10px; font-family: inherit; font-size: 0.8rem; font-weight: 600; outline: none; background: var(--surface-solid); color: var(--text-dark); }
-        .chat-input-row input:focus { border-color: var(--brand); }
-        .chat-input-row button { width: 42px; height: 42px; border-radius: 10px; border: none; background: var(--brand-gradient); color: white; cursor: pointer; font-size: 0.85rem; }
-        .tab-bar { display: flex; gap: 6px; margin-bottom: 1rem; background: var(--bg); border-radius: 12px; padding: 4px; }
-        .tab-pill { flex: 1; padding: 10px; border-radius: 8px; background: transparent; border: none; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 0.72rem; color: var(--text-sub); transition: var(--transition); display: flex; align-items: center; justify-content: center; gap: 5px; }
-        .tab-pill.active { background: var(--surface-solid); color: var(--text-dark); box-shadow: var(--shadow-sm); }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .fc-card { background: var(--surface-solid); border: 1px solid var(--border); border-radius: 14px; padding: 2rem 1.2rem; text-align: center; min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: var(--transition); margin-bottom: 10px; }
-        .fc-card:active { transform: scale(0.98); }
-        .fc-front { font-size: 0.95rem; font-weight: 700; }
-        .fc-back { font-size: 0.85rem; font-weight: 600; color: var(--text-sub); display: none; }
-        .fc-card.flipped .fc-front { display: none; }
-        .fc-card.flipped .fc-back { display: block; }
-        .fc-nav { display: flex; gap: 8px; justify-content: center; margin-bottom: 10px; }
-        .fc-nav button { padding: 10px 18px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-solid); font-family: inherit; font-weight: 700; font-size: 0.75rem; cursor: pointer; }
-        .yt-card { background: var(--surface-solid); border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-bottom: 8px; cursor: pointer; display: flex; align-items: center; gap: 12px; }
-        .typing { display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--text-sub);margin:0 2px;animation:typingDot 1s infinite ease-in-out; }
-        .typing:nth-child(2) { animation-delay:.2s; }
-        .typing:nth-child(3) { animation-delay:.4s; }
-        @keyframes typingDot { 0%,80%,100%{opacity:.2;transform:translateY(0)} 40%{opacity:1;transform:translateY(-3px)} }        .yt-card:active { transform: scale(0.98); }
-        .yt-card i { font-size: 1.5rem; color: #ff0000; }
-        .yt-card h4 { font-size: 0.82rem; font-weight: 700; margin: 0; }
+.page-content{padding:0 1.5rem}
+/* Breadcrumb */
+.top-bar{display:flex;align-items:center;gap:8px;padding:10px 0 0;margin-bottom:2px}
+.top-bar .tb-bread{font-size:0.68rem;font-weight:600;color:var(--text-sub)}
+.top-bar .tb-bread a{color:var(--brand);text-decoration:none}
+.top-bar .tb-bread span{margin:0 4px;opacity:0.4}
+/* Hero card */
+.st-hero{background:var(--brand-gradient);border-radius:var(--radius-lg);padding:18px 22px;margin-bottom:14px;color:white;position:relative;overflow:hidden}
+.st-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at top right,rgba(255,255,255,0.12) 0%,transparent 60%)}
+.st-hero .st-code{font-size:0.65rem;opacity:0.8;font-weight:600;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;position:relative;display:block;margin-bottom:6px}
+.st-hero h2{font-size:1.2rem;font-weight:800;letter-spacing:-0.3px;position:relative;margin:0 0 2px}
+.st-hero .st-row{display:flex;gap:14px;position:relative;font-size:0.65rem;font-weight:600;opacity:0.85;align-items:center}
+.st-hero .st-row .st-badge{padding:2px 8px;border-radius:4px;background:rgba(255,255,255,0.15);font-size:0.6rem;text-transform:capitalize}
+.st-hero .st-row .st-progress{font-size:0.6rem;font-weight:600;margin-left:auto;background:rgba(255,255,255,0.12);padding:2px 10px;border-radius:4px}
+.st-hero .hero-actions{display:flex;gap:7px;margin-top:10px;position:relative}
+.st-hero .hero-actions button{padding:5px 10px;border-radius:5px;border:none;background:rgba(255,255,255,0.15);color:white;font-family:inherit;font-size:0.6rem;font-weight:700;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:4px}
+.st-hero .hero-actions button:active{transform:scale(0.95)}
+/* Session bar */
+.session-bar{background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.session-bar .st-time{font-size:1.05rem;font-weight:800;font-variant-numeric:tabular-nums;flex:1;color:var(--text-primary)}
+.session-bar .st-btn{width:34px;height:34px;border-radius:50%;border:none;cursor:pointer;font-size:0.8rem;display:flex;align-items:center;justify-content:center;transition:all .12s}
+.session-bar .st-btn:active{transform:scale(0.9)}
+.session-bar .st-btn.play{background:var(--brand-gradient);color:white}
+.session-bar .st-btn.pause{background:#f59e0b;color:white}
+.session-bar .st-btn.stop{background:#ef4444;color:white}
+/* Tab bar */
+.tab-bar{display:flex;gap:5px;margin-bottom:14px;background:var(--bg);border-radius:10px;padding:3px}
+.tab-pill{flex:1;padding:9px;border-radius:7px;background:transparent;border:none;cursor:pointer;font-family:inherit;font-weight:700;font-size:0.7rem;color:var(--text-sub);transition:all .12s;display:flex;align-items:center;justify-content:center;gap:4px}
+.tab-pill.active{background:var(--surface-solid);color:var(--text-primary);box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+/* Generate button */
+.gen-btn{padding:12px 24px;border-radius:var(--radius-sm);border:none;background:var(--brand-gradient);color:white;font-family:inherit;font-weight:700;font-size:0.82rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:all .12s}
+.gen-btn:active{transform:scale(0.97)}
+.gen-btn.secondary{background:var(--bg);color:var(--text-primary);border:1.5px solid var(--border)}
+.gen-btn.sm{padding:8px 16px;font-size:0.72rem}
+/* Section blocks — flat textbook flow */
+.sec-block{margin-bottom:20px}
+.sec-heading{font-size:0.72rem;font-family:'IBM Plex Mono',monospace;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;padding:0 0 6px 13px;margin:0 0 10px;border-left:3px solid var(--brand);position:relative}
+.sec-body{font-size:0.85rem;line-height:1.85;color:var(--text-secondary)}
+.sec-body p{margin:0 0 12px}
+.sec-body p:last-child{margin-bottom:0}
+.sec-formula{font-family:'IBM Plex Mono',monospace;background:var(--brand-light);border:1px solid var(--brand);border-radius:5px;padding:4px 8px;color:var(--brand);font-size:0.8rem;display:inline-block;margin:2px 0;white-space:normal}
+.sec-formula-block{display:block;text-align:center;margin:12px 0;padding:14px 16px;background:var(--brand-light);border:1px solid var(--brand);border-radius:8px;overflow-x:auto}
+/* Key terms grid */
+.sec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-top:2px}
+.sec-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.sec-card b{font-family:'IBM Plex Mono',monospace;color:var(--brand);font-size:0.72rem;display:block;margin-bottom:2px}
+.sec-card span{font-size:0.76rem;color:var(--text-secondary);line-height:1.5;display:block}
+/* Step-by-step */
+.sec-step{display:flex;gap:12px;margin-bottom:12px;align-items:flex-start}
+.sec-step:last-child{margin-bottom:0}
+.sec-step-num{width:24px;height:24px;min-width:24px;border-radius:50%;background:var(--brand-light);color:var(--brand);border:1.5px solid var(--brand);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:0.6rem;font-weight:700;margin-top:2px}
+.sec-step-content{flex:1;font-size:0.82rem;line-height:1.7}
+/* Common mistakes */
+.sec-wrong{border:1px solid var(--danger);border-radius:8px;padding:10px 13px;margin-bottom:8px;font-size:0.8rem;color:var(--text-secondary);line-height:1.6}
+.sec-wrong b{color:var(--danger);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;font-size:0.55rem;letter-spacing:0.1em;display:block;margin-bottom:3px;font-weight:700}
+.sec-right{border:1px solid var(--success);background:var(--bg);border-radius:8px;padding:10px 13px;font-size:0.8rem;color:var(--text-secondary);line-height:1.6}
+.sec-right b{color:var(--success);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;font-size:0.55rem;letter-spacing:0.1em;display:block;margin-bottom:3px;font-weight:700}
+/* Edge cases */
+.sec-edge{background:var(--bg);border:1px solid var(--border);border-left:4px solid #f59e0b;border-radius:0 8px 8px 0;padding:10px 13px;margin-bottom:5px;font-size:0.8rem;line-height:1.6}
+/* Practice questions */
+.sec-q{background:var(--bg);border:1px solid var(--border);border-left:3px solid var(--brand);border-radius:0 8px 8px 0;margin-bottom:8px;transition:all .12s;cursor:pointer;position:relative}
+.sec-q:active{transform:scale(0.995)}
+.sec-q .q-main{padding:11px 13px}
+.sec-q .q-num{font-family:'IBM Plex Mono',monospace;color:white;font-weight:800;font-size:0.6rem;display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:5px;background:var(--brand-gradient);margin-right:7px;padding:0 5px}
+.sec-q .q-text{display:inline;font-size:0.84rem;line-height:1.6}
+.sec-q .q-hint{font-size:0.6rem;color:var(--text-muted);font-weight:600;margin-top:8px;display:flex;align-items:center;gap:5px;padding-left:2px}
+.sec-q .q-hint i{font-size:0.55rem;color:var(--brand)}
+.sec-q .q-answer{display:none;padding:12px 13px;border-top:1px dashed var(--border);font-size:0.8rem;line-height:1.7;color:var(--text-secondary);background:rgba(34,197,94,0.03);border-radius:0 0 8px 0}
+.sec-q .q-answer b{color:var(--success);font-family:'IBM Plex Mono',monospace;font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:6px;font-weight:700}
+.sec-q.revealed .q-answer{display:block}
+.sec-q.revealed .q-hint{display:none}
+.sec-q .q-answer .mjx-container{display:inline-block;vertical-align:middle;margin:2px 2px 2px 0}
+/* Solutions */
+.sec-sol{background:var(--bg);border:1px solid var(--border);border-left:3px solid var(--success);border-radius:0 8px 8px 0;padding:11px 13px;margin-bottom:8px;font-size:0.84rem;line-height:1.7}
+.sec-sol .q-num{font-family:'IBM Plex Mono',monospace;color:white;font-weight:800;font-size:0.6rem;display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:5px;background:var(--success);margin-right:7px;padding:0 5px}
+/* MathJax fixes */
+.mjx-container{display:inline-block;vertical-align:middle;margin:2px 4px 2px 0}
+.MathJax_Display{margin:6px 0!important;overflow-x:auto;overflow-y:hidden}
+.sec-body .mjx-container{margin:2px 6px 2px 0}
+/* Flashcards */
+.fc-card{background:var(--surface-solid);border:1px solid var(--border);border-radius:12px;padding:1.8rem 1rem;text-align:center;min-height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;margin-bottom:8px}
+.fc-card:active{transform:scale(0.98)}
+.fc-front{font-size:0.92rem;font-weight:700;color:var(--text-primary)}
+.fc-back{font-size:0.82rem;font-weight:600;color:var(--text-sub);display:none}
+.fc-card.flipped .fc-front{display:none}
+.fc-card.flipped .fc-back{display:block}
+.fc-nav{display:flex;gap:6px;justify-content:center;margin-bottom:8px;flex-wrap:wrap}
+.fc-nav button{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface-solid);font-family:inherit;font-weight:700;font-size:0.72rem;cursor:pointer;color:var(--text-primary);transition:all .12s}
+.fc-nav button:active{transform:scale(0.95)}
+.count-picker{display:flex;gap:6px;margin-bottom:10px;justify-content:center}
+.count-pill{padding:8px 16px;border-radius:8px;border:1.5px solid var(--border);background:transparent;font-family:inherit;font-weight:700;font-size:0.75rem;cursor:pointer;color:var(--text-secondary);transition:all .12s}
+.count-pill.active{background:var(--brand-gradient);color:white;border-color:transparent}
+/* YouTube */
+.yt-card{background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:7px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:all .12s}
+.yt-card:active{transform:scale(0.98)}
+.yt-card i{font-size:1.4rem;color:#ff0000;min-width:22px}
+.yt-card h4{font-size:0.8rem;font-weight:700;margin:0;color:var(--text-primary)}
+.yt-card span{font-size:0.7rem;color:var(--text-muted);margin-top:1px}
+/* Q&A section */
+.qa-section{margin-top:24px;background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px 18px}
+.qa-header{display:flex;align-items:center;gap:10px;font-size:0.85rem;font-weight:700;color:var(--text-primary);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.qa-messages{max-height:400px;overflow-y:auto;margin-bottom:12px;display:flex;flex-direction:column;gap:8px}
+.qa-msg{display:flex;gap:8px}
+.qa-msg.user{flex-direction:row-reverse}
+.qa-msg .bubble{max-width:85%;padding:10px 14px;border-radius:12px;font-size:0.82rem;font-weight:500;line-height:1.6}
+.qa-msg.user .bubble{background:#2563eb;color:white;border-bottom-right-radius:4px}
+.qa-msg.ai .bubble{background:var(--bg);border:1px solid var(--border);color:var(--text-dark);border-bottom-left-radius:4px}
+.qa-pending{display:none;background:var(--bg);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:0.82rem;font-weight:600;color:var(--text-sub)}
+.qa-input-wrap{display:flex;gap:8px}
+.qa-input-wrap input{flex:1;padding:11px 14px;border:1.5px solid var(--border-solid);border-radius:10px;font-family:inherit;font-size:0.82rem;font-weight:600;outline:none;background:var(--bg);color:var(--text-primary)}
+.qa-input-wrap input:focus{border-color:var(--brand)}
+.qa-input-wrap button{padding:11px 16px;border:none;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;font-weight:700;border-radius:10px;cursor:pointer;font-family:inherit;transition:all .12s}
+.qa-input-wrap button:active{transform:scale(0.95)}
+.qa-footer{font-size:0.65rem;color:var(--text-muted);margin-top:8px;font-weight:600}
+/* Video toggle */
+.vid-header{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border-radius:10px;margin-bottom:8px;cursor:pointer;font-size:0.78rem;font-weight:700;color:var(--text-dark);user-select:none;transition:all .12s}
+.vid-header:active{transform:scale(0.98)}
+.vid-header .chevron{font-size:0.6rem;transition:transform .2s}
+.vid-header .chevron.open{transform:rotate(0deg)}
+.vid-header .chevron.closed{transform:rotate(-90deg)}
+/* Edge cases fallback */
+.sec-edge:first-child{margin-top:0}
+/* Prerequisites and Why matters - just paragraphs with better spacing */
+.sec-body h3{font-size:0.85rem;font-weight:700;color:var(--text-primary);margin:0 0 6px}
     </style>
+    <%- include('partials/theme-toggle') %>
 </head>
 <body>
 <%- include('partials/sidebar') %>
@@ -78,51 +150,81 @@
         <div class="header-title"><%= (subtopic.subtopic_name || subtopic.title) %></div>
         <div style="width:42px"></div>
     </div>
-
     <div class="page-content">
-        <div class="breadcrumb">
-            <a href="/study">Study</a> &rsaquo;
-            <% if (course) { %><a href="/study/course/<%= course.id %>"><%= course.course_name %></a> &rsaquo; <% } %>
-            <%= (subtopic.subtopic_name || subtopic.title) %>
+        <div class="top-bar">
+            <div class="tb-bread"><a href="/study">Study</a><span>›</span><% if (course) { %><a href="/study/course/<%= course.id %>"><%= course.course_name %></a><span>›</span><% } %><%= (subtopic.subtopic_name || subtopic.title) %></div>
         </div>
 
-        <div style="display:flex;align-items:center;gap:8px;margin:4px 0 10px">
-            <div style="flex:1">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-                    <span class="status-badge <%= subtopic.status %>" id="statusBadge" style="font-size:0.6rem;padding:2px 8px;border-radius:4px;font-weight:700;<% if (subtopic.status === 'accepted') { %>background:#d1fae5;color:#065f46<% } else if (subtopic.status === 'completed') { %>background:#d1fae5;color:#065f46<% } else { %>background:#fef3c7;color:#92400e<% } %>"><%= subtopic.status %></span>
-                    <button onclick="toggleComplete()" id="completeBtn" style="padding:4px 10px;border-radius:6px;border:none;font-size:0.7rem;font-weight:700;cursor:pointer;<%= subtopic.status === 'completed' ? 'background:#d1fae5;color:#065f46' : 'background:#f1f5f9;color:var(--text-sub)' %>"><i class="fas <%= subtopic.status === 'completed' ? 'fa-check-circle' : 'fa-circle' %>"></i> <%= subtopic.status === 'completed' ? 'Completed' : 'Mark completed' %></button>
-                </div>
-                <div style="display:flex;align-items:center;gap:6px">
-                    <div style="flex:1;height:4px;background:#e2e8f0;border-radius:2px;overflow:hidden">
-                        <div id="topicProgressBar" style="width:<% var ttl = (topicSubtopics || []).length; var don = (topicSubtopics || []).filter(function(st){ return st.status === 'completed'; }).length; %><%= ttl > 0 ? Math.round(don / ttl * 100) : 0 %>%;height:100%;background:linear-gradient(90deg,#3b82f6,#8b5cf6);border-radius:2px;transition:width 0.4s"></div>
-                    </div>
-                    <span id="topicProgressText" style="font-size:0.6rem;font-weight:700;color:var(--text-sub);white-space:nowrap"><%= don %>/<%= ttl %></span>
-                </div>
+        <div class="st-hero">
+            <% if (course) { %><span class="st-code"><%= course.course_code %> · <%= course.course_name %></span><% } %>
+            <h2><%= (subtopic.subtopic_name || subtopic.title) %></h2>
+            <div class="st-row">
+                <span class="st-badge" id="statusBadge"><%= subtopic.status %></span>
+                <button onclick="toggleComplete()" id="completeBtn"><i class="fas <%= subtopic.status === 'completed' ? 'fa-check-circle' : 'fa-circle' %>"></i> <%= subtopic.status === 'completed' ? 'Completed' : 'Mark done' %></button>
+                <span class="st-progress" id="topicProgressText"><% var ttl = (topicSubtopics || []).length; var don = (topicSubtopics || []).filter(function(st){ return st.status === 'completed'; }).length; %><%= don %>/<%= ttl %></span>
             </div>
         </div>
 
-        <div class="session-timer-bar" id="sessionTimerBar">
-            <i class="fas fa-clock"></i>
+        <div class="session-bar" id="sessionTimerBar">
+            <i class="fas fa-clock" style="color:var(--text-sub);font-size:0.85rem"></i>
             <span class="st-time" id="stDisplay">00:00</span>
             <button class="st-btn play" id="stToggle" onclick="toggleSessionTimer()"><i class="fas fa-play"></i></button>
-            <button class="st-btn stop" id="stStopBtn" onclick="endSubtopICSession()" style="display:none;"><i class="fas fa-stop"></i></button>
+            <button class="st-btn stop" id="stStopBtn" onclick="endSubtopICSession()" style="display:none"><i class="fas fa-stop"></i></button>
         </div>
 
         <div class="tab-bar">
-            <button class="tab-pill active" onclick="switchTab('videos', this)"><i class="fas fa-video"></i> Videos</button>
-            <button class="tab-pill" onclick="switchTab('flashcards', this)"><i class="fas fa-layer-group"></i> Flashcards</button>
-            <button class="tab-pill" onclick="switchTab('chat', this)"><i class="fas fa-robot"></i> Chat</button>
-            <button class="tab-pill" onclick="startQuiz()"><i class="fas fa-question-circle"></i> Quiz</button>
+            <button class="tab-pill active" onclick="switchTab('explanation',this)"><i class="fas fa-lightbulb"></i> Learn</button>
+            <button class="tab-pill" onclick="switchTab('videos',this)"><i class="fas fa-video"></i> Videos</button>
+            <button class="tab-pill" onclick="switchTab('flashcards',this)"><i class="fas fa-layer-group"></i> Flashcards</button>
+            <button class="tab-pill" onclick="startQuiz()"><i class="fas fa-question-circle"></i> Test</button>
         </div>
 
-        <div class="tab-content active" id="tab-videos">
-            <div onclick="toggleVideos(this)" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border-radius:10px;margin-bottom:8px;cursor:pointer;font-size:0.78rem;font-weight:700;color:var(--text-dark);user-select:none">
+        <div class="tab-content active" id="tab-explanation">
+            <div id="explainEmpty" style="text-align:center;padding:3rem 1rem;color:var(--text-muted)">
+                <i class="fas fa-lightbulb" style="font-size:2.5rem;display:block;margin-bottom:12px;color:var(--border-solid)"></i>
+                <div style="font-weight:700;font-size:0.95rem;color:var(--text-secondary);margin-bottom:6px">No explanation yet</div>
+                <div style="font-size:0.78rem;margin-bottom:18px">Generate a full lesson with sections, examples, and practice questions</div>
+                <button class="gen-btn" id="genContentBtn" onclick="generateContent()" style="display:inline-flex;width:auto;padding:12px 28px"><i class="fas fa-magic"></i> Generate Explanation</button>
+            </div>
+            <div id="explainSkeleton" style="display:none;margin-bottom:1rem">
+                <div class="skeleton skeleton-block"></div>
+                <div class="skeleton skeleton-text" style="width:75%"></div>
+                <div class="skeleton skeleton-text" style="width:50%"></div>
+                <div class="skeleton skeleton-text short"></div>
+            </div>
+            <div id="explainInlineError" class="inline-error" style="display:none">
+                <i class="fas fa-exclamation-circle"></i>
+                <span id="explainErrorText" style="flex:1"></span>
+                <button onclick="generateContent()"><i class="fas fa-redo"></i> Retry</button>
+            </div>
+            <div id="explanationWrap" style="display:none">
+                <div style="display:flex;gap:8px;margin-bottom:12px">
+                    <button class="gen-btn secondary" id="regenerateBtn" onclick="generateContent()" style="flex:1;margin:0;padding:10px;font-size:0.75rem"><i class="fas fa-redo"></i> Regenerate</button>
+                    <button class="gen-btn secondary" onclick="document.getElementById('qaInput').focus();window.scrollTo({top:document.getElementById('qaSectionWrap').offsetTop-100,behavior:'smooth'})" style="flex:1;margin:0;padding:10px;font-size:0.75rem"><i class="fas fa-question-circle"></i> Ask Question</button>
+                </div>
+                <div id="explanationText"></div>
+                <div class="qa-section" id="qaSectionWrap">
+                    <div class="qa-header"><i class="fas fa-question-circle" style="color:#2563eb;font-size:1rem"></i> <span>Ask About This Topic</span></div>
+                    <div class="qa-messages" id="qaMessages"></div>
+                    <div class="qa-pending" id="qaPending"><i class="fas fa-spinner fa-spin"></i> Thinking...</div>
+                    <div class="qa-input-wrap">
+                        <input type="text" id="qaInput" placeholder="Ask a question about this topic..." onkeydown="if(event.key==='Enter')askQuestion()">
+                        <button onclick="askQuestion()"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                    <div class="qa-footer">AI answers based on the explanation above</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-videos">
+            <div class="vid-header" onclick="toggleVideos(this)">
                 <i class="fas fa-video" style="color:#ff0000"></i>
                 <span style="flex:1">Video Resources</span>
-                <i class="fas fa-chevron-down" style="font-size:0.6rem;transition:transform 0.2s"></i>
+                <i class="fas fa-chevron-down chevron open"></i>
             </div>
             <div id="videoList"></div>
         </div>
+
         <div class="tab-content" id="tab-flashcards">
             <div class="count-picker" id="subFcCountPicker">
                 <button class="count-pill" onclick="setSubFcCount(5)">5</button>
@@ -141,48 +243,16 @@
                 <button onclick="nextCard()"><i class="fas fa-chevron-right"></i></button>
                 <button onclick="deleteSubtopicFlashcards()" style="color:var(--danger);border-color:#fecaca;background:#fef2f2"><i class="fas fa-trash"></i></button>
             </div>
-            <div id="fcContainer"><div style="text-align:center;padding:2rem;color:var(--text-muted);font-weight:600;">Load or generate flashcards</div></div>
-        </div>
-        <div class="tab-content" id="tab-chat">
-            <div class="chat-box">
-                <div class="chat-messages" id="chatMessages">
-                    <div style="text-align:center;padding:2rem;color:var(--text-muted);font-weight:600;font-size:0.78rem;"><i class="fas fa-comments" style="display:block;font-size:1.5rem;margin-bottom:6px;color:#e2e8f0"></i>Ask anything about this subtopic</div>
-                </div>
-                <div class="chat-input-row">
-                    <input type="text" id="chatInput" placeholder="Ask a question..." onkeydown="if(event.key==='Enter')sendChatMsg()">
-                    <button onclick="sendChatMsg()"><i class="fas fa-paper-plane"></i></button>
-                </div>
-            </div>
-        </div>
-
-        <button class="gen-btn" id="genContentBtn" onclick="generateContent()"><i class="fas fa-magic"></i> Generate Explanation</button>
-
-        <div id="explainSkeleton" style="display:none;margin-bottom:1rem">
-            <div class="skeleton skeleton-block"></div>
-            <div class="skeleton skeleton-text" style="width:75%"></div>
-            <div class="skeleton skeleton-text" style="width:50%"></div>
-            <div class="skeleton skeleton-text short"></div>
-        </div>
-
-        <div id="explainInlineError" class="inline-error" style="display:none">
-            <i class="fas fa-exclamation-circle"></i>
-            <span id="explainErrorText" style="flex:1"></span>
-            <button onclick="generateContent()"><i class="fas fa-redo"></i> Retry</button>
-        </div>
-
-        <div id="contentDisplay" class="content-card" style="display:none;">
-            <div class="exp-header"><i class="fas fa-lightbulb" style="color:#f59e0b;font-size:1.2rem"></i> <span>Explanation</span></div>
-            <div class="body-text" id="explanationText"></div>
+            <div id="fcContainer"><div style="text-align:center;padding:2rem;color:var(--text-muted);font-weight:600">Load or generate flashcards</div></div>
         </div>
     </div>
-
     <div style="height:60px"></div>
     <%- include('partials/bottom-nav', { activeNav: 'study' }) %>
 </div>
 
 <script>
 var subtopicId = <%= subtopic.id %>;
-var subtopicName = '<%= (subtopic.subtopic_name || subtopic.title || "").replace(/'/g, "\\'") %>';
+var subtopicName = <%- JSON.stringify(subtopic.subtopic_name || subtopic.title || '') %>;
 var courseId = <%= course ? course.id : 0 %>;
 var topicSubtopics = <%- JSON.stringify(topicSubtopics || []) %>;
 var topicId = <%= topic ? topic.id : 0 %>;
@@ -193,503 +263,344 @@ var stSeconds = 0;
 var stRunning = false;
 var stSessionId = null;
 var subGradients = [
-    ['#667eea', '#764ba2'], ['#f093fb', '#f5576c'], ['#4facfe', '#00f2fe'],
-    ['#43e97b', '#38f9d7'], ['#fa709a', '#fee140'], ['#a18cd1', '#fbc2eb'],
-    ['#fccb90', '#d57eeb'], ['#e0c3fc', '#8ec5fc'], ['#30cfd0', '#330867'],
-    ['#ffecd2', '#fcb69f'], ['#89f7fe', '#66a6ff'], ['#f5576c', '#ff6f91']
+    ['#667eea','#764ba2'],['#f093fb','#f5576c'],['#4facfe','#00f2fe'],
+    ['#43e97b','#38f9d7'],['#fa709a','#fee140'],['#a18cd1','#fbc2eb'],
+    ['#fccb90','#d57eeb'],['#e0c3fc','#8ec5fc'],['#30cfd0','#330867'],
+    ['#ffecd2','#fcb69f'],['#89f7fe','#66a6ff'],['#f5576c','#ff6f91']
 ];
-function getCardColor(t) { var h=0; for(var i=0;i<(t||'').length;i++){h=((h<<5)-h)+t.charCodeAt(i);h|=0;} return subGradients[Math.abs(h)%subGradients.length]; }
-function subCardSvg(c,cs) {
+function getCardColor(t){var h=0;for(var i=0;i<(t||'').length;i++){h=((h<<5)-h)+t.charCodeAt(i);h|=0;}return subGradients[Math.abs(h)%subGradients.length];}
+function subCardSvg(c,cs){
     var ch=(c.front||'?').charAt(0).toUpperCase();
-    return '<svg width="100%" height="80" viewBox="0 0 300 80" style="border-radius:14px 14px 0 0;display:block">' +
-        '<defs><linearGradient id="sg' + c.id + '" x1="0%" y1="0%" x2="100%" y2="100%">' +
-        '<stop offset="0%" style="stop-color:' + cs[0] + '"/>' +
-        '<stop offset="100%" style="stop-color:' + cs[1] + '"/></linearGradient></defs>' +
-        '<rect width="300" height="80" rx="14" fill="url(#sg' + c.id + ')" opacity="0.12"/>' +
-        '<circle cx="230" cy="20" r="30" fill="' + cs[0] + '" opacity="0.06"/>' +
-        '<circle cx="60" cy="60" r="20" fill="' + cs[1] + '" opacity="0.06"/>' +
-        '<text x="18" y="54" font-family="Plus Jakarta Sans,sans-serif" font-size="42" font-weight="800" fill="' + cs[0] + '" opacity="0.15">' + ch + '</text></svg>';
+    return '<svg width="100%" height="80" viewBox="0 0 300 80" style="border-radius:14px 14px 0 0;display:block"><defs><linearGradient id="sg'+c.id+'" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:'+cs[0]+'"/><stop offset="100%" style="stop-color:'+cs[1]+'"/></linearGradient></defs><rect width="300" height="80" rx="14" fill="url(#sg'+c.id+')" opacity="0.12"/><circle cx="230" cy="20" r="30" fill="'+cs[0]+'" opacity="0.06"/><circle cx="60" cy="60" r="20" fill="'+cs[1]+'" opacity="0.06"/><text x="18" y="54" font-family="Plus Jakarta Sans,sans-serif" font-size="42" font-weight="800" fill="'+cs[0]+'" opacity="0.15">'+ch+'</text></svg>';
+}
+var subFcCount = 10;
+function setSubFcCount(n){
+    subFcCount=n;
+    document.querySelectorAll('#subFcCountPicker .count-pill').forEach(function(p){p.classList.toggle('active',parseInt(p.textContent)===n);});
+}
+function esc(t){return(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function escapeHtml(t){return(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function fmtCodes(text){
+    text=text.replace(/```mermaid\n?([\s\S]*?)```/g,function(m,code){return '<div class="mermaid" style="background:var(--bg);border-radius:10px;padding:14px;margin:12px 0;text-align:center">'+esc(code.trim())+'</div>';});
+    text=text.replace(/```(\w*)\n?([\s\S]*?)```/g,function(m,lang,code){return '<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin:8px 0;font-family:monospace;font-size:0.78rem;white-space:pre-wrap;overflow-x:auto">'+esc(code.trim())+'</div>';});
+    return text;
+}
+function fmtInline(text){
+    text=text.replace(/\\\[([\s\S]*?)\\\]/g,function(m,inner){return '<div class="sec-formula sec-formula-block">\\['+inner.replace(/\s*\n\s*/g,' ').trim()+'\\]</div>';});
+    text=text.replace(/\\\(([\s\S]*?)\\\)/g,function(m){return '<span class="sec-formula">'+m.replace(/\s*\n\s*/g,' ')+'</span>';});
+    text=text.replace(/(?<!\\)\$\$([\s\S]*?)\$\$(?!\\)/g,function(m,inner){return '<div class="sec-formula sec-formula-block">$$'+inner.replace(/\s*\n\s*/g,' ').trim()+'$$</div>';});
+    text=fmtCodes(text);
+    return text;
+}
+function fmtP(text){
+    var paras=text.split(/\n{2,}/),h='';
+    for(var pi=0;pi<paras.length;pi++){var p=paras[pi].trim();if(p)h+='<p>'+fmtInline(esc(p))+'</p>';}
+    return h;
 }
 
-function aiCleanText(t) {
-  if (!t) return '';
-  return (t + '')
-    .replace(/```[a-zA-Z]*\n?/g, '```')
-    .replace(/\*\*([^*]+)\*\*/g, '$1')
-    .replace(/__([^_]+)__/g, '$1')
-    .replace(/^\s*#{1,6}\s*/gm, '')
-    .replace(/^\s*[-*+]\s+/gm, '\u2022 ')
-    .replace(/^\s*(\d+)\.\s+/gm, '$1) ')
-    .replace(/^>\s?/gm, '')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)')
-    .replace(/\\\(([^)]+)\\\)/g, '($1)')
-    .replace(/\\\[(.+?)\\\]/g, '[$1]')
-    .replace(/\$/g, '')
-    .replace(/\r\n/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
-
-function toggleVideos(el) {
-  var body = el.nextElementSibling;
-  var icon = el.querySelector('.fa-chevron-down');
-  if (body.style.display === 'none') { body.style.display = 'block'; icon.style.transform = 'rotate(0deg)'; }
-  else { body.style.display = 'none'; icon.style.transform = 'rotate(-90deg)'; }
-}
-
-function toggleSection(header) {
-  var body = header.nextElementSibling;
-  var icon = header.querySelector('.fa-chevron-down');
-  if (body.style.display === 'none') { body.style.display = 'block'; icon.style.transform = 'rotate(0deg)'; }
-  else { body.style.display = 'none'; icon.style.transform = 'rotate(-90deg)'; }
-}
-
-var SEC_CFG = {
-  'Overview': { icon: 'fa-eye', color: '#3b82f6', bg: '#eff6ff' },
-  'Key Terms': { icon: 'fa-book', color: '#8b5cf6', bg: '#f5f3ff' },
-  'Full Explanation': { icon: 'fa-list-check', color: '#059669', bg: '#ecfdf5' },
-  'Formula': { icon: 'fa-square-root-variable', color: '#f59e0b', bg: '#fffbeb' },
-  'Worked Example': { icon: 'fa-flask', color: '#8b5cf6', bg: '#f5f3ff' },
-  'Common Mistakes': { icon: 'fa-triangle-exclamation', color: '#ef4444', bg: '#fef2f2' },
-  'Practice Problems': { icon: 'fa-pen-to-square', color: '#f59e0b', bg: '#fffbeb' },
-  'Quick Recap': { icon: 'fa-list', color: '#3b82f6', bg: '#eff6ff' }
+var SEC_KEYS=[['What You Should Know','pr'],['Why It Matters','wh'],['Plain Explanation','pl'],['Key Terms','ke'],['Step-by-Step Examples','st'],['Common Mistakes','co'],['Edge Cases','ed'],['Practice Questions','prq'],['Step-by-Step Solutions','so']];
+var SEC_CFG={
+    pr:{dot:'#22d3ee',tagBg:'#ecfeff',tagColor:'#0891b2',label:'Prerequisites'},
+    wh:{dot:'#fbbf24',tagBg:'#fffbeb',tagColor:'#d97706',label:'Why It Matters'},
+    pl:{dot:'#34d399',tagBg:'#ecfdf5',tagColor:'#059669',label:'Plain Explanation'},
+    ke:{dot:'#a78bfa',tagBg:'#f5f3ff',tagColor:'#7c3aed',label:'Key Terms'},
+    st:{dot:'#2563eb',tagBg:'#eff6ff',tagColor:'#2563eb',label:'Step-by-Step'},
+    co:{dot:'#f87171',tagBg:'#fef2f2',tagColor:'#dc2626',label:'Common Mistakes'},
+    ed:{dot:'#f59e0b',tagBg:'#fffbeb',tagColor:'#d97706',label:'Edge Cases'},
+    prq:{dot:'#22d3ee',tagBg:'#ecfeff',tagColor:'#0891b2',label:'Practice Questions'},
+    so:{dot:'#34d399',tagBg:'#ecfdf5',tagColor:'#059669',label:'Solutions'}
 };
 
-(function applyDarkSecCfg() {
-  if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    SEC_CFG['Overview'].bg = '#1e3a5f'; SEC_CFG['Overview'].color = '#60a5fa';
-    SEC_CFG['Key Terms'].bg = '#2e1065'; SEC_CFG['Key Terms'].color = '#a78bfa';
-    SEC_CFG['Full Explanation'].bg = '#064e3b'; SEC_CFG['Full Explanation'].color = '#34d399';
-    SEC_CFG['Formula'].bg = '#422006'; SEC_CFG['Formula'].color = '#fbbf24';
-    SEC_CFG['Worked Example'].bg = '#2e1065'; SEC_CFG['Worked Example'].color = '#a78bfa';
-    SEC_CFG['Common Mistakes'].bg = '#450a0a'; SEC_CFG['Common Mistakes'].color = '#f87171';
-    SEC_CFG['Practice Problems'].bg = '#422006'; SEC_CFG['Practice Problems'].color = '#fbbf24';
-    SEC_CFG['Quick Recap'].bg = '#1e3a5f'; SEC_CFG['Quick Recap'].color = '#60a5fa';
-  }
-})();
-
-function fmtCode(text) {
-  text = text.replace(/```(\w*)\n?([\s\S]*?)```/g, function(m, lang, code) {
-    return '<div class="ai-pre">' + escapeHtml(code.trim()) + '</div>';
-  });
-  text = text.replace(/`([^`\n]+)`/g, '<code class="ai-inline-code">$1</code>');
-  return text;
-}
-
-var subFcCount = 10;
-
-function setSubFcCount(n) {
-  subFcCount = n;
-  document.querySelectorAll('#subFcCountPicker .count-pill').forEach(function(p) {
-    p.classList.toggle('active', parseInt(p.textContent) === n);
-  });
-}
-
-function explainRender(t) {
-  var clean = aiCleanText(t);
-  var sections = [];
-  var lines = clean.split('\n');
-  var curHead = ''; var curBody = [];
-  lines.forEach(function(line) {
-    var m = line.trim().match(/^(Overview|Key Terms|Full Explanation|Formula|Worked Example|Common Mistakes|Practice Problems|Quick Recap):$/i);
-    if (m) {
-      if (curHead) sections.push({ head: curHead, body: curBody.join('\n').trim() });
-      curHead = m[1]; curBody = [];
-    } else { curBody.push(line); }
-  });
-  if (curHead) sections.push({ head: curHead, body: curBody.join('\n').trim() });
-  if (!sections.length) {
-    var plainHtml = escapeHtml(clean).replace(/\n\n/g, '</p><p style="margin:0 0 10px;line-height:1.8">').replace(/\n/g, '<br>');
-    return '<div style="padding:14px;line-height:1.8;font-size:0.88rem;color:var(--text-dark)">' + fmtCode(plainHtml) + '</div>';
-  }
-  return sections.map(function(s, i) {
-    var c = SEC_CFG[s.head] || { icon: 'fa-circle', color: '#6b7280', bg: '#f3f4f6' };
-    var paras = s.body.split(/\n{2,}/).filter(function(l){ return l.trim(); }).map(function(l){
-      var lines2 = l.split('\n').filter(function(l2){ return l2.trim(); });
-      var text = fmtCode(lines2.map(function(l2){ return escapeHtml(l2); }).join('<br>'));
-      return '<p style="margin:0 0 10px;line-height:1.8">' + text + '</p>';
-    }).join('');
-    return '<div class="reveal" style="animation-delay:' + (i * 0.08) + 's;margin-bottom:10px;border-radius:12px;overflow:hidden;border:1px solid ' + c.color + '33;box-shadow:0 1px 3px rgba(0,0,0,0.04)">' +
-      '<div onclick="toggleSection(this)" style="padding:12px 16px;background:' + c.bg + ';cursor:pointer;display:flex;align-items:center;gap:10px;font-weight:700;font-size:0.85rem;color:' + c.color + ';user-select:none;border-bottom:1px solid ' + c.color + '15">' +
-      '<i class="fas ' + c.icon + '" style="font-size:0.9rem;width:20px;text-align:center"></i>' +
-      '<span style="flex:1">' + s.head + '</span>' +
-      '<span style="font-size:0.6rem;color:' + c.color + '88;font-weight:600">Click to toggle</span>' +
-      '<i class="fas fa-chevron-down" style="font-size:0.6rem;transition:transform 0.2s;color:' + c.color + '88"></i></div>' +
-      '<div class="sec-body" style="padding:14px 16px;font-size:0.85rem;line-height:1.8;color:var(--text-dark)">' + paras + '</div></div>';
-  }).join('');
-}
-
-function generateContent() {
-    var btn = document.getElementById('genContentBtn');
-    var skeleton = document.getElementById('explainSkeleton');
-    var inlineErr = document.getElementById('explainInlineError');
-    var display = document.getElementById('contentDisplay');
-    inlineErr.style.display = 'none';
-    display.style.display = 'none';
-    skeleton.style.display = 'block';
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
-    btn.disabled = true;
-    fetch('/api/study/subtopic/' + subtopicId + '/content', { method: 'POST' })
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-        skeleton.style.display = 'none';
-        if (d.success) {
-            display.style.display = 'block';
-            document.getElementById('explanationText').innerHTML = explainRender(d.content);
-            mathRender(document.getElementById('explanationText'));
-        } else {
-            inlineErr.style.display = 'flex';
-            document.getElementById('explainErrorText').textContent = d.error || 'Could not generate explanation';
+function secBody(key,text,ctx){
+    ctx=ctx||{};
+    if(key==='ke'){
+        text=text.replace(/^[•\u2022\*]\s*/gm,'').trim();
+        var rawTerms=text.split(/\s+(?=[•\u2022\-*]\s)/).filter(function(l){return l.trim();});
+        if(rawTerms.length<2)rawTerms=text.split(/\n/).filter(function(l){return l.trim();});
+        var cards=[];
+        for(var ti=0;ti<rawTerms.length;ti++){
+            var l=rawTerms[ti].trim().replace(/^[•\u2022\-*]\s*/,'');if(!l)continue;
+            var m=l.match(/^(.+?)\s*[:–-]\s*(.+)/);
+            if(m)cards.push('<div class="sec-card"><b>'+esc(m[1].trim())+'</b><span>'+esc(m[2].trim())+'</span></div>');
+            else cards.push('<div class="sec-card"><span>'+esc(l)+'</span></div>');
         }
-    }).catch(function(e) {
-        skeleton.style.display = 'none';
-        inlineErr.style.display = 'flex';
-        document.getElementById('explainErrorText').textContent = e.message || 'Network error';
-    }).finally(function() {
-        btn.innerHTML = '<i class="fas fa-magic"></i> Regenerate';
-        btn.disabled = false;
-    });
-}
-
-function switchTab(tab, btn) {
-    document.querySelectorAll('.tab-pill').forEach(function(b) { b.classList.remove('active'); });
-    btn.classList.add('active');
-    document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
-    document.getElementById('tab-' + tab).classList.add('active');
-    if (tab === 'videos') loadVideos();
-    if (tab === 'flashcards') loadFlashcards();
-}
-
-function loadVideos() {
-    var container = document.getElementById('videoList');
-    fetch('/api/study/youtube/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: subtopicName })
-    }).then(function(r) { return r.json(); })
-    .then(function(d) {
-        container.innerHTML = '';
-        if (d.success && d.html) {
-            container.innerHTML = d.html;
-        } else if (d.terms && d.terms.length > 0) {
-            d.terms.forEach(function(t) {
-                container.innerHTML += '<div class="yt-card" onclick="window.open(\'https://www.youtube.com/results?search_query=' + encodeURIComponent(t) + '\',\'_blank\')">' +
-                    '<i class="fab fa-youtube"></i><div><h4>' + escapeHtml(t) + '</h4></div></div>';
-            });
-        } else {
-            container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);font-weight:600;">No videos found</div>';
-        }
-    });
-}
-
-function loadFlashcards() {
-    document.getElementById('subFcInlineError').style.display = 'none';
-    var url = '/api/study/flashcards?courseId=' + courseId + (subtopicId ? '&subtopicId=' + subtopicId : '');
-    fetch(url)
-    .then(function(r) { return r.json().catch(function(){ return { flashcards: [] }; }); })
-    .then(function(d) {
-        if (d.flashcards && d.flashcards.length > 0) {
-            flashcards = d.flashcards;
-            currentCard = 0;
-            showCard();
-        }
-    }).catch(function(e){ console.warn('flashcards load failed', e); });
-}
-
-function showCard() {
-    if (flashcards.length === 0) {
-        document.getElementById('fcContainer').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);font-weight:600;">No flashcards yet. Generate some!</div>';
-        return;
+        return cards.length?'<div class="sec-grid">'+cards.join('')+'</div>':fmtP(text);
     }
-    var c = flashcards[currentCard];
-    var cs = getCardColor(c.front);
-    document.getElementById('fcContainer').innerHTML = '<div class="fc-card reveal" onclick="this.classList.toggle(\'flipped\')" style="padding:0;overflow:hidden">' +
-        subCardSvg(c, cs) +
-        '<div style="padding:12px 16px 16px">' +
-        '<div class="fc-front" style="font-size:0.95rem;font-weight:700;line-height:1.5;color:var(--text-dark)">' + escapeHtml(c.front || '(empty)') + '</div>' +
-        '<div class="fc-back" style="font-size:0.88rem;font-weight:600;color:var(--text-sub);line-height:1.5">' + escapeHtml(c.back || '(empty)') + '</div>' +
-        '</div>' +
-        '<div class="tap-hint" style="display:block;padding:0 16px 10px;font-size:0.6rem;color:var(--text-muted);font-weight:600">Tap to flip</div></div>' +
-        '<div class="reveal" style="text-align:center;font-size:0.7rem;font-weight:600;color:var(--text-sub);margin-top:4px">' + (currentCard + 1) + ' / ' + flashcards.length + '</div>';
+    if(key==='st'){
+        text=text.replace(/^Let's consider\b[^.]+\.\s*/i,'');
+        text=text.replace(/^Step\s+\d+[:.\s]+/gim,'');
+        var lines=text.split('\n').filter(function(l){return l.trim();});
+        var parts=[];
+        for(var sti=0;sti<lines.length;sti++){
+            var ln=lines[sti].trim();
+            if(/^\d+[.)]\s/.test(ln)){parts.push(ln.replace(/^\d+[.)]\s*/,''));}
+            else if(parts.length)parts[parts.length-1]+=' '+ln;
+            else parts.push(ln);
+        }
+        if(parts.length<2){
+            text=text.replace(/([.!?])\s+(?=[A-Z])/g,'$1\n');
+            parts=text.split('\n').filter(function(l){return l.trim();}).slice(0,5);
+        }
+        var html='';
+        for(var si=0;si<parts.length;si++){var t=parts[si].trim();if(t)html+='<div class="sec-step"><div class="sec-step-num">'+(si+1)+'</div><div class="sec-step-content">'+fmtInline(esc(t))+'</div></div>';}
+        return html||fmtP(text);
+    }
+    if(key==='co'){
+        var wr='',ri='',text2=text;
+        var wrRe=/(?:wrong|common mistake|incorrect)\s*(?:approach|way|method)?\s*[:;]\s*([\s\S]*?)(?=(?:right|correct|correct way|correct approach)\s*[:;]|$)/i;
+        var riRe=/(?:right|correct|correct way|correct approach)\s*[:;]\s*([\s\S]*)/i;
+        var wrMatch=text2.match(wrRe),riMatch=text2.match(riRe);
+        if(wrMatch)wr=wrMatch[1].trim();if(riMatch)ri=riMatch[1].trim();
+        if(wr||ri){var h='';if(wr)h+='<div class="sec-wrong"><b>Wrong Approach</b> '+fmtInline(esc(wr))+'</div>';if(ri)h+='<div class="sec-right"><b>Correct Way</b> '+fmtInline(esc(ri))+'</div>';return h;}
+        return fmtP(text);
+    }
+    if(key==='prq'){
+        var qLines=text.split('\n'),prqParts=[],prqBuf='';
+        for(var pri=0;pri<qLines.length;pri++){
+            var pl=qLines[pri];
+            if(/^\s*\d+[.)]\s/.test(pl)){if(prqBuf)prqParts.push(prqBuf.trim());prqBuf=pl.replace(/^\s*\d+[.)]\s*/,'');}
+            else prqBuf+=' '+pl;
+        }
+        if(prqBuf)prqParts.push(prqBuf.trim());
+        var qs=prqParts.length>1?prqParts:text.split(/\d+[.)]\s*/).filter(function(l){return l.trim();});
+        var sols=ctx.solutions||[],qhtml='';
+        for(var qi=0;qi<qs.length;qi++){
+            var qText=qs[qi].trim(),answer=sols[qi]||'';
+            qhtml+='<div class="sec-q" onclick="this.classList.toggle(\'revealed\')"><div class="q-main"><span class="q-num">'+(qi+1)+'</span><span class="q-text">'+fmtInline(esc(qText))+'</span>'+
+                (answer?'<div class="q-hint"><i class="fas fa-hand-pointer"></i> Tap to reveal answer</div>':'')+'</div>'+
+                (answer?'<div class="q-answer"><b>Solution</b> '+fmtInline(esc(answer))+'</div>':'')+'</div>';
+        }
+        return qhtml||fmtP(text);
+    }
+    if(key==='so'){
+        var soLines=text.split('\n'),soParts=[],soBuf='';
+        for(var soi2=0;soi2<soLines.length;soi2++){
+            var sl=soLines[soi2];
+            var solLabelMatch=sl.match(/^\s*(?:Solution\s*)?\d+[:.)]\s*/i);
+            if(solLabelMatch){if(soBuf)soParts.push(soBuf.trim());soBuf=sl.replace(/^\s*(?:Solution\s*)?\d+[:.)]\s*/i,'');}
+            else soBuf+=' '+sl;
+        }
+        if(soBuf)soParts.push(soBuf.trim());
+        var solsArr=soParts.length>1?soParts:text.split(/(?:Solution\s*)?\d+[:.)]\s*/i).filter(function(l){return l.trim();});
+        var shtml='';
+        for(var soi3=0;soi3<solsArr.length;soi3++){shtml+='<div class="sec-sol"><span class="q-num">'+(soi3+1)+'</span>'+fmtInline(esc(solsArr[soi3].trim()))+'</div>';}
+        return shtml||fmtP(text);
+    }
+    if(key==='ed'){
+        var edges=text.split(/\n{2,}/).filter(function(l){return l.trim();}),ehtml='';
+        for(var ei=0;ei<edges.length;ei++){ehtml+='<div class="sec-edge">'+fmtInline(esc(edges[ei].trim()))+'</div>';}
+        return ehtml||fmtP(text);
+    }
+    return fmtP(text);
+}
+
+function explainRender(t){
+    if(!t)return '<p style="color:var(--text-muted);text-align:center;padding:2rem">No content available</p>';
+    var clean=(t+'').replace(/```[a-zA-Z]*\n?/g,'```').replace(/\r\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+    var headRe=/(What You Should Know|Why It Matters|Plain Explanation|Key Terms|Step-by-Step Examples|Common Mistakes|Edge Cases|Practice Questions|Step-by-Step Solutions)\s*:\s*/gi;
+    var parts=clean.split(headRe),sections=[];
+    if(parts.length>=2){for(var pi=1;pi+1<parts.length;pi+=2){sections.push({head:parts[pi].trim(),body:(parts[pi+1]||'').trim()});}}
+    else sections.push({head:'',body:clean});
+    var solutionsList=[];
+    for(var fi=0;fi<sections.length;fi++){
+        if(/solutions/i.test(sections[fi].head)){
+            var soBody=sections[fi].body,soLines=soBody.split('\n'),solParts=[],solBuf='';
+            for(var sli=0;sli<soLines.length;sli++){
+                var sll=soLines[sli];
+                var solLb=sll.match(/^\s*(?:Solution\s*)?\d+[:.)]\s*/i);
+                if(solLb){if(solBuf)solParts.push(solBuf.trim());solBuf=sll.replace(/^\s*(?:Solution\s*)?\d+[:.)]\s*/i,'');}
+                else solBuf+=' '+sll;
+            }
+            if(solBuf)solParts.push(solBuf.trim());
+            solutionsList=solParts.length>1?solParts:soBody.split(/(?:Solution\s*)?\d+[:.)]\s*/i).filter(function(l){return l.trim();});
+            break;
+        }
+    }
+    if(!sections.length)return'<div class="sec-block"><div class="sec-body">'+fmtP(clean)+'</div></div>';
+    var html='';
+    for(var si=0;si<sections.length;si++){
+        var s=sections[si];
+        if(!s.head){html+='<div class="sec-block"><div class="sec-body">'+fmtP(s.body)+'</div></div>';continue;}
+        var key='pl';
+        for(var ki=0;ki<SEC_KEYS.length;ki++){if(SEC_KEYS[ki][0].toLowerCase()===s.head.toLowerCase()){key=SEC_KEYS[ki][1];break;}}
+        var c=SEC_CFG[key],ctx={solutions:solutionsList},rendered=secBody(key,s.body,ctx);
+        html+='<div class="sec-block"><div class="sec-heading" style="border-left-color:'+c.dot+'">'+c.label+'</div><div class="sec-body">'+rendered+'</div></div>';
+    }
+    return html;
+}
+
+function generateContent(){
+    var skeleton=document.getElementById('explainSkeleton'),inlineErr=document.getElementById('explainInlineError'),empty=document.getElementById('explainEmpty'),wrap=document.getElementById('explanationWrap');
+    inlineErr.style.display='none';if(empty)empty.style.display='none';if(wrap)wrap.style.display='none';skeleton.style.display='block';
+    var btns=document.querySelectorAll('#tab-explanation .gen-btn');for(var bi=0;bi<btns.length;bi++){btns[bi].disabled=true;btns[bi].innerHTML='<i class="fas fa-spinner fa-spin"></i> Generating...';}
+    fetch('/api/study/subtopic/'+subtopicId+'/content',{method:'POST'}).then(function(r){return r.json();}).then(function(d){
+        skeleton.style.display='none';
+        if(d.success){
+            if(wrap)wrap.style.display='block';
+            document.getElementById('explanationText').innerHTML=explainRender(d.content);
+            setTimeout(function(){
+                try{if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise([document.getElementById('explanationText')]).catch(function(){});}catch(e){}
+                diagramRender(document.getElementById('explanationText'));
+            },300);
+            setTimeout(function(){
+                try{if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise([document.getElementById('explanationText')]).catch(function(){});}catch(e){}
+            },1500);
+        } else {
+            if(empty)empty.style.display='block';inlineErr.style.display='flex';document.getElementById('explainErrorText').textContent=d.error||'Could not generate explanation';
+        }
+    }).catch(function(e){
+        skeleton.style.display='none';if(empty)empty.style.display='block';inlineErr.style.display='flex';document.getElementById('explainErrorText').textContent=e.message||'Network error';
+    }).finally(function(){
+        document.querySelectorAll('#tab-explanation .gen-btn').forEach(function(b){b.disabled=false;b.innerHTML=b.id==='genContentBtn'?'<i class="fas fa-magic"></i> Generate Explanation':'<i class="fas fa-redo"></i> Regenerate';});
+    });
+}
+
+function qaEscape(s){return(s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function askQuestion(){
+    var input=document.getElementById('qaInput'),q=input.value.trim();if(!q)return;input.value='';
+    var container=document.getElementById('qaMessages'),msg=document.createElement('div');msg.className='qa-msg user';
+    var bubble=document.createElement('div');bubble.className='bubble';bubble.innerHTML=qaEscape(q);msg.appendChild(bubble);container.appendChild(msg);container.scrollTop=container.scrollHeight;
+    var pending=document.getElementById('qaPending');pending.style.display='block';
+    fetch('/api/study/subtopic/'+subtopicId+'/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})})
+    .then(function(r){return r.json();}).then(function(d){
+        pending.style.display='none';
+        var aiMsg=document.createElement('div');aiMsg.className='qa-msg ai';var aiBubble=document.createElement('div');aiBubble.className='bubble';
+        if(d.success&&d.answer)aiBubble.innerHTML=d.answer.replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>');
+        else aiBubble.innerHTML='<span style="color:#dc2626">Error: '+qaEscape(d.error||'No response')+'</span>';
+        aiMsg.appendChild(aiBubble);container.appendChild(aiMsg);container.scrollTop=container.scrollHeight;
+        try{if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise([container]).catch(function(){});}catch(e){}
+        diagramRender(container);
+    }).catch(function(e){
+        pending.style.display='none';
+        var aiMsg=document.createElement('div');aiMsg.className='qa-msg ai';var aiBubble=document.createElement('div');aiBubble.className='bubble';
+        aiBubble.innerHTML='<span style="color:#dc2626">Network error: '+qaEscape(e.message)+'</span>';aiMsg.appendChild(aiBubble);container.appendChild(aiMsg);container.scrollTop=container.scrollHeight;
+    });
+}
+
+function switchTab(tab,btn){
+    document.querySelectorAll('.tab-pill').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(function(t){t.classList.remove('active');});document.getElementById('tab-'+tab).classList.add('active');
+    if(tab==='videos')loadVideos();if(tab==='flashcards')loadFlashcards();
+    if(tab==='explanation')setTimeout(function(){diagramRender(document.getElementById('explanationText'));},300);
+}
+
+function toggleVideos(el){
+    var body=el.nextElementSibling,icon=el.querySelector('.chevron');
+    if(!body.style.display||body.style.display==='none'){body.style.display='block';icon.className='fas fa-chevron-down chevron open';}
+    else{body.style.display='none';icon.className='fas fa-chevron-down chevron closed';}
+}
+
+function loadVideos(){
+    var container=document.getElementById('videoList');
+    fetch('/api/study/youtube/search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:subtopicName})})
+    .then(function(r){return r.json();}).then(function(d){
+        container.innerHTML='';
+        if(d.success&&d.html)container.innerHTML=d.html;
+        else if(d.terms&&d.terms.length>0){d.terms.forEach(function(t){container.innerHTML+='<div class="yt-card" onclick="window.open(\'https://www.youtube.com/results?search_query='+encodeURIComponent(t)+'\',\'_blank\')"><i class="fab fa-youtube"></i><div><h4>'+escapeHtml(t)+'</h4></div></div>';});}
+        else container.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text-muted);font-weight:600">No videos found</div>';
+    });
+}
+
+function loadFlashcards(){
+    document.getElementById('subFcInlineError').style.display='none';
+    fetch('/api/study/flashcards?courseId='+courseId+(subtopicId?'&subtopicId='+subtopicId:''))
+    .then(function(r){return r.json().catch(function(){return{flashcards:[]};});}).then(function(d){
+        if(d.flashcards&&d.flashcards.length>0){flashcards=d.flashcards;currentCard=0;showCard();}
+    }).catch(function(e){console.warn('flashcards load failed',e);});
+}
+function showCard(){
+    if(!flashcards.length){document.getElementById('fcContainer').innerHTML='<div style="text-align:center;padding:2rem;color:var(--text-muted);font-weight:600">No flashcards yet. Generate some!</div>';return;}
+    var c=flashcards[currentCard],cs=getCardColor(c.front);
+    document.getElementById('fcContainer').innerHTML='<div class="fc-card reveal" onclick="this.classList.toggle(\'flipped\')" style="padding:0;overflow:hidden">'+subCardSvg(c,cs)+
+        '<div style="padding:12px 16px 16px"><div class="fc-front" style="font-size:0.95rem;font-weight:700;line-height:1.5;color:var(--text-dark)">'+escapeHtml(c.front||'(empty)')+'</div>'+
+        '<div class="fc-back" style="font-size:0.88rem;font-weight:600;color:var(--text-sub);line-height:1.5">'+escapeHtml(c.back||'(empty)')+'</div></div>'+
+        '<div style="padding:0 16px 10px;font-size:0.6rem;color:var(--text-muted);font-weight:600">Tap to flip</div></div>'+
+        '<div class="reveal" style="text-align:center;font-size:0.7rem;font-weight:600;color:var(--text-sub);margin-top:4px">'+(currentCard+1)+' / '+flashcards.length+'</div>';
     mathRender(document.getElementById('fcContainer'));
 }
+function prevCard(){if(currentCard>0){currentCard--;showCard();}}
+function nextCard(){if(currentCard<flashcards.length-1){currentCard++;showCard();}}
 
-function prevCard() { if (currentCard > 0) { currentCard--; showCard(); } }
-function nextCard() { if (currentCard < flashcards.length - 1) { currentCard++; showCard(); } }
+function genFlashcards(){
+    var fcContainer=document.getElementById('fcContainer'),inlineErr=document.getElementById('subFcInlineError'),errText=document.getElementById('subFcErrorText');
+    inlineErr.style.display='none';fcContainer.innerHTML='<div class="skeleton skeleton-card" style="height:200px"></div><div class="skeleton skeleton-text" style="width:40%;margin:0 auto"></div>';
+    fetch('/api/study/flashcards/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({courseId:courseId,subtopicId:subtopicId,topicTitle:subtopicName,count:subFcCount})})
+    .then(function(r){return r.json();}).then(function(d){
+        if(d.success){Swal.fire({icon:'success',text:d.count+' flashcards created!',timer:1200,showConfirmButton:false});loadFlashcards();}
+        else{fcContainer.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text-muted);font-weight:600">No flashcards yet. Generate some!</div>';inlineErr.style.display='flex';errText.textContent=d.error||'Could not generate flashcards';}
+    }).catch(function(e){fcContainer.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text-muted);font-weight:600">No flashcards yet. Generate some!</div>';inlineErr.style.display='flex';errText.textContent=e.message||'Network error';});
+}
 
-function genFlashcards() {
-    var fcContainer = document.getElementById('fcContainer');
-    var inlineErr = document.getElementById('subFcInlineError');
-    var errText = document.getElementById('subFcErrorText');
-    inlineErr.style.display = 'none';
-    fcContainer.innerHTML = '<div class="skeleton skeleton-card" style="height:200px"></div>' +
-        '<div class="skeleton skeleton-text" style="width:40%;margin:0 auto"></div>';
-    fetch('/api/study/flashcards/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ courseId: courseId, subtopicId: subtopicId, topicTitle: subtopicName, count: subFcCount })
-    }).then(function(r) { return r.json(); }).then(function(d) {
-        if (d.success) { Swal.fire({ icon: 'success', text: d.count + ' flashcards created!', timer: 1200, showConfirmButton: false }); loadFlashcards(); }
-        else {
-            fcContainer.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);font-weight:600;">No flashcards yet. Generate some!</div>';
-            inlineErr.style.display = 'flex';
-            errText.textContent = d.error || 'Could not generate flashcards';
-        }
-    }).catch(function(e) {
-        fcContainer.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);font-weight:600;">No flashcards yet. Generate some!</div>';
-        inlineErr.style.display = 'flex';
-        errText.textContent = e.message || 'Network error';
+function deleteSubtopicFlashcards(){
+    Swal.fire({title:'Delete all flashcards?',text:'This will remove all flashcards for this subtopic.',icon:'warning',showCancelButton:true,confirmButtonText:'Delete all',confirmButtonColor:'#dc2626'}).then(function(res){
+        if(res.isConfirmed){fetch('/api/study/flashcards/delete-all',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({courseId:courseId,subtopicId:subtopicId})}).then(function(r){return r.json();}).then(function(d){if(d.success)Swal.fire({icon:'success',text:d.deleted+' flashcards deleted',timer:1500,showConfirmButton:false});else Swal.fire({icon:'error',text:d.error});});}
     });
 }
 
-function deleteSubtopicFlashcards() {
-    Swal.fire({ title: 'Delete all flashcards?', text: 'This will remove all flashcards for this subtopic.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete all', confirmButtonColor: '#dc2626' }).then(function(res) {
-        if (res.isConfirmed) {
-            fetch('/api/study/flashcards/delete-all', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ courseId: courseId, subtopicId: subtopicId }) })
-            .then(function(r){ return r.json(); })
-            .then(function(d) {
-                if (d.success) { Swal.fire({ icon: 'success', text: d.deleted + ' flashcards deleted', timer: 1500, showConfirmButton: false }); loadFlashcards(); }
-                else Swal.fire({ icon: 'error', text: d.error });
-            });
-        }
-    });
-}
-
-function startQuiz() {
+function startQuiz(){
     Swal.fire({
-        title: 'Quiz Setup',
-        html:
-            '<div style="text-align:left;font-size:0.8rem;color:#475569;font-weight:600;margin-bottom:6px">Number of questions</div>' +
-            '<select id="qz-count" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #cbd5e1;font-family:inherit;font-weight:600;margin-bottom:10px">' +
-            '<option value="5">5 questions</option><option value="10" selected>10 questions</option>' +
-            '<option value="15">15 questions</option><option value="20">20 questions</option></select>' +
-            '<div style="text-align:left;font-size:0.8rem;color:#475569;font-weight:600;margin-bottom:6px">Question type</div>' +
-            '<select id="qz-type" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #cbd5e1;font-family:inherit;font-weight:600;margin-bottom:10px">' +
-            '<option value="mixed" selected>Mixed (MCQ + Theory)</option>' +
-            '<option value="multiple_choice">Multiple Choice only</option>' +
-            '<option value="theory">Theory only</option></select>' +
-            '<div style="text-align:left;font-size:0.8rem;color:#475569;font-weight:600;margin-bottom:6px">Time limit</div>' +
-            '<select id="qz-time" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #cbd5e1;font-family:inherit;font-weight:600;margin-bottom:10px">' +
-            '<option value="0" selected>Untimed</option>' +
-            '<option value="5">5 minutes</option>' +
-            '<option value="10">10 minutes</option>' +
-            '<option value="15">15 minutes</option></select>',
-        showCancelButton: true,
-        confirmButtonText: 'Generate Quiz',
-        showLoaderOnConfirm: true,
-        preConfirm: function() {
-            var count = parseInt(document.getElementById('qz-count').value) || 5;
-            var type = document.getElementById('qz-type').value;
-            var time = parseInt(document.getElementById('qz-time').value) || 0;
-            Swal.update({ html: '<div style="margin-top:8px"><i class="fas fa-spinner fa-spin" style="font-size:1.6rem;color:#0062ff"></i></div><div style="margin-top:8px;font-weight:600;color:#475569">Generating quiz…</div>' });
-            return fetch('/api/study/quiz/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ courseId: courseId, subtopicId: subtopicId, topicTitle: subtopicName, questionType: type, questionCount: count, timeLimit: time })
-            }).then(function(r){ return r.json(); }).then(function(d) {
-                if (d && d.success && d.attempt) return d;
-                throw new Error((d && d.error) ? d.error : 'Failed to generate quiz');
-            });
+        title:'Quiz Setup',
+        html:'<div style="text-align:left;font-size:0.8rem;color:#475569;font-weight:600;margin-bottom:6px">Number of questions</div><select id="qz-count" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #cbd5e1;font-family:inherit;font-weight:600;margin-bottom:10px"><option value="5">5 questions</option><option value="10" selected>10 questions</option><option value="15">15 questions</option><option value="20">20 questions</option></select>'+
+        '<div style="text-align:left;font-size:0.8rem;color:#475569;font-weight:600;margin-bottom:6px">Question type</div><select id="qz-type" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #cbd5e1;font-family:inherit;font-weight:600;margin-bottom:10px"><option value="mixed" selected>Mixed (MCQ + Theory)</option><option value="multiple_choice">Multiple Choice only</option><option value="theory">Theory only</option></select>'+
+        '<div style="text-align:left;font-size:0.8rem;color:#475569;font-weight:600;margin-bottom:6px">Time limit</div><select id="qz-time" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #cbd5e1;font-family:inherit;font-weight:600;margin-bottom:10px"><option value="0" selected>Untimed</option><option value="5">5 minutes</option><option value="10">10 minutes</option><option value="15">15 minutes</option></select>',
+        showCancelButton:true,confirmButtonText:'Generate Quiz',showLoaderOnConfirm:true,
+        preConfirm:function(){
+            var count=parseInt(document.getElementById('qz-count').value)||5,type=document.getElementById('qz-type').value,time=parseInt(document.getElementById('qz-time').value)||0;
+            Swal.update({html:'<div style="margin-top:8px"><i class="fas fa-spinner fa-spin" style="font-size:1.6rem;color:var(--brand)"></i></div><div style="margin-top:8px;font-weight:600;color:var(--text-secondary)">Generating quiz...</div>'});
+            return fetch('/api/study/quiz/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({courseId:courseId,subtopicId:subtopicId,topicTitle:subtopicName,questionType:type,questionCount:count,timeLimit:time})}).then(function(r){return r.json();}).then(function(d){if(d&&d.success&&d.attempt)return d;throw new Error((d&&d.error)?d.error:'Failed to generate quiz');});
         }
-    }).then(function(res) {
-        if (res && res.isConfirmed && res.value && res.value.attempt) {
-            window.location.href = '/study/quiz/' + res.value.attempt.id;
-        }
-    }).catch(function(err) {
-        Swal.fire({ icon: 'error', title: 'Quiz error', text: err.message });
-    });
+    }).then(function(res){if(res&&res.isConfirmed&&res.value&&res.value.attempt)window.location.href='/study/quiz/'+res.value.attempt.id;}).catch(function(err){Swal.fire({icon:'error',title:'Quiz error',text:err.message});});
 }
 
-function escapeHtml(t) { return (t || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-function updateTopicProgress() {
-  var url = '/api/study/subtopic/topic-progress?';
-  if (topicId) url += 'topicId=' + topicId;
-  else url += 'subtopicId=' + subtopicId;
-  fetch(url)
-    .then(function(r){ return r.json(); })
-    .then(function(d) {
-      if (d.subtopics) {
-        topicSubtopics = d.subtopics;
-        var total = topicSubtopics.length;
-        var done = topicSubtopics.filter(function(s){ return s.status === 'completed'; }).length;
-        var pct = total > 0 ? Math.round(done / total * 100) : 0;
-        var bar = document.getElementById('topicProgressBar');
-        var txt = document.getElementById('topicProgressText');
-        if (bar) bar.style.width = pct + '%';
-        if (txt) txt.textContent = done + '/' + total;
-      }
+function updateTopicProgress(){
+    var url='/api/study/subtopic/topic-progress?';if(topicId)url+='topicId='+topicId;else url+='subtopicId='+subtopicId;
+    fetch(url).then(function(r){return r.json();}).then(function(d){
+        if(d.subtopics){topicSubtopics=d.subtopics;var total=topicSubtopics.length,done=topicSubtopics.filter(function(s){return s.status==='completed';}).length,pct=total>0?Math.round(done/total*100):0;
+        var txt=document.getElementById('topicProgressText');if(txt)txt.textContent=done+'/'+total;}
     }).catch(function(){});
 }
 
-function toggleComplete() {
-  var btn = document.getElementById('completeBtn');
-  var badge = document.getElementById('statusBadge');
-  var isComplete = badge && badge.textContent.trim() === 'completed';
-  var newStatus = isComplete ? 'accepted' : 'completed';
-  fetch('/api/study/subtopics/update', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id: subtopicId, status: newStatus })
-  }).then(function(r){ return r.json(); }).then(function(d) {
-    if (d.success) {
-      if (badge) {
-        badge.textContent = newStatus;
-        badge.style.background = newStatus === 'completed' ? '#d1fae5' : '#fef3c7';
-        badge.style.color = newStatus === 'completed' ? '#065f46' : '#92400e';
-      }
-      if (btn) {
-        btn.innerHTML = newStatus === 'completed' ? '<i class="fas fa-check-circle"></i> Completed' : '<i class="fas fa-circle"></i> Mark completed';
-        btn.style.background = newStatus === 'completed' ? '#d1fae5' : '#f1f5f9';
-        btn.style.color = newStatus === 'completed' ? '#065f46' : 'var(--text-sub)';
-      }
-      updateTopicProgress();
-    }
-  });
+function toggleComplete(){
+    var badge=document.getElementById('statusBadge'),isComplete=badge&&badge.textContent.trim()==='completed',newStatus=isComplete?'accepted':'completed';
+    fetch('/api/study/subtopics/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:subtopicId,status:newStatus})}).then(function(r){return r.json();}).then(function(d){
+        if(d.success){
+            if(badge){badge.textContent=newStatus;}
+            var btn=document.getElementById('completeBtn');
+            if(btn){btn.innerHTML=newStatus==='completed'?'<i class="fas fa-check-circle"></i> Completed':'<i class="fas fa-circle"></i> Mark done';}
+            updateTopicProgress();
+        }
+    });
 }
 
-function fmtTime(secs) {
-    var m = Math.floor(secs / 60);
-    var s = secs % 60;
-    return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
-}
-
-function toggleSessionTimer() {
-    var btn = document.getElementById('stToggle');
-    if (stRunning) {
-        clearInterval(stInterval);
-        stRunning = false;
-        btn.innerHTML = '<i class="fas fa-play"></i>';
-        btn.className = 'st-btn play';
-        return;
-    }
-    if (!stSessionId) {
-        fetch('/api/study/sessions/start', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ courseId: courseId, subtopicId: subtopicId, courseName: subtopicName })
-        }).then(function(r){ return r.json(); }).then(function(d) {
-            if (d.success && d.session) {
-                stSessionId = d.session.id;
-                document.getElementById('stStopBtn').style.display = 'block';
-                startTimer(btn);
-            }
-        });
-        return;
-    }
+function fmtTime(secs){var m=Math.floor(secs/60),s=secs%60;return(m<10?'0':'')+m+':'+(s<10?'0':'')+s;}
+function toggleSessionTimer(){
+    var btn=document.getElementById('stToggle');
+    if(stRunning){clearInterval(stInterval);stRunning=false;btn.innerHTML='<i class="fas fa-play"></i>';btn.className='st-btn play';return;}
+    if(!stSessionId){fetch('/api/study/sessions/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({courseId:courseId,subtopicId:subtopicId,courseName:subtopicName})}).then(function(r){return r.json();}).then(function(d){if(d.success&&d.session){stSessionId=d.session.id;document.getElementById('stStopBtn').style.display='block';startTimer(btn);}});return;}
     startTimer(btn);
 }
-
-function startTimer(btn) {
-    stRunning = true;
-    btn.innerHTML = '<i class="fas fa-pause"></i>';
-    btn.className = 'st-btn pause';
-    stInterval = setInterval(function() {
-        stSeconds++;
-        document.getElementById('stDisplay').textContent = fmtTime(stSeconds);
-    }, 1000);
-}
-
-function endSubtopICSession() {
-    if (!stSessionId) return;
-    if (stInterval) clearInterval(stInterval);
-    stRunning = false;
-    fetch('/api/study/sessions/end', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: stSessionId, elapsedSeconds: stSeconds })
-    }).then(function(r){ return r.json(); }).then(function(d) {
-        if (d.success) {
-            stSessionId = null;
-            stSeconds = 0;
-            document.getElementById('stDisplay').textContent = '00:00';
-            document.getElementById('stToggle').innerHTML = '<i class="fas fa-play"></i>';
-            document.getElementById('stToggle').className = 'st-btn play';
-            document.getElementById('stStopBtn').style.display = 'none';
-        }
+function startTimer(btn){stRunning=true;btn.innerHTML='<i class="fas fa-pause"></i>';btn.className='st-btn pause';stInterval=setInterval(function(){stSeconds++;document.getElementById('stDisplay').textContent=fmtTime(stSeconds);},1000);}
+function endSubtopICSession(){
+    if(!stSessionId)return;if(stInterval)clearInterval(stInterval);stRunning=false;
+    fetch('/api/study/sessions/end',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:stSessionId,elapsedSeconds:stSeconds})}).then(function(r){return r.json();}).then(function(d){
+        if(d.success){stSessionId=null;stSeconds=0;document.getElementById('stDisplay').textContent='00:00';document.getElementById('stToggle').innerHTML='<i class="fas fa-play"></i>';document.getElementById('stToggle').className='st-btn play';document.getElementById('stStopBtn').style.display='none';}
     });
 }
 
-function chEscape(s) {
-    return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-function chRender(text) {
-    var raw = String(text || '');
-    var paras = raw.split(/\n\s*\n/);
-    return paras.map(function(p) {
-        var t = p.replace(/\s*\n\s*/g, ' ').trim();
-        if (!t) return '';
-        return '<p style="margin:0 0 6px">' + chEscape(t) + '</p>';
-    }).join('');
-}
-
-function chAppend(role, html) {
-    var wrap = document.createElement('div');
-    wrap.className = 'chat-msg ' + role;
-    var bubble = document.createElement('div');
-    bubble.className = 'bubble';
-    bubble.innerHTML = html;
-    wrap.appendChild(bubble);
-    var container = document.getElementById('chatMessages');
-    if (container.querySelector('.fa-comments')) container.innerHTML = '';
-    container.appendChild(wrap);
-    container.scrollTop = container.scrollHeight;
-}
-
-function loadChatHistory() {
-    fetch('/api/study/chat/history?courseId=' + courseId + '&subtopicId=' + subtopicId)
-    .then(function(r){ return r.json(); }).then(function(d) {
-        if (d.messages && d.messages.length > 0) {
-            var container = document.getElementById('chatMessages');
-            container.innerHTML = '';
-            d.messages.forEach(function(m) {
-                chAppend(m.role === 'user' ? 'user' : 'ai', chRender(m.message));
-            });
-        }
-    }).catch(function(e){ console.warn('chat history', e); });
-}
-
-function sendChatMsg() {
-    var input = document.getElementById('chatInput');
-    var msg = input.value.trim();
-    if (!msg) return;
-    input.value = '';
-    chAppend('user', chEscape(msg));
-    var aiMsg = document.createElement('div');
-    aiMsg.className = 'chat-msg ai';
-    var bubble = document.createElement('div');
-    bubble.className = 'bubble';
-    bubble.innerHTML = '<i class="fas fa-spinner fa-pulse" style="color:var(--brand)"></i>';
-    aiMsg.appendChild(bubble);
-    var container = document.getElementById('chatMessages');
-    if (container.querySelector('.fa-comments')) container.innerHTML = '';
-    container.appendChild(aiMsg);
-    container.scrollTop = container.scrollHeight;
-    fetch('/api/study/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: msg, courseId: courseId, subtopicId: subtopicId, courseName: subtopicName })
-    }).then(function(r){ return r.json(); }).then(function(d) {
-        if (d && d.success && d.reply) {
-            bubble.innerHTML = d.reply.replace(/\n/g, '<br>');
-        } else {
-            bubble.innerHTML = '<p style="color:#dc2626;margin:0">' + chEscape((d && d.error) ? d.error : 'Sorry, I could not process that.') + '</p>';
-        }
-        container.scrollTop = container.scrollHeight;
-    }).catch(function(err) {
-        bubble.innerHTML = '<p style="color:#dc2626;margin:0">' + chEscape(err.message || 'network error') + '</p>';
-    });
-}
-
-if (document.querySelector('#tab-videos.active')) loadVideos();
-
-(function autoInit() {
-  var raw = <%- JSON.stringify(typeof subtopic !== "undefined" && subtopic ? (subtopic.content || '') : '') %>;
-  if (raw) {
-    document.getElementById('contentDisplay').style.display = 'block';
-    document.getElementById('explanationText').innerHTML = explainRender(raw);
-  }
+(function autoInit(){
+    var raw=<%- JSON.stringify(typeof subtopic !== "undefined" && subtopic ? (subtopic.content || '') : '') %>;
+    if(raw){
+        var e=document.getElementById('explainEmpty'),w=document.getElementById('explanationWrap');
+        if(e)e.style.display='none';if(w)w.style.display='block';
+        document.getElementById('explanationText').innerHTML=explainRender(raw);
+        setTimeout(function(){
+            try{if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise([document.getElementById('explanationText')]).catch(function(){});}catch(e){}
+            diagramRender(document.getElementById('explanationText'));
+        },400);
+        setTimeout(function(){try{if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise([document.getElementById('explanationText')]).catch(function(){});}catch(e){}},1500);
+    }
 })();
 </script>
 </body>

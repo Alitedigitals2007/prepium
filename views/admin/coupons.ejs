@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --brand: #0062ff; --bg: #f0f4f8; --sidebar: #0b1437;
+            --brand: #2563eb; --bg: #f0f4f8; --sidebar: #0b1437;
             --border: rgba(226,232,240,0.6); --card-bg: rgba(255,255,255,0.72);
             --text-primary: #0f172a; --text-secondary: #64748b; --text-muted: #94a3b8;
             --green: #10b981; --red: #f43f5e; --amber: #f59e0b;
@@ -25,7 +25,7 @@
         .nav-item { display:flex; align-items:center; gap:12px; color:rgba(255,255,255,0.5); text-decoration:none; padding:11px 14px; border-radius:12px; font-size:0.85rem; font-weight:600; margin-bottom:3px; transition:all 0.2s; }
         .nav-item i { width:20px; text-align:center; }
         .nav-item:hover { background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.9); }
-        .nav-item.active { background:rgba(0,98,255,0.18); color:white; }
+        .nav-item.active { background:rgba(37,99,235,0.18); color:white; }
         .nav-item.active::before { content:''; position:absolute; left:-12px; top:50%; transform:translateY(-50%); width:3px; height:20px; background:var(--brand); border-radius:0 4px 4px 0; }
         .nav-divider { height:1px; background:rgba(255,255,255,0.06); margin:12px 14px; }
         .main { margin-left:260px; padding:2.5rem; width:calc(100% - 260px); min-height:100vh; }
@@ -54,6 +54,8 @@
         .badge.inactive { background:#f1f5f9; color:#64748b; }
         @media (max-width:900px) { .sidebar { transform:translateX(-100%); } .main { margin-left:0; width:100%; padding:1.5rem; } }
     </style>
+<meta name="theme-color" content="#2563eb">
+<%- include('../partials/theme-toggle') %>
 </head>
 <body>
     <nav class="sidebar">

@@ -375,6 +375,7 @@ const transporter = (process.env.EMAIL_USER && process.env.EMAIL_PASS)
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+app.disable('view cache');
 
 // Paystack webhook needs raw body BEFORE express.json() consumes it
 app.post('/paystack-webhook', express.raw({ type: '*/*' }), async (req, res) => {
@@ -2670,37 +2671,39 @@ async function callGeminiWithImage(prompt, base64Data, mimeType) {
 
 // Call Gemini with text prompt + text content
 async function callGeminiWithText(prompt, textContent) {
-    const endpoints = [
-        { url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', key: process.env.GEMINI_API_KEY_PRIMARY },
-        { url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', key: process.env.GEMINI_API_KEY_SECONDARY }
-    ].filter(e => e.key);
+    const models = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
+    const keys = [process.env.GEMINI_API_KEY_PRIMARY, process.env.GEMINI_API_KEY_SECONDARY].filter(Boolean);
 
-    for (const ep of endpoints) {
-        try {
-            const body = {
-                contents: [{
-                    parts: [
-                        { text: prompt },
-                        { text: textContent }
-                    ]
-                }],
-                generationConfig: { temperature: 0.1, maxOutputTokens: 8192 }
-            };
+    for (const key of keys) {
+        for (const model of models) {
+            try {
+                const parts = [{ text: prompt }];
+                if (textContent) parts.push({ text: textContent });
+                const body = {
+                    contents: [{ parts }],
+                    generationConfig: { temperature: 0.1, maxOutputTokens: 16384 }
+                };
 
-            const resp = await fetch(`${ep.url}?key=${ep.key}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-                signal: AbortSignal.timeout(30000)
-            });
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+                const resp = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                    signal: AbortSignal.timeout(90000)
+                });
 
-            if (resp.ok) {
+                if (!resp.ok) {
+                    const errText = await resp.text().catch(() => '');
+                    console.error(`Gemini ${model} returned ${resp.status}: ${errText.slice(0, 200)}`);
+                    continue;
+                }
+
                 const data = await resp.json();
                 const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
                 if (text) return { success: true, text };
+            } catch (e) {
+                console.error(`Gemini ${model} failed:`, e.message);
             }
-        } catch (e) {
-            console.error('Gemini text call failed:', e.message);
         }
     }
     return { success: false, text: '' };
@@ -3284,8 +3287,9 @@ app.get('/daily-challenge', isAuth, async (req, res) => {
 
 app.post('/api/daily-challenge/start', isAuth, async (req, res) => {
     const userId = req.session.user.id;
-    const { subject } = req.body;
-    if (!subject) return res.json({ error: 'Select a subject.' });
+    const { subjects } = req.body;
+    if (!subjects || !Array.isArray(subjects) || subjects.length === 0) return res.json({ error: 'Select at least one subject.' });
+    if (subjects.length > 3) return res.json({ error: 'Max 3 subjects.' });
 
     try {
         const existing = await pool.query(
@@ -3294,21 +3298,11 @@ app.post('/api/daily-challenge/start', isAuth, async (req, res) => {
         );
         if (existing.rows.length > 0) return res.json({ error: 'Already completed today.' });
 
-        const prompt = `You are a Nigerian university examiner. Generate exactly 20 multiple-choice questions for the subject "${subject}" at university level.
-Each question must have 4 options (A, B, C, D), exactly one correct answer, and a brief explanation.
-Vary difficulty across the questions.
-Respond with ONLY valid JSON array (no markdown, no code fences):
-[
-  {
-    "question_text": "...",
-    "option_a": "...",
-    "option_b": "...",
-    "option_c": "...",
-    "option_d": "...",
-    "correct_option": "A",
-    "explanation": "..."
-  }
-]`;
+        const subjectList = subjects.join(', ');
+        const prompt = `Generate 15 multiple-choice questions covering: ${subjectList}. University level, mixed across subjects.
+Each: 4 options (A-D), one correct, brief explanation. Vary difficulty.
+Return ONLY valid JSON array:
+[{"question_text":"...","option_a":"...","option_b":"...","option_c":"...","option_d":"...","correct_option":"A","explanation":"..."}]`;
 
         let questions;
         const endpoints = [
@@ -3319,8 +3313,8 @@ Respond with ONLY valid JSON array (no markdown, no code fences):
         let generated = false;
         for (const ep of endpoints) {
             try {
-                const body = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.7, maxOutputTokens: 8192 } };
-                const resp = await fetch(`${ep.url}?key=${ep.key}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(30000) });
+                const body = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.5, maxOutputTokens: 4096 } };
+                const resp = await fetch(`${ep.url}?key=${ep.key}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(25000) });
                 if (resp.ok) {
                     const data = await resp.json();
                     const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
@@ -3335,8 +3329,8 @@ Respond with ONLY valid JSON array (no markdown, no code fences):
                 try {
                     const orResp = await fetch('https://api.mistral.ai/v1/chat/completions', {
                         method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-                        body: JSON.stringify({ model: 'mistral-small-latest', messages: [{ role: 'user', content: prompt }], temperature: 0.7 }),
-                        signal: AbortSignal.timeout(30000)
+                        body: JSON.stringify({ model: 'mistral-small-latest', messages: [{ role: 'user', content: prompt }], temperature: 0.5 }),
+                        signal: AbortSignal.timeout(25000)
                     });
                     if (orResp.ok) {
                         const orData = await orResp.json();
@@ -3348,13 +3342,13 @@ Respond with ONLY valid JSON array (no markdown, no code fences):
         }
 
         if (!generated || !Array.isArray(questions) || questions.length < 5) {
-            return res.json({ error: 'AI could not generate questions. Try again.' });
+            return res.json({ error: 'Could not generate questions. Try again.' });
         }
-        questions = questions.slice(0, 20);
+        questions = questions.slice(0, 15);
 
         const insert = await pool.query(
             `INSERT INTO daily_challenge_attempts (user_id, subject, questions, total) VALUES ($1, $2, $3, $4) RETURNING id`,
-            [userId, subject, JSON.stringify(questions), questions.length]
+            [userId, subjectList, JSON.stringify(questions), questions.length]
         );
 
         res.json({ success: true, attemptId: insert.rows[0].id, questions });
@@ -4684,39 +4678,15 @@ setTimeout(resetWeeklyLeaderboard, 5000);
 // ======================== STUDY HUB ROUTES ========================
 
 // Study AI helper — uses OpenRouter
-function cleanLatex(t) {
-  if (!t) return t;
-  return t
-    .replace(/\\\(/g, '').replace(/\\\)/g, '')
-    .replace(/\\\[/g, '').replace(/\\\]/g, '')
-    .replace(/\$\$/g, '').replace(/\$(?!\d)/g, '')
-    .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '$1/$2')
-    .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
-    .replace(/\\alpha/g, 'α').replace(/\\beta/g, 'β').replace(/\\gamma/g, 'γ')
-    .replace(/\\delta/g, 'δ').replace(/\\epsilon/g, 'ε').replace(/\\theta/g, 'θ')
-    .replace(/\\lambda/g, 'λ').replace(/\\mu/g, 'μ').replace(/\\sigma/g, 'σ')
-    .replace(/\\omega/g, 'ω').replace(/\\pi/g, 'π').replace(/\\phi/g, 'φ')
-    .replace(/\\rightarrow/g, '→').replace(/\\Rightarrow/g, '⇒')
-    .replace(/\\leftarrow/g, '←').replace(/\\Leftarrow/g, '⇐')
-    .replace(/\\times/g, '×').replace(/\\cdot/g, '·').replace(/\\div/g, '÷')
-    .replace(/\\approx/g, '≈').replace(/\\neq/g, '≠').replace(/\\leq/g, '≤').replace(/\\geq/g, '≥')
-    .replace(/\\infty/g, '∞').replace(/\\partial/g, '∂').replace(/\\nabla/g, '∇')
-    .replace(/\\sum/g, '∑').replace(/\\prod/g, '∏').replace(/\\int/g, '∫')
-    .replace(/\\text\{([^}]+)\}/g, '$1')
-    .replace(/\\[a-zA-Z]+\{[^}]*\}/g, '')
-    .replace(/\\[a-zA-Z]+/g, '')
-    .replace(/\s+/g, ' ').trim();
-}
-
 function cleanAiText(t) {
   if (t == null) return '';
-  var s = cleanLatex(String(t));
-  s = s.replace(/```[a-zA-Z]*\n?/g, '').replace(/```/g, '');
+  var s = String(t);
+  s = s.replace(/```[a-zA-Z]*\n?/g, '```');
   s = s.replace(/\*\*([^*\n]+)\*\*/g, '$1');
   s = s.replace(/__([^_\n]+)__/g, '$1');
   s = s.replace(/(^|[^*])\*(?!\s)([^*\n]+?)\*(?!\*)/g, '$1$2');
   s = s.replace(/(^|[^_])_(?!_)([^_\n]+?)_(?!_)/g, '$1$2');
-  s = s.replace(/`+([^`\n]+?)`+/g, '$1');
+  s = s.replace(/`+([^`\n]+?)`+/g, function(m, inner){ if(inner.indexOf('\\(') >= 0 || inner.indexOf('\\[') >= 0) return ''+inner+''; return inner; });
   s = s.replace(/^#{1,6}\s*/gm, '');
   s = s.replace(/^\s*[-*+]\s+/gm, '\u2022 ');
   s = s.replace(/^\s*(\d+)\.\s+/gm, '$1) ');
@@ -4728,19 +4698,29 @@ function cleanAiText(t) {
   return s.trim();
 }
 
+function cleanLatex(t) {
+  if (t == null) return '';
+  var s = String(t);
+  s = s.replace(/\$\$([\s\S]*?)\$\$/g, '\\[$1\\]');
+  s = s.replace(/\$([^\$]*?)\$/g, '\\\($1\\\)');
+  return s;
+}
+
 const CEREBRAS_MODELS = ['llama-3.3-70b', 'llama-3.1-70b'];
 const GROQ_FAST = ['llama-3.1-8b-instant'];
 const GROQ_SMART = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
 
-async function cerebrasPrompt(prompt, jsonMode) {
+async function cerebrasPrompt(prompt, jsonMode, maxTokens, noClean) {
   const key = process.env.CEREBRAS_API_KEY;
   if (!key) return { text: '', provider: 'cerebras-no-key' };
+  maxTokens = maxTokens || 4000;
   for (const model of CEREBRAS_MODELS) {
     try {
       const body = {
         model,
         messages: [{ role: 'user', content: prompt }],
         temperature: jsonMode ? 0.15 : 0.25,
+        max_tokens: maxTokens,
         stream: false,
         ...(jsonMode ? { response_format: { type: 'json_object' } } : {})
       };
@@ -4753,22 +4733,24 @@ async function cerebrasPrompt(prompt, jsonMode) {
       if (!res.ok) continue;
       const data = await res.json();
       const raw = data.choices?.[0]?.message?.content;
-      if (raw) return { text: jsonMode ? raw : cleanLatex(raw), provider: 'cerebras:' + model };
+      if (raw) return { text: jsonMode ? raw : (noClean ? raw : cleanLatex(raw)), provider: 'cerebras:' + model };
     } catch (_) { continue; }
   }
   return { text: '', provider: 'cerebras-failed' };
 }
 
-async function groqPrompt(prompt, jsonMode, smart) {
+async function groqPrompt(prompt, jsonMode, smart, maxTokens, noClean) {
   const key = process.env.GROQ_API_KEY;
   if (!key) return { text: '', provider: 'groq-no-key' };
   const list = smart ? GROQ_SMART : GROQ_FAST;
+  maxTokens = maxTokens || 4000;
   for (const model of list) {
     try {
       const body = {
         model,
         messages: [{ role: 'user', content: prompt }],
         temperature: jsonMode ? 0.15 : 0.3,
+        max_tokens: maxTokens,
         stream: false,
         ...(jsonMode ? { response_format: { type: 'json_object' } } : {})
       };
@@ -4781,7 +4763,7 @@ async function groqPrompt(prompt, jsonMode, smart) {
       if (!res.ok) continue;
       const data = await res.json();
       const raw = data.choices?.[0]?.message?.content;
-      if (raw) return { text: jsonMode ? raw : cleanLatex(raw), provider: 'groq:' + model };
+      if (raw) return { text: jsonMode ? raw : (noClean ? raw : cleanLatex(raw)), provider: 'groq:' + model };
     } catch (_) { continue; }
   }
   return { text: '', provider: 'groq-failed' };
@@ -4831,33 +4813,38 @@ async function groqStream(prompt, onChunk) {
   return false;
 }
 
-async function openRouterPrompt(prompt, jsonMode) {
-  const fast = await groqPrompt(prompt, jsonMode, false);
+async function openRouterPrompt(prompt, jsonMode, maxTokens, noClean) {
+  maxTokens = maxTokens || 4000;
+  noClean = noClean || false;
+  const fast = await groqPrompt(prompt, jsonMode, false, maxTokens, noClean);
   if (fast.text) return { text: fast.text, provider: fast.provider };
-  const big = await cerebrasPrompt(prompt, jsonMode);
+  const big = await cerebrasPrompt(prompt, jsonMode, maxTokens, noClean);
   if (big.text) return { text: big.text, provider: big.provider };
-  const smart = await groqPrompt(prompt, jsonMode, true);
+  const smart = await groqPrompt(prompt, jsonMode, true, maxTokens, noClean);
   if (smart.text) return { text: smart.text, provider: smart.provider };
   const orKey = process.env.OPENROUTER_API_KEY;
+  const OR_MODELS = ['google/gemma-3-27b-it:free', 'mistralai/mistral-7b-instruct:free', 'google/gemini-2.0-flash-lite-preview-02-05:free'];
   if (orKey) {
-    try {
-      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${orKey}`, 'HTTP-Referer': 'https://theprepium.vercel.app', 'X-Title': 'Prepium' },
-        body: JSON.stringify({ model: 'google/gemma-3-27b-it:free', messages: [{ role: 'user', content: prompt }], temperature: 0.3 }),
-        signal: AbortSignal.timeout(45000)
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const raw = data.choices?.[0]?.message?.content;
-        if (raw) return { text: jsonMode ? raw : cleanLatex(raw), provider: 'openrouter' };
-      }
-    } catch (_) {}
+    for (const model of OR_MODELS) {
+      try {
+        const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${orKey}`, 'HTTP-Referer': 'https://theprepium.vercel.app', 'X-Title': 'Prepium' },
+          body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], temperature: 0.3, max_tokens: maxTokens }),
+          signal: AbortSignal.timeout(30000)
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const raw = data.choices?.[0]?.message?.content;
+          if (raw) return { text: jsonMode ? raw : (noClean ? raw : cleanLatex(raw)), provider: 'openrouter:' + model };
+        }
+      } catch (_) { continue; }
+    }
   }
   return { text: 'AI error: all providers failed', provider: 'none' };
 }
 
-async function studyPromptAI(prompt) { return openRouterPrompt(prompt, false); }
+async function studyPromptAI(prompt) { return openRouterPrompt(prompt, false, 4000, false); }
 
 function extractJsonItems(text) {
   if (!text) return '';
@@ -4884,17 +4871,34 @@ function extractJsonItems(text) {
 
 async function studyPromptJSON(prompt) {
   const wrapped = `${prompt.trim()}\n\nIMPORTANT: Return ONLY a single JSON object of the form { "items": [...the data array...] } Do not wrap in markdown. No prose outside JSON.`;
-  return openRouterPrompt(wrapped, true);
+  const res = await openRouterPrompt(wrapped, true);
+  if (res.text && !res.text.startsWith('AI error')) return res;
+  const fallback = await openRouterPrompt(wrapped, false);
+  if (fallback.text && !fallback.text.startsWith('AI error')) {
+    const extracted = extractJsonItems(fallback.text);
+    if (extracted) return { text: extracted, provider: 'extracted' };
+  }
+  const gemini = await callGeminiWithText(wrapped, '');
+  if (gemini.success && gemini.text) {
+    const extracted = extractJsonItems(gemini.text);
+    if (extracted) return { text: extracted, provider: 'gemini-json' };
+  }
+  return res;
 }
 
-async function studyPromptSmart(prompt) {
-  const cere = await cerebrasPrompt(prompt, false);
+async function studyPromptSmart(prompt, opts) {
+  opts = opts || {};
+  const maxTokens = opts.maxTokens || 8000;
+  const noClean = opts.noClean === true;
+  const cere = await cerebrasPrompt(prompt, false, maxTokens, noClean);
   if (cere.text) return cere;
-  const smart = await groqPrompt(prompt, false, true);
+  const smart = await groqPrompt(prompt, false, true, maxTokens, noClean);
   if (smart.text) return smart;
-  const gemini = await callGeminiWithText(prompt, '');
+  const or = await openRouterPrompt(prompt, false, maxTokens, noClean);
+  if (or.text && !or.text.startsWith('AI error')) return or;
+  const gemini = await callGeminiWithText(prompt, '', maxTokens);
   if (gemini.success && gemini.text) return { text: gemini.text, provider: 'gemini' };
-  return openRouterPrompt(prompt, false);
+  return { text: 'AI error: all providers could not generate this content. Please try again in a moment.', provider: 'none' };
 }
 
 async function studyPromptFast(prompt) {
@@ -5164,8 +5168,8 @@ app.get('/api/study/topics/:courseId', isAuth, async (req, res) => {
 // ==================== STUDY API: SUBTOPICS ====================
 app.post('/api/study/subtopics/ai-generate', isAuth, requirePaid, async (req, res) => {
   try {
-    const { topicId, courseId, topicTitle, courseName } = req.body;
-    const prompt = `For the topic "${topicTitle}" in the course "${courseName}", generate a list of 5-8 specific subtopics that should be studied. Return a JSON array of strings. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
+    const { topicId, courseId, topicTitle, courseName, courseCode } = req.body;
+    const prompt = `For the topic "${topicTitle}" in the course "${courseName}", generate a comprehensive list of subtopics that cover every aspect of this topic that should be studied. Include foundational concepts first, then more advanced aspects. Be thorough — break the topic down into its natural parts. Return a JSON array of strings. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
     const aiRes = await studyPromptJSON(prompt);
     if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
     let subtopics = [];
@@ -5184,7 +5188,7 @@ app.post('/api/study/subtopics/ai-generate', isAuth, requirePaid, async (req, re
     }
     const uid = req.session.user.id;
     const results = [];
-    for (const st of subtopics.slice(0, 10)) {
+    for (const st of subtopics.slice(0, 25)) {
       const cleanName = st.replace(/^["'\s]+|["'\s]+$/g, '').trim();
       if (!cleanName) continue;
       const r = await pool.query('INSERT INTO study_subtopics (topic_id, course_id, user_id, subtopic_name, title, status) VALUES ($1::integer, $2::integer, $3::integer, $4::text, $5::text, $6::text) RETURNING *', [parseInt(topicId) || 0, parseInt(courseId) || 0, parseInt(uid) || 0, cleanName, cleanName, 'pending']);
@@ -5239,38 +5243,134 @@ app.post('/api/study/subtopic/:id/content', isAuth, requirePaid, async (req, res
     const s = st.rows[0];
     const topic = await pool.query('SELECT * FROM study_topics WHERE id = $1', [s.topic_id]).catch(() => ({ rows: [] }));
     const topicName = topic.rows[0] ? (topic.rows[0].topic_name || topic.rows[0].title) : 'General';
-    const prompt = `You are a university tutor teaching a full lesson on "${s.subtopic_name || s.title}" (part of "${topicName}"). Structure your response using EXACTLY these section headers (each on its own line ending with a colon). Skip a section ONLY if it does not apply. Use PLAIN TEXT only — no markdown, no asterisks, no hashtags, no backticks. Separate paragraphs with blank lines.
+    const prompt = `You are an expert university professor giving a complete, in-depth lecture on "${s.subtopic_name || s.title}" (part of "${topicName}"). Your goal is to make the learner truly master this topic — full understanding, not surface memorization. Write extensively, with rich detail, explicit explanations, and thorough reasoning in every section.
 
-Overview:
-2-4 sentences — what this topic is, why it matters, where it fits in the course.
+Structure your response using EXACTLY these section headers (each on its own line ending with a colon). Use PLAIN TEXT with LaTeX math. For ALL mathematical expressions, formulas, equations, symbols, and variables — ALWAYS use proper LaTeX notation:
+- Use \\( \\) for inline math like variables (x, y, derivatives), short formulas, and expressions within sentences.
+- Use \\[ \\] for display math — standalone equations, multi-step derivations, system of equations, integrals, limits, summations.
+- Always wrap mathematical variables in math mode: \\(x\\), \\(\\frac{dy}{dx}\\), \\(\\int_a^b f(x)\\,dx\\), \\(\\sum_{n=1}^{\\infty}\\), \\(\\lim_{x \\to 0}\\), \\(\\pi\\), \\(\\theta\\), \\(\\alpha\\), \\(\\beta\\).
+- Use proper LaTeX for fractions \\(\\frac{numerator}{denominator}\\), exponents \\(x^{n}\\), subscripts \\(x_{i}\\), square roots \\(\\sqrt{x}\\), and integrals \\(\\int_{a}^{b}\\).
+- NEVER write mathematical notation in plain text (e.g., write \\(x^2 + y^2 = 25\\) not "x^2 + y^2 = 25").
+- For step-by-step calculations, use \\[ \\] display blocks so equations are clearly separated.
+
+No markdown, no asterisks for bold, no hashtags, no backticks. Separate paragraphs with blank lines. You can include a simple Mermaid diagram (flowchart, sequence, or mindmap) by wrapping it in a code block with the word "mermaid" after the opening backticks — this is optional, use only where it clarifies relationships or processes.
+
+What You Should Know:
+Connect this topic to prerequisite concepts the learner should already know. Explain each prerequisite in detail — what it means, why it matters, and exactly how it connects to this new topic. Use mathematical notation where relevant. 5-8 sentences. If none, just say "No specific prerequisites."
+
+Why It Matters:
+Explain thoroughly what real problem this concept solves, the historical or practical motivation behind it, and how it appears in real-world or academic contexts. Give at least 2-3 concrete real-life or professional applications with details — include formulas or mathematical relationships involved. 5-8 sentences.
+
+Plain Explanation:
+Explain the concept in plain, everyday language first — as if talking to someone with no background. Use a vivid real-life analogy or story to introduce the concept. Then give the formal definition or statement with full interpretation of every symbol, variable, and operation. Break it into small, digestible sub-parts and explain each one. Use multiple analogies if they genuinely help. Define any new terminology used in the definition. Include ALL relevant mathematical formulas using proper LaTeX display math. Make this section thorough and detailed — at least 8-12 sentences.
 
 Key Terms:
-Bullet each term on its own line starting with a dash. Format: "- term: definition". Cover every term the learner needs to know.
+Bullet each term on its own line starting with a dash. Format: "- term: short definition where any symbols or formulas use \\( \\)". Cover every term the learner needs to know for full mastery — not just obvious ones. Include variables, operations, and notation as terms with proper LaTeX. Keep definitions concise but precise.
 
-Full Explanation:
-Break the concept into logical sub-parts using short paragraphs. Use plain language first, then technical terms. Use analogies where helpful.
-
-Formula:
-If this topic has formulas, present each on its own line. Explain what each symbol means and when to use it. Skip if no formulas apply.
-
-Worked Example:
-At least one full step-by-step example with reasoning at each step. Use realistic numbers. State the final answer clearly.
+Step-by-Step Examples:
+2-3 fully worked examples of increasing difficulty. For each example: state the problem clearly using proper LaTeX notation, walk through EVERY step with explicit reasoning and ALL intermediate mathematical expressions in \\[ \\] display blocks — not just the answer. Explain WHY each step is done, what technique is being applied, and what the result means. Use realistic numbers and contexts. Show ALL algebraic manipulation, calculus operations, or derivations in proper LaTeX. State the final answer clearly inside \\[ \\] and verify it. Make each example thorough and pedagogical.
 
 Common Mistakes:
-Describe 1-2 common errors or misconceptions. Show the wrong approach, explain why it is wrong, contrast with the correct approach. Use "Wrong:" and "Right:" labels.
+Describe 2-3 common errors or misconceptions students make on this topic. For each: state the wrong approach explicitly with the INCORRECT mathematical reasoning shown using LaTeX, explain in detail WHY it is wrong and what misconception leads to it, then contrast with the correct approach showing the RIGHT mathematical reasoning in LaTeX. Use "Wrong:" and "Right:" labels. Be thorough — deeply explain the thinking behind the mistakes.
 
-Practice Problems:
-Write 2-3 practice questions with increasing difficulty. Show the full worked solution for each.
+Edge Cases:
+Mention any special cases, exceptions, degenerate situations, or scenarios where the concept behaves differently than expected. For each edge case: describe the situation, show what happens mathematically using LaTeX, and explain why. If there are common pitfalls at boundaries, explain those with proper notation. If none, say "No major edge cases for this topic."
 
-Quick Recap:
-5-8 bullet points (each starting with a dash) summarizing the most important takeaways. This is the "remember this" section.
+Practice Questions:
+Write 5-7 practice questions arranged from easy to challenging. Number them. Give ONLY the questions here — NO answers or solutions yet. ALL mathematical expressions in questions MUST use proper LaTeX notation. Vary the types: computational, conceptual, application-based, and edge-case reasoning. Write each question as a clear, complete sentence with all formulas in LaTeX.
 
-Make each section substantial — at least 4-6 lines each where the topic warrants it. Use blank lines between sections and between paragraphs. Use proper line spacing.`;
-    const aiRes = await studyPromptSmart(prompt);
+Step-by-Step Solutions:
+Give the full, detailed worked solutions to ALL practice questions above. For each solution: restate the problem briefly in LaTeX, show EVERY step with explicit reasoning in proper \\[ \\] display math blocks, explain the technique used, and state the final answer clearly inside \\[ \\]. Verify the answer where possible. Label each solution clearly (e.g., "Solution 1:", "Solution 2:"). Each solution should be thorough — cover all algebra, calculus, or reasoning steps.
+
+CRITICAL FORMATTING RULES:
+- Each section should be SUBSTANTIAL — minimum 8-12 lines of meaningful content where the topic warrants it.
+- Use blank lines between sections and between paragraphs.
+- Use proper line spacing.
+- Be explicit and verbose — assume the reader needs every detail spelled out.
+- Do NOT summarize or rush — thoroughness is more important than brevity.
+- Every mathematical symbol, variable, equation, or formula MUST be inside \\( \\) or \\[ \\] — never plain text math.`;
+    let aiRes = await studyPromptSmart(prompt, { maxTokens: 8000, noClean: true });
+    if (!aiRes.text || aiRes.text.startsWith('AI error')) {
+      const shortPrompt = `You are an expert professor giving an in-depth lecture on "${s.subtopic_name || s.title}" (part of "${topicName}"). Write a thorough, comprehensive explanation covering: prerequisites in detail, real-world importance with concrete applications, plain explanation with vivid analogies, key terms with definitions, fully worked step-by-step examples, common mistakes with explicit wrong/right contrasts, edge cases, and practice questions with full worked solutions. Use these section headers exactly: "What You Should Know:", "Why It Matters:", "Plain Explanation:", "Key Terms:", "Step-by-Step Examples:", "Common Mistakes:", "Edge Cases:", "Practice Questions:", "Step-by-Step Solutions:". Use plain text with LaTeX math \\( \\) and \\[ \\]. Include a Mermaid diagram in a mermaid code block if it helps clarify relationships. Be thorough, explicit, and detailed — minimum 6-10 lines per section. Do not summarize.`;
+      aiRes = await studyPromptSmart(shortPrompt, { maxTokens: 8000, noClean: true });
+    }
     if (!aiRes.text || aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text || 'AI error' });
     const clean = cleanAiText(aiRes.text);
     await pool.query('UPDATE study_subtopics SET content = $1 WHERE id = $2', [clean, req.params.id]);
     res.json({ success: true, subtopic: s.subtopic_name || s.title, content: clean });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// ==================== STUDY API: AI DIAGNOSTIC ====================
+app.get('/debug-ai', async (req, res) => {
+  const results = {};
+  const groqKey = process.env.GROQ_API_KEY;
+  const cereKey = process.env.CEREBRAS_API_KEY;
+  const orKey = process.env.OPENROUTER_API_KEY;
+  results.env = { hasGroq: !!groqKey, hasCere: !!cereKey, hasOR: !!orKey };
+
+  // Test Groq
+  if (groqKey) {
+    try {
+      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + groqKey },
+        body: JSON.stringify({ model: 'llama-3.1-8b-instant', messages: [{ role: 'user', content: 'say hi' }], temperature: 0.3, max_tokens: 100, stream: false }),
+        signal: AbortSignal.timeout(15000)
+      });
+      results.groq = { ok: r.ok, status: r.status, statusText: r.statusText };
+      if (r.ok) {
+        try { const d = await r.json(); results.groq.hasContent = !!(d.choices?.[0]?.message?.content); results.groq.preview = (d.choices?.[0]?.message?.content || '').slice(0, 50); } catch (e) { results.groq.parseError = e.message; }
+      } else { results.groq.body = (await r.text()).slice(0, 200); }
+    } catch (e) { results.groq = { error: e.message }; }
+  } else { results.groq = { skipped: 'no key' }; }
+
+  // Test Cerebras
+  if (cereKey) {
+    try {
+      const r = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cereKey },
+        body: JSON.stringify({ model: 'llama-3.3-70b', messages: [{ role: 'user', content: 'say hi' }], temperature: 0.25, max_tokens: 100, stream: false }),
+        signal: AbortSignal.timeout(15000)
+      });
+      results.cerebras = { ok: r.ok, status: r.status, statusText: r.statusText };
+      if (r.ok) { try { const d = await r.json(); results.cerebras.hasContent = !!(d.choices?.[0]?.message?.content); } catch (e) { results.cerebras.parseError = e.message; } }
+      else { results.cerebras.body = (await r.text()).slice(0, 200); }
+    } catch (e) { results.cerebras = { error: e.message }; }
+  } else { results.cerebras = { skipped: 'no key' }; }
+
+  // Test OpenRouter
+  if (orKey) {
+    try {
+      const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + orKey, 'HTTP-Referer': 'https://theprepium.vercel.app', 'X-Title': 'Prepium' },
+        body: JSON.stringify({ model: 'google/gemma-3-27b-it:free', messages: [{ role: 'user', content: 'say hi' }], temperature: 0.3, max_tokens: 100, stream: false }),
+        signal: AbortSignal.timeout(15000)
+      });
+      results.openrouter = { ok: r.ok, status: r.status, statusText: r.statusText };
+      if (r.ok) { try { const d = await r.json(); results.openrouter.hasContent = !!(d.choices?.[0]?.message?.content); } catch (e) { results.openrouter.parseError = e.message; } }
+      else { results.openrouter.body = (await r.text()).slice(0, 200); }
+    } catch (e) { results.openrouter = { error: e.message }; }
+  } else { results.openrouter = { skipped: 'no key' }; }
+
+  res.json({ success: true, results });
+});
+
+// ==================== STUDY API: EXPLANATION Q&A ====================
+app.post('/api/study/subtopic/:id/ask', isAuth, requirePaid, async (req, res) => {
+  try {
+    const { question } = req.body;
+    if (!question || !question.trim()) return res.json({ success: false, error: 'Question is required' });
+    const st = await pool.query('SELECT * FROM study_subtopics WHERE id = $1', [req.params.id]);
+    if (!st.rows[0]) return res.json({ success: false, error: 'Not found' });
+    const s = st.rows[0];
+    const content = s.content || '';
+    const prompt = `You are a university tutor. The student is studying "${s.subtopic_name || s.title}" and has just read the following explanation:\n\n"""\n${content.slice(0, 5000)}\n"""\n\nThe student now asks:\n"${question}"\n\nAnswer their question clearly and concisely, building on the explanation above. Use PLAIN TEXT only. If they ask for clarification, re-explain simply. If they ask something beyond the explanation, use your knowledge to help. Separate paragraphs with blank lines. Use LaTeX math delimiters \\( \\) for inline and \\[ \\] for display math when needed.`;
+    const aiRes = await studyPromptFast(prompt);
+    if (!aiRes.text || aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text || 'AI error' });
+    res.json({ success: true, answer: cleanAiText(aiRes.text) });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
@@ -5325,7 +5425,7 @@ app.post('/api/study/chat', isAuth, requirePaid, async (req, res) => {
     const cleanUser = cleanAiText(message);
     await pool.query('INSERT INTO study_chat_messages (user_id, course_id, subtopic_id, role, message) VALUES ($1, $2, $3, $4, $5)', [uid, courseId || 0, subtopicId || 0, 'user', cleanUser]);
     const ctx = courseName ? `Context: Student is studying "${courseName}". ` : '';
-    const prompt = `${ctx}You are a helpful study assistant for university students. Answer the following question in PLAIN TEXT only. Do NOT use markdown bullets that start with asterisks or hashes. Use short paragraphs separated by blank lines. Keep formatting simple — no asterisks, no hashtags, no backticks.\n\nStudent's question: ${cleanUser}\n\nProvide a thorough, educational response in clean plain text.`;
+    const prompt = `${ctx}You are a helpful study assistant for university students. Answer the question in PLAIN TEXT. Use \\( \\) for inline LaTeX math and \\[ \\] for display math when formulas are needed. No markdown, no asterisks for bold, no hashtags, no backticks. Use short paragraphs separated by blank lines.\n\nStudent's question: ${cleanUser}\n\nProvide a thorough, educational response.`;
     let reply = '';
     const streamed = await groqStream(prompt, async function(delta) { reply += delta; });
     if (streamed) {
@@ -5494,7 +5594,7 @@ app.post('/api/study/flashcards/generate', isAuth, requirePaid, async (req, res)
     const { courseId, subtopicId, topicTitle, count } = req.body;
     const fcCount = parseInt(count) || 10;
     const uid = req.session.user.id;
-    const prompt = `Generate ${fcCount} flashcards for studying "${topicTitle || 'this course'}". Each flashcard: front (question/term), back (answer/definition), image (short visual scene description for illustration, 5-10 words). Return a JSON array of objects. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
+    const prompt = `Generate ${fcCount} high-quality flashcards for studying "${topicTitle || 'this course'}". Each flashcard: front (a clear question, term, or concept prompt), back (a thorough answer, definition, or explanation — include a short example or mnemonic where helpful, 1-3 sentences). Make cards genuinely useful for learning — avoid trivial facts. Use LaTeX math where appropriate. Return a JSON array of objects with keys "front" and "back". Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
     const aiRes = await studyPromptJSON(prompt);
     let cards = [];
     try {

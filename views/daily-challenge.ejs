@@ -3,81 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2563eb">
     <title>Daily Challenge | Prepium</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/style.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f0f4f8; color: #0f172a; min-height: 100vh; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f0f4f8; color: var(--text-primary); min-height: 100vh; }
         .app-shell { display: flex; min-height: 100vh; }
         .main-area { flex: 1; padding: 1.5rem; overflow-y: auto; max-width: 900px; margin: 0 auto; width: 100%; }
 
         .page-head { margin-bottom: 1.5rem; }
         .page-head h1 { font-size: 1.5rem; font-weight: 800; display: flex; align-items: center; gap: 10px; }
-        .page-head p { font-size: 0.75rem; color: #64748b; font-weight: 600; margin-top: 2px; }
+        .page-head p { font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; margin-top: 2px; }
 
         .subjects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
-        .subject-card { background: white; border-radius: 16px; padding: 16px; text-align: center; cursor: pointer; border: 2px solid #e2e8f0; transition: all 0.2s; }
-        .subject-card:hover { border-color: #0062ff; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,98,255,0.08); }
-        .subject-card.selected { border-color: #0062ff; background: #eff6ff; }
+        .subject-card { background: white; border-radius: 16px; padding: 16px; text-align: center; cursor: pointer; border: 2px solid var(--border-solid); transition: all 0.2s; }
+        .subject-card:hover { border-color: var(--brand); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(37,99,235,0.08); }
+        .subject-card.selected { border-color: var(--brand); background: var(--brand-soft); }
         .subject-card .sc-icon { font-size: 1.5rem; margin-bottom: 6px; }
         .subject-card .sc-name { font-weight: 700; font-size: 0.78rem; }
 
         .card { background: white; border-radius: 20px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); margin-bottom: 1rem; }
         .btn { padding: 12px 28px; border-radius: 14px; border: none; font-family: inherit; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; }
         .btn:active { transform: scale(0.96); }
-        .btn-primary { background: linear-gradient(135deg, #0062ff, #4f46e5); color: white; box-shadow: 0 8px 20px rgba(0,98,255,0.2); }
+        .btn-primary { background: linear-gradient(135deg, var(--brand), #1d4ed8); color: white; box-shadow: 0 8px 20px rgba(37,99,235,0.2); }
         .btn-primary:disabled { opacity: 0.5; pointer-events: none; }
-        .btn-outline { background: white; border: 1.5px solid #e2e8f0; color: #0f172a; }
+        .btn-outline { background: white; border: 1.5px solid var(--border-solid); color: var(--text-primary); }
         .btn-success { background: #10b981; color: white; }
         .btn-block { width: 100%; justify-content: center; }
 
         .quiz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .quiz-progress { flex: 1; margin: 0 16px; }
-        .quiz-progress-bar { height: 6px; background: #e2e8f0; border-radius: 10px; overflow: hidden; }
-        .quiz-progress-fill { height: 100%; background: linear-gradient(90deg, #0062ff, #4f46e5); transition: width 0.3s; border-radius: 10px; }
-        .quiz-counter { font-weight: 800; font-size: 0.85rem; color: #64748b; min-width: 60px; text-align: center; }
+        .quiz-progress-bar { height: 6px; background: var(--border-solid); border-radius: 10px; overflow: hidden; }
+        .quiz-progress-fill { height: 100%; background: linear-gradient(90deg, var(--brand), #1d4ed8); transition: width 0.3s; border-radius: 10px; }
+        .quiz-counter { font-weight: 800; font-size: 0.85rem; color: var(--text-secondary); min-width: 60px; text-align: center; }
 
-        .timer-circle { width: 56px; height: 56px; border-radius: 50%; border: 3px solid #0062ff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.2rem; color: #0062ff; flex-shrink: 0; transition: border-color 0.3s; }
+        .timer-circle { width: 56px; height: 56px; border-radius: 50%; border: 3px solid var(--brand); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.2rem; color: var(--brand); flex-shrink: 0; transition: border-color 0.3s; }
         .timer-circle.warning { border-color: #f59e0b; color: #f59e0b; }
         .timer-circle.danger { border-color: #ef4444; color: #ef4444; }
 
         .q-text { font-weight: 700; font-size: 1.05rem; line-height: 1.5; margin-bottom: 20px; min-height: 50px; }
 
-        .option-btn { display: block; width: 100%; padding: 14px 18px; margin: 8px 0; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; font-weight: 600; cursor: pointer; text-align: left; font-family: inherit; font-size: 0.9rem; transition: all 0.15s; }
-        .option-btn:hover { border-color: #0062ff; background: #f0f4ff; }
+        .option-btn { display: block; width: 100%; padding: 14px 18px; margin: 8px 0; background: #f8fafc; border: 1.5px solid var(--border-solid); border-radius: 14px; font-weight: 600; cursor: pointer; text-align: left; font-family: inherit; font-size: 0.9rem; transition: all 0.15s; }
+        .option-btn:hover { border-color: var(--brand); background: #f0f4ff; }
         .option-btn:disabled { cursor: default; opacity: 0.7; }
         .option-btn.correct { border-color: #10b981; background: #ecfdf5; color: #065f46; }
         .option-btn.wrong { border-color: #ef4444; background: #fef2f2; color: #991b1b; }
         .option-btn.reveal-correct { border-color: #10b981; background: #ecfdf5; color: #065f46; }
 
         .score-display { text-align: center; padding: 20px 0; }
-        .score-number { font-size: 3rem; font-weight: 800; background: linear-gradient(135deg, #0062ff, #4f46e5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .score-label { font-size: 0.8rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+        .score-number { font-size: 3rem; font-weight: 800; background: linear-gradient(135deg, var(--brand), #1d4ed8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .score-label { font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
         .score-stats { display: flex; justify-content: center; gap: 30px; margin-top: 16px; }
         .score-stat { text-align: center; }
         .score-stat-value { font-weight: 800; font-size: 1.1rem; }
-        .score-stat-label { font-size: 0.65rem; color: #64748b; font-weight: 600; text-transform: uppercase; }
+        .score-stat-label { font-size: 0.65rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; }
 
-        .lb-card { display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: white; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 8px; transition: all 0.2s; }
-        .lb-card.highlight { background: #eff6ff; border-color: #0062ff; }
-        .lb-rank { width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.75rem; background: #f1f5f9; color: #64748b; flex-shrink: 0; }
+        .lb-card { display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: white; border-radius: 16px; border: 1px solid var(--border-solid); margin-bottom: 8px; transition: all 0.2s; }
+        .lb-card.highlight { background: var(--brand-soft); border-color: var(--brand); }
+        .lb-rank { width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.75rem; background: var(--bg); color: var(--text-secondary); flex-shrink: 0; }
         .lb-rank.gold { background: linear-gradient(135deg, #f59e0b, #f97316); color: white; }
-        .lb-rank.silver { background: linear-gradient(135deg, #94a3b8, #64748b); color: white; }
+        .lb-rank.silver { background: linear-gradient(135deg, var(--text-muted), var(--text-secondary)); color: white; }
         .lb-rank.bronze { background: linear-gradient(135deg, #d97706, #92400e); color: white; }
         .lb-info { flex: 1; min-width: 0; }
         .lb-name { font-weight: 700; font-size: 0.85rem; }
-        .lb-uni { font-size: 0.6rem; font-weight: 700; color: #0062ff; text-transform: uppercase; }
-        .lb-score { font-weight: 800; font-size: 0.9rem; color: #0f172a; white-space: nowrap; }
+        .lb-uni { font-size: 0.6rem; font-weight: 700; color: var(--brand); text-transform: uppercase; }
+        .lb-score { font-weight: 800; font-size: 0.9rem; color: var(--text-primary); white-space: nowrap; }
 
         .subject-input-wrap { display: flex; gap: 10px; margin-top: 12px; }
-        .subject-input-wrap input { flex: 1; padding: 12px 16px; border-radius: 14px; border: 1.5px solid #e2e8f0; font-family: inherit; font-weight: 600; font-size: 0.85rem; outline: none; }
-        .subject-input-wrap input:focus { border-color: #0062ff; }
+        .subject-input-wrap input { flex: 1; padding: 12px 16px; border-radius: 14px; border: 1.5px solid var(--border-solid); font-family: inherit; font-weight: 600; font-size: 0.85rem; outline: none; }
+        .subject-input-wrap input:focus { border-color: var(--brand); }
 
-        .tab-bar { display: flex; background: #f1f5f9; padding: 4px; border-radius: 14px; margin-bottom: 1.5rem; }
-        .tab-btn { flex: 1; padding: 10px; border: none; border-radius: 12px; font-weight: 700; font-size: 0.8rem; cursor: pointer; background: transparent; color: #64748b; transition: all 0.2s; }
-        .tab-btn.active { background: white; color: #0062ff; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .tab-bar { display: flex; background: var(--bg); padding: 4px; border-radius: 14px; margin-bottom: 1.5rem; }
+        .tab-btn { flex: 1; padding: 10px; border: none; border-radius: 12px; font-weight: 700; font-size: 0.8rem; cursor: pointer; background: transparent; color: var(--text-secondary); transition: all 0.2s; }
+        .tab-btn.active { background: white; color: var(--brand); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
 
         .tab-content { display: none; }
         .tab-content.active { display: block; }
@@ -87,12 +88,13 @@
         .result-actions { display: flex; gap: 10px; margin-top: 16px; }
         .result-actions .btn { flex: 1; }
 
-        .empty-state { text-align: center; padding: 40px 20px; color: #64748b; }
+        .empty-state { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
         .empty-state i { font-size: 2.5rem; margin-bottom: 12px; opacity: 0.4; }
-        .empty-state h3 { font-weight: 700; font-size: 1rem; color: #0f172a; margin-bottom: 4px; }
+        .empty-state h3 { font-weight: 700; font-size: 1rem; color: var(--text-primary); margin-bottom: 4px; }
 
         .custom-subject { margin-top: 1rem; }
-        .custom-subject label { font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 6px; }
+        .custom-subject label { font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; display: block; margin-bottom: 6px; }
+    <%- include('partials/theme-toggle') %>
     </style>
 </head>
 <body>
@@ -100,8 +102,8 @@
 <div class="app-shell">
     <div class="main-area">
         <div class="page-head">
-            <h1><i class="fas fa-calendar-check" style="color:#0062ff;"></i> Daily Challenge</h1>
-            <p>Pick a subject, answer 20 questions, climb the ranks</p>
+            <h1><i class="fas fa-calendar-check" style="color:var(--brand);"></i> Daily Challenge</h1>
+            <p>Pick up to 3 subjects, answer 15 questions, climb the ranks</p>
         </div>
 
         <div class="tab-bar">
@@ -114,15 +116,15 @@
             <% if (hasPlayed) { %>
                 <!-- Already played today -->
                 <div class="card" style="text-align:center;">
-                    <div style="font-size: 3rem; margin-bottom: 12px;"><i class="fas fa-check-circle" style="color:#10b981;"></i></div>
+                    <div style="font-size: 3rem; margin-bottom: 12px;"><i class="fas fa-check-circle" style="color:var(--success);"></i></div>
                     <h2 style="font-weight:800; margin-bottom:4px;">Challenge Complete</h2>
-                    <p style="color:#64748b; font-size:0.85rem;">You played today on <strong><%= subject %></strong></p>
+                    <p style="color:var(--text-secondary); font-size:0.85rem;">You played today on <strong><%= subject %></strong></p>
                     <div class="score-display">
                         <div class="score-number"><%= lastScore %></div>
                         <div class="score-label">Points Scored</div>
                     </div>
-                    <p style="font-size:0.75rem; color:#64748b; margin-top:4px;">Come back tomorrow for a new challenge</p>
-                    <div style="margin-top:16px; background:#0f172a; padding:16px; border-radius:16px; color:white;">
+                    <p style="font-size:0.75rem; color:var(--text-secondary); margin-top:4px;">Come back tomorrow for a new challenge</p>
+                    <div style="margin-top:16px; background:var(--text-primary); padding:16px; border-radius:16px; color:white;">
                         <small style="font-weight:700; text-transform:uppercase; opacity:0.6; letter-spacing:1px;">Next Challenge In</small>
                         <div id="reset-timer" style="font-size:1.4rem; font-weight:800; margin-top:4px;">--:--:--</div>
                     </div>
@@ -130,9 +132,10 @@
             <% } else { %>
                 <!-- Subject Picker -->
                 <div class="card">
-                    <h2 style="font-weight:800; font-size:1rem; margin-bottom:16px; display:flex; align-items:center; gap:8px;">
-                        <i class="fas fa-book" style="color:#0062ff;"></i> Choose Your Subject
+                    <h2 style="font-weight:800; font-size:1rem; margin-bottom:4px; display:flex; align-items:center; gap:8px;">
+                        <i class="fas fa-book" style="color:var(--brand);"></i> Choose Subjects
                     </h2>
+                    <p style="font-size:0.72rem;color:var(--text-secondary);font-weight:600;margin-bottom:16px;">Select up to 3 subjects</p>
                     <div class="subjects-grid" id="subjectGrid">
                         <div class="subject-card" data-subject="Mathematics" onclick="pickSubject(this)">
                             <div class="sc-icon">📐</div>
@@ -191,14 +194,11 @@
                             <div class="sc-name">Current Affairs</div>
                         </div>
                     </div>
-                    <div class="custom-subject">
-                        <label>Or type your own</label>
-                        <div class="subject-input-wrap">
-                            <input type="text" id="customSubject" placeholder="e.g. Anatomy, Psychology..." oninput="onCustomSubject(this)">
-                            <button class="btn btn-primary" id="startBtn" onclick="startChallenge()" disabled>
-                                <i class="fas fa-bolt"></i> Start
-                            </button>
-                        </div>
+                    <div style="margin-top:12px;display:flex;align-items:center;gap:10px;">
+                        <button class="btn btn-primary" id="startBtn" onclick="startChallenge()" disabled>
+                            <i class="fas fa-bolt"></i> Start Challenge
+                        </button>
+                        <span id="selCount" style="font-size:0.75rem;font-weight:700;color:var(--text-muted);">0 selected</span>
                     </div>
                 </div>
 
@@ -212,7 +212,7 @@
                                     <div class="quiz-progress-fill" id="progressFill" style="width:0%"></div>
                                 </div>
                             </div>
-                            <div class="quiz-counter"><span id="qNum">1</span>/20</div>
+                            <div class="quiz-counter"><span id="qNum">1</span>/15</div>
                         </div>
                         <div class="q-text" id="qText">Loading...</div>
                         <div id="optionsContainer"></div>
@@ -223,7 +223,7 @@
 
         <!-- ═══ LEADERBOARD TAB ═══ -->
         <div id="tab-leaderboard" class="tab-content">
-            <div class="card" style="background:linear-gradient(135deg,#0f172a,#1e293b);color:white;padding:20px;border-radius:20px;margin-bottom:1rem;">
+            <div class="card" style="background:linear-gradient(135deg,var(--text-primary),#1e293b);color:white;padding:20px;border-radius:20px;margin-bottom:1rem;">
                 <div style="display:flex;justify-content:space-between;align-items:center;">
                     <div>
                         <small style="opacity:0.6;font-weight:700;text-transform:uppercase;font-size:0.6rem;letter-spacing:1px;">Weekly Leaderboard</small>
@@ -262,7 +262,7 @@
 <%- include('partials/bottom-nav', { activeNav: 'dashboard' }) %>
 
 <script>
-let selectedSubject = '';
+let selectedSubjects = [];
 let attemptId = null;
 let questions = [];
 let currentIdx = 0;
@@ -270,7 +270,8 @@ let score = 0;
 let timeLeft = 10;
 let timerInterval = null;
 let answering = false;
-const maxScore = 400;
+const maxScore = 300;
+const maxSubjects = 3;
 
 function switchTab(name) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -285,21 +286,22 @@ function switchTab(name) {
 }
 
 function pickSubject(el) {
-    document.querySelectorAll('.subject-card').forEach(c => c.classList.remove('selected'));
-    el.classList.add('selected');
-    selectedSubject = el.dataset.subject;
-    document.getElementById('customSubject').value = '';
-    document.getElementById('startBtn').disabled = false;
-}
-
-function onCustomSubject(input) {
-    document.querySelectorAll('.subject-card').forEach(c => c.classList.remove('selected'));
-    selectedSubject = input.value.trim();
-    document.getElementById('startBtn').disabled = !selectedSubject;
+    const sub = el.dataset.subject;
+    const idx = selectedSubjects.indexOf(sub);
+    if (idx > -1) {
+        selectedSubjects.splice(idx, 1);
+        el.classList.remove('selected');
+    } else {
+        if (selectedSubjects.length >= maxSubjects) return;
+        selectedSubjects.push(sub);
+        el.classList.add('selected');
+    }
+    document.getElementById('startBtn').disabled = selectedSubjects.length === 0;
+    document.getElementById('selCount').textContent = selectedSubjects.length + ' selected';
 }
 
 async function startChallenge() {
-    if (!selectedSubject) return;
+    if (selectedSubjects.length === 0) return;
     const btn = document.getElementById('startBtn');
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
@@ -308,13 +310,13 @@ async function startChallenge() {
         const r = await fetch('/api/daily-challenge/start', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ subject: selectedSubject })
+            body: JSON.stringify({ subjects: selectedSubjects })
         });
         const d = await r.json();
         if (d.error) {
             alert(d.error);
             btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-bolt"></i> Start';
+            btn.innerHTML = '<i class="fas fa-bolt"></i> Start Challenge';
             return;
         }
         attemptId = d.attemptId;
@@ -325,7 +327,7 @@ async function startChallenge() {
     } catch (e) {
         alert('Failed to generate questions. Try again.');
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-bolt"></i> Start';
+        btn.innerHTML = '<i class="fas fa-bolt"></i> Start Challenge';
     }
 }
 
@@ -400,7 +402,7 @@ async function submitQuiz() {
     document.getElementById('quizArea').innerHTML = `
         <div class="card" style="text-align:center;">
             <div style="padding:30px 0;">
-                <i class="fas fa-sync fa-spin" style="font-size:2rem;color:#0062ff;"></i>
+                <i class="fas fa-sync fa-spin" style="font-size:2rem;color:var(--brand);"></i>
                 <p style="margin-top:12px;font-weight:600;">Submitting your score...</p>
             </div>
         </div>`;
@@ -427,7 +429,7 @@ function showResults() {
     document.getElementById('quizArea').innerHTML = `
         <div class="card" style="text-align:center;">
             <div style="font-size:3rem;margin-bottom:8px;">
-                ${pct >= 70 ? '<i class="fas fa-trophy" style="color:#f59e0b;"></i>' : pct >= 40 ? '<i class="fas fa-star" style="color:#0062ff;"></i>' : '<i class="fas fa-flag-checkered" style="color:#64748b;"></i>'}
+                ${pct >= 70 ? '<i class="fas fa-trophy" style="color:#f59e0b;"></i>' : pct >= 40 ? '<i class="fas fa-star" style="color:#2563eb;"></i>' : '<i class="fas fa-flag-checkered" style="color:#64748b;"></i>'}
             </div>
             <h2 style="font-weight:800;margin-bottom:4px;">
                 ${pct >= 70 ? 'Outstanding!' : pct >= 40 ? 'Good Effort!' : 'Keep Practicing!'}
@@ -438,7 +440,7 @@ function showResults() {
             </div>
             <div class="score-stats">
                 <div class="score-stat">
-                    <div class="score-stat-value" style="color:#10b981;">${Math.round(score/20)}/${questions.length}</div>
+                    <div class="score-stat-value" style="color:#10b981;">${Math.round(score/20)}</div>
                     <div class="score-stat-label">Correct</div>
                 </div>
                 <div class="score-stat">
@@ -446,7 +448,7 @@ function showResults() {
                     <div class="score-stat-label">Accuracy</div>
                 </div>
                 <div class="score-stat">
-                    <div class="score-stat-value" style="color:#0062ff;">${maxScore}</div>
+                    <div class="score-stat-value" style="color:var(--brand);">${maxScore}</div>
                     <div class="score-stat-label">Max Possible</div>
                 </div>
             </div>

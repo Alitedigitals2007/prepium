@@ -1,0 +1,54 @@
+<script>
+(function() {
+  var theme = localStorage.getItem('prepium-theme');
+  if (!theme) {
+    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  document.documentElement.setAttribute('data-theme', theme);
+})();
+
+function toggleTheme() {
+  var html = document.documentElement;
+  var current = html.getAttribute('data-theme');
+  var next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('prepium-theme', next);
+  updateThemeIcons(next);
+}
+
+function updateThemeIcons(theme) {
+  var moon = document.getElementById('themeIconMoon');
+  var sun = document.getElementById('themeIconSun');
+  if (moon && sun) {
+    moon.style.display = theme === 'dark' ? 'none' : 'inline-block';
+    sun.style.display = theme === 'dark' ? 'inline-block' : 'none';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var current = document.documentElement.getAttribute('data-theme') || 'light';
+  updateThemeIcons(current);
+});
+</script>
+<style>
+.theme-toggle-btn {
+  width: 42px; height: 42px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+.theme-toggle-btn:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: var(--brand-light);
+}
+.theme-toggle-btn:active { transform: scale(0.92); }
+</style>

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#2563eb">
     <title>Prepium | Study Library</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -35,7 +36,7 @@
             width: 42px; height: 42px; background: var(--brand-gradient); 
             border-radius: 14px; color: white; display: flex; 
             align-items: center; justify-content: center; font-weight: 800; font-size: 1rem;
-            box-shadow: 0 4px 12px rgba(0,98,255,0.2);
+            box-shadow: 0 4px 12px color-mix(in srgb, var(--brand) 20%, transparent);
         }
         .header-title h1 { font-size: 1.2rem; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
         .header-title p { font-size: 0.7rem; color: var(--text-sub); margin: 2px 0 0; font-weight: 600; }
@@ -57,7 +58,7 @@
             font-family: inherit; font-weight: 600; font-size: 0.9rem;
             transition: all 0.2s ease;
         }
-        .search-input:focus { background: white; border-color: var(--brand); box-shadow: 0 0 0 4px rgba(0,98,255,0.06); outline: none; }
+        .search-input:focus { background: white; border-color: var(--brand); box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 6%, transparent); outline: none; }
 
         /* Tab Switcher */
         .tab-bar {
@@ -221,7 +222,7 @@
             background: var(--brand-gradient); color: white; border: none;
             font-family: inherit; font-weight: 800; font-size: 0.9rem;
             cursor: pointer; margin-top: 8px;
-            box-shadow: 0 6px 16px rgba(0,98,255,0.25);
+            box-shadow: 0 6px 16px color-mix(in srgb, var(--brand) 25%, transparent);
         }
         .btn-upload:active { transform: scale(0.97); }
         .btn-upload:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -231,6 +232,7 @@
         .empty-materials p { font-size: 0.85rem; font-weight: 600; }
 
     </style>
+    <%- include('partials/theme-toggle') %>
 </head>
 <body>
 <%- include('partials/sidebar') %>
@@ -461,13 +463,13 @@
 
                 if (data.success) {
                     closeUploadModal();
-                    Swal.fire({ icon: 'success', title: 'Uploaded!', text: 'Material saved to your library', confirmButtonColor: '#0062ff', timer: 1500, showConfirmButton: false });
+                    Swal.fire({ icon: 'success', title: 'Uploaded!', text: 'Material saved to your library', confirmButtonColor: '#2563eb', timer: 1500, showConfirmButton: false });
                     setTimeout(() => location.reload(), 1200);
                 } else {
                     throw new Error(data.message);
                 }
             } catch (err) {
-                Swal.fire({ icon: 'error', title: 'Upload Failed', text: err.message || 'Please try again', confirmButtonColor: '#0062ff' });
+                Swal.fire({ icon: 'error', title: 'Upload Failed', text: err.message || 'Please try again', confirmButtonColor: '#2563eb' });
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-upload"></i> Upload Material';
             }

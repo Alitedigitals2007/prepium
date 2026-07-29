@@ -3,17 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2563eb">
     <title>Ambassador Login | Prepium</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        :root { --brand: #0062ff; --bg: #f8fafc; --text: #1e293b; }
+        :root { --brand: #2563eb; --bg: #f8fafc; --text: #1e293b; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; display: flex; justify-content: center; }
         
         .auth-shell { 
             width: 100%; 
             max-width: 430px; 
-            background: white; 
+            background: var(--surface-solid); 
             min-height: 100vh; 
             display: flex; 
             flex-direction: column; 
@@ -22,18 +23,18 @@
         
         .logo-small { color: var(--brand); font-weight: 800; font-size: 1.2rem; margin-bottom: 2rem; display: block; text-decoration: none; }
         h1 { font-size: 1.8rem; font-weight: 800; margin: 0; }
-        p { color: #64748b; font-size: 0.95rem; margin-top: 8px; }
+        p { color: var(--text-secondary); font-size: 0.95rem; margin-top: 8px; }
         
         .header { margin-bottom: 2rem; }
         .form-group { margin-bottom: 1.2rem; }
         
-        label { display: block; font-size: 0.75rem; font-weight: 800; margin-bottom: 8px; color: #94a3b8; text-transform: uppercase; padding-left: 4px; }
+        label { display: block; font-size: 0.75rem; font-weight: 800; margin-bottom: 8px; color: var(--text-muted); text-transform: uppercase; padding-left: 4px; }
         input { 
             width: 100%; 
             padding: 1.1rem; 
             border-radius: 20px; 
-            border: 2px solid #f1f5f9; 
-            background: #f8fafc; 
+            border: 2px solid var(--bg); 
+            background: var(--bg); 
             font-size: 1.1rem; 
             font-weight: 700;
             outline: none; 
@@ -41,11 +42,11 @@
             font-family: monospace;
             letter-spacing: 1px;
         }
-        input:focus { border-color: var(--brand); background: white; box-shadow: 0 0 0 4px rgba(0,98,255,0.08); }
+        input:focus { border-color: var(--brand); background: var(--surface-solid); box-shadow: 0 0 0 4px rgba(37,99,235,0.08); }
         
         .btn-primary { 
             background: var(--brand); 
-            color: white; 
+            color: var(--surface-solid); 
             border: none; 
             width: 100%; 
             padding: 1.2rem; 
@@ -54,9 +55,10 @@
             font-weight: 700; 
             cursor: pointer; 
             margin-top: 1.5rem; 
-            box-shadow: 0 10px 20px rgba(0,98,255,0.15); 
+            box-shadow: 0 10px 20px rgba(37,99,235,0.15); 
         }
     </style>
+    <%- include('partials/theme-toggle') %>
 </head>
 <body>
 
@@ -65,7 +67,7 @@
         
         <div class="header">
             <h1>Ambassador Login</h1>
-            <p>Access your earnings and tracking console.</p>
+            <p>Sign in to track earnings and referrals.</p>
         </div>
 
         <form action="/ambassador/login" method="POST">
@@ -73,7 +75,7 @@
                 <label>Unique Ambassador ID</label>
                 <input type="text" name="unique_code" placeholder="E.g. PREP-1234" required autofocus>
             </div>
-            <button type="submit" class="btn-primary">Sign Into Portal</button>
+            <button type="submit" class="btn-primary">Sign In</button>
         </form>
     </div>
 

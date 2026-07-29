@@ -1,22 +1,10 @@
 <style>
-:root {
-  --glass-bg: rgba(255,255,255,.72);
-  --glass-border: rgba(255,255,255,.3);
-  --glass-shadow: 0 8px 32px rgba(0,0,0,.06);
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --glass-bg: rgba(15,23,42,.72);
-    --glass-border: rgba(255,255,255,.07);
-    --glass-shadow: 0 8px 32px rgba(0,0,0,.25);
-  }
-}
 .glass {
-  background: var(--glass-bg);
+  background: var(--surface);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
+  box-shadow: var(--shadow-md);
   border-radius: clamp(10px,3vw,22px);
 }
 .flex-center { display:flex; align-items:center; justify-content:center; }

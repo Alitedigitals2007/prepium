@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#2563eb">
     <title>Prepium | History</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -15,7 +16,7 @@
         .status-bar { height: env(safe-area-inset-top, 0px); }
         .page-header { padding: 1.25rem 1.5rem 0.75rem; display: flex; align-items: center; justify-content: space-between; }
         .page-header h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; margin: 0; }
-        .page-header p { font-size: 0.72rem; color: var(--text-sub); font-weight: 600; margin: 2px 0 0; }
+        .page-header p { font-size: 0.72rem; color: var(--text-secondary); font-weight: 600; margin: 2px 0 0; }
 
         .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 1.5rem; margin-bottom: 1.25rem; }
         .stat-card { background: white; border: 1.5px solid var(--border); border-radius: 18px; padding: 16px 12px; text-align: center; box-shadow: var(--shadow-sm); }
@@ -24,53 +25,54 @@
         .stat-card:nth-child(2) .stat-icon { color: var(--success); }
         .stat-card:nth-child(3) .stat-icon { color: var(--warning); }
         .stat-num { font-size: 1.4rem; font-weight: 800; display: block; }
-        .stat-label { font-size: 0.6rem; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-label { font-size: 0.6rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
 
         .chart-section { margin: 0 1.5rem 1.25rem; background: white; border: 1.5px solid var(--border); border-radius: 22px; padding: 18px; box-shadow: var(--shadow-sm); }
         .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
         .chart-title { font-size: 0.85rem; font-weight: 800; }
-        .chart-badge { font-size: 0.65rem; font-weight: 700; color: var(--brand); background: #f0f7ff; padding: 4px 10px; border-radius: 8px; }
+        .chart-badge { font-size: 0.65rem; font-weight: 700; color: var(--brand); background: var(--brand-soft); padding: 4px 10px; border-radius: 8px; }
         .chart-canvas { height: 160px; position: relative; }
 
         .section-head { padding: 0.5rem 1.5rem 0.75rem; display: flex; align-items: center; justify-content: space-between; }
         .section-head h2 { font-size: 0.95rem; font-weight: 800; }
-        .section-head span { font-size: 0.68rem; font-weight: 700; color: var(--text-sub); }
+        .section-head span { font-size: 0.68rem; font-weight: 700; color: var(--text-secondary); }
 
         .history-list { padding: 0 1.5rem; }
         .history-card { background: white; border-radius: 18px; padding: 14px; border: 1.5px solid var(--border); margin-bottom: 10px; display: flex; align-items: center; gap: 14px; box-shadow: var(--shadow-sm); transition: transform 0.2s ease; }
         .history-card:active { transform: scale(0.98); }
-        .history-card.study { border-left: 4px solid #7c3aed; }
+        .history-card.study { border-left: 4px solid var(--brand); }
         .icon-circle { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
         .icon-circle.standard { background: var(--brand-soft); color: var(--brand); }
-        .icon-circle.study { background: #f5f3ff; color: #7c3aed; }
+        .icon-circle.study { background: var(--brand-soft); color: var(--brand); }
         .card-content { flex: 1; min-width: 0; }
         .card-title { font-weight: 800; font-size: 0.85rem; margin: 0 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .card-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-        .card-date { font-size: 0.65rem; color: var(--text-sub); font-weight: 600; }
+        .card-date { font-size: 0.65rem; color: var(--text-secondary); font-weight: 600; }
         .type-tag { font-size: 0.55rem; font-weight: 700; padding: 2px 7px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.3px; }
-        .type-tag.standard { background: #e0f2fe; color: #0369a1; }
-        .type-tag.study { background: #f3e8ff; color: #6b21a8; }
+        .type-tag.standard { background: var(--brand-soft); color: var(--brand); }
+        .type-tag.study { background: var(--brand-soft); color: var(--brand); }
         .score-badge { text-align: right; flex-shrink: 0; }
         .score-num { font-size: 1rem; font-weight: 800; display: block; }
         .accuracy-pill { font-size: 0.6rem; font-weight: 700; padding: 3px 8px; border-radius: 8px; display: inline-block; margin-top: 3px; }
-        .accuracy-pill.high { background: #dcfce7; color: #15803d; }
-        .accuracy-pill.mid { background: #fef3c7; color: #b45309; }
-        .accuracy-pill.low { background: #fee2e2; color: #b91c1c; }
-        .progress-mini { width: 100%; height: 4px; background: #f1f5f9; border-radius: 2px; margin-top: 5px; overflow: hidden; }
+        .accuracy-pill.high { background: var(--success-soft); color: var(--success); }
+        .accuracy-pill.mid { background: var(--warning-soft); color: var(--warning); }
+        .accuracy-pill.low { background: var(--danger-soft); color: var(--danger); }
+        .progress-mini { width: 100%; height: 4px; background: var(--bg); border-radius: 2px; margin-top: 5px; overflow: hidden; }
         .progress-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
         .progress-fill.high { background: var(--success); }
         .progress-fill.mid { background: var(--warning); }
         .progress-fill.low { background: var(--danger); }
         .empty-state { text-align: center; padding: 2.5rem 1.5rem; }
-        .empty-state i { font-size: 2.2rem; color: #e2e8f0; display: block; margin-bottom: 0.8rem; }
-        .empty-state h3 { font-size: 0.85rem; font-weight: 700; color: var(--text-sub); margin: 0 0 4px; }
+        .empty-state i { font-size: 2.2rem; color: var(--border-solid); display: block; margin-bottom: 0.8rem; }
+        .empty-state h3 { font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); margin: 0 0 4px; }
         .empty-state p { font-size: 0.72rem; color: var(--text-muted); margin: 0; }
         .empty-state .cta-btn { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; padding: 12px 24px; border-radius: 14px; background: var(--brand-gradient); color: white; text-decoration: none; font-weight: 700; font-size: 0.8rem; }
         .tab-bar { display: flex; gap: 6px; padding: 0 1.5rem 1rem; }
-        .tab-pill { flex: 1; padding: 11px; border-radius: 12px; background: #f1f5f9; border: none; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 0.72rem; color: var(--text-sub); transition: var(--transition); }
-        .tab-pill.active { background: var(--text-dark); color: white; }
+        .tab-pill { flex: 1; padding: 11px; border-radius: 12px; background: var(--bg); border: none; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 0.72rem; color: var(--text-secondary); transition: var(--transition); }
+        .tab-pill.active { background: var(--text-primary); color: white; }
         @media (min-width: 431px) { .app-shell { border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); margin: 0 auto; } }
     </style>
+    <%- include('partials/theme-toggle') %>
 </head>
 <body>
 <%- include('partials/sidebar') %>
@@ -80,7 +82,7 @@
     <div class="page-header">
         <div>
             <h1>History</h1>
-            <p>Your quiz and study performance</p>
+            <p>Your quiz and study activity</p>
         </div>
     </div>
 
@@ -127,7 +129,7 @@
         <div class="empty-state">
             <i class="fas fa-chart-line"></i>
             <h3>No activity yet</h3>
-            <p>Complete quizzes and study sessions to see them here</p>
+            <p>Complete quizzes or study sessions to see them here</p>
             <a href="/study" class="cta-btn"><i class="fas fa-graduation-cap"></i> Start Studying</a>
         </div>
     </div>
@@ -245,12 +247,12 @@ function escapeHtml(text) {
                 }),
                 datasets: [{
                     data: recent.map(function(h) { return h.pct; }),
-                    borderColor: '#0062ff',
-                    backgroundColor: 'rgba(0,98,255,0.05)',
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(99,102,241,0.05)',
                     borderWidth: 2.5,
                     fill: true,
                     tension: 0.4,
-                    pointBackgroundColor: '#0062ff',
+                    pointBackgroundColor: '#2563eb',
                     pointBorderColor: '#ffffff',
                     pointBorderWidth: 2,
                     pointRadius: 4

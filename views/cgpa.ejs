@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#2563eb">
 <title>CGPA Tracker | Prepium</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -119,7 +120,7 @@
     content: '';
     position: absolute; inset: 0;
     background:
-        radial-gradient(ellipse 80% 70% at 110% -10%, rgba(0,98,255,.35) 0%, transparent 60%),
+        radial-gradient(ellipse 80% 70% at 110% -10%, rgba(37,99,235,.35) 0%, transparent 60%),
         radial-gradient(ellipse 50% 50% at -10% 110%, rgba(79,70,229,.25) 0%, transparent 60%);
     pointer-events: none;
 }
@@ -237,7 +238,7 @@
 .gpa-live {
     font-size: .8rem; font-weight: 800;
     color: var(--brand); background: var(--brand-soft);
-    border: 1px solid rgba(0,98,255,.12);
+    border: 1px solid rgba(37,99,235,.12);
     padding: 6px 13px; border-radius: 50px;
 }
 
@@ -281,7 +282,7 @@
     border: 1px solid var(--border-solid);
 }
 .grade-chip.A { background:rgba(245,158,11,.1); color:var(--warning); border-color:rgba(245,158,11,.15); }
-.grade-chip.B { background:var(--brand-soft);  color:var(--brand);  border-color:rgba(0,98,255,.15); }
+.grade-chip.B { background:var(--brand-soft);  color:var(--brand);  border-color:rgba(37,99,235,.15); }
 .grade-chip.C { background:rgba(16,185,129,.08);  color:var(--success);  border-color:rgba(16,185,129,.15); }
 .grade-chip.D { background:rgba(124,58,237,.07);color:#7c3aed;border-color:rgba(124,58,237,.15); }
 .grade-chip.E { background:var(--bg);       color:var(--text-sub); }
@@ -351,6 +352,7 @@
     .grade-chips { grid-template-columns: repeat(3,1fr); }
     .grid2 { grid-template-columns: 1fr; }
 }
+<%- include('partials/theme-toggle') %>
 </style>
 </head>
 <body>
@@ -611,7 +613,7 @@
     </div>
     <div id="advisorBody" style="display:none;">
         <div style="display:flex;gap:6px;margin-bottom:12px;">
-            <button type="button" onclick="aiPredictGpa()" style="flex:1;padding:11px;border:none;background:linear-gradient(135deg,#0062ff,#003fcc);color:white;border-radius:10px;font-weight:700;font-size:0.78rem;cursor:pointer"><i class="fas fa-magic"></i> Predict next semester</button>
+            <button type="button" onclick="aiPredictGpa()" style="flex:1;padding:11px;border:none;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;border-radius:10px;font-weight:700;font-size:0.78rem;cursor:pointer"><i class="fas fa-magic"></i> Predict next semester</button>
             <button type="button" onclick="advisorWhatif()" style="flex:1;padding:11px;border:none;background:#0f172a;color:white;border-radius:10px;font-weight:700;font-size:0.78rem;cursor:pointer"><i class="fas fa-calculator"></i> What-If Builder</button>
         </div>
 
@@ -744,7 +746,7 @@
 </div><!-- /app-shell -->
 
 <!-- Floating: Add Course button (always visible) -->
-<button id="fab-add-course" type="button" onclick="openOv('ov-add')" title="Add a course" aria-label="Add a course" style="position:fixed;right:18px;bottom:90px;z-index:9000;width:56px;height:56px;border-radius:50%;border:none;background:linear-gradient(135deg,#0062ff,#003fcc);color:white;font-size:1.4rem;box-shadow:0 10px 24px rgba(0,98,255,0.35);cursor:pointer;display:flex;align-items:center;justify-content:center"><i class="fas fa-plus"></i></button>
+<button id="fab-add-course" type="button" onclick="openOv('ov-add')" title="Add a course" aria-label="Add a course" style="position:fixed;right:18px;bottom:90px;z-index:9000;width:56px;height:56px;border-radius:50%;border:none;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;font-size:1.4rem;box-shadow:0 10px 24px rgba(37,99,235,0.35);cursor:pointer;display:flex;align-items:center;justify-content:center"><i class="fas fa-plus"></i></button>
 
 <!-- Floating: AI Chat button -->
 <button id="fab-ai-chat" type="button" onclick="openCGPAChat()" title="AI Academic Advisor" aria-label="AI Chat" style="position:fixed;right:18px;bottom:155px;z-index:9000;height:48px;padding:0 18px;border-radius:24px;border:none;background:#0f172a;color:white;font-weight:700;font-size:0.78rem;box-shadow:0 10px 24px rgba(15,23,42,0.25);cursor:pointer;display:flex;align-items:center;gap:8px"><i class="fas fa-robot"></i> AI Advisor</button>
@@ -819,7 +821,7 @@
         <div id="add-loading" style="display:none;text-align:center;padding:8px;color:#475569;font-weight:600"><i class="fas fa-spinner fa-spin"></i> Saving...</div>
         <div id="add-error" style="display:none;font-size:0.75rem;color:#dc2626;font-weight:600;margin:4px 0 8px;padding:8px 10px;background:#fef2f2;border-radius:8px"></div>
         <div style="display:flex;gap:8px;margin-top:10px">
-            <button id="add-save-btn" onclick="addCourseAjax()" style="flex:1;padding:12px;border:none;background:linear-gradient(135deg,#0062ff,#003fcc);color:white;border-radius:10px;font-weight:700;font-size:0.82rem;cursor:pointer"><i class="fas fa-plus"></i> Save Course</button>
+            <button id="add-save-btn" onclick="addCourseAjax()" style="flex:1;padding:12px;border:none;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;border-radius:10px;font-weight:700;font-size:0.82rem;cursor:pointer"><i class="fas fa-plus"></i> Save Course</button>
             <button id="add-save-another" onclick="addCourseAjax(true)" style="padding:12px 16px;border:1.5px solid var(--border);background:white;border-radius:10px;font-weight:700;font-size:0.78rem;cursor:pointer;color:var(--text-dark)"><i class="fas fa-plus-circle"></i> Add Another</button>
         </div>
     </div>
@@ -1321,7 +1323,7 @@ function buildTranscriptHtml(d) {
         var semGpa = sem.units > 0 ? (sem.points / sem.units).toFixed(2) : '0.00';
         html += '<tr class="sem-gpa"><td colspan="2" style="font-size:7pt;color:#475569">Semester Grade Point Average (SGPA)</td>' +
             '<td style="text-align:center">' + sem.units + '</td>' +
-            '<td style="text-align:center;color:#0062ff">' + semGpa + '</td>' +
+            '<td style="text-align:center;color:#2563eb">' + semGpa + '</td>' +
             '<td style="text-align:center">' + sem.points.toFixed(1) + '</td>' +
             '<td style="text-align:center;font-size:6.5pt;color:#475569">' + sem.courses.filter(function(c){ return c.grade !== 'F' && !c.excluded; }).length + '/' + sem.courses.filter(function(c){ return !c.excluded; }).length + ' passed</td></tr>';
         html += '</tbody></table></div>';
@@ -1382,7 +1384,7 @@ function openCGPAChat() {
             '<div id="cgpa-chat-pending" style="display:none;background:#f1f5f9;border-radius:10px;padding:10px;margin-bottom:8px;font-size:0.85rem"><i class="fas fa-spinner fa-spin"></i> Thinking...</div>' +
             '<div style="display:flex;gap:6px;margin-top:8px">' +
             '<input id="cgpa-chat-inp" type="text" placeholder="Ask about your CGPA..." style="flex:1;padding:11px 13px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-size:0.85rem;font-weight:600;outline:none">' +
-            '<button id="cgpa-chat-send" type="button" style="padding:11px 16px;border:none;background:linear-gradient(135deg,#0062ff,#003fcc);color:white;font-weight:700;border-radius:10px;cursor:pointer"><i class="fas fa-paper-plane"></i></button></div>' +
+            '<button id="cgpa-chat-send" type="button" style="padding:11px 16px;border:none;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;font-weight:700;border-radius:10px;cursor:pointer"><i class="fas fa-paper-plane"></i></button></div>' +
             '<div style="font-size:0.68rem;color:#94a3b8;margin-top:6px;font-weight:600">AI can misread data. Verify important decisions.</div>',
         showConfirmButton: false,
         showCloseButton: true,
@@ -1390,15 +1392,15 @@ function openCGPAChat() {
         didOpen: function() {
             var box = document.getElementById(containerId);
             var pending = document.getElementById('cgpa-chat-pending');
-            box.innerHTML = '<div style="display:flex;gap:10px;margin-bottom:8px"><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#0062ff,#003fcc);display:flex;align-items:center;justify-content:center;color:white;font-size:0.7rem"><i class="fas fa-robot"></i></div><div style="flex:1;background:#f1f5f9;border-radius:10px;padding:10px;line-height:1.5">Hi! I\'m your CGPA advisor. Ask me anything â€” what-if a grade, how to raise your GPA, which semesters to focus on, etc.</div></div>';
+            box.innerHTML = '<div style="display:flex;gap:10px;margin-bottom:8px"><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#1d4ed8);display:flex;align-items:center;justify-content:center;color:white;font-size:0.7rem"><i class="fas fa-robot"></i></div><div style="flex:1;background:#f1f5f9;border-radius:10px;padding:10px;line-height:1.5">Hi! I\'m your CGPA advisor. Ask me anything â€” what-if a grade, how to raise your GPA, which semesters to focus on, etc.</div></div>';
 
             function appnd(role, text, color) {
                 var div = document.createElement('div');
                 div.style.cssText = 'display:flex;gap:10px;margin-bottom:8px';
                 if (role === 'user') div.style.flexDirection = 'row-reverse';
                 div.innerHTML = role === 'user'
-                    ? '<div style="flex:1;background:#0062ff;color:white;border-radius:10px;padding:10px;line-height:1.5">' + aiEscape(text) + '</div>'
-                    : '<div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#0062ff,#003fcc);display:flex;align-items:center;justify-content:center;color:white;font-size:0.7rem;flex-shrink:0"><i class="fas fa-robot"></i></div><div style="flex:1;background:#f1f5f9;border-radius:10px;padding:10px;line-height:1.5;white-space:pre-wrap">' + aiEscape(text) + '</div>';
+                    ? '<div style="flex:1;background:#2563eb;color:white;border-radius:10px;padding:10px;line-height:1.5">' + aiEscape(text) + '</div>'
+                    : '<div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#1d4ed8);display:flex;align-items:center;justify-content:center;color:white;font-size:0.7rem;flex-shrink:0"><i class="fas fa-robot"></i></div><div style="flex:1;background:#f1f5f9;border-radius:10px;padding:10px;line-height:1.5;white-space:pre-wrap">' + aiEscape(text) + '</div>';
                 box.appendChild(div);
                 box.parentElement.scrollTop = box.parentElement.scrollHeight;
             }

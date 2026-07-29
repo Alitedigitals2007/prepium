@@ -24,7 +24,7 @@
       <i class="fas fa-book-open"></i> Reading Schedule
     </a>
     <a href="/cgpa" class="sidebar-link">
-      <i class="fas fa-graduation-cap"></i> CGPA Tracker
+      <i class="fas fa-chart-line"></i> CGPA Tracker
     </a>
     <a href="/history" class="sidebar-link">
       <i class="fas fa-chart-bar"></i> History
@@ -55,6 +55,13 @@
     </a>
   </nav>
   <div class="sidebar-footer">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:0 0.5rem;">
+      <button class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle theme">
+        <i class="fas fa-moon" id="themeIconMoon" style="display:none;"></i>
+        <i class="fas fa-sun" id="themeIconSun" style="display:none;"></i>
+      </button>
+      <span style="font-size:0.72rem;font-weight:700;color:var(--text-muted);">Toggle Theme</span>
+    </div>
     <div class="sidebar-user">
       <div class="sidebar-avatar">
         <% if (typeof user !== 'undefined' && user.fullname) { %>

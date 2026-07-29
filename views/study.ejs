@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#2563eb">
     <title>Prepium | Study</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -16,34 +17,34 @@
         .page-header { padding: 1.5rem 1.5rem 0.75rem; display: flex; align-items: center; justify-content: space-between; }
         .page-header h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; }
         .page-header p { font-size: 0.72rem; color: var(--text-sub); font-weight: 600; margin-top: 2px; }
-        .import-btn { padding: 8px 14px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: white; font-weight: 700; font-size: 0.7rem; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--text-dark); transition: var(--transition); }
+        .import-btn { padding: 8px 14px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: var(--surface-solid); font-weight: 700; font-size: 0.7rem; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--text-dark); transition: var(--transition); }
         .import-btn:hover { border-color: var(--brand); color: var(--brand); }
 
         .stats-row { display: flex; gap: 10px; padding: 0.5rem 1.5rem 1rem; }
-        .stat-chip { flex: 1; background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 12px; text-align: center; box-shadow: var(--shadow-sm); }
+        .stat-chip { flex: 1; background: var(--surface-solid); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 12px; text-align: center; box-shadow: var(--shadow-sm); }
         .stat-chip i { font-size: 1.15rem; color: var(--brand); margin-bottom: 6px; display: block; }
         .stat-chip .num { font-size: 1.3rem; font-weight: 800; line-height: 1.2; }
         .stat-chip .lbl { font-size: 0.6rem; color: var(--text-sub); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
-        .stat-chip.streak-chip i { color: #f97316; }
-        .stat-chip.streak-chip .num { color: #f97316; }
+        .stat-chip.streak-chip i { color: var(--warning); }
+        .stat-chip.streak-chip .num { color: var(--warning); }
 
-        .active-session-card { margin: 0 1.5rem 1rem; background: linear-gradient(135deg,#1e293b,#0f172a); border-radius: var(--radius-lg); padding: 18px 20px; color: white; display: flex; align-items: center; gap: 14px; cursor: pointer; box-shadow: 0 8px 24px rgba(15,23,42,0.3); }
+        .active-session-card { margin: 0 1.5rem 1rem; background: linear-gradient(135deg,var(--surface-solid),var(--text-primary)); border-radius: var(--radius-lg); padding: 18px 20px; color: white; display: flex; align-items: center; gap: 14px; cursor: pointer; box-shadow: 0 8px 24px rgba(15,23,42,0.3); }
         .active-session-card:active { transform: scale(0.98); }
         .active-session-card .as-icon { width: 46px; height: 46px; border-radius: var(--radius-sm); background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
         .active-session-card .as-info { flex: 1; }
         .active-session-card .as-info h4 { margin: 0 0 2px; font-size: 0.85rem; font-weight: 800; }
         .active-session-card .as-info p { margin: 0; font-size: 0.7rem; opacity: 0.7; font-weight: 600; }
-        .active-session-card .as-resume { padding: 8px 16px; border-radius: 20px; border: none; background: #22c55e; color: white; font-weight: 800; font-size: 0.7rem; cursor: pointer; }
+        .active-session-card .as-resume { padding: 8px 16px; border-radius: 20px; border: none; background: var(--success); color: white; font-weight: 800; font-size: 0.7rem; cursor: pointer; }
 
         .quick-start { margin: 0 1.5rem 1rem; background: var(--brand-gradient); border-radius: var(--radius-lg); padding: 20px; color: white; position: relative; overflow: hidden; cursor: pointer; }
         .quick-start:active { transform: scale(0.98); }
         .quick-start::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at top right, rgba(255,255,255,0.15) 0%, transparent 60%); }
         .quick-start h3 { margin: 0 0 4px; font-size: 1rem; font-weight: 800; position: relative; }
         .quick-start p { margin: 0 0 12px; font-size: 0.72rem; opacity: 0.85; font-weight: 600; position: relative; }
-        .quick-start .qs-btn { padding: 10px 24px; border-radius: 20px; border: none; background: white; color: var(--brand); font-weight: 800; font-size: 0.78rem; cursor: pointer; position: relative; display: inline-flex; align-items: center; gap: 8px; }
+        .quick-start .qs-btn { padding: 10px 24px; border-radius: 20px; border: none; background: var(--surface-solid); color: var(--brand); font-weight: 800; font-size: 0.78rem; cursor: pointer; position: relative; display: inline-flex; align-items: center; gap: 8px; }
 
         .tab-bar { display: flex; gap: 6px; padding: 0.5rem 1.5rem; }
-        .tab-pill { flex: 1; padding: 12px; border-radius: var(--radius-sm); background: #f1f5f9; border: none; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 0.78rem; color: var(--text-sub); transition: var(--transition); display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .tab-pill { flex: 1; padding: 12px; border-radius: var(--radius-sm); background: var(--bg); border: none; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 0.78rem; color: var(--text-sub); transition: var(--transition); display: flex; align-items: center; justify-content: center; gap: 6px; }
         .tab-pill.active { background: var(--text-dark); color: white; }
         .tab-pill i { font-size: 0.85rem; }
 
@@ -60,17 +61,17 @@
         .card-info .code { font-size: 0.68rem; color: var(--text-sub); font-weight: 600; margin: 2px 0 0; }
         .card-meta { display: flex; gap: 12px; font-size: 0.7rem; color: var(--text-sub); font-weight: 600; }
         .card-meta i { margin-right: 4px; }
-        .progress-mini { height: 5px; background: #f1f5f9; border-radius: 3px; overflow: hidden; margin-top: 8px; }
+        .progress-mini { height: 5px; background: var(--bg); border-radius: 3px; overflow: hidden; margin-top: 8px; }
         .progress-fill { height: 100%; border-radius: 3px; transition: width 0.5s var(--ease-out); }
 
         .empty-state { text-align: center; padding: 3rem 1.5rem; }
-        .empty-state i { font-size: 2.5rem; color: #e2e8f0; margin-bottom: 0.8rem; display: block; }
+        .empty-state i { font-size: 2.5rem; color: var(--border-solid); margin-bottom: 0.8rem; display: block; }
         .empty-state h3 { font-size: 0.9rem; font-weight: 700; color: var(--text-sub); margin: 0 0 4px; }
         .empty-state p { font-size: 0.75rem; color: var(--text-muted); margin: 0; }
         .empty-state .cta { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; padding: 11px 22px; border-radius: var(--radius-sm); background: var(--brand-gradient); color: white; text-decoration: none; font-weight: 700; font-size: 0.82rem; }
 
         .recent-section { padding: 0 1.5rem 1.5rem; }
-        .session-chip { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: white; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 8px; cursor: pointer; text-decoration: none; color: inherit; transition: var(--transition); }
+        .session-chip { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--surface-solid); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 8px; cursor: pointer; text-decoration: none; color: inherit; transition: var(--transition); }
         .session-chip:active { transform: scale(0.98); }
         .session-chip .s-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--brand-soft); display: flex; align-items: center; justify-content: center; color: var(--brand); flex-shrink: 0; }
         .session-chip .s-info { flex: 1; }
@@ -80,6 +81,7 @@
 
         @media (min-width: 431px) { .app-shell { border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); margin: 0 auto; } }
     </style>
+    <%- include('partials/theme-toggle') %>
 </head>
 <body>
 <%- include('partials/sidebar') %>
@@ -89,7 +91,7 @@
     <div class="page-header">
         <div>
             <h1>Study</h1>
-            <p>Track your learning progress</p>
+            <p>Courses, flashcards & AI tutor</p>
         </div>
         <button class="import-btn" onclick="importTimetable()" title="Import from timetable"><i class="fas fa-download"></i> Import</button>
     </div>
@@ -165,8 +167,8 @@
                 <div class="empty-state">
                     <i class="fas fa-book-open"></i>
                     <h3>No courses yet</h3>
-                    <p>Import from your timetable or add courses manually</p>
-                    <button class="cta" onclick="importTimetable()"><i class="fas fa-download"></i> Import from Timetable</button>
+                    <p>Import from timetable or add manually</p>
+                    <button class="cta" onclick="importTimetable()"><i class="fas fa-download"></i> Import</button>
                 </div>
             <% } %>
         </div>
@@ -190,7 +192,7 @@
                 <div class="empty-state">
                     <i class="fas fa-history"></i>
                     <h3>No sessions yet</h3>
-                    <p>Start a study session to see it here</p>
+                    <p>Start a session to track it here</p>
                 </div>
             <% } %>
         </div>

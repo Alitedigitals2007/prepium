@@ -8,9 +8,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --brand: #0062ff;
-            --brand-light: rgba(0, 98, 255, 0.08);
-            --brand-glow: rgba(0, 98, 255, 0.25);
+            --brand: #2563eb;
+            --brand-light: rgba(37, 99, 235, 0.08);
+            --brand-glow: rgba(37, 99, 235, 0.25);
             --sidebar: #0b1437;
             --sidebar-hover: rgba(255, 255, 255, 0.06);
             --sidebar-active: rgba(0, 98, 255, 0.18);
@@ -22,7 +22,7 @@
             --text-muted: #94a3b8;
             --border: rgba(226, 232, 240, 0.6);
             --border-solid: #e2e8f0;
-            --indigo: #6366f1;
+            --indigo: #2563eb;
             --green: #16a34a;
             --green-bg: #dcfce7;
             --amber: #f59e0b;
@@ -170,7 +170,7 @@
             right: -10%;
             width: 320px;
             height: 320px;
-            background: radial-gradient(circle, rgba(0,98,255,0.2) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(37,99,235,0.2) 0%, transparent 70%);
             border-radius: 50%;
         }
         .welcome-banner::after {
@@ -322,7 +322,7 @@
             font-size: 0.86rem;
         }
         tr:last-child td { border-bottom: none; }
-        tr:hover td { background: rgba(0,98,255,0.02); }
+        tr:hover td { background: rgba(37,99,235,0.02); }
 
         .user-info { display: flex; flex-direction: column; gap: 2px; }
         .user-name { font-weight: 700; color: var(--text-primary); }
@@ -389,6 +389,8 @@
             th, td { padding: 10px 8px; font-size: 0.75rem; }
         }
     </style>
+<meta name="theme-color" content="#2563eb">
+<%- include('../partials/theme-toggle') %>
 </head>
 <body>
 

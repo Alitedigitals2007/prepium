@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Prepium | Dashboard</title>
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#0062ff">
+    <meta name="theme-color" content="#2563eb">
     <script src="https://js.paystack.co/v1/inline.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -22,7 +22,7 @@
             --accent-rose: #f43f5e;
             --accent-amber: #f59e0b;
             --accent-teal: #0d9488;
-            --accent-blue: #0062ff;
+            --accent-blue: #2563eb;
         }
         body { background: var(--dash-bg); }
         body::before { display: none; }
@@ -30,7 +30,7 @@
 
         .dash-header { padding: 1.25rem 1.25rem 0.75rem; display: flex; align-items: center; justify-content: space-between; }
         .dash-header-left { display: flex; align-items: center; gap: 12px; }
-        .dash-avatar { width: 46px; height: 46px; border-radius: 16px; background: var(--brand-gradient); color: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; box-shadow: 0 4px 14px rgba(0,98,255,0.25); }
+        .dash-avatar { width: 46px; height: 46px; border-radius: 16px; background: var(--brand-gradient); color: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; box-shadow: 0 4px 14px rgba(37,99,235,0.25); }
         .dash-greeting { font-size: 0.62rem; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.5px; }
         .dash-name { font-size: 1.15rem; font-weight: 800; line-height: 1.2; }
         .dash-header-right { display: flex; align-items: center; gap: 8px; }
@@ -51,7 +51,7 @@
         .mood-chip { flex-shrink: 0; padding: 10px 18px; border-radius: 14px; background: white; border: 1px solid rgba(226,232,240,0.5); font-weight: 700; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--text-dark); box-shadow: var(--card-shadow); transition: var(--transition); }
         .mood-chip:active { transform: scale(0.95); }
         .mood-chip i { font-size: 0.85rem; }
-        .mood-chip.primary { background: var(--brand-gradient); color: white; border: none; box-shadow: 0 4px 14px rgba(0,98,255,0.25); }
+        .mood-chip.primary { background: var(--brand-gradient); color: white; border: none; box-shadow: 0 4px 14px rgba(37,99,235,0.25); }
 
         <% if (!user.has_paid) { %>
         .upgrade-strip { margin: 0 1.25rem 1.25rem; padding: 18px 20px; border-radius: 20px; background: linear-gradient(135deg,#0f172a 0%,#1e1b4b 100%); color: white; display: flex; align-items: center; gap: 14px; position: relative; overflow: hidden; }
@@ -74,7 +74,7 @@
         .feature-card .fc-label { font-size: 0.78rem; font-weight: 800; margin-bottom: 2px; }
         .feature-card .fc-desc { font-size: 0.65rem; color: var(--text-sub); font-weight: 600; line-height: 1.3; }
         .feature-card .fc-badge { display: inline-flex; align-items: center; gap: 3px; margin-top: 8px; padding: 3px 8px; border-radius: 6px; font-size: 0.58rem; font-weight: 700; }
-        .feature-card.featured { grid-column: span 2; flex-direction: row; align-items: center; gap: 16px; padding: 16px 18px; background: linear-gradient(135deg,#0062ff,#4f46e5); color: white; border: none; box-shadow: 0 6px 24px rgba(0,98,255,0.25); }
+        .feature-card.featured { grid-column: span 2; flex-direction: row; align-items: center; gap: 16px; padding: 16px 18px; background: linear-gradient(135deg,#2563eb,#2563eb); color: white; border: none; box-shadow: 0 6px 24px rgba(37,99,235,0.25); }
         .feature-card.featured .fc-icon { background: rgba(255,255,255,0.2); color: white; margin-bottom: 0; }
         .feature-card.featured .fc-body { flex: 1; }
         .feature-card.featured .fc-label { font-size: 0.88rem; }
@@ -82,7 +82,7 @@
         .feature-card.featured .fc-arrow { width: 32px; height: 32px; border-radius: 10px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
         .feature-card.locked { opacity: 0.6; }
-        .feature-card.locked .fc-icon { background: #f1f5f9; color: var(--text-muted); }
+        .feature-card.locked .fc-icon { background: var(--bg); color: var(--text-muted); }
         .feature-card.locked::after { display: none; }
         .feature-card .lock-overlay { display: none; }
         .feature-card.locked .lock-overlay { display: flex; align-items: center; justify-content: center; position: absolute; inset: 0; background: rgba(255,255,255,0.5); backdrop-filter: blur(2px); border-radius: 18px; font-size: 0.75rem; color: var(--text-sub); font-weight: 700; z-index: 2; cursor: pointer; }
@@ -106,6 +106,7 @@
 
         .bottom-spacer { height: 20px; }
     </style>
+    <%- include('partials/theme-toggle') %>
 </head>
 <body>
 <%- include('partials/sidebar') %>
@@ -129,22 +130,22 @@
 
     <div class="hero-strip">
         <div class="hero-stat">
-            <div class="stat-icon" style="background:#eef4ff;color:var(--brand);"><i class="fas fa-check-circle"></i></div>
+            <div class="stat-icon" style="background:var(--brand-soft);color:var(--brand);"><i class="fas fa-check-circle"></i></div>
             <div class="stat-num"><%= typeof quizCount !== 'undefined' ? quizCount : 0 %></div>
             <div class="stat-label">Quizzes Done</div>
         </div>
         <div class="hero-stat">
-            <div class="stat-icon" style="background:#fef3c7;color:#f59e0b;"><i class="fas fa-trophy"></i></div>
+            <div class="stat-icon" style="background:var(--warning-soft);color:var(--warning);"><i class="fas fa-trophy"></i></div>
             <div class="stat-num"><%= typeof avgScore !== 'undefined' ? avgScore + '%' : '0%' %></div>
             <div class="stat-label">Avg Score</div>
         </div>
         <div class="hero-stat">
-            <div class="stat-icon" style="background:#d1fae5;color:#10b981;"><i class="fas fa-book-open"></i></div>
+            <div class="stat-icon" style="background:var(--success-soft);color:var(--success);"><i class="fas fa-book-open"></i></div>
             <div class="stat-num"><%= typeof studySessions !== 'undefined' ? studySessions : 0 %></div>
             <div class="stat-label">Study Sessions</div>
         </div>
         <div class="hero-stat">
-            <div class="stat-icon" style="background:#f0fdf4;color:#16a34a;"><i class="fas fa-robot"></i></div>
+            <div class="stat-icon" style="background:var(--success-soft);color:var(--success);"><i class="fas fa-robot"></i></div>
             <div class="stat-num"><%= typeof aiQuizCount !== 'undefined' ? aiQuizCount : 0 %></div>
             <div class="stat-label">AI Quizzes</div>
         </div>
@@ -190,14 +191,14 @@
 
         <a href="/cgpa" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
             <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-            <div class="fc-icon" style="background:#e0f2fe;color:#0284c7;"><i class="fas fa-chart-line"></i></div>
+            <div class="fc-icon" style="background:var(--brand-soft);color:var(--accent);"><i class="fas fa-chart-line"></i></div>
             <div class="fc-label">CGPA Tracker</div>
             <div class="fc-desc">Forecast & AI advisor</div>
         </a>
 
         <a href="/ai-quiz" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
             <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-            <div class="fc-icon" style="background:#f0fdf4;color:#16a34a;"><i class="fas fa-wand-magic-sparkles"></i></div>
+            <div class="fc-icon" style="background:var(--success-soft);color:var(--success);"><i class="fas fa-wand-magic-sparkles"></i></div>
             <div class="fc-label">AI Quiz Generator</div>
             <div class="fc-desc">Generate quizzes from PDF</div>
         </a>
@@ -214,21 +215,21 @@
 
         <a href="/timetable" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
             <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-            <div class="fc-icon" style="background:#f3e8ff;color:#7c3aed;"><i class="fas fa-table"></i></div>
+            <div class="fc-icon" style="background:var(--brand-light);color:var(--brand);"><i class="fas fa-table"></i></div>
             <div class="fc-label">Timetable</div>
             <div class="fc-desc">AI-powered schedule</div>
         </a>
 
         <a href="/reading-timetable" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
             <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-            <div class="fc-icon" style="background:#dbeafe;color:#0284c7;"><i class="fas fa-book-open"></i></div>
+            <div class="fc-icon" style="background:var(--brand-soft);color:var(--accent);"><i class="fas fa-book-open"></i></div>
             <div class="fc-label">Reading Schedule</div>
             <div class="fc-desc">Smart study plan</div>
         </a>
 
         <a href="/deadlines" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
             <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-            <div class="fc-icon" style="background:#fee2e2;color:#ef4444;"><i class="fas fa-hourglass-half"></i></div>
+            <div class="fc-icon" style="background:var(--danger-soft);color:var(--danger);"><i class="fas fa-hourglass-half"></i></div>
             <div class="fc-label">Deadlines</div>
             <div class="fc-desc">Track milestones</div>
         </a>
@@ -236,38 +237,38 @@
         <!-- ═══ EXTRAS ═══ -->
         <a href="/history" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
             <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-            <div class="fc-icon" style="background:#fef3c7;color:#f59e0b;"><i class="fas fa-chart-bar"></i></div>
+            <div class="fc-icon" style="background:var(--warning-soft);color:var(--warning);"><i class="fas fa-chart-bar"></i></div>
             <div class="fc-label">History</div>
             <div class="fc-desc">Quiz performance</div>
         </a>
 
         <a href="/daily-challenge" class="feature-card">
-            <div class="fc-icon" style="background:#d1fae5;color:#10b981;"><i class="fas fa-calendar-check"></i></div>
+            <div class="fc-icon" style="background:var(--success-soft);color:var(--success);"><i class="fas fa-calendar-check"></i></div>
             <div class="fc-label">Daily Challenge</div>
             <div class="fc-desc">Free daily competition</div>
         </a>
 
         <a href="/competition" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
             <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-            <div class="fc-icon" style="background:#fce7f3;color:#ec4899;"><i class="fas fa-trophy"></i></div>
+            <div class="fc-icon" style="background:var(--brand-light);color:var(--accent);"><i class="fas fa-trophy"></i></div>
             <div class="fc-label">Live Arena</div>
             <div class="fc-desc">Real-time rankings</div>
         </a>
 
         <a href="/refer" class="feature-card">
-            <div class="fc-icon" style="background:#d1fae5;color:#10b981;"><i class="fas fa-gift"></i></div>
+            <div class="fc-icon" style="background:var(--success-soft);color:var(--success);"><i class="fas fa-gift"></i></div>
             <div class="fc-label">Refer & Earn</div>
             <div class="fc-desc">15% commission on referrals</div>
         </a>
 
         <a href="/guide" class="feature-card">
-            <div class="fc-icon" style="background:#e0e7ff;color:#3730a3;"><i class="fas fa-book"></i></div>
+            <div class="fc-icon" style="background:var(--brand-soft);color:var(--text-primary);"><i class="fas fa-book"></i></div>
             <div class="fc-label">User Guide</div>
             <div class="fc-desc">How to use every feature</div>
         </a>
 
         <a href="/suggestions" class="feature-card">
-            <div class="fc-icon" style="background:#e0f2fe;color:#0284c7;"><i class="fas fa-lightbulb"></i></div>
+            <div class="fc-icon" style="background:var(--brand-soft);color:var(--accent);"><i class="fas fa-lightbulb"></i></div>
             <div class="fc-label">Feedback</div>
             <div class="fc-desc">Share your thoughts</div>
         </a>
@@ -378,7 +379,7 @@ function payWithPaystack(e, presets) {
     }
 
     const hour = new Date().getHours();
-    let g = 'Good evening';
+    let g = 'Good morning';
     if (hour < 12) g = 'Good morning';
     else if (hour < 17) g = 'Good afternoon';
     document.getElementById('greeting-text').textContent = g;

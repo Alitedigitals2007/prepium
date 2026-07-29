@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Prepium | Deadlines</title>
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#0062ff">
+    <meta name="theme-color" content="#2563eb">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -30,29 +30,29 @@
 
         .form-row { display: flex; gap: 8px; margin-bottom: 10px; }
         .form-input {
-            flex: 1; padding: 12px 14px; border-radius: 12px; border: 1.5px solid #e2e8f0;
+            flex: 1; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--border-solid);
             font-family: inherit; font-size: 0.85rem; font-weight: 600; background: #f8fafc; outline: none;
         }
         .form-input:focus { border-color: var(--brand); background: white; }
 
-        .btn-primary { width: 100%; padding: 13px; border-radius: 12px; border: none; background: var(--brand-gradient, linear-gradient(135deg,#0062ff,#4f46e5)); color: white; font-weight: 800; font-size: 0.85rem; cursor: pointer; box-shadow: 0 4px 14px rgba(0,98,255,0.25); }
+        .btn-primary { width: 100%; padding: 13px; border-radius: 12px; border: none; background: var(--brand-gradient, linear-gradient(135deg,var(--brand),#1d4ed8)); color: white; font-weight: 800; font-size: 0.85rem; cursor: pointer; box-shadow: 0 4px 14px rgba(37,99,235,0.25); }
 
         .deadline-list { padding: 0 1.25rem; display: flex; flex-direction: column; gap: 10px; }
         .deadline-card {
-            background: white; border-radius: 18px; padding: 14px; border: 1.5px solid var(--border, #e2e8f0);
+            background: white; border-radius: 18px; padding: 14px; border: 1.5px solid var(--border-solid);
             display: flex; align-items: center; gap: 14px; box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.04));
         }
-        .deadline-card.urgent { border-left: 4px solid #ef4444; }
-        .deadline-card.upcoming { border-left: 4px solid #f59e0b; }
-        .deadline-card.future { border-left: 4px solid #10b981; }
-        .deadline-card.expired { opacity: 0.6; border-left: 4px solid #94a3b8; }
+        .deadline-card.urgent { border-left: 4px solid var(--danger); }
+        .deadline-card.upcoming { border-left: 4px solid var(--warning); }
+        .deadline-card.future { border-left: 4px solid var(--success); }
+        .deadline-card.expired { opacity: 0.6; border-left: 4px solid var(--text-muted); }
 
         .date-block {
-            width: 60px; flex-shrink: 0; text-align: center; background: #f8fafc;
+            width: 60px; flex-shrink: 0; text-align: center; background: var(--bg);
             border-radius: 14px; padding: 10px 4px;
         }
         .date-block .month { font-size: 0.65rem; font-weight: 800; color: var(--brand); text-transform: uppercase; }
-        .date-block .day { font-size: 1.3rem; font-weight: 800; color: var(--text-dark, #0f172a); line-height: 1.1; }
+        .date-block .day { font-size: 1.3rem; font-weight: 800; color: var(--text-primary); line-height: 1.1; }
         .date-block .time { font-size: 0.55rem; font-weight: 700; color: var(--text-sub); margin-top: 4px; }
 
         .deadline-body { flex: 1; min-width: 0; }
@@ -63,7 +63,7 @@
         .status-pill.urgent { background: #fee2e2; color: #b91c1c; }
         .status-pill.upcoming { background: #fef3c7; color: #b45309; }
         .status-pill.future { background: #dcfce7; color: #15803d; }
-        .status-pill.expired { background: #f1f5f9; color: #64748b; }
+        .status-pill.expired { background: var(--bg); color: var(--text-secondary); }
 
         .del-btn {
             background: transparent; border: none; color: #ef4444; cursor: pointer; padding: 8px;
@@ -72,17 +72,17 @@
         .del-btn:hover { background: #fee2e2; }
 
         .countdown { font-size: 0.6rem; font-weight: 800; display: flex; align-items: center; gap: 4px; margin-top: 4px; }
-        .countdown .cd-num { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-variant-numeric: tabular-nums; color: #0f172a; }
-        .countdown .cd-lbl { font-size: 0.5rem; color: #94a3b8; text-transform: uppercase; margin-right: 2px; }
+        .countdown .cd-num { background: var(--bg); padding: 2px 6px; border-radius: 4px; font-variant-numeric: tabular-nums; color: var(--text-primary); }
+        .countdown .cd-lbl { font-size: 0.5rem; color: var(--text-muted); text-transform: uppercase; margin-right: 2px; }
         .countdown .cd-sep { color: #cbd5e1; font-weight: 300; }
         .countdown.urgent .cd-num { background: #fee2e2; color: #b91c1c; }
-        .countdown.expired { color: #94a3b8; }
+        .countdown.expired { color: var(--text-muted); }
 
         .empty-state {
             text-align: center; padding: 3rem 1.5rem; color: var(--text-sub);
         }
         .empty-state i { font-size: 2.5rem; color: #cbd5e1; display: block; margin-bottom: 1rem; }
-        .empty-state h3 { font-size: 1rem; font-weight: 800; margin: 0 0 4px; color: var(--text-dark, #0f172a); }
+        .empty-state h3 { font-size: 1rem; font-weight: 800; margin: 0 0 4px; color: var(--text-primary); }
         .empty-state p { font-size: 0.78rem; margin: 0; }
 
         .message {
@@ -91,7 +91,8 @@
         }
         .message.error { background: #fee2e2; color: #b91c1c; }
         .msg-success { background: #dcfce7; color: #15803d; }
-    </style>
+    <%- include('partials/theme-toggle') %>
+</style>
 </head>
 <body>
 <%- include('partials/sidebar') %>

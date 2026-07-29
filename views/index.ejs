@@ -7,6 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
     <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --bg-light: #f4f7fa;
@@ -38,7 +39,7 @@
             transform: translateX(-50%);
             width: 100%;
             max-width: 430px;
-            background: rgba(255, 255, 255, 0.85);
+            background: var(--surface);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             z-index: 1000;
@@ -107,7 +108,7 @@
         /* Hero */
         .hero {
             padding: 3rem 1.5rem 2.2rem;
-            background: linear-gradient(180deg, var(--brand-soft) 0%, #ffffff 100%);
+            background: linear-gradient(180deg, var(--brand-soft) 0%, var(--surface-solid) 100%);
             text-align: center;
             border-bottom-left-radius: 40px;
             border-bottom-right-radius: 40px;
@@ -124,7 +125,7 @@
             box-shadow: 0 4px 14px rgba(0,0,0,0.03);
             margin-bottom: 1.2rem;
             text-transform: uppercase;
-            border: 1px solid rgba(0, 98, 255, 0.1);
+            border: 1px solid var(--brand-light);
         }
 
         h1 { font-size: 2.5rem; font-weight: 800; margin: 0; letter-spacing: -1.2px; color: var(--brand); }
@@ -136,7 +137,7 @@
             width: 100%;
             overflow: hidden;
             padding: 10px 0;
-            background: linear-gradient(90deg, transparent 0%, rgba(0,98,255,0.02) 50%, transparent 100%);
+            background: linear-gradient(90deg, transparent 0%, var(--brand-light) 50%, transparent 100%);
         }
         
         /* Left and Right blur shadows for modern depth layout */
@@ -242,6 +243,7 @@
         }
         @keyframes fadeInTop { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
+    <%- include('partials/theme-toggle') %>
 </head>
 <body>
 
@@ -264,7 +266,7 @@
         <header class="hero">
             <span class="hero-badge">Smart Learning Platform</span>
             <h1>Prepium</h1>
-            <p class="tagline">AI-powered study tools, CGPA tracking, quizzes & more â€” all in one place.</p>
+            <p class="tagline">AI-powered study tools, CGPA tracking & quizzes — all in one place.</p>
         </header>
 
       <div class="section-title reveal">Partnering Universities</div>
@@ -341,35 +343,35 @@
         <div class="section-title reveal" id="features">Everything in Prepium</div>
         <section class="features-grid">
             <div class="card reveal">
-                <div style="font-size: 1.5rem;">ðŸ“š</div>
+                <i class="fas fa-book-open" style="font-size: 1.5rem; color: var(--brand);"></i>
                 <div>
                     <h3 style="margin:0; font-size:0.95rem;">Study Hub</h3>
-                    <p style="margin:3px 0 0; font-size:0.8rem; color:var(--text-muted);">Courses, AI tutor, flashcards, and study quizzes.</p>
+                    <p style="margin:3px 0 0; font-size:0.8rem; color:var(--text-muted);">Courses, AI tutor, flashcards & study quizzes.</p>
                 </div>
             </div>
             <div class="card reveal">
-                <div style="font-size: 1.5rem;">ðŸ§ </div>
+                <i class="fas fa-brain" style="font-size: 1.5rem; color: var(--brand);"></i>
                 <div>
                     <h3 style="margin:0; font-size:0.95rem;">AI Quiz Generator</h3>
                     <p style="margin:3px 0 0; font-size:0.8rem; color:var(--text-muted);">Upload PDFs and generate custom quizzes instantly.</p>
                 </div>
             </div>
             <div class="card reveal">
-                <div style="font-size: 1.5rem;">ðŸ“Š</div>
+                <i class="fas fa-chart-line" style="font-size: 1.5rem; color: var(--brand);"></i>
                 <div>
                     <h3 style="margin:0; font-size:0.95rem;">CGPA Tracker</h3>
                     <p style="margin:3px 0 0; font-size:0.8rem; color:var(--text-muted);">Track semesters, forecast grades, AI advisor.</p>
                 </div>
             </div>
             <div class="card reveal">
-                <div style="font-size: 1.5rem;">ðŸ“…</div>
+                <i class="fas fa-calendar-alt" style="font-size: 1.5rem; color: var(--brand);"></i>
                 <div>
                     <h3 style="margin:0; font-size:0.95rem;">Daily Task & Timetable</h3>
                     <p style="margin:3px 0 0; font-size:0.8rem; color:var(--text-muted);">AI schedules, deadlines, goals & weekly reports.</p>
                 </div>
             </div>
             <div class="card reveal">
-                <div style="font-size: 1.5rem;">ðŸ†</div>
+                <i class="fas fa-trophy" style="font-size: 1.5rem; color: var(--brand);"></i>
                 <div>
                     <h3 style="margin:0; font-size:0.95rem;">Challenges & Arena</h3>
                     <p style="margin:3px 0 0; font-size:0.8rem; color:var(--text-muted);">Daily free challenges + live ranked competition.</p>
@@ -385,14 +387,14 @@
                         <div class="t-avatar">AA</div>
                         <div><div class="t-name">Stephanie A.</div><div style="font-size:0.7rem; color:var(--text-muted)">Physics Dept.</div></div>
                     </div>
-                    <p class="t-text">"The LaTeX support for physics formulas is perfect. Finally, a platform that understands my curriculum!"</p>
+                    <p class="t-text">"LaTeX for physics formulas is perfect. Finally, a platform that gets my curriculum!"</p>
                 </div>
                 <div class="t-card">
                     <div class="t-user">
                         <div class="t-avatar">DO</div>
                         <div><div class="t-name">Daniel O.</div><div style="font-size:0.7rem; color:var(--text-muted)">Pharmacy</div></div>
                     </div>
-                    <p class="t-text">"Strategic analytics helped me see exactly where I was failing. My scores jumped by 30%."</p>
+                    <p class="t-text">"Analytics showed me where I was failing. My scores jumped 30%."</p>
                 </div>
             </div>
         </section>
@@ -400,20 +402,20 @@
         <div class="section-title reveal">Common Questions</div>
         <section class="faq-list reveal">
             <div class="faq-item">
-                <div class="faq-question" onclick="toggleFaq(this)">Is premium a one-time payment? <span>+</span></div>
-                <div class="faq-answer">Yes. Pay once at â‚¦2,000 and unlock all premium features forever.</div>
+                <div class="faq-question" onclick="toggleFaq(this)">One-time payment? <span>+</span></div>
+                <div class="faq-answer">Yes — pay â‚¦2,000 once and unlock all premium features forever.</div>
             </div>
             <div class="faq-item">
-                <div class="faq-question" onclick="toggleFaq(this)">Can I use Prepium on mobile? <span>+</span></div>
-                <div class="faq-answer">Fully optimized for mobile with an app-like experience. Works on any browser.</div>
+                <div class="faq-question" onclick="toggleFaq(this)">Mobile friendly? <span>+</span></div>
+                <div class="faq-answer">Fully optimized for mobile with an app-like experience on any browser.</div>
             </div>
             <div class="faq-item">
-                <div class="faq-question" onclick="toggleFaq(this)">How does the AI quiz generator work? <span>+</span></div>
-                <div class="faq-answer">Upload any PDF document and our AI reads it to generate custom multiple-choice, theory, and fill-in-the-blank questions.</div>
+                <div class="faq-question" onclick="toggleFaq(this)">How does AI quiz generation work? <span>+</span></div>
+                <div class="faq-answer">Upload a PDF — our AI generates custom MCQs, theory, and fill-in-the-blank questions from it.</div>
             </div>
             <div class="faq-item">
-                <div class="faq-question" onclick="toggleFaq(this)">How do I track my CGPA? <span>+</span></div>
-                <div class="faq-answer">Set up your profile with your grading scale (4 or 5 point), add courses with grades, and track semester by semester. Use the AI What-If Builder to plan improvements.</div>
+                <div class="faq-question" onclick="toggleFaq(this)">How does CGPA tracking work? <span>+</span></div>
+                <div class="faq-answer">Set your grading scale (4 or 5 point), add courses with grades, and track semester by semester. Use the AI What-If Builder to plan improvements.</div>
             </div>
         </section>
 

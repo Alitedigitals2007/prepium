@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2563eb">
     <title>Prepium | Referral Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -14,7 +15,7 @@
         body { background: var(--dash-bg); font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; }
         body::before { display: none; }
         .app-shell { max-width: 500px; margin: 0 auto; background: transparent; backdrop-filter: none; border: none; padding: 1.25rem 1.25rem 6rem; }
-        @media (min-width: 431px) { .app-shell { border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; } }
+        @media (min-width: 431px) { .app-shell { border-left: 1px solid var(--border-solid); border-right: 1px solid var(--border-solid); } }
 
         .dash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
         .dash-header h1 { font-size: 1.4rem; font-weight: 800; margin: 0; }
@@ -49,36 +50,37 @@
 
         .form-row { display: flex; gap: 8px; margin-bottom: 10px; }
         .form-input {
-            flex: 1; padding: 12px 14px; border-radius: 12px; border: 1.5px solid #e2e8f0;
+            flex: 1; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--border-solid);
             font-family: inherit; font-size: 0.85rem; font-weight: 600; background: #f8fafc; outline: none; box-sizing: border-box;
         }
         .form-input:focus { border-color: var(--brand); background: white; }
 
         .btn-primary {
             width: 100%; padding: 13px; border-radius: 12px; border: none;
-            background: var(--brand-gradient, linear-gradient(135deg,#0062ff,#4f46e5));
+            background: var(--brand-gradient, linear-gradient(135deg,var(--brand),#1d4ed8));
             color: white; font-weight: 800; font-size: 0.85rem; cursor: pointer;
         }
         .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-secondary {
-            width: 100%; padding: 11px; border-radius: 12px; border: 1.5px solid #e2e8f0;
-            background: white; color: var(--text); font-weight: 700; font-size: 0.82rem; cursor: pointer; text-align: center; display: block;
+            width: 100%; padding: 11px; border-radius: 12px; border: 1.5px solid var(--border-solid);
+            background: white; color: var(--text-primary); font-weight: 700; font-size: 0.82rem; cursor: pointer; text-align: center; display: block;
         }
 
         .table-wrap { background: white; border-radius: 18px; overflow: hidden; border: 1px solid rgba(226,232,240,0.5); margin-bottom: 1.25rem; }
         table { width: 100%; border-collapse: collapse; }
-        th { background: #f8fafc; padding: 0.8rem 1rem; font-size: 0.65rem; color: var(--text-sub); text-transform: uppercase; text-align: left; }
-        td { padding: 0.8rem 1rem; border-top: 1px solid #f1f5f9; font-size: 0.82rem; font-weight: 600; }
+        th { background: #f8fafc; padding: 0.8rem 1rem; font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; text-align: left; }
+        td { padding: 0.8rem 1rem; border-top: 1px solid var(--bg); font-size: 0.82rem; font-weight: 600; }
         .badge { font-size: 0.6rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; }
         .badge.active { background: #dcfce7; color: #15803d; }
         .badge.pending { background: #fef3c7; color: #b45309; }
-        .badge.inactive { background: #f1f5f9; color: #64748b; }
+        .badge.inactive { background: var(--bg); color: var(--text-secondary); }
 
         .empty-state { text-align: center; padding: 2rem; color: var(--text-sub); }
         .empty-state i { font-size: 2rem; color: #cbd5e1; display: block; margin-bottom: 0.8rem; }
         .empty-state p { font-size: 0.8rem; margin: 0; }
 
         .bottom-spacer { height: 20px; }
+    <%- include('partials/theme-toggle') %>
     </style>
 </head>
 <body>

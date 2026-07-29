@@ -9,9 +9,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --brand: #0062ff;
-            --brand-light: rgba(0, 98, 255, 0.1);
-            --brand-glow: rgba(0, 98, 255, 0.25);
+            --brand: #2563eb;
+            --brand-light: rgba(37, 99, 235, 0.1);
+            --brand-glow: rgba(37, 99, 235, 0.25);
             --bg: #f0f4f8;
             --sidebar: #0b1437;
             --sidebar-hover: rgba(255, 255, 255, 0.06);
@@ -404,6 +404,8 @@
             color: var(--text-primary);
         }
     </style>
+<meta name="theme-color" content="#2563eb">
+<%- include('../partials/theme-toggle') %>
 </head>
 <body>
 
@@ -540,14 +542,14 @@
                 datasets: [{
                     label: 'New Users',
                     data: <%- JSON.stringify(chartData.values) %>,
-                    borderColor: '#0062ff',
+                    borderColor: '#2563eb',
                     backgroundColor: (context) => {
                         const chart = context.chart;
                         const {ctx: c, chartArea} = chart;
-                        if (!chartArea) return 'rgba(0,98,255,0.06)';
+                        if (!chartArea) return 'rgba(37,99,235,0.06)';
                         const gradient = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                        gradient.addColorStop(0, 'rgba(0, 98, 255, 0.15)');
-                        gradient.addColorStop(1, 'rgba(0, 98, 255, 0.01)');
+                        gradient.addColorStop(0, 'rgba(37, 99, 235, 0.15)');
+                        gradient.addColorStop(1, 'rgba(37, 99, 235, 0.01)');
                         return gradient;
                     },
                     borderWidth: 2.5,
@@ -556,7 +558,7 @@
                     pointRadius: 0,
                     pointHoverRadius: 6,
                     pointHoverBackgroundColor: '#fff',
-                    pointHoverBorderColor: '#0062ff',
+                    pointHoverBorderColor: '#2563eb',
                     pointHoverBorderWidth: 2.5
                 }]
             },
