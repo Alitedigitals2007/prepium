@@ -65,7 +65,8 @@ const pool = new Pool({
     rejectUnauthorized: false
   },
   connectionTimeoutMillis: 10000,
-  idleTimeoutMillis: 30000
+  idleTimeoutMillis: 30000,
+  family: 4
 });
 
 // Handle pool errors gracefully
