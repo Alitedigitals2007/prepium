@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"><title>Prepium Roadmap</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f8;color:#1e293b;padding:0 0 80px}
+h1{text-align:center;padding:20px 16px 6px;font-size:1.3rem;font-weight:800;color:#1e293b}
+.sub{text-align:center;font-size:.75rem;color:#64748b;margin-bottom:16px;padding:0 16px}
+.section{background:#fff;border-radius:14px;margin:12px 16px;padding:16px;box-shadow:0 1px 6px rgba(0,0,0,.05)}
+.section h2{font-size:.95rem;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.section .desc{font-size:.72rem;color:#64748b;margin-bottom:10px;line-height:1.5}
+.item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-top:1px solid #f1f5f9;font-size:.78rem;line-height:1.5}
+.item:first-of-type{border-top:none}
+.item input[type=checkbox]{margin-top:3px;width:18px;height:18px;accent-color:#2563eb;flex-shrink:0;cursor:pointer}
+.item .text{flex:1}
+.item .text .step{display:block;color:#64748b;font-size:.7rem;margin-top:3px;padding-left:0}
+.item.done .text{text-decoration:line-through;color:#94a3b8}
+.badge{padding:2px 8px;border-radius:6px;font-size:.6rem;font-weight:700;white-space:nowrap;margin-left:auto;flex-shrink:0}
+.badge.easy{background:#dcfce7;color:#16a34a}
+.badge.medium{background:#fef9c3;color:#ca8a04}
+.badge.hard{background:#fee2e2;color:#dc2626}
+.progress-bar{height:4px;background:#e2e8f0;border-radius:4px;margin:12px 16px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,#2563eb,#7c3aed);border-radius:4px;transition:width .3s;width:0%}
+.stats{text-align:center;font-size:.72rem;color:#64748b;margin-bottom:8px}
+.footer{text-align:center;padding:24px 16px;font-size:.7rem;color:#94a3b8}
+code{background:#f1f5f9;padding:1px 5px;border-radius:4px;font-size:.72rem;word-break:break-all}
+</style>
+</head>
+<body>
+<h1>Prepium Roadmap</h1>
+<p class="sub">Tick items as you complete them &middot; Progress saved on this device</p>
+<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+<p class="stats" id="stats"></p>
+
+<div class="section">
+<h2>1. SEO &mdash; Search Engine Optimization</h2>
+<div class="desc">Done: meta tags, OG, robots.txt, sitemap, canonical URLs. Remaining:</div>
+<div class="item" data-key="seo-gsc"><input type="checkbox"><div class="text"><b>Submit sitemap to Google Search Console</b><span class="step">Go to <code>https://search.google.com/search-console</code> &rarr; Add property <code>https://theprepium.vercel.app</code> &rarr; Sitemaps &rarr; Enter <code>https://theprepium.vercel.app/sitemap.xml</code> &rarr; Submit</span></div><span class="badge easy">Easy</span></div>
+<div class="item" data-key="seo-ogimg"><input type="checkbox"><div class="text"><b>Create OG social preview image</b><span class="step">Design a 1200x630px PNG with "Prepium" branding &rarr; Save as <code>public/images/og-image.png</code> &rarr; Edit <code>views/partials/head.ejs</code> line <code>og:image</code> to <code>/images/og-image.png</code> &rarr; Commit &amp; push</span></div><span class="badge easy">Easy</span></div>
+</div>
+
+<div class="section">
+<h2>2. Security &mdash; Helmet</h2>
+<div class="desc">Add HTTP security headers (CSP, XSS, etc.)</div>
+<div class="item" data-key="sec-install"><input type="checkbox"><div class="text"><b>Install helmet</b><span class="step">Run <code>npm install helmet</code> in your project folder</span></div><span class="badge easy">Easy</span></div>
+<div class="item" data-key="sec-add"><input type="checkbox"><div class="text"><b>Add helmet middleware to app.js</b><span class="step">Add <code>const helmet = require('helmet');</code> at top &rarr; Add <code>app.use(helmet({ contentSecurityPolicy: false }));</code> after <code>trust proxy</code> line (~450) &rarr; Commit &amp; push</span></div><span class="badge easy">Easy</span></div>
+</div>
+
+<div class="section">
+<h2>3. Analytics</h2>
+<div class="desc">Track visitors, pageviews, and user behavior</div>
+<div class="item" data-key="ana-ga"><input type="checkbox"><div class="text"><b>Add Google Analytics</b><span class="step">Create GA4 property at <code>https://analytics.google.com</code> &rarr; Get measurement ID (G-XXXXXXXX) &rarr; Add to <code>views/partials/head.ejs</code> just before <code>&lt;/head&gt;</code>:<br>
+<code>&lt;script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"&gt;&lt;/script&gt;</code><br>
+<code>&lt;script&gt;window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-XXXXXXXX');&lt;/script&gt;</code><br>
+&rarr; Commit &amp; push</span></div><span class="badge easy">Easy</span></div>
+<div class="item" data-key="ana-vercel"><input type="checkbox"><div class="text"><b>Enable Vercel Analytics</b><span class="step">In Vercel dashboard &rarr; your project &rarr; Analytics tab &rarr; Enable &rarr; Automatic (no code needed)</span></div><span class="badge easy">Easy</span></div>
+</div>
+
+<div class="section">
+<h2>4. Refactor &mdash; Split app.js</h2>
+<div class="desc">app.js is 6000+ lines. Split into separate route modules.</div>
+<div class="item" data-key="ref-dir"><input type="checkbox"><div class="text"><b>Create routes/ directory</b><span class="step">Run <code>mkdir routes</code> &rarr; Create files: <code>routes/auth.js</code>, <code>routes/study.js</code>, <code>routes/quiz.js</code>, <code>routes/admin.js</code>, <code>routes/seo.js</code>, <code>routes/api.js</code></span></div><span class="badge medium">Medium</span></div>
+<div class="item" data-key="ref-study"><input type="checkbox"><div class="text"><b>Move study routes</b><span class="step">Cut-paste all <code>app.get('/study/...')</code>, <code>app.post('/api/study/...')</code> into <code>routes/study.js</code> &rarr; Export as <code>module.exports = function(app) { ... }</code> &rarr; In app.js: <code>require('./routes/study')(app);</code></span></div><span class="badge hard">Hard</span></div>
+<div class="item" data-key="ref-auth"><input type="checkbox"><div class="text"><b>Move auth routes</b><span class="step">Move <code>/auth/signup</code>, <code>/auth/login</code>, <code>/auth/logout</code>, <code>/forgot-password</code>, <code>/reset-password</code> into <code>routes/auth.js</code></span></div><span class="badge medium">Medium</span></div>
+<div class="item" data-key="ref-admin"><input type="checkbox"><div class="text"><b>Move admin routes</b><span class="step">Move all <code>/admin/...</code> routes into <code>routes/admin.js</code></span></div><span class="badge medium">Medium</span></div>
+<div class="item" data-key="ref-quiz"><input type="checkbox"><div class="text"><b>Move quiz/test routes</b><span class="step">Move <code>/start-test</code>, <code>/submit-test</code>, <code>/quiz/...</code> into <code>routes/quiz.js</code></span></div><span class="badge medium">Medium</span></div>
+</div>
+
+<div class="section">
+<h2>5. Error Handling</h2>
+<div class="desc">Global error handler &amp; error reporting</div>
+<div class="item" data-key="err-global"><input type="checkbox"><div class="text"><b>Add global error middleware</b><span class="step">At the bottom of app.js (after all routes), add:<br>
+<code>app.use(function(err, req, res, next) { console.error(err.stack); res.status(500).json({ success: false, error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message }); });</code></span></div><span class="badge easy">Easy</span></div>
+<div class="item" data-key="err-sentry"><input type="checkbox"><div class="text"><b>Add Sentry error tracking (optional)</b><span class="step">Create account at <code>sentry.io</code> &rarr; Install <code>npm install @sentry/node</code> &rarr; Add init at top of app.js &rarr; Commit</span></div><span class="badge easy">Easy</span></div>
+</div>
+
+<div class="section">
+<h2>6. Caching &amp; Performance</h2>
+<div class="desc">Faster page loads, better Lighthouse score</div>
+<div class="item" data-key="cache-static"><input type="checkbox"><div class="text"><b>Add static cache headers</b><span class="step">In app.js, replace <code>app.use(express.static(...))</code> with:<br>
+<code>app.use(express.static(path.join(__dirname, 'public'), { maxAge: '30d', immutable: true }));</code></span></div><span class="badge easy">Easy</span></div>
+<div class="item" data-key="cache-css"><input type="checkbox"><div class="text"><b>Minify CSS</b><span class="step">Copy your <code>public/css/style.css</code> content into a CSS minifier (like <code>cssminifier.com</code>) &rarr; Replace file with minified version &rarr; Commit</span></div><span class="badge easy">Easy</span></div>
+<div class="item" data-key="cache-compress"><input type="checkbox"><div class="text"><b>Enable compression</b><span class="step">Install <code>npm install compression</code> &rarr; In app.js after helmet: <code>const compression = require('compression'); app.use(compression());</code></span></div><span class="badge easy">Easy</span></div>
+</div>
+
+<div class="section">
+<h2>7. Testing</h2>
+<div class="desc">Basic API tests to catch regressions</div>
+<div class="item" data-key="test-install"><input type="checkbox"><div class="text"><b>Install test framework</b><span class="step">Run <code>npm install --save-dev jest</code> &rarr; Update <code>package.json</code> scripts: <code>"test": "jest"</code></span></div><span class="badge easy">Easy</span></div>
+<div class="item" data-key="test-api"><input type="checkbox"><div class="text"><b>Write API tests</b><span class="step">Create <code>tests/api.test.js</code> with tests for <code>GET /robots.txt</code>, <code>GET /sitemap.xml</code>, <code>POST /auth/login</code> &rarr; Run <code>npm test</code></span></div><span class="badge medium">Medium</span></div>
+</div>
+
+<div class="section">
+<h2>8. Notifications</h2>
+<div class="desc">Real-time push notifications to users</div>
+<div class="item" data-key="notif-sw"><input type="checkbox"><div class="text"><b>Set up Web Push</b><span class="step">Install <code>npm install web-push</code> &rarr; Generate VAPID keys &rarr; Create push subscription API endpoint &rarr; Update service worker to handle push events &rarr; Send study reminders</span></div><span class="badge hard">Hard</span></div>
+</div>
+
+<p class="footer">Open this page anytime: <code>https://theprepium.vercel.app/roadmap.html</code><br>Progress auto-saves on this device &middot; Last updated Jul 2026</p>
+
+<script>
+(function(){
+  var keys = [];
+  document.querySelectorAll('.item[data-key]').forEach(function(el){ keys.push(el.dataset.key); });
+  function load(){
+    var total = keys.length, done = 0;
+    keys.forEach(function(k){
+      var cb = document.querySelector('.item[data-key="'+k+'"] input[type=checkbox]');
+      if(!cb) return;
+      var saved = localStorage.getItem('roadmap-'+k);
+      if(saved === 'true'){ cb.checked = true; done++; }
+      cb.addEventListener('change', function(){
+        localStorage.setItem('roadmap-'+k, cb.checked);
+        updateStats();
+      });
+    });
+    updateStats();
+  }
+  function updateStats(){
+    var total = keys.length, done = 0;
+    keys.forEach(function(k){
+      if(localStorage.getItem('roadmap-'+k) === 'true') done++;
+    });
+    var pct = total ? Math.round(done/total*100) : 0;
+    document.getElementById('progressFill').style.width = pct+'%';
+    document.getElementById('stats').textContent = done+'/'+total+' completed ('+pct+'%)';
+  }
+  load();
+})();
+</script>
+</body>
+</html>
