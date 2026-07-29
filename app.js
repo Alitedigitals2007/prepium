@@ -1,4 +1,5 @@
 const express = require('express');
+const helmet = require('helmet');
 const nodemailer = require('nodemailer');
 const bcrypt = require('bcryptjs');
 const session = require('express-session');
@@ -448,6 +449,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Add this line directly ABOVE your app.use(session({...})) middleware declaration
 app.set('trust proxy', 1);
+
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false
+}));
 
 app.use(session({
     secret: process.env.SESSION_SECRET,
