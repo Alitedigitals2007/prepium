@@ -512,6 +512,61 @@ const isAdmin = (req, res, next) => {
     res.status(403).send("Access Denied: Admins Only");
 };
 
+// ======================== SEO Middleware ========================
+const BASE_URL = 'https://theprepium.vercel.app';
+
+app.use(function seoDefaults(req, res, next) {
+  res.locals.seo = {
+    title: 'Prepium | Smart Exam Mastery',
+    description: 'Your Academic CBT Practice Platform — master exams with AI-powered study tools, quizzes, and personalized learning.',
+    url: BASE_URL + req.originalUrl,
+    image: '/images/icon-512.png',
+    type: 'website',
+    robots: 'index,follow'
+  };
+  next();
+});
+
+// ======================== robots.txt ========================
+app.get('/robots.txt', function (req, res) {
+  res.type('text/plain').send('User-agent: *\nAllow: /\nSitemap: ' + BASE_URL + '/sitemap.xml\n');
+});
+
+// ======================== sitemap.xml ========================
+app.get('/sitemap.xml', async function (req, res) {
+  try {
+    const pages = [
+      { loc: BASE_URL + '/', priority: '1.0', changefreq: 'weekly' },
+      { loc: BASE_URL + '/guide', priority: '0.6', changefreq: 'monthly' },
+      { loc: BASE_URL + '/how-it-works', priority: '0.7', changefreq: 'monthly' },
+      { loc: BASE_URL + '/signup', priority: '0.5', changefreq: 'monthly' },
+      { loc: BASE_URL + '/login', priority: '0.5', changefreq: 'monthly' }
+    ];
+    const courses = await pool.query("SELECT id, course_name, updated_at FROM study_courses ORDER BY id").catch(() => ({ rows: [] }));
+    for (const c of courses.rows) {
+      pages.push({ loc: BASE_URL + '/study/course/' + c.id, priority: '0.8', changefreq: 'weekly', lastmod: c.updated_at });
+    }
+    const topics = await pool.query("SELECT id, topic_name, updated_at FROM study_topics ORDER BY id").catch(() => ({ rows: [] }));
+    for (const t of topics.rows) {
+      pages.push({ loc: BASE_URL + '/study/topic/' + t.id, priority: '0.7', changefreq: 'weekly', lastmod: t.updated_at });
+    }
+    const subtopics = await pool.query("SELECT id, subtopic_name, updated_at FROM study_subtopics ORDER BY id").catch(() => ({ rows: [] }));
+    for (const s of subtopics.rows) {
+      pages.push({ loc: BASE_URL + '/study/subtopic/' + s.id, priority: '0.6', changefreq: 'weekly', lastmod: s.updated_at });
+    }
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+    for (const p of pages) {
+      xml += '  <url>\n    <loc>' + p.loc + '</loc>\n    <priority>' + p.priority + '</priority>\n    <changefreq>' + p.changefreq + '</changefreq>\n';
+      if (p.lastmod) xml += '    <lastmod>' + new Date(p.lastmod).toISOString().split('T')[0] + '</lastmod>\n';
+      xml += '  </url>\n';
+    }
+    xml += '</urlset>';
+    res.type('application/xml').send(xml);
+  } catch (e) {
+    res.type('application/xml').status(500).send('<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>');
+  }
+});
+
 // Generate Test (The Logic)
 app.post('/start-test', isAuth, hasPaid, async (req, res) => {
     const { subjectIds, numQuestions } = req.body; // array of IDs
@@ -552,6 +607,8 @@ app.get('/', (req, res) => {
 });
 
 app.get('/guide', (req, res) => {
+    res.locals.seo.title = 'Prepium | User Guide';
+    res.locals.seo.description = 'Complete guide to Prepium — learn how to use CBT practice, AI study tools, flashcards, quizzes, and more to ace your exams.';
     res.render('guide', { user: req.session.user || null });
 });
 
@@ -2809,7 +2866,8 @@ function minutesToTime(minutes) {
 
 // GET: Render the How It Works Guide
 app.get('/how-it-works', isAuth, (req, res) => {
-    
+    res.locals.seo.title = 'Prepium | How It Works';
+    res.locals.seo.description = 'Discover how Prepium works — AI-powered CBT practice, smart study tools, flashcards, quizzes, and personalized exam preparation.';
     res.render('how-it-works', { 
         user: req.session.user,
         hasNewNotifs: req.session.hasNewNotifs || false 
@@ -5033,6 +5091,8 @@ app.get('/study', isAuth, requirePaid, async (req, res) => {
     const activeSession = activeRes.rows[0] || null;
     const streak = parseInt(streakRes.rows[0]?.current_streak) || 0;
     const todayStats = { sessions: parseInt(todayRes.rows[0]?.today_sessions) || 0, seconds: parseInt(todayRes.rows[0]?.today_seconds) || 0 };
+    res.locals.seo.title = 'Prepium | Study Dashboard';
+    res.locals.seo.description = 'Your personalized study dashboard — track courses, sessions, streaks, and progress with AI-powered learning tools on Prepium.';
     res.render('study', { user: req.session.user, courses: coursesRes.rows, progress: progressRes.rows, recentSessions: sessionsRes.rows, activeSession, streak, todayStats, subjects: [] });
   } catch (err) { console.error(err); res.status(500).send('Error loading study page'); }
 });
@@ -5048,6 +5108,8 @@ app.get('/study/course/:id', isAuth, requirePaid, async (req, res) => {
       pool.query('SELECT * FROM study_progress WHERE user_id = $1 AND course_id = $2', [req.session.user.id, req.params.id])
     ]);
     const topics = topicsRes.rows.map(t => { t.subtopics = subtopicsRes.rows.filter(s => s.topic_id === t.id); return t; });
+    res.locals.seo.title = 'Prepium | ' + (course.rows[0]?.course_name || 'Course');
+    res.locals.seo.description = 'Study ' + (course.rows[0]?.course_name || 'this course') + ' with AI-powered explanations, flashcards, quizzes, and progress tracking on Prepium.';
     res.render('study-course', { user: req.session.user, course: course.rows[0], topics, progress: progressRes.rows[0] || null });
   } catch (err) { console.error(err); res.status(500).send('Error loading course'); }
 });
@@ -5094,6 +5156,10 @@ app.get('/study/subtopic/:id', isAuth, requirePaid, async (req, res) => {
     const topic = await pool.query('SELECT * FROM study_topics WHERE id = $1', [s.topic_id]).catch(() => ({ rows: [] }));
     const course = await pool.query('SELECT * FROM study_courses WHERE id = $1', [s.course_id || 0]).catch(() => ({ rows: [] }));
     const topicSubtopics = await pool.query('SELECT id, status FROM study_subtopics WHERE topic_id = $1', [s.topic_id]).catch(() => ({ rows: [] }));
+    const subName = s.subtopic_name || s.title || 'Subtopic';
+    const topicName = (topic.rows[0]?.topic_name || topic.rows[0]?.title || '');
+    const courseName = (course.rows[0]?.course_name || '');
+    res.locals.seo = { ...res.locals.seo, title: 'Prepium | ' + subName, description: 'Study ' + subName + (topicName ? ' as part of ' + topicName : '') + (courseName ? ' in ' + courseName : '') + ' with AI-powered explanations and quizzes on Prepium.' };
     res.render('study-subtopic', { user: req.session.user, subtopic: s, topic: topic.rows[0] || null, course: course.rows[0] || null, topicSubtopics: topicSubtopics.rows });
   } catch (err) { console.error(err); res.status(500).send('Error loading subtopic'); }
 });
@@ -5302,62 +5368,6 @@ CRITICAL FORMATTING RULES:
 });
 
 // ==================== STUDY API: AI DIAGNOSTIC ====================
-app.get('/debug-ai', async (req, res) => {
-  const results = {};
-  const groqKey = process.env.GROQ_API_KEY;
-  const cereKey = process.env.CEREBRAS_API_KEY;
-  const orKey = process.env.OPENROUTER_API_KEY;
-  results.env = { hasGroq: !!groqKey, hasCere: !!cereKey, hasOR: !!orKey };
-
-  // Test Groq
-  if (groqKey) {
-    try {
-      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + groqKey },
-        body: JSON.stringify({ model: 'llama-3.1-8b-instant', messages: [{ role: 'user', content: 'say hi' }], temperature: 0.3, max_tokens: 100, stream: false }),
-        signal: AbortSignal.timeout(15000)
-      });
-      results.groq = { ok: r.ok, status: r.status, statusText: r.statusText };
-      if (r.ok) {
-        try { const d = await r.json(); results.groq.hasContent = !!(d.choices?.[0]?.message?.content); results.groq.preview = (d.choices?.[0]?.message?.content || '').slice(0, 50); } catch (e) { results.groq.parseError = e.message; }
-      } else { results.groq.body = (await r.text()).slice(0, 200); }
-    } catch (e) { results.groq = { error: e.message }; }
-  } else { results.groq = { skipped: 'no key' }; }
-
-  // Test Cerebras
-  if (cereKey) {
-    try {
-      const r = await fetch('https://api.cerebras.ai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cereKey },
-        body: JSON.stringify({ model: 'llama-3.3-70b', messages: [{ role: 'user', content: 'say hi' }], temperature: 0.25, max_tokens: 100, stream: false }),
-        signal: AbortSignal.timeout(15000)
-      });
-      results.cerebras = { ok: r.ok, status: r.status, statusText: r.statusText };
-      if (r.ok) { try { const d = await r.json(); results.cerebras.hasContent = !!(d.choices?.[0]?.message?.content); } catch (e) { results.cerebras.parseError = e.message; } }
-      else { results.cerebras.body = (await r.text()).slice(0, 200); }
-    } catch (e) { results.cerebras = { error: e.message }; }
-  } else { results.cerebras = { skipped: 'no key' }; }
-
-  // Test OpenRouter
-  if (orKey) {
-    try {
-      const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + orKey, 'HTTP-Referer': 'https://theprepium.vercel.app', 'X-Title': 'Prepium' },
-        body: JSON.stringify({ model: 'google/gemma-3-27b-it:free', messages: [{ role: 'user', content: 'say hi' }], temperature: 0.3, max_tokens: 100, stream: false }),
-        signal: AbortSignal.timeout(15000)
-      });
-      results.openrouter = { ok: r.ok, status: r.status, statusText: r.statusText };
-      if (r.ok) { try { const d = await r.json(); results.openrouter.hasContent = !!(d.choices?.[0]?.message?.content); } catch (e) { results.openrouter.parseError = e.message; } }
-      else { results.openrouter.body = (await r.text()).slice(0, 200); }
-    } catch (e) { results.openrouter = { error: e.message }; }
-  } else { results.openrouter = { skipped: 'no key' }; }
-
-  res.json({ success: true, results });
-});
-
 // ==================== STUDY API: EXPLANATION Q&A ====================
 app.post('/api/study/subtopic/:id/ask', isAuth, requirePaid, async (req, res) => {
   try {
