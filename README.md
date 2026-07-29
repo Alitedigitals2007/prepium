@@ -12,17 +12,18 @@ Stop juggling WhatsApp groups, USB drives, and photocopy shops. Prepium puts eve
 | Feature | Free | Premium |
 |---------|------|---------|
 | Practice Quizzes (CBT) | 2 free tries | Unlimited |
-| Daily Challenge | ✅ | ✅ |
-| Refer & Earn | ✅ | ✅ |
-| Feedback | ✅ | ✅ |
-| Study Hub (AI tutor, flashcards, quizzes) | — | ✅ |
+| Daily Challenge (Leaderboard) | ✅ | ✅ |
+| Refer & Earn (15% commission) | ✅ | ✅ |
+| Feedback / Suggestions | ✅ | ✅ |
+| Study Hub (AI tutor, flashcards, quizzes, Pomodoro) | — | ✅ |
 | AI Quiz Generator (from PDF) | — | ✅ |
-| CGPA Tracker & AI Advisor | — | ✅ |
-| School Timetable | — | ✅ |
+| CGPA Tracker & AI Advisor (what-if, predict, chat) | — | ✅ |
+| School Timetable (with AI image extraction) | — | ✅ |
 | AI Reading Schedule | — | ✅ |
-| Deadline Tracker | — | ✅ |
-| Live Arena | — | ✅ |
+| Deadline Tracker (email reminders) | — | ✅ |
+| Daily Task Dashboard | — | ✅ |
 | History & Analytics | — | ✅ |
+| Competition Arena | — | ✅ |
 
 ---
 
@@ -40,11 +41,11 @@ Set up your profile (4 or 5-point scale), add courses, see real-time CGPA. Use t
 ### Practice Quizzes
 Pick subjects, difficulty, and number of questions. Instant grading with explanations.
 
-### Daily Challenge & Live Arena
-Free daily 10-question challenge with leaderboard. Premium live ranked arena.
+### Daily Challenge
+Free daily 10-question challenge with leaderboard (resets weekly).
 
 ### Timetable & Reading Schedule
-AI generates weekly schedules from your courses and available hours.
+AI generates weekly schedules from your courses and available hours. Timetable supports AI extraction from images/PDFs.
 
 ### Deadlines
 Track assignments/exams with email reminders 1 hour before.
@@ -53,7 +54,10 @@ Track assignments/exams with email reminders 1 hour before.
 Tasks, goals, deadlines, and weekly reports in one place.
 
 ### Refer & Earn
-Earn 15% commission on every referral that upgrades to premium.
+Earn 15% commission on every referral that upgrades to premium. Ambassador program available with separate dashboard.
+
+### Admin Panel
+Full admin suite: student management, university management, coupon system, email blasts, user groups, ambassador management, withdrawal processing, analytics dashboard, AI quiz generator for exams, and database manager.
 
 ---
 
