@@ -1,0 +1,72 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Decorative circles -->
+  <circle cx="1050" cy="100" r="320" fill="#2563eb" opacity="0.06"/>
+  <circle cx="150" cy="500" r="240" fill="#7c3aed" opacity="0.05"/>
+  <circle cx="600" cy="315" r="400" fill="#3b82f6" opacity="0.03"/>
+
+  <!-- Grid lines -->
+  <g stroke="#ffffff" stroke-opacity="0.03" stroke-width="1">
+    <line x1="0" y1="157" x2="1200" y2="157"/>
+    <line x1="0" y1="315" x2="1200" y2="315"/>
+    <line x1="0" y1="472" x2="1200" y2="472"/>
+    <line x1="300" y1="0" x2="300" y2="630"/>
+    <line x1="600" y1="0" x2="600" y2="630"/>
+    <line x1="900" y1="0" x2="900" y2="630"/>
+  </g>
+
+  <!-- Brand bar at top -->
+  <rect x="0" y="0" width="1200" height="5" fill="url(#brand)"/>
+
+  <!-- Logo mark -->
+  <rect x="60" y="50" width="48" height="48" rx="12" fill="url(#brand)"/>
+  <text x="84" y="82" font-family="Arial,sans-serif" font-size="28" font-weight="bold" fill="white" text-anchor="middle">P</text>
+
+  <!-- Main headline -->
+  <text x="60" y="200" font-family="'Plus Jakarta Sans',Arial,sans-serif" font-size="64" font-weight="800" fill="white" letter-spacing="-1.5">Prepium</text>
+
+  <text x="60" y="270" font-family="'Plus Jakarta Sans',Arial,sans-serif" font-size="28" font-weight="400" fill="#94a3b8" letter-spacing="-0.3">Master Your Exams with AI</text>
+
+  <!-- Feature pills -->
+  <rect x="60" y="320" width="160" height="36" rx="18" fill="#2563eb" opacity="0.15"/>
+  <text x="140" y="344" font-family="Arial,sans-serif" font-size="15" font-weight="600" fill="#60a5fa" text-anchor="middle">AI Study Tools</text>
+
+  <rect x="236" y="320" width="160" height="36" rx="18" fill="#7c3aed" opacity="0.15"/>
+  <text x="316" y="344" font-family="Arial,sans-serif" font-size="15" font-weight="600" fill="#a78bfa" text-anchor="middle">CBT Practice</text>
+
+  <rect x="412" y="320" width="160" height="36" rx="18" fill="#059669" opacity="0.15"/>
+  <text x="492" y="344" font-family="Arial,sans-serif" font-size="15" font-weight="600" fill="#34d399" text-anchor="middle">Flashcards</text>
+
+  <rect x="588" y="320" width="160" height="36" rx="18" fill="#d97706" opacity="0.15"/>
+  <text x="668" y="344" font-family="Arial,sans-serif" font-size="15" font-weight="600" fill="#fbbf24" text-anchor="middle">Quiz Generator</text>
+
+  <!-- Description -->
+  <text x="60" y="420" font-family="'Plus Jakarta Sans',Arial,sans-serif" font-size="18" fill="#64748b" letter-spacing="-0.2">AI-powered exam preparation for Nigerian university students.</text>
+  <text x="60" y="450" font-family="'Plus Jakarta Sans',Arial,sans-serif" font-size="18" fill="#64748b" letter-spacing="-0.2">Smart quizzes, personalized study plans, and progress tracking.</text>
+
+  <!-- Bottom bar -->
+  <rect x="0" y="580" width="1200" height="50" fill="#1e293b"/>
+  <rect x="0" y="580" width="1200" height="1" fill="#334155"/>
+
+  <text x="60" y="610" font-family="'Plus Jakarta Sans',Arial,sans-serif" font-size="14" font-weight="600" fill="#475569">theprepium.vercel.app</text>
+
+  <rect x="1070" y="590" width="80" height="30" rx="6" fill="url(#brand)" opacity="0.9"/>
+  <text x="1110" y="610" font-family="Arial,sans-serif" font-size="13" font-weight="700" fill="white" text-anchor="middle">Get Started</text>
+</svg>

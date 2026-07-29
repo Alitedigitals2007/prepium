@@ -526,7 +526,7 @@ app.use(function seoDefaults(req, res, next) {
     title: 'Prepium | Smart Exam Mastery',
     description: 'Your Academic CBT Practice Platform — master exams with AI-powered study tools, quizzes, and personalized learning.',
     url: BASE_URL + req.originalUrl,
-    image: '/images/icon-512.png',
+    image: '/images/og-image.svg',
     type: 'website',
     robots: 'index,follow'
   };
