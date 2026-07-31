@@ -29,9 +29,24 @@ function updateThemeIcons(theme) {
     moon.style.display = theme === 'dark' ? 'none' : 'inline-block';
     sun.style.display = theme === 'dark' ? 'inline-block' : 'none';
   }
+  var mMoon = document.getElementById('mobileThemeIconMoon');
+  var mSun = document.getElementById('mobileThemeIconSun');
+  if (mMoon && mSun) {
+    mMoon.style.display = theme === 'dark' ? 'none' : 'inline-block';
+    mSun.style.display = theme === 'dark' ? 'inline-block' : 'none';
+  }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+  if (!document.querySelector('.mobile-theme-btn')) {
+    var btn = document.createElement('button');
+    btn.className = 'theme-toggle-btn mobile-theme-btn';
+    btn.setAttribute('onclick', 'toggleTheme()');
+    btn.setAttribute('title', 'Toggle theme');
+    btn.innerHTML = '<i class="fas fa-moon" id="mobileThemeIconMoon" style="display:none;"></i>' +
+                    '<i class="fas fa-sun" id="mobileThemeIconSun" style="display:none;"></i>';
+    document.body.appendChild(btn);
+  }
   var current = document.documentElement.getAttribute('data-theme') || 'light';
   setThemeColor(current);
   updateThemeIcons(current);
@@ -58,4 +73,19 @@ document.addEventListener('DOMContentLoaded', function() {
   background: var(--brand-light);
 }
 .theme-toggle-btn:active { transform: scale(0.92); }
+.mobile-theme-btn {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 9999;
+  display: none;
+  box-shadow: 0 6px 18px rgba(2, 6, 23, 0.25);
+}
+@media (max-width: 768px) {
+  .mobile-theme-btn { display: flex; }
+  .dash-header-right,
+  .top-action-cluster,
+  .dash-header > .back-btn,
+  .page-header .import-btn { margin-right: 54px; }
+}
 </style>

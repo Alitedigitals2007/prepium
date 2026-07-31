@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <%- include('partials/head') %>
+    <%- include('../partials/head') %>
     <style>
         :root {
             --brand-glow: rgba(37, 99, 235, 0.25);
@@ -519,8 +519,14 @@
             document.getElementById('overlay').classList.toggle('show');
         }
 
-        const ctx = document.getElementById('growthChart').getContext('2d');
-        new Chart(ctx, {
+        var growthChartDone = false;
+        function initGrowthChart() {
+            var el = document.getElementById('growthChart');
+            if (!el || growthChartDone) return;
+            if (typeof Chart === 'undefined') { setTimeout(initGrowthChart, 300); return; }
+            growthChartDone = true;
+            const ctx = el.getContext('2d');
+            new Chart(ctx, {
             type: 'line',
             data: {
                 labels: <%- JSON.stringify(chartData.labels) %>,
@@ -580,6 +586,8 @@
                 }
             }
         });
+        }
+        initGrowthChart();
     </script>
 <script src="/js/animations.js"></script>
 </body>

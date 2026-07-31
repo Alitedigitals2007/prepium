@@ -1074,28 +1074,34 @@ function render() {
 /* â”€â”€ Chart.js â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 document.addEventListener('DOMContentLoaded', () => {
     render();
-    const ctx = document.getElementById('gChart');
-    if (!ctx) return;
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: ['A','B','C','D','E','F'],
-            datasets: [{
-                data: [GRADE_COUNTS.A, GRADE_COUNTS.B, GRADE_COUNTS.C, GRADE_COUNTS.D, GRADE_COUNTS.E, GRADE_COUNTS.F],
-                backgroundColor: ['rgba(180,83,9,.1)','rgba(37,99,235,.1)','rgba(13,148,136,.1)','rgba(124,58,237,.1)','rgba(82,82,91,.1)','rgba(225,29,72,.1)'],
-                borderColor:     ['#b45309','#2563eb','#0d9488','#7c3aed','#52525b','#e11d48'],
-                borderWidth: 1.5, borderRadius: 7, borderSkipped: false
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend:{ display:false } },
-            scales: {
-                x: { grid:{ display:false }, ticks:{ font:{ family:'Plus Jakarta Sans',weight:'700' } } },
-                y: { grid:{ color:'rgba(0,0,0,.04)' }, ticks:{ precision:0 } }
+    var gradeChartDone = false;
+    function initGradeChart() {
+        var ctx = document.getElementById('gChart');
+        if (!ctx || gradeChartDone) return;
+        if (typeof Chart === 'undefined') { setTimeout(initGradeChart, 300); return; }
+        gradeChartDone = true;
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['A','B','C','D','E','F'],
+                datasets: [{
+                    data: [GRADE_COUNTS.A, GRADE_COUNTS.B, GRADE_COUNTS.C, GRADE_COUNTS.D, GRADE_COUNTS.E, GRADE_COUNTS.F],
+                    backgroundColor: ['rgba(180,83,9,.1)','rgba(37,99,235,.1)','rgba(13,148,136,.1)','rgba(124,58,237,.1)','rgba(82,82,91,.1)','rgba(225,29,72,.1)'],
+                    borderColor:     ['#b45309','#2563eb','#0d9488','#7c3aed','#52525b','#e11d48'],
+                    borderWidth: 1.5, borderRadius: 7, borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend:{ display:false } },
+                scales: {
+                    x: { grid:{ display:false }, ticks:{ autoSkip:false, font:{ family:'Plus Jakarta Sans',weight:'700' } } },
+                    y: { suggestedMax: 10, grid:{ color:'rgba(0,0,0,.04)' }, ticks:{ precision:0 } }
+                }
             }
-        }
-    });
+        });
+    }
+    initGradeChart();
 });
 
 /* â”€â”€ Import from Study â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */

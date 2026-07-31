@@ -226,8 +226,12 @@ function escapeHtml(text) {
     // Chart
     var sorted = all.slice().sort(function(a, b) { return new Date(a.date) - new Date(b.date); });
     var recent = sorted.slice(-10);
-    var ctx = document.getElementById('perfChart');
-    if (ctx && recent.length > 0) {
+    var perfChartDone = false;
+    function initPerfChart() {
+        var ctx = document.getElementById('perfChart');
+        if (!ctx || perfChartDone || recent.length === 0) return;
+        if (typeof Chart === 'undefined') { setTimeout(initPerfChart, 300); return; }
+        perfChartDone = true;
         new Chart(ctx, {
             type: 'line',
             data: {
@@ -258,6 +262,7 @@ function escapeHtml(text) {
             }
         });
     }
+    initPerfChart();
 })();
 
 render('all');

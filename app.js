@@ -1264,10 +1264,10 @@ app.get('/dashboard', isStudent, async (req, res) => {
             LEFT JOIN subjects s ON qr.subject_id = s.id
             WHERE qr.user_id = $1
             UNION ALL
-            SELECT 'General Quiz' as subject, score, total_questions, TO_CHAR(created_at, 'YYYY-MM-DD') as date_taken
+            SELECT 'General Quiz' as subject, score, total_questions, TO_CHAR(taken_at, 'YYYY-MM-DD') as date_taken
             FROM results WHERE user_id = $1
             ORDER BY date_taken DESC
-            LIMIT 1`, [userId, userId]);
+            LIMIT 1`, [userId]);
 
         res.render('dashboard', { 
             user: { ...req.session.user, ...userData }, 
@@ -1715,11 +1715,11 @@ app.get('/history', isAuth, requirePaid, async (req, res) => {
             SELECT id, NULL as subject_id, score, total_questions, 
                    CASE WHEN total_questions > 0 THEN ROUND((score::numeric / total_questions) * 100) ELSE 0 END as percentage,
                    NULL as title, NULL as time_taken,
-                   created_at,
+                   taken_at AS created_at,
                    'General Quiz' as subject_name
             FROM results
             WHERE user_id = $1
-            ORDER BY created_at DESC
+            ORDER BY taken_at DESC
         `, [uid]);
         oldRows = oldRes.rows;
     } catch (e) { console.error("History results table:", e.message); }
@@ -4383,7 +4383,7 @@ app.get('/cgpa', isAuth, requirePaid, async (req, res) => {
         const profile = profileResult.rows[0];
 
         const coursesResult = await pool.query(
-            `SELECT id, id AS _id, course_code AS code, credit_units, grade, 
+            `SELECT id, id AS _id, course_code AS code, title, credit_units, grade, 
                     level_scope, semester, is_hidden, deleted 
              FROM public.cgpa_courses 
              WHERE user_id = $1 AND deleted = false 

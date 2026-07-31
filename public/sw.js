@@ -1,11 +1,12 @@
-const CACHE_NAME = 'prepium-v1';
+const CACHE_NAME = 'prepium-v2';
 const ASSETS = [
     '/',
     '/dashboard',
     '/manifest.json',
     'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
-    'https://cdn.jsdelivr.net/npm/sweetalert2@11'
+    'https://cdn.jsdelivr.net/npm/sweetalert2@11',
+    'https://cdn.jsdelivr.net/npm/chart.js@4'
 ];
 
 self.addEventListener('install', e => {
