@@ -64,8 +64,8 @@ const pool = new Pool({
   ssl: {
     rejectUnauthorized: false
   },
-  connectionTimeoutMillis: 10000,
-  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 30000,
+  idleTimeoutMillis: 60000,
   family: 4
 });
 
@@ -73,6 +73,12 @@ const pool = new Pool({
 pool.on('error', (err) => {
     console.error('[DB] Pool error:', err.message);
 });
+
+// Keep the (free-tier) database awake — Neon suspends after ~5 min idle,
+// and a cold start can exceed the connection timeout and kill requests.
+setInterval(() => {
+    pool.query('SELECT 1').catch(() => {});
+}, 120000);
 
 // Test database connection on startup
 (async () => {
@@ -1232,21 +1238,36 @@ app.get('/dashboard', isStudent, async (req, res) => {
         const upcomingDeadlines = parseInt(deadlineCount.rows[0].count) || 0;
 
         // 6. Get study stats for dashboard
-        const [studyStatsRes, quizCountRes, avgScoreRes, streakRes] = await Promise.all([
+        const [studyStatsRes, quizStatsRes, streakRes] = await Promise.all([
             pool.query('SELECT COALESCE(SUM(elapsed_seconds), 0) as t, COUNT(*) as s FROM study_sessions WHERE user_id = $1 AND status = $2', [userId, 'completed']),
-            pool.query('SELECT COUNT(*) as c FROM results WHERE user_id = $1', [userId]),
-            pool.query('SELECT COALESCE(AVG(score::float/NULLIF(total_questions,0)*100), 0) as avg FROM results WHERE user_id = $1 AND total_questions > 0', [userId]),
+            pool.query(`SELECT
+                (SELECT COUNT(*) FROM quiz_results WHERE user_id = $1)
+              + (SELECT COUNT(*) FROM results WHERE user_id = $1) as c,
+                (SELECT COALESCE(AVG(pct), 0) FROM (
+                    SELECT (score::float / NULLIF(total_questions, 0) * 100) as pct FROM quiz_results WHERE user_id = $1 AND total_questions > 0
+                    UNION ALL
+                    SELECT (score::float / NULLIF(total_questions, 0) * 100) as pct FROM results WHERE user_id = $1 AND total_questions > 0
+                ) q) as avg`, [userId]),
             pool.query('SELECT current_streak FROM login_streaks WHERE user_id = $1', [userId])
         ]);
         const streak = parseInt(streakRes.rows[0]?.current_streak) || 0;
         const studySessions = parseInt(studyStatsRes.rows[0].s) || 0;
-        const quizCount = parseInt(quizCountRes.rows[0].c) || 0;
-        const avgScore = Math.round(parseFloat(avgScoreRes.rows[0].avg) || 0);
+        const quizCount = parseInt(quizStatsRes.rows[0].c) || 0;
+        const avgScore = Math.round(parseFloat(quizStatsRes.rows[0].avg) || 0);
         const aiQuizRes = await pool.query('SELECT COUNT(*) FROM quiz_results WHERE user_id = $1 AND subject_id IS NULL', [userId]);
         const aiQuizCount = parseInt(aiQuizRes.rows[0].count) || 0;
 
         // 7. Get recent quiz
-        const recentQuizRes = await pool.query('SELECT subject, score, total_questions, TO_CHAR(taken_at, \'YYYY-MM-DD\') as date_taken FROM results WHERE user_id = $1 ORDER BY taken_at DESC LIMIT 1', [userId]);
+        const recentQuizRes = await pool.query(`
+            SELECT COALESCE(s.name, qr.title, 'Quiz') as subject, qr.score, qr.total_questions, TO_CHAR(qr.created_at, 'YYYY-MM-DD') as date_taken
+            FROM quiz_results qr
+            LEFT JOIN subjects s ON qr.subject_id = s.id
+            WHERE qr.user_id = $1
+            UNION ALL
+            SELECT 'General Quiz' as subject, score, total_questions, TO_CHAR(created_at, 'YYYY-MM-DD') as date_taken
+            FROM results WHERE user_id = $1
+            ORDER BY date_taken DESC
+            LIMIT 1`, [userId, userId]);
 
         res.render('dashboard', { 
             user: { ...req.session.user, ...userData }, 
@@ -3468,7 +3489,7 @@ app.get('/admin/analytics', isAdmin, async (req, res) => {
                 (SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL '7 days') as weekly_signups,
                 (SELECT COUNT(*) FROM users WHERE has_paid = true) as premium_users,
                 (SELECT COUNT(*) FROM users WHERE has_paid = true AND created_at > NOW() - INTERVAL '7 days') as weekly_premium,
-                (SELECT COUNT(*) FROM results) as total_quizzes,
+                (SELECT (SELECT COUNT(*) FROM results) + (SELECT COUNT(*) FROM quiz_results)) as total_quizzes,
                 (SELECT COUNT(*) FROM study_quiz_attempts) as study_quiz_count,
                 (SELECT COUNT(*) FROM daily_leaderboard) as active_battlers,
                 (SELECT COUNT(*) FROM users WHERE used_coupon IS NOT NULL) as coupon_redemptions`),

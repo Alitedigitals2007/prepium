@@ -7,12 +7,18 @@
   document.documentElement.setAttribute('data-theme', theme);
 })();
 
+function setThemeColor(theme) {
+  var meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', theme === 'dark' ? '#0b1120' : '#2563eb');
+}
+
 function toggleTheme() {
   var html = document.documentElement;
   var current = html.getAttribute('data-theme');
   var next = current === 'dark' ? 'light' : 'dark';
   html.setAttribute('data-theme', next);
   localStorage.setItem('prepium-theme', next);
+  setThemeColor(next);
   updateThemeIcons(next);
 }
 
@@ -27,6 +33,7 @@ function updateThemeIcons(theme) {
 
 document.addEventListener('DOMContentLoaded', function() {
   var current = document.documentElement.getAttribute('data-theme') || 'light';
+  setThemeColor(current);
   updateThemeIcons(current);
 });
 </script>

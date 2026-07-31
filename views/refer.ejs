@@ -3,7 +3,7 @@
 <head>
     <%- include('partials/head') %>
     <style>
-        :root { --brand: #2563eb; --text: #1e293b; --sub: #64748b; }
+        :root { --sub: var(--text-secondary); }
         .app-shell { min-height: 100vh; padding: 2rem 1.5rem; max-width: 500px; margin: 0 auto; }
         .logo-head { font-weight: 800; font-size: 1.35rem; color: var(--brand); margin-bottom: 1.5rem; display: inline-block; text-decoration: none; }
         .logo-head span { color: var(--text); }
@@ -11,7 +11,7 @@
         p.desc { color: var(--sub); font-weight: 600; font-size: 0.9rem; margin-bottom: 1.75rem; }
 
         .perk-card {
-            background: #fafcfe; border: 1px solid var(--border-solid); border-radius: 20px; padding: 1.15rem;
+            background: var(--surface); border: 1px solid var(--border-solid); border-radius: 20px; padding: 1.15rem;
             margin-bottom: 12px; display: flex; align-items: flex-start; gap: 14px;
         }
         .perk-card i { font-size: 1.25rem; color: var(--brand); margin-top: 2px; width: 24px; text-align: center; }
@@ -25,17 +25,17 @@
             box-shadow: 0 8px 24px rgba(0,98,255,0.18); margin-top: 1.25rem;
         }
         .cta-btn:hover { background: #0056e0; }
-        .cta-btn.secondary { background: var(--text); box-shadow: none; }
+        .cta-btn.secondary { background: var(--brand); box-shadow: none; }
 
         .info-panel {
-            background: #f0f7ff; border: 1px solid #dbeafe; border-radius: 20px; padding: 1.25rem;
+            background: var(--brand-soft); border: 1px solid var(--brand-soft); border-radius: 20px; padding: 1.25rem;
             margin: 1.25rem 0; border-left: 4px solid var(--brand);
         }
         .info-panel strong { display: block; font-size: 0.88rem; margin-bottom: 4px; }
         .info-panel p { margin: 0; font-size: 0.82rem; color: var(--sub); font-weight: 600; }
 
         .code-display {
-            background: #eff6ff; border: 2px dashed rgba(0,98,255,0.3); border-radius: 20px;
+            background: var(--brand-soft); border: 2px dashed rgba(0,98,255,0.3); border-radius: 20px;
             padding: 1rem; font-size: 1.5rem; font-weight: 800; color: var(--brand);
             text-align: center; letter-spacing: 3px; margin: 1rem 0; cursor: pointer;
         }
@@ -45,18 +45,18 @@
         .input-group label { display: block; font-size: 0.72rem; font-weight: 800; color: var(--sub); margin-bottom: 6px; text-transform: uppercase; }
         .input-group input, .input-group textarea {
             width: 100%; padding: 1rem; border-radius: 14px; border: 1.5px solid var(--border-solid);
-            font-family: inherit; font-size: 0.9rem; font-weight: 600; background: #f8fafc;
+            font-family: inherit; font-size: 0.9rem; font-weight: 600; background: var(--surface);
             outline: none; box-sizing: border-box;
         }
-        .input-group input:focus, .input-group textarea:focus { border-color: var(--brand); background: white; }
+        .input-group input:focus, .input-group textarea:focus { border-color: var(--brand); background: var(--surface-solid); }
         .input-group textarea { resize: vertical; min-height: 80px; }
 
         .dash-link { text-align: center; margin-top: 1.5rem; }
         .dash-link a { color: var(--brand); font-weight: 700; font-size: 0.88rem; text-decoration: none; }
 
         @media (min-width: 431px) { .app-shell { border-left: 1px solid var(--border-solid); border-right: 1px solid var(--border-solid); } }
-    <%- include('partials/theme-toggle') %>
     </style>
+    <%- include('partials/theme-toggle') %>
 </head>
 <body>
 <div class="app-shell">

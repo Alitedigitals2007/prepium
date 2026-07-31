@@ -4,7 +4,7 @@
     <%- include('partials/head') %>
     <style>
         :root { 
-            --brand-light: #e6efff;
+            --brand-light: var(--brand-soft);
             --sub: var(--text-secondary);
             --white: var(--surface-solid);
         }
@@ -67,7 +67,7 @@
         p.desc { color: var(--sub); font-size: 0.88rem; font-weight: 600; line-height: 1.5; margin-bottom: 1.75rem; }
 
         .perk-card {
-            background: #fafcfe; border: 1px solid var(--border); border-radius: 20px;
+            background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
             padding: 1.15rem; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 14px;
         }
         .perk-card i { font-size: 1.25rem; color: var(--brand); margin-top: 2px; }
@@ -105,7 +105,7 @@
         }
 
         .info-panel {
-            background: #fdfdfd; border: 1px solid var(--border); padding: 1.15rem;
+            background: var(--surface); border: 1px solid var(--border); padding: 1.15rem;
             border-radius: 20px; font-size: 0.88rem; font-weight: 600; color: var(--text);
             line-height: 1.6; margin: 1.25rem 0; text-align: left; border-left: 4px solid var(--brand);
         }
@@ -114,7 +114,7 @@
         .info-panel a:hover { text-decoration: underline; }
 
         .cert-container { 
-            background: #fdfdfd; border: 1px solid var(--border); padding: 14px; border-radius: 24px;
+            background: var(--surface); border: 1px solid var(--border); padding: 14px; border-radius: 24px;
             margin: 1.25rem 0; box-shadow: 0 4px 12px rgba(0,0,0,0.015);
         }
         canvas { width: 100%; border-radius: 16px; border: 1px solid var(--border); display: block; margin-bottom: 12px; }
@@ -124,7 +124,7 @@
             padding: 0.95rem; border-radius: 16px; font-size: 0.88rem; font-weight: 800; cursor: pointer;
             display: flex; justify-content: center; align-items: center; gap: 10px; transition: all 0.25s;
         }
-        .download-btn:hover { background: #f4f8ff; }
+        .download-btn:hover { background: var(--brand-soft); }
 
         .whatsapp-btn { background: #25d366; color: var(--surface-solid); box-shadow: 0 8px 24px rgba(37, 211, 102, 0.22); margin-top: 1rem; }
         .whatsapp-btn:hover { background: #1ebd5b; }
@@ -191,7 +191,7 @@
 
                 <button type="submit" class="btn-action" id="submitBtn">Generate Unique ID âž”</button>
             </form>
-            <div class="login-toggle-link" onclick="goToStep(1)" style="margin-top: 1.25rem;">â® Go Back</div>
+            <div class="login-toggle-link" onclick="goToStep(1)" style="margin-top: 1.25rem;">❮ Go Back</div>
         </div>
 
         <div class="step-panel" id="stepLogin">
@@ -209,7 +209,7 @@
 
                 <button type="submit" class="btn-action" id="loginBtn">Log in to Portal âž”</button>
             </form>
-            <div class="login-toggle-link" onclick="goToStep(1)" style="margin-top: 1.25rem;">â® Back to Registration</div>
+            <div class="login-toggle-link" onclick="goToStep(1)" style="margin-top: 1.25rem;">❮ Back to Registration</div>
         </div>
 
         <div class="step-panel success-box" id="step3">
@@ -232,7 +232,7 @@
             </div>
 
             <a id="waShareBtn" href="#" class="btn-action whatsapp-btn" target="_blank"><i class="fab fa-whatsapp"></i> Share on WhatsApp</a>
-            <a id="portalBtn" href="#" class="btn-action" style="background: var(--text); box-shadow: none; margin-top: 1rem;"><i class="fas fa-sign-in-alt"></i> Go to Dashboard</a>
+            <a id="portalBtn" href="#" class="btn-action" style="background: var(--brand); box-shadow: none; margin-top: 1rem;"><i class="fas fa-sign-in-alt"></i> Go to Dashboard</a>
         </div>
     </div>
 

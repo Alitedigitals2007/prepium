@@ -3,22 +3,20 @@
 <head>
     <%- include('partials/head') %>
     <style>
-        :root { 
-            --text: #1e293b; 
-        }
+        :root { }
         body { 
             padding: 2rem 1rem; 
         }
         
         .container { max-width: 950px; margin: 0 auto; }
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem; }
-        .logout { color: #ef4444; font-weight: 700; text-decoration: none; font-size: 0.9rem; }
+        .logout { color: var(--danger); font-weight: 700; text-decoration: none; font-size: 0.9rem; }
 
         .code-banner {
             background: var(--brand-soft); border: 2px dashed var(--brand); border-radius: 20px;
             padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;
         }
-        .code-banner h2 { margin: 0; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; color: #1e40af; }
+        .code-banner h2 { margin: 0; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; color: var(--brand); }
         .code-banner span { font-size: 1.5rem; font-weight: 800; color: var(--brand); font-family: monospace; }
 
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.2rem; margin-bottom: 2.5rem; }
@@ -33,14 +31,14 @@
         
         textarea { width: 100%; resize: none; margin-bottom: 1rem; }
         textarea:focus { border-color: var(--brand); background: var(--surface-solid); }
-        .btn-action { background: var(--text); color: var(--surface-solid); border: none; padding: 1rem 2rem; border-radius: 14px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        .btn-action { background: var(--brand); color: white; border: none; padding: 1rem 2rem; border-radius: 14px; font-weight: 700; cursor: pointer; transition: 0.2s; }
         .btn-action:hover { transform: translateY(-2px); opacity: 0.95; }
 
         .table-wrap { background: var(--surface-solid); border-radius: 24px; overflow: hidden; border: 1px solid var(--bg); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03); }
         table { width: 100%; border-collapse: collapse; text-align: left; }
         th { background: var(--bg); padding: 1rem 1.5rem; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
         td { padding: 1.1rem 1.5rem; border-top: 1px solid var(--bg); font-size: 0.95rem; }
-        .badge-success { background: #dcfce7; color: #15803d; font-weight: 700; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; }
+        .badge-success { background: var(--success-soft); color: var(--success); font-weight: 700; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; }
         .badge-pending { background: var(--bg); color: var(--text-secondary); font-weight: 700; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; }
     </style>
     <%- include('partials/theme-toggle') %>

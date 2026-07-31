@@ -3,11 +3,11 @@
 <head>
     <%- include('partials/head') %>
     <style>
-        :root { --sub: #64748b; }
+        :root { --sub: var(--text-secondary); }
         .app-shell { padding-bottom: 110px; }
         .header-main {
             padding: 2.5rem 1.5rem 1.5rem;
-            background: linear-gradient(180deg, #fef2f2 0%, #ffffff 100%);
+            background: linear-gradient(180deg, var(--danger-soft) 0%, var(--surface-solid) 100%);
             border-bottom: 1px solid var(--bg);
         }
         .user-profile { display: flex; align-items: center; justify-content: space-between; }
@@ -23,7 +23,7 @@
 
         .section-card {
             margin: 16px;
-            background: white;
+            background: var(--surface-solid);
             border-radius: 20px;
             padding: 20px;
             border: 1px solid var(--bg);
@@ -54,9 +54,9 @@
         .mode-option {
             flex: 1; padding: 14px; border: 1.5px solid var(--border-solid); border-radius: 14px;
             text-align: center; cursor: pointer; font-weight: 700; font-size: 0.8rem;
-            transition: all 0.2s; background: white;
+            transition: all 0.2s; background: var(--surface-solid);
         }
-        .mode-option.active { border-color: var(--brand); background: #f0f7ff; color: var(--brand); }
+        .mode-option.active { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
         .mode-option i { display: block; font-size: 1.3rem; margin-bottom: 4px; }
 
         .btn-primary {
@@ -69,11 +69,11 @@
         .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-secondary {
             width: 100%; padding: 14px; border: 1.5px solid var(--border-solid); border-radius: 14px;
-            background: white; color: #0b1437; font-size: 0.9rem; font-weight: 700; cursor: pointer;
+            background: var(--surface-solid); color: #0b1437; font-size: 0.9rem; font-weight: 700; cursor: pointer;
             transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;
         }
         .btn-danger {
-            background: #fef2f2; color: #ef4444; border: 1px solid #fecaca;
+            background: var(--danger-soft); color: var(--danger); border: 1px solid #fecaca;
             padding: 10px 16px; border-radius: 12px; font-weight: 700; font-size: 0.8rem;
             cursor: pointer; transition: 0.2s;
         }
@@ -83,7 +83,7 @@
             background: var(--bg); padding: 6px 12px; border-radius: 20px;
             font-size: 0.78rem; font-weight: 600; margin: 4px;
         }
-        .course-chip .remove { cursor: pointer; color: #ef4444; font-size: 0.85rem; }
+        .course-chip .remove { cursor: pointer; color: var(--danger); font-size: 0.85rem; }
 
         .reading-day { margin-bottom: 16px; }
         .reading-day-header {
@@ -92,7 +92,7 @@
             border-bottom: 2px solid var(--brand); display: inline-block;
         }
         .reading-slot {
-            background: #f8fafc; border: 1px solid var(--bg);
+            background: var(--surface); border: 1px solid var(--bg);
             padding: 12px 14px; border-radius: 14px; margin-bottom: 8px;
             display: flex; align-items: center; gap: 12px;
         }
@@ -105,10 +105,10 @@
         .checkbox-label {
             display: flex; align-items: center; gap: 6px;
             font-size: 0.8rem; font-weight: 600; cursor: pointer;
-            padding: 6px 12px; background: #f8fafc; border-radius: 10px;
+            padding: 6px 12px; background: var(--surface); border-radius: 10px;
             border: 1px solid var(--border-solid);
         }
-        .checkbox-label input:checked + span { color: #ef4444; }
+        .checkbox-label input:checked + span { color: var(--danger); }
 
         .empty-state { text-align: center; padding: 2rem 1rem; color: var(--sub); }
         .empty-state i { font-size: 2.5rem; color: var(--border-solid); margin-bottom: 1rem; display: block; }
@@ -132,8 +132,8 @@
 
         .loader { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 0.6s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-    <%- include('partials/theme-toggle') %>
     </style>
+    <%- include('partials/theme-toggle') %>
 </head>
 <body>
 <%- include('partials/sidebar') %>
@@ -270,7 +270,7 @@
                                             <small><%= slot.course_code ? slot.course_code + ' &middot; ' : '' %><%= slot.unit %> Credits</small>
                                         </div>
                                         <form action="/reading-timetable/delete/<%= slot.id %>" method="POST" style="margin:0;" onsubmit="return deleteReadingSlot(event, this)">
-                                            <button type="submit" style="background:none; border:none; color:#ef4444; cursor:pointer; padding:4px;"><i class="fas fa-times"></i></button>
+                                            <button type="submit" style="background:none; border:none; color:var(--danger); cursor:pointer; padding:4px;"><i class="fas fa-times"></i></button>
                                         </form>
                                     </div>
                                 <% }); %>
@@ -325,7 +325,7 @@
                 <input type="text" class="manual-code" placeholder="Code" style="flex:1;">
                 <input type="text" class="manual-name" placeholder="Course name" style="flex:2;">
                 <input type="number" class="manual-unit" placeholder="Unit" style="width:60px;" value="3" min="1" max="6">
-                <button onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer; padding:4px 8px;">
+                <button onclick="this.parentElement.remove()" style="background:none; border:none; color:var(--danger); cursor:pointer; padding:4px 8px;">
                     <i class="fas fa-trash"></i>
                 </button>
             `;
@@ -447,7 +447,7 @@
                                     <small>${slot.course_code ? slot.course_code + ' &middot; ' : ''}${slot.unit} Credits</small>
                                 </div>
                                 <form action="/reading-timetable/delete/${slot.id}" method="POST" style="margin:0;" onsubmit="return deleteReadingSlot(event, this)">
-                                    <button type="submit" style="background:none; border:none; color:#ef4444; cursor:pointer; padding:4px;"><i class="fas fa-times"></i></button>
+                                    <button type="submit" style="background:none; border:none; color:var(--danger); cursor:pointer; padding:4px;"><i class="fas fa-times"></i></button>
                                 </form>
                             </div>
                         `;

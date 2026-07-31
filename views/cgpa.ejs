@@ -88,7 +88,7 @@
     font-size: .9rem; font-weight: 600; color: var(--text-dark);
     transition: .15s; appearance: none; -webkit-appearance: none;
 }
-.fg input:focus, .fg select:focus { border-color: var(--brand); background: #fff; }
+.fg input:focus, .fg select:focus { border-color: var(--brand); background: var(--surface-solid); }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
 .btn-ghost {
@@ -100,7 +100,7 @@
 /* â•â• HERO â•â• */
 .hero {
     margin: 14px 14px 0;
-    background: var(--text-dark);
+    background: #0f172a;
     border-radius: var(--radius-xl);
     padding: 26px 22px 24px;
     color: #fff; position: relative; overflow: hidden;
@@ -220,7 +220,7 @@
     flex-shrink: 0;
 }
 .pill:hover { border-color: var(--brand); }
-.pill.on { background: var(--text-dark); border-color: var(--text-dark); color: #fff; }
+.pill.on { background: var(--brand); border-color: var(--brand); color: #fff; }
 .filter-row2 {
     display: flex; align-items: center; justify-content: space-between;
     padding: 10px 14px 0;
@@ -305,7 +305,7 @@
 /* â•â• OVERLAYS â•â• */
 .overlay {
     display: none; position: fixed; inset: 0; z-index: 2000;
-    background: rgba(255,255,255,0.97);
+    background: var(--surface-solid);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     overflow-y: auto; padding-bottom: 48px;
@@ -342,8 +342,8 @@
     .grade-chips { grid-template-columns: repeat(3,1fr); }
     .grid2 { grid-template-columns: 1fr; }
 }
-<%- include('partials/theme-toggle') %>
 </style>
+<%- include('partials/theme-toggle') %>
 </head>
 <body>
 <%- include('partials/sidebar') %>
@@ -455,8 +455,8 @@
         </div>
 
         <div class="balance-hint">
-            <strong>How it works:</strong> Your CGPA Ã— units = quality points. These are added to your running total each time we recalculate.<br><br>
-            <strong>5-point scale:</strong> max CGPA 5.00 &nbsp;Â·&nbsp; <strong>4-point scale:</strong> max CGPA 4.00
+            <strong>How it works:</strong> Your CGPA × units = quality points. These are added to your running total each time we recalculate.<br><br>
+            <strong>5-point scale:</strong> max CGPA 5.00 &nbsp;·&nbsp; <strong>4-point scale:</strong> max CGPA 4.00
         </div>
 
         <button type="submit" class="btn btn-primary">
@@ -545,7 +545,7 @@
         <span class="div-badge <%= badge %>">
             <i class="fas fa-medal"></i> <%= cls %>
         </span>
-        <div class="hero-meta"><%= profile.department %> Â· L<%= profile.current_level %></div>
+        <div class="hero-meta"><%= profile.department %> · L<%= profile.current_level %></div>
     </div>
 </div>
 
@@ -580,7 +580,7 @@
         <% ['A','B','C','D','E','F'].forEach(l => { %>
         <div class="gchip">
             <div class="gchip-letter <%= l %>"><%= l %></div>
-            <div class="gchip-count"><%= gradeCounts[l] %>Ã—</div>
+            <div class="gchip-count"><%= gradeCounts[l] %>×</div>
         </div>
         <% }) %>
     </div>
@@ -607,17 +607,17 @@
             <button type="button" onclick="advisorWhatif()" style="flex:1;padding:11px;border:none;background:#0f172a;color:white;border-radius:10px;font-weight:700;font-size:0.78rem;cursor:pointer"><i class="fas fa-calculator"></i> What-If Builder</button>
         </div>
 
-        <div id="aiPredictResult" style="display:none;background:#f8fafc;border-radius:10px;padding:12px;font-size:0.85rem;color:#0f172a;line-height:1.55;white-space:pre-wrap;margin-bottom:10px;"></div>
+        <div id="aiPredictResult" style="display:none;background:var(--surface);border-radius:10px;padding:12px;font-size:0.85rem;color:var(--text-primary);line-height:1.55;white-space:pre-wrap;margin-bottom:10px;"></div>
 
         <div id="whatifBuilder" style="display:none;">
             <div class="section-label" style="font-size:0.75rem;margin-bottom:8px;"><i class="fas fa-plus-circle"></i> Add courses to see CGPA impact</div>
             <div id="whatifCourseList" style="margin-bottom:8px;"></div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;">
                 <input type="text" id="wiCourseName" placeholder="Course name" style="flex:2;min-width:100px;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-weight:600;font-size:0.75rem;">
-                <select id="wiCourseUnits" style="flex:1;min-width:60px;padding:9px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-weight:600;font-size:0.75rem;background:white;">
+                <select id="wiCourseUnits" style="flex:1;min-width:60px;padding:9px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-weight:600;font-size:0.75rem;background:var(--surface-solid);">
                     <% for(var uu=1;uu<=8;uu++){ %><option value="<%= uu %>" <%= uu===3?'selected':'' %>><%= uu %>u</option><% } %>
                 </select>
-                <select id="wiCourseGrade" style="flex:1;min-width:50px;padding:9px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-weight:600;font-size:0.75rem;background:white;">
+                <select id="wiCourseGrade" style="flex:1;min-width:50px;padding:9px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-weight:600;font-size:0.75rem;background:var(--surface-solid);">
                     <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option><option value="E">E</option><option value="F">F</option>
                 </select>
                 <button onclick="addAdvisorCourse()" style="padding:9px 14px;border:none;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;font-weight:700;font-size:0.7rem;cursor:pointer;color:var(--text-dark);"><i class="fas fa-plus"></i> Add</button>
@@ -626,7 +626,7 @@
             <button id="calcImpactBtn" onclick="calcAdvisorImpact()" style="display:none;width:100%;margin-top:8px;padding:12px;border:none;background:var(--brand-gradient);color:white;border-radius:10px;font-weight:700;font-size:0.82rem;cursor:pointer;"><i class="fas fa-calculator"></i> Calculate Impact</button>
         </div>
 
-        <div id="aiWhatifResult" style="display:none;background:#f8fafc;border-radius:10px;padding:12px;font-size:0.85rem;color:#0f172a;line-height:1.55;margin-top:8px"></div>
+        <div id="aiWhatifResult" style="display:none;background:var(--surface);border-radius:10px;padding:12px;font-size:0.85rem;color:var(--text-primary);line-height:1.55;margin-top:8px"></div>
     </div>
 </div>
 
@@ -692,8 +692,8 @@
                 </div>
                 <div class="cmeta">
                     <span><%= c.credit_units %> units</span>
-                    <% if (c.title) { %><span>Â· <%= c.title %></span><% } %>
-                    <span>Â· L<%= c.level_scope %> S<%= c.semester %></span>
+                    <% if (c.title) { %><span>· <%= c.title %></span><% } %>
+                    <span>· L<%= c.level_scope %> S<%= c.semester %></span>
                 </div>
             </div>
             <div class="crow-right">
@@ -809,10 +809,10 @@
             </div>
         </div>
         <div id="add-loading" style="display:none;text-align:center;padding:8px;color:#475569;font-weight:600"><i class="fas fa-spinner fa-spin"></i> Saving...</div>
-        <div id="add-error" style="display:none;font-size:0.75rem;color:#dc2626;font-weight:600;margin:4px 0 8px;padding:8px 10px;background:#fef2f2;border-radius:8px"></div>
+        <div id="add-error" style="display:none;font-size:0.75rem;color:var(--danger);font-weight:600;margin:4px 0 8px;padding:8px 10px;background:var(--danger-soft);border-radius:8px"></div>
         <div style="display:flex;gap:8px;margin-top:10px">
             <button id="add-save-btn" onclick="addCourseAjax()" style="flex:1;padding:12px;border:none;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;border-radius:10px;font-weight:700;font-size:0.82rem;cursor:pointer"><i class="fas fa-plus"></i> Save Course</button>
-            <button id="add-save-another" onclick="addCourseAjax(true)" style="padding:12px 16px;border:1.5px solid var(--border);background:white;border-radius:10px;font-weight:700;font-size:0.78rem;cursor:pointer;color:var(--text-dark)"><i class="fas fa-plus-circle"></i> Add Another</button>
+            <button id="add-save-another" onclick="addCourseAjax(true)" style="padding:12px 16px;border:1.5px solid var(--border);background:var(--surface-solid);border-radius:10px;font-weight:700;font-size:0.78rem;cursor:pointer;color:var(--text-dark)"><i class="fas fa-plus-circle"></i> Add Another</button>
         </div>
     </div>
 </div>
@@ -903,7 +903,7 @@ function showAddSuccess(msg) {
     var box = document.getElementById('add-error');
     box.style.display = 'block';
     box.style.color = '#16a34a';
-    box.style.background = '#f0fdf4';
+    box.style.background = 'var(--success-soft)';
     box.innerHTML = '<i class="fas fa-check-circle"></i> ' + msg;
 }
 </script>
@@ -1068,7 +1068,7 @@ function render() {
 
     const ll = curLvl==='all'?'All Levels':`${curLvl}L`;
     const sl = curSem==='all'?'Both Sems':`Sem ${curSem}`;
-    document.getElementById('matLabel').textContent = `${ll} Â· ${sl}`;
+    document.getElementById('matLabel').textContent = `${ll} · ${sl}`;
 }
 
 /* â”€â”€ Chart.js â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -1151,7 +1151,7 @@ function renderAdvisorCourses() {
     for (var i = 0; i < advisorCourses.length; i++) {
         var c = advisorCourses[i];
         var gc = c.grade === 'A' ? 'var(--success)' : c.grade === 'F' ? 'var(--danger)' : c.grade === 'B' ? 'var(--brand)' : 'var(--text-dark)';
-        html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:white;border:1px solid var(--border);border-radius:8px;margin-bottom:4px;font-size:0.75rem;font-weight:600;animation:rowIn .2s ease;">';
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--surface-solid);border:1px solid var(--border);border-radius:8px;margin-bottom:4px;font-size:0.75rem;font-weight:600;animation:rowIn .2s ease;">';
         html += '<span>' + aiEscape(c.name) + ' <span style="color:var(--text-muted);font-weight:600;">' + c.units + ' units</span> <span style="color:' + gc + ';">(' + c.grade + ')</span></span>';
         html += '<button onclick="removeAdvisorCourse(' + i + ')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.75rem;padding:4px;transition:.15s;" onmouseover="this.style.color=\'var(--danger)\'" onmouseout="this.style.color=\'\'"><i class="fas fa-times-circle"></i></button>';
         html += '</div>';
@@ -1179,7 +1179,7 @@ function calcAdvisorImpact() {
         if (d.success) {
             var color = parseFloat(d.change) >= 0 ? '#16a34a' : '#dc2626';
             var sign = parseFloat(d.change) >= 0 ? '+' : '';
-            var bg = parseFloat(d.change) >= 0 ? '#f0fdf4' : '#fef2f2';
+            var bg = parseFloat(d.change) >= 0 ? 'var(--success-soft)' : 'var(--danger-soft)';
             var bd = parseFloat(d.change) >= 0 ? 'rgba(16,185,129,.15)' : 'rgba(239,68,68,.15)';
             result.innerHTML =
                 '<div style="background:' + bg + ';border:1px solid ' + bd + ';border-radius:12px;padding:14px;animation:pop .3s cubic-bezier(.34,1.56,.64,1);">' +
@@ -1187,20 +1187,20 @@ function calcAdvisorImpact() {
                 '<span style="font-size:0.65rem;font-weight:700;color:var(--text-sub);text-transform:uppercase;">Current CGPA</span>' +
                 '<span style="font-size:0.65rem;font-weight:700;color:var(--text-sub);text-transform:uppercase;">With Additions</span></div>' +
                 '<div style="display:flex;justify-content:space-between;align-items:center;">' +
-                '<span style="font-size:1.6rem;font-weight:900;color:#0f172a;">' + d.currentCGPA + '</span>' +
+                '<span style="font-size:1.6rem;font-weight:900;color:var(--text-primary);">' + d.currentCGPA + '</span>' +
                 '<span style="font-size:0.7rem;color:var(--text-muted);font-weight:600;"><i class="fas fa-arrow-right"></i></span>' +
                 '<span style="font-size:1.6rem;font-weight:900;color:' + color + ';">' + d.newCGPA + '</span></div>' +
                 '<div style="margin-top:8px;padding-top:8px;border-top:1px solid ' + (parseFloat(d.change) >= 0 ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)') + ';display:flex;justify-content:space-between;align-items:center;">' +
                 '<span style="font-size:0.75rem;font-weight:600;color:var(--text-sub);">' + d.totalUnits + ' units â†’ ' + d.newTotalUnits + ' units</span>' +
                 '<span style="font-size:0.85rem;font-weight:800;color:' + color + ';">' + sign + d.change + '</span></div></div>';
         } else {
-            result.innerHTML = '<div style="padding:10px;font-size:0.75rem;color:var(--danger);font-weight:600;background:#fef2f2;border-radius:8px;">' + aiEscape(d.error || 'Could not calculate.') + '</div>';
+            result.innerHTML = '<div style="padding:10px;font-size:0.75rem;color:var(--danger);font-weight:600;background:var(--danger-soft);border-radius:8px;">' + aiEscape(d.error || 'Could not calculate.') + '</div>';
         }
     })
     .catch(function(err) {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-calculator"></i> Calculate Impact';
-        result.innerHTML = '<div style="padding:10px;font-size:0.75rem;color:var(--danger);font-weight:600;background:#fef2f2;border-radius:8px;">Network error: ' + aiEscape(err.message) + '</div>';
+        result.innerHTML = '<div style="padding:10px;font-size:0.75rem;color:var(--danger);font-weight:600;background:var(--danger-soft);border-radius:8px;">Network error: ' + aiEscape(err.message) + '</div>';
     });
 }
 
@@ -1356,11 +1356,11 @@ function aiPredictGpa() {
             }).join('');
             box.innerHTML = '<div style="border-left:3px solid var(--brand);padding-left:12px">' + html + '</div>';
         } else {
-            box.innerHTML = '<p style="color:#dc2626;margin:0">' + aiEscape((d && d.error) ? d.error : 'Could not generate prediction.') + '</p>';
+            box.innerHTML = '<p style="color:var(--danger);margin:0">' + aiEscape((d && d.error) ? d.error : 'Could not generate prediction.') + '</p>';
         }
     })
     .catch(function(err) {
-        box.innerHTML = '<p style="color:#dc2626;margin:0">Network error: ' + aiEscape(err.message) + '</p>';
+        box.innerHTML = '<p style="color:var(--danger);margin:0">Network error: ' + aiEscape(err.message) + '</p>';
     });
 }
 
@@ -1371,7 +1371,7 @@ function openCGPAChat() {
         title: '<span style="font-weight:800;font-size:1rem">AI Academic Advisor</span>',
         html:
             '<div id="' + containerId + '" style="text-align:left;max-height:400px;overflow-y:auto;padding:4px;font-size:0.85rem"></div>' +
-            '<div id="cgpa-chat-pending" style="display:none;background:#f1f5f9;border-radius:10px;padding:10px;margin-bottom:8px;font-size:0.85rem"><i class="fas fa-spinner fa-spin"></i> Thinking...</div>' +
+            '<div id="cgpa-chat-pending" style="display:none;background:var(--surface);border-radius:10px;padding:10px;margin-bottom:8px;font-size:0.85rem"><i class="fas fa-spinner fa-spin"></i> Thinking...</div>' +
             '<div style="display:flex;gap:6px;margin-top:8px">' +
             '<input id="cgpa-chat-inp" type="text" placeholder="Ask about your CGPA..." style="flex:1;padding:11px 13px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-size:0.85rem;font-weight:600;outline:none">' +
             '<button id="cgpa-chat-send" type="button" style="padding:11px 16px;border:none;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;font-weight:700;border-radius:10px;cursor:pointer"><i class="fas fa-paper-plane"></i></button></div>' +
@@ -1382,7 +1382,7 @@ function openCGPAChat() {
         didOpen: function() {
             var box = document.getElementById(containerId);
             var pending = document.getElementById('cgpa-chat-pending');
-            box.innerHTML = '<div style="display:flex;gap:10px;margin-bottom:8px"><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#1d4ed8);display:flex;align-items:center;justify-content:center;color:white;font-size:0.7rem"><i class="fas fa-robot"></i></div><div style="flex:1;background:#f1f5f9;border-radius:10px;padding:10px;line-height:1.5">Hi! I\'m your CGPA advisor. Ask me anything â€” what-if a grade, how to raise your GPA, which semesters to focus on, etc.</div></div>';
+            box.innerHTML = '<div style="display:flex;gap:10px;margin-bottom:8px"><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#1d4ed8);display:flex;align-items:center;justify-content:center;color:white;font-size:0.7rem"><i class="fas fa-robot"></i></div><div style="flex:1;background:var(--surface);border-radius:10px;padding:10px;line-height:1.5">Hi! I\'m your CGPA advisor. Ask me anything â€” what-if a grade, how to raise your GPA, which semesters to focus on, etc.</div></div>';
 
             function appnd(role, text, color) {
                 var div = document.createElement('div');
@@ -1390,7 +1390,7 @@ function openCGPAChat() {
                 if (role === 'user') div.style.flexDirection = 'row-reverse';
                 div.innerHTML = role === 'user'
                     ? '<div style="flex:1;background:#2563eb;color:white;border-radius:10px;padding:10px;line-height:1.5">' + aiEscape(text) + '</div>'
-                    : '<div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#1d4ed8);display:flex;align-items:center;justify-content:center;color:white;font-size:0.7rem;flex-shrink:0"><i class="fas fa-robot"></i></div><div style="flex:1;background:#f1f5f9;border-radius:10px;padding:10px;line-height:1.5;white-space:pre-wrap">' + aiEscape(text) + '</div>';
+                    : '<div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#1d4ed8);display:flex;align-items:center;justify-content:center;color:white;font-size:0.7rem;flex-shrink:0"><i class="fas fa-robot"></i></div><div style="flex:1;background:var(--surface);border-radius:10px;padding:10px;line-height:1.5;white-space:pre-wrap">' + aiEscape(text) + '</div>';
                 box.appendChild(div);
                 box.parentElement.scrollTop = box.parentElement.scrollHeight;
             }

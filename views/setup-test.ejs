@@ -8,7 +8,7 @@
         .top-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
         .back-circle { 
             width: 42px; height: 42px; 
-            background: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.9);
+            background: var(--surface); border: 1px solid var(--border);
             border-radius: 14px;
             display: flex; align-items: center; justify-content: center;
             text-decoration: none; color: var(--text-primary);
@@ -17,12 +17,12 @@
         .page-title { font-size: 1.15rem; font-weight: 800; letter-spacing: -0.5px; }
 
         .view-switcher { 
-            background: rgba(255,255,255,0.8); padding: 4px; border-radius: 12px; 
+            background: var(--surface); padding: 4px; border-radius: 12px; 
             display: flex; border: 1px solid rgba(255,255,255,0.9);
         }
         .v-btn { 
             border: none; background: transparent; padding: 8px 12px; border-radius: 10px; 
-            cursor: pointer; color: var(--text-sub); font-size: 0.8rem;
+            cursor: pointer; color: var(--text-secondary); font-size: 0.8rem;
             transition: all 0.3s ease;
         }
         .v-btn.active { 
@@ -58,7 +58,7 @@
         .search-row { display: flex; gap: 10px; margin: 0 14px; }
         .search-bar { 
             flex: 1; 
-            background: rgba(255,255,255,0.8); 
+            background: var(--surface); 
             border: 1px solid rgba(255,255,255,0.9);
             border-radius: 14px; 
             padding: 12px 16px; display: flex; align-items: center; gap: 10px;
@@ -69,14 +69,14 @@
             font-family: inherit; font-weight: 600; font-size: 0.85rem; 
             color: var(--text-primary); outline: none;
         }
-        .search-bar input::placeholder { color: var(--text-sub); }
+        .search-bar input::placeholder { color: var(--text-secondary); }
 
         .course-grid { padding: 0 14px; display: grid; gap: 12px; }
         .course-grid.grid-layout { grid-template-columns: 1fr 1fr; }
         .course-grid.list-layout { grid-template-columns: 1fr; }
 
         .course-card {
-            background: rgba(255,255,255,0.7);
+            background: var(--surface);
             border: 1.5px solid rgba(255,255,255,0.8);
             border-radius: 20px; padding: 16px; position: relative;
             box-shadow: 0 2px 12px rgba(0,0,0,0.02);
@@ -94,7 +94,7 @@
             cursor: pointer;
         }
         .course-name { 
-            font-weight: 800; font-size: 0.88rem; color: var(--text-dark); 
+            font-weight: 800; font-size: 0.88rem; color: var(--text-primary); 
             flex: 1; line-height: 1.2;
         }
 
@@ -118,7 +118,7 @@
             font-size: 0.9rem;
             transition: all 0.3s ease;
         }
-        .qty-input:focus { border-color: var(--brand); background: white; outline: none; }
+        .qty-input:focus { border-color: var(--brand); background: var(--surface-solid); outline: none; }
         .qty-input.error { border-color: var(--danger); }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
@@ -127,7 +127,7 @@
             position: fixed; bottom: 100px;
             left: 50%; transform: translateX(-50%);
             width: calc(100% - 28px); max-width: 430px;
-            background: rgba(255,255,255,0.95);
+            background: var(--surface-solid);
             backdrop-filter: blur(24px);
             -webkit-backdrop-filter: blur(24px);
             padding: 1.25rem 1.5rem; 
@@ -193,8 +193,8 @@
 
         <div style="padding: 0 14px; margin-bottom: 12px;">
             <div class="search-bar" style="background:rgba(255,255,255,0.8);border:1px solid rgba(255,255,255,0.9);border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:10px;">
-                <i class="fas fa-search" style="color: var(--text-sub); font-size: 0.85rem;"></i>
-                <input type="text" id="courseSearch" placeholder="Search courses..." onkeyup="doSearch()" style="border:none;background:transparent;width:100%;font-family:inherit;font-weight:600;font-size:0.85rem;color:var(--text-dark);outline:none;">
+                <i class="fas fa-search" style="color: var(--text-secondary); font-size: 0.85rem;"></i>
+                <input type="text" id="courseSearch" placeholder="Search courses..." onkeyup="doSearch()" style="border:none;background:transparent;width:100%;font-family:inherit;font-weight:600;font-size:0.85rem;color:var(--text-primary);outline:none;">
             </div>
         </div>
 

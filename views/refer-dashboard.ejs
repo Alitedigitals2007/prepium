@@ -3,7 +3,7 @@
 <head>
     <%- include('partials/head') %>
     <style>
-        :root { --dash-bg: #f0f2f8; }
+        :root { --dash-bg: var(--bg); }
         body { background: var(--dash-bg); font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; }
         body::before { display: none; }
         .app-shell { max-width: 500px; margin: 0 auto; background: transparent; backdrop-filter: none; border: none; padding: 1.25rem 1.25rem 6rem; }
@@ -11,7 +11,7 @@
 
         .dash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
         .dash-header h1 { font-size: 1.4rem; font-weight: 800; margin: 0; }
-        .back-btn { color: var(--text-sub); text-decoration: none; font-size: 1.2rem; }
+        .back-btn { color: var(--text-secondary); text-decoration: none; font-size: 1.2rem; }
 
         .code-banner {
             background: linear-gradient(135deg,#0f172a,#1e1b4b); color: white; border-radius: 20px;
@@ -22,30 +22,30 @@
 
         .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 1.25rem; }
         .stat-card {
-            background: white; border-radius: 18px; padding: 16px; border: 1px solid rgba(226,232,240,0.5);
+            background: var(--surface-solid); border-radius: 18px; padding: 16px; border: 1px solid var(--border);
             box-shadow: 0 2px 12px rgba(0,0,0,0.04);
         }
-        .stat-card .stat-label { font-size: 0.6rem; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-card .stat-label { font-size: 0.6rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
         .stat-card .stat-value { font-size: 1.5rem; font-weight: 800; margin-top: 4px; }
         .stat-card .stat-value.green { color: #10b981; }
         .stat-card .stat-value.brand { color: var(--brand); }
         .stat-card .stat-value.amber { color: #f59e0b; }
 
-        .section-title { font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-sub); margin: 1.25rem 0 0.75rem; }
+        .section-title { font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin: 1.25rem 0 0.75rem; }
 
         .withdraw-card {
-            background: white; border-radius: 18px; padding: 1.25rem; border: 1px solid rgba(226,232,240,0.5);
+            background: var(--surface-solid); border-radius: 18px; padding: 1.25rem; border: 1px solid var(--border);
             box-shadow: 0 2px 12px rgba(0,0,0,0.04); margin-bottom: 1.25rem;
         }
         .withdraw-card h3 { font-size: 0.95rem; font-weight: 800; margin: 0 0 4px; }
-        .withdraw-card .sub { font-size: 0.7rem; color: var(--text-sub); font-weight: 600; margin-bottom: 1rem; }
+        .withdraw-card .sub { font-size: 0.7rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 1rem; }
 
         .form-row { display: flex; gap: 8px; margin-bottom: 10px; }
         .form-input {
             flex: 1; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--border-solid);
-            font-family: inherit; font-size: 0.85rem; font-weight: 600; background: #f8fafc; outline: none; box-sizing: border-box;
+            font-family: inherit; font-size: 0.85rem; font-weight: 600; background: var(--surface); outline: none; box-sizing: border-box;
         }
-        .form-input:focus { border-color: var(--brand); background: white; }
+        .form-input:focus { border-color: var(--brand); background: var(--surface-solid); }
 
         .btn-primary {
             width: 100%; padding: 13px; border-radius: 12px; border: none;
@@ -55,25 +55,25 @@
         .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-secondary {
             width: 100%; padding: 11px; border-radius: 12px; border: 1.5px solid var(--border-solid);
-            background: white; color: var(--text-primary); font-weight: 700; font-size: 0.82rem; cursor: pointer; text-align: center; display: block;
+            background: var(--surface-solid); color: var(--text-primary); font-weight: 700; font-size: 0.82rem; cursor: pointer; text-align: center; display: block;
         }
 
-        .table-wrap { background: white; border-radius: 18px; overflow: hidden; border: 1px solid rgba(226,232,240,0.5); margin-bottom: 1.25rem; }
+        .table-wrap { background: var(--surface-solid); border-radius: 18px; overflow: hidden; border: 1px solid var(--border); margin-bottom: 1.25rem; }
         table { width: 100%; border-collapse: collapse; }
-        th { background: #f8fafc; padding: 0.8rem 1rem; font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; text-align: left; }
+        th { background: var(--surface); padding: 0.8rem 1rem; font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; text-align: left; }
         td { padding: 0.8rem 1rem; border-top: 1px solid var(--bg); font-size: 0.82rem; font-weight: 600; }
         .badge { font-size: 0.6rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; }
-        .badge.active { background: #dcfce7; color: #15803d; }
-        .badge.pending { background: #fef3c7; color: #b45309; }
+        .badge.active { background: var(--success-soft); color: var(--success); }
+        .badge.pending { background: var(--warning-soft); color: var(--warning); }
         .badge.inactive { background: var(--bg); color: var(--text-secondary); }
 
-        .empty-state { text-align: center; padding: 2rem; color: var(--text-sub); }
+        .empty-state { text-align: center; padding: 2rem; color: var(--text-secondary); }
         .empty-state i { font-size: 2rem; color: #cbd5e1; display: block; margin-bottom: 0.8rem; }
         .empty-state p { font-size: 0.8rem; margin: 0; }
 
         .bottom-spacer { height: 20px; }
-    <%- include('partials/theme-toggle') %>
     </style>
+    <%- include('partials/theme-toggle') %>
 </head>
 <body>
 <div class="app-shell">
@@ -120,7 +120,7 @@
             <div class="form-row">
                 <input type="text" class="form-input" id="bankDetails" placeholder="Bank | Account No | Name" value="<%= referral ? referral.bank_details : '' %>" required>
             </div>
-            <p style="font-size:0.68rem;color:var(--text-sub);font-weight:600;margin:8px 0;">
+            <p style="font-size:0.68rem;color:var(--text-secondary);font-weight:600;margin:8px 0;">
                 Fee: 10% | Net: â‚¦<span id="netAmount">0</span>
             </p>
             <button type="submit" class="btn-primary" id="withdrawBtn">Withdraw Now</button>
@@ -136,7 +136,7 @@
                 <% if (referrals && referrals.length > 0) { %>
                     <% referrals.forEach(function(r) { %>
                     <tr>
-                        <td><%= r.fullname %><br><small style="font-weight:400;color:var(--text-sub);font-size:0.7rem;"><%= r.email %></small></td>
+                        <td><%= r.fullname %><br><small style="font-weight:400;color:var(--text-secondary);font-size:0.7rem;"><%= r.email %></small></td>
                         <td><span class="badge <%= r.has_paid ? 'active' : 'inactive' %>"><%= r.has_paid ? 'Active' : 'Pending' %></span></td>
                         <td style="font-size:0.7rem;"><%= new Date(r.created_at).toLocaleDateString('en-GB', {day:'numeric',month:'short'}) %></td>
                     </tr>

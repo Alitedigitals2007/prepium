@@ -6,17 +6,8 @@
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
-            --brand: #2563eb;
-            --brand-light: rgba(37, 99, 235, 0.08);
-            --brand-glow: rgba(37, 99, 235, 0.25);
             --sidebar-bg: #0b1437;
             --sidebar-width: 260px;
-            --bg: #f0f4ff;
-            --text: #1b2559;
-            --text-muted: #707eae;
-            --border: rgba(224, 229, 242, 0.7);
-            --card-bg: rgba(255, 255, 255, 0.6);
-            --card-border: rgba(255, 255, 255, 0.45);
             --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
         }
 
@@ -161,7 +152,7 @@
 
         /* ===================== HEADER ===================== */
         .header {
-            background: rgba(255, 255, 255, 0.7);
+            background: var(--surface);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             padding: 18px 40px;
@@ -288,7 +279,7 @@
             font-family: 'Plus Jakarta Sans', sans-serif;
             font-weight: 600;
             font-size: 0.92rem;
-            background: rgba(255, 255, 255, 0.6);
+            background: var(--surface);
             color: var(--text);
             transition: border-color 0.2s, box-shadow 0.2s;
             outline: none;
@@ -345,7 +336,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 18px 22px;
-            background: rgba(255, 255, 255, 0.5);
+            background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 16px;
             margin-bottom: 12px;

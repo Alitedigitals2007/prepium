@@ -14,40 +14,40 @@
         .hero-card .meta-row i { margin-right: 4px; }
 
         .quick-actions { display: flex; gap: 8px; padding: 0 1.5rem 1rem; }
-        .q-btn { flex: 1; padding: 12px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 0.72rem; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: var(--transition); background: var(--surface-solid); border: 1px solid var(--border); color: var(--text-dark); }
+        .q-btn { flex: 1; padding: 12px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 0.72rem; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: var(--transition); background: var(--surface-solid); border: 1px solid var(--border); color: var(--text-primary); }
         .q-btn i { font-size: 1rem; color: var(--brand); }
         .q-btn:active { transform: scale(0.95); }
         .q-btn.primary { background: var(--brand-gradient); color: white; border: none; }
         .q-btn.primary i { color: white; }
         .q-btn.primary:hover { box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35); }
 
-        .section-label { font-size: 0.62rem; font-weight: 800; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; padding: 0.5rem 1.5rem 0.5rem; display: flex; justify-content: space-between; align-items: center; }
+        .section-label { font-size: 0.62rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; padding: 0.5rem 1.5rem 0.5rem; display: flex; justify-content: space-between; align-items: center; }
         .section-label .action-link { font-size: 0.68rem; text-transform: none; letter-spacing: 0; color: var(--brand); cursor: pointer; font-weight: 700; background: none; border: none; font-family: inherit; }
 
         .topic-item { margin: 0 1.5rem 8px; background: var(--surface-solid); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; transition: var(--transition); }
         .topic-header { display: flex; align-items: center; gap: 10px; padding: 14px 14px; cursor: pointer; }
-        .topic-header:active { background: #fafbfc; }
+        .topic-header:active { background: var(--surface); }
         .topic-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--brand); flex-shrink: 0; }
         .topic-dot.completed { background: var(--success); }
         .topic-name { flex: 1; font-weight: 700; font-size: 0.82rem; }
         .topic-actions { display: flex; gap: 4px; }
-        .topic-actions button { width: 32px; height: 32px; border-radius: 8px; border: none; background: transparent; cursor: pointer; color: var(--text-sub); font-size: 0.75rem; transition: var(--transition); display: flex; align-items: center; justify-content: center; }
+        .topic-actions button { width: 32px; height: 32px; border-radius: 8px; border: none; background: transparent; cursor: pointer; color: var(--text-secondary); font-size: 0.75rem; transition: var(--transition); display: flex; align-items: center; justify-content: center; }
         .topic-actions button:hover { background: var(--bg); }
-        .topic-actions .del-btn:hover { color: var(--danger); background: #fef2f2; }
+        .topic-actions .del-btn:hover { color: var(--danger); background: var(--danger-soft); }
 
         .subtopic-list { padding: 0 14px 12px; display: none; }
         .subtopic-list.open { display: block; }
         .subtopic-chip { display: flex; align-items: center; gap: 8px; padding: 10px; margin-bottom: 4px; background: var(--bg); border-radius: 8px; border: 1px solid var(--border); font-size: 0.75rem; font-weight: 600; }
         .subtopic-chip .chip-actions { margin-left: auto; display: flex; gap: 4px; }
-        .subtopic-chip .chip-actions button { width: 28px; height: 28px; border-radius: 6px; border: none; background: transparent; cursor: pointer; font-size: 0.7rem; color: var(--text-sub); }
+        .subtopic-chip .chip-actions button { width: 28px; height: 28px; border-radius: 6px; border: none; background: transparent; cursor: pointer; font-size: 0.7rem; color: var(--text-secondary); }
         .subtopic-chip .chip-actions button:hover { background: var(--bg); }
         .subtopic-chip .chip-actions .accept-btn:hover { color: var(--success); }
         .subtopic-chip .chip-actions .edit-btn:hover { color: var(--brand); }
         .subtopic-chip .chip-actions .reject-btn:hover { color: var(--danger); }
         .subtopic-chip .status-badge { font-size: 0.6rem; padding: 2px 8px; border-radius: 4px; font-weight: 700; }
-        .status-badge.accepted { background: #d1fae5; color: #065f46; }
-        .status-badge.pending { background: #fef3c7; color: #92400e; }
-        .status-badge.ai-generated { background: #dbeafe; color: #1e40af; }
+        .status-badge.accepted { background: var(--success-soft); color: var(--success); }
+        .status-badge.pending { background: var(--warning-soft); color: var(--warning); }
+        .status-badge.ai-generated { background: var(--brand-soft); color: var(--brand); }
 
         .add-topic-row { display: flex; gap: 8px; margin: 0 1.5rem 12px; }
         .add-topic-row input { flex: 1; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: inherit; font-size: 0.82rem; font-weight: 600; outline: none; transition: var(--transition); }
@@ -55,7 +55,7 @@
         .add-topic-row button { padding: 12px 18px; border-radius: var(--radius-sm); border: none; background: var(--brand-gradient); color: white; font-weight: 700; font-size: 0.75rem; cursor: pointer; white-space: nowrap; }
 
         .generate-section { margin: 0 1.5rem 12px; }
-        .gen-btn { width: 100%; padding: 12px; border-radius: var(--radius-sm); border: 1.5px dashed var(--border); background: transparent; font-family: inherit; font-weight: 700; font-size: 0.78rem; color: var(--text-sub); cursor: pointer; transition: var(--transition); display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .gen-btn { width: 100%; padding: 12px; border-radius: var(--radius-sm); border: 1.5px dashed var(--border); background: transparent; font-family: inherit; font-weight: 700; font-size: 0.78rem; color: var(--text-secondary); cursor: pointer; transition: var(--transition); display: flex; align-items: center; justify-content: center; gap: 8px; }
         .gen-btn:hover { border-color: var(--brand); color: var(--brand); }
         .gen-btn i { color: var(--brand); }
 
@@ -116,7 +116,7 @@
                                 <% var sttl = (t.subtopics || []).length; var sdon = (t.subtopics || []).filter(function(st){ return st.status === 'completed'; }).length; %>
                                 <div style="width:<%= sttl > 0 ? Math.round(sdon / sttl * 100) : 0 %>%;height:100%;background:linear-gradient(90deg,#3b82f6,#8b5cf6);border-radius:2px"></div>
                             </div>
-                            <span style="font-size:0.55rem;font-weight:700;color:var(--text-sub)"><%= sdon %>/<%= sttl %></span>
+                            <span style="font-size:0.55rem;font-weight:700;color:var(--text-secondary)"><%= sdon %>/<%= sttl %></span>
                         </div>
                     </div>
                     <div class="topic-actions">
@@ -314,7 +314,7 @@ function aiFmt(text) {
     var s = aiEscape(text).replace(/\n/g, '<br>');
     s = s.replace(/(^|\s)(\*\*|__)([^\n]+?)\2(?=\s|$|[.,;:!?])/g, '$1<strong>$3</strong>');
     s = s.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
-    s = s.replace(/`([^`\n]+)`/g, '<code style="background:#eef2ff;padding:1px 5px;border-radius:4px;font-size:0.78rem">$1</code>');
+    s = s.replace(/`([^`\n]+)`/g, '<code style="background:var(--brand-soft);padding:1px 5px;border-radius:4px;font-size:0.78rem">$1</code>');
     s = s.replace(/(^|\n)(\d+)\.\s+([^<][^\n]+)/g, '$1<div style="display:flex;gap:8px;margin:4px 0"><span style="font-weight:800;color:var(--brand);min-width:18px">$2.</span><span>$3</span></div>');
     s = s.replace(/(^|\n)[-*]\s+([^<][^\n]+)/g, '$1<div style="display:flex;gap:8px;margin:4px 0"><span style="color:var(--brand)">&bull;</span><span>$2</span></div>');
     return s;
@@ -388,13 +388,13 @@ function openAIClass() {
                         );
                     } else {
                         aiAppend(box,
-                            '<strong style="color:#dc2626">Error:</strong> ' + aiEscape((d && d.error) ? d.error : 'No response. Try again.')
+                            '<strong style="color:var(--danger)">Error:</strong> ' + aiEscape((d && d.error) ? d.error : 'No response. Try again.')
                         );
                     }
                 })
                 .catch(function(err) {
                     pending.style.display = 'none';
-                    aiAppend(box, '<strong style="color:#dc2626">Network error:</strong> ' + aiEscape(err.message || 'request failed'));
+                    aiAppend(box, '<strong style="color:var(--danger)">Network error:</strong> ' + aiEscape(err.message || 'request failed'));
                 });
             }
 

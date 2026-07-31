@@ -3,14 +3,6 @@
 <head>
     <%- include('partials/head') %>
     <style>
-        :root {
-            --bg-light: #f4f7fa;
-        }
-
-        body {
-            background-color: var(--bg-light);
-        }
-
         .app-container {
             width: 100%;
             max-width: 430px;
@@ -19,13 +11,12 @@
             display: flex;
             flex-direction: column;
             position: relative;
-            box-shadow: 0 0 40px rgba(0,0,0,0.03);
+            box-shadow: var(--shadow-sm);
             overflow-x: hidden;
             padding-bottom: 140px;
             padding-top: 60px;
         }
 
-        /* Nav Bar */
         .nav-bar {
             position: fixed;
             top: 0;
@@ -49,7 +40,7 @@
             align-items: center;
             gap: 10px;
             text-decoration: none;
-            color: var(--text-dark);
+            color: var(--text-primary);
             font-weight: 800;
             font-size: 1.15rem;
         }
@@ -67,8 +58,8 @@
         }
 
         .nav-menu-btn {
-            background: var(--bg-light);
-            border: none;
+            background: var(--surface-solid);
+            border: 1px solid var(--border);
             width: 40px;
             height: 40px;
             border-radius: 12px;
@@ -77,13 +68,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            color: var(--text-secondary);
         }
 
-        /* Floating Menu */
         .mobile-menu {
             display: none;
             flex-direction: column;
-            background: white;
+            background: var(--surface-solid);
             border-bottom: 1px solid var(--border);
             padding: 0.8rem 1.5rem;
             gap: 6px;
@@ -99,7 +90,6 @@
             border-radius: 14px;
         }
 
-        /* Hero */
         .hero {
             padding: 3rem 1.5rem 2.2rem;
             background: linear-gradient(180deg, var(--brand-soft) 0%, var(--surface-solid) 100%);
@@ -110,22 +100,21 @@
 
         .hero-badge {
             display: inline-flex;
-            background: white;
+            background: var(--surface-solid);
             padding: 6px 14px;
             border-radius: 30px;
             font-size: 0.72rem;
             font-weight: 800;
             color: var(--brand);
-            box-shadow: 0 4px 14px rgba(0,0,0,0.03);
+            box-shadow: var(--shadow-sm);
             margin-bottom: 1.2rem;
             text-transform: uppercase;
             border: 1px solid var(--brand-light);
         }
 
         h1 { font-size: 2.5rem; font-weight: 800; margin: 0; letter-spacing: -1.2px; color: var(--brand); }
-        .tagline { color: var(--text-muted); font-size: 0.98rem; margin-top: 12px; font-weight: 600; }
+        .tagline { color: var(--text-secondary); font-size: 0.98rem; margin-top: 12px; font-weight: 600; }
 
-        /* Smooth Moving University Carousel Container */
         .carousel-wrapper {
             position: relative;
             width: 100%;
@@ -134,7 +123,6 @@
             background: linear-gradient(90deg, transparent 0%, var(--brand-light) 50%, transparent 100%);
         }
         
-        /* Left and Right blur shadows for modern depth layout */
         .carousel-wrapper::before, .carousel-wrapper::after {
             content: "";
             position: absolute;
@@ -162,7 +150,7 @@
             display: flex; 
             align-items: center; 
             gap: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.01);
+            box-shadow: var(--shadow-sm);
         }
         .partner-card img { 
             width: 32px; 
@@ -172,7 +160,7 @@
         .partner-name { 
             font-size: 0.72rem; 
             font-weight: 800; 
-            color: var(--text-dark); 
+            color: var(--text-primary); 
             letter-spacing: 0.3px;
         }
 
@@ -187,7 +175,6 @@
             gap: 16px;
         }
 
-        /* Testimonials */
         .testimonials-container { padding: 0.5rem 0 1rem; overflow: hidden; }
         .testimonial-track {
             display: flex;
@@ -200,7 +187,7 @@
         .testimonial-track::-webkit-scrollbar { display: none; }
         .t-card {
             min-width: 280px;
-            background: white;
+            background: var(--surface-solid);
             padding: 1.5rem;
             border-radius: 24px;
             border: 1px solid var(--border);
@@ -208,19 +195,18 @@
         }
         .t-user { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
         .t-avatar { width: 36px; height: 36px; background: var(--brand-soft); color: var(--brand); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; }
-        .t-name { font-size: 0.85rem; font-weight: 800; }
-        .t-text { font-size: 0.85rem; color: var(--text-dark); line-height: 1.5; font-style: italic; }
+        .t-name { font-size: 0.85rem; font-weight: 800; color: var(--text-primary); }
+        .t-text { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; font-style: italic; }
 
-        /* FAQ */
         .faq-list { padding: 0.4rem 1.5rem; display: flex; flex-direction: column; gap: 10px; }
         .faq-item { border: 1px solid var(--border); border-radius: 18px; background: var(--surface); }
-        .faq-question { padding: 1.2rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: 700; font-size: 0.88rem; }
+        .faq-question { padding: 1.2rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: 700; font-size: 0.88rem; color: var(--text-primary); }
         .faq-answer { max-height: 0; overflow: hidden; padding: 0 1.2rem; color: var(--text-muted); font-size: 0.82rem; transition: 0.3s ease; }
         .faq-item.active .faq-answer { padding-bottom: 1.2rem; max-height: 150px; }
 
         .actions {
             padding: 1.25rem 1.5rem;
-            background: rgba(255, 255, 255, 0.9);
+            background: var(--surface);
             backdrop-filter: blur(20px);
             position: fixed;
             bottom: 0;
@@ -230,7 +216,6 @@
             z-index: 1000;
         }
         
-        /* Custom Keyframe for smooth infinite loops */
         @keyframes scrollMarquee {
             0% { transform: translateX(0); }
             100% { transform: translateX(calc(-50% - 8px)); }

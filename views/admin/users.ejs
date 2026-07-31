@@ -4,30 +4,19 @@
     <%- include('partials/head') %>
     <style>
         :root {
-            --brand: #2563eb;
-            --brand-light: rgba(0, 98, 255, 0.1);
             --brand-glow: rgba(0, 98, 255, 0.25);
             --sidebar: #0b1437;
             --sidebar-hover: rgba(255, 255, 255, 0.06);
             --sidebar-active: rgba(0, 98, 255, 0.18);
-            --bg: #f0f4f8;
-            --card-bg: rgba(255, 255, 255, 0.72);
-            --card-border: rgba(255, 255, 255, 0.5);
-            --text-primary: #0f172a;
-            --text-secondary: #64748b;
-            --text-muted: #94a3b8;
-            --border: rgba(226, 232, 240, 0.6);
-            --border-solid: #e2e8f0;
             --green: #10b981;
             --green-bg: rgba(16, 185, 129, 0.1);
             --amber: #f59e0b;
             --amber-bg: rgba(245, 158, 11, 0.1);
-            --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.04);
-            --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.06);
-            --shadow-lg: 0 8px 32px rgba(15, 23, 42, 0.08);
             --shadow-glass: 0 8px 32px rgba(15, 23, 42, 0.07), inset 0 1px 0 rgba(255,255,255,0.6);
-            --radius: 20px;
-            --radius-sm: 14px;
+        }
+
+        [data-theme="dark"] {
+            --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255,255,255,0.05);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }

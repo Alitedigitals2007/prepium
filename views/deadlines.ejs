@@ -4,8 +4,8 @@
     <%- include('partials/head') %>
     <style>
         :root {
-            --dash-bg: #f0f2f8;
-            --card-bg: rgba(255,255,255,0.85);
+            --dash-bg: var(--bg);
+            --card-bg: var(--surface);
         }
         body { background: var(--dash-bg); }
         body::before { display: none; }
@@ -13,24 +13,24 @@
 
         .page-header { padding: 1.25rem 1.25rem 0.5rem; display: flex; align-items: center; justify-content: space-between; }
         .page-header h1 { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.5px; margin: 0; }
-        .page-header p { font-size: 0.7rem; color: var(--text-sub); font-weight: 600; margin: 2px 0 0; }
+        .page-header p { font-size: 0.7rem; color: var(--text-secondary); font-weight: 600; margin: 2px 0 0; }
 
-        .add-card { margin: 1rem 1.25rem; background: white; border-radius: 20px; padding: 18px; border: 1px solid rgba(226,232,240,0.5); box-shadow: var(--shadow-sm, 0 2px 12px rgba(0,0,0,0.04)); }
+        .add-card { margin: 1rem 1.25rem; background: var(--surface-solid); border-radius: 20px; padding: 18px; border: 1px solid var(--border); box-shadow: var(--shadow-sm, 0 2px 12px rgba(0,0,0,0.04)); }
         .add-card h2 { font-size: 0.95rem; font-weight: 800; margin: 0 0 4px; }
-        .add-card .sub { font-size: 0.7rem; color: var(--text-sub); font-weight: 600; margin-bottom: 14px; }
+        .add-card .sub { font-size: 0.7rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 14px; }
 
         .form-row { display: flex; gap: 8px; margin-bottom: 10px; }
         .form-input {
             flex: 1; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--border-solid);
-            font-family: inherit; font-size: 0.85rem; font-weight: 600; background: #f8fafc; outline: none;
+            font-family: inherit; font-size: 0.85rem; font-weight: 600; background: var(--surface); outline: none;
         }
-        .form-input:focus { border-color: var(--brand); background: white; }
+        .form-input:focus { border-color: var(--brand); background: var(--surface-solid); }
 
         .btn-primary { width: 100%; padding: 13px; border-radius: 12px; border: none; background: var(--brand-gradient, linear-gradient(135deg,var(--brand),#1d4ed8)); color: white; font-weight: 800; font-size: 0.85rem; cursor: pointer; box-shadow: 0 4px 14px rgba(37,99,235,0.25); }
 
         .deadline-list { padding: 0 1.25rem; display: flex; flex-direction: column; gap: 10px; }
         .deadline-card {
-            background: white; border-radius: 18px; padding: 14px; border: 1.5px solid var(--border-solid);
+            background: var(--surface-solid); border-radius: 18px; padding: 14px; border: 1.5px solid var(--border-solid);
             display: flex; align-items: center; gap: 14px; box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.04));
         }
         .deadline-card.urgent { border-left: 4px solid var(--danger); }
@@ -44,33 +44,33 @@
         }
         .date-block .month { font-size: 0.65rem; font-weight: 800; color: var(--brand); text-transform: uppercase; }
         .date-block .day { font-size: 1.3rem; font-weight: 800; color: var(--text-primary); line-height: 1.1; }
-        .date-block .time { font-size: 0.55rem; font-weight: 700; color: var(--text-sub); margin-top: 4px; }
+        .date-block .time { font-size: 0.55rem; font-weight: 700; color: var(--text-secondary); margin-top: 4px; }
 
         .deadline-body { flex: 1; min-width: 0; }
         .deadline-title { font-weight: 800; font-size: 0.9rem; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .deadline-meta { display: flex; align-items: center; gap: 8px; margin-top: 3px; }
-        .deadline-meta small { font-size: 0.65rem; color: var(--text-sub); font-weight: 600; }
+        .deadline-meta small { font-size: 0.65rem; color: var(--text-secondary); font-weight: 600; }
         .status-pill { font-size: 0.58rem; font-weight: 800; padding: 3px 8px; border-radius: 8px; text-transform: uppercase; letter-spacing: 0.3px; }
-        .status-pill.urgent { background: #fee2e2; color: #b91c1c; }
-        .status-pill.upcoming { background: #fef3c7; color: #b45309; }
-        .status-pill.future { background: #dcfce7; color: #15803d; }
+        .status-pill.urgent { background: var(--danger-soft); color: var(--danger); }
+        .status-pill.upcoming { background: var(--warning-soft); color: var(--warning); }
+        .status-pill.future { background: var(--success-soft); color: var(--success); }
         .status-pill.expired { background: var(--bg); color: var(--text-secondary); }
 
         .del-btn {
-            background: transparent; border: none; color: #ef4444; cursor: pointer; padding: 8px;
+            background: transparent; border: none; color: var(--danger); cursor: pointer; padding: 8px;
             border-radius: 10px; font-size: 0.85rem;
         }
-        .del-btn:hover { background: #fee2e2; }
+        .del-btn:hover { background: var(--danger-soft); }
 
         .countdown { font-size: 0.6rem; font-weight: 800; display: flex; align-items: center; gap: 4px; margin-top: 4px; }
         .countdown .cd-num { background: var(--bg); padding: 2px 6px; border-radius: 4px; font-variant-numeric: tabular-nums; color: var(--text-primary); }
         .countdown .cd-lbl { font-size: 0.5rem; color: var(--text-muted); text-transform: uppercase; margin-right: 2px; }
         .countdown .cd-sep { color: #cbd5e1; font-weight: 300; }
-        .countdown.urgent .cd-num { background: #fee2e2; color: #b91c1c; }
+        .countdown.urgent .cd-num { background: var(--danger-soft); color: var(--danger); }
         .countdown.expired { color: var(--text-muted); }
 
         .empty-state {
-            text-align: center; padding: 3rem 1.5rem; color: var(--text-sub);
+            text-align: center; padding: 3rem 1.5rem; color: var(--text-secondary);
         }
         .empty-state i { font-size: 2.5rem; color: #cbd5e1; display: block; margin-bottom: 1rem; }
         .empty-state h3 { font-size: 1rem; font-weight: 800; margin: 0 0 4px; color: var(--text-primary); }
@@ -80,10 +80,10 @@
             margin: 0 1.25rem 1rem; padding: 12px 16px; border-radius: 14px;
             font-size: 0.78rem; font-weight: 700; text-align: center;
         }
-        .message.error { background: #fee2e2; color: #b91c1c; }
-        .msg-success { background: #dcfce7; color: #15803d; }
-    <%- include('partials/theme-toggle') %>
+        .message.error { background: var(--danger-soft); color: var(--danger); }
+        .msg-success { background: var(--success-soft); color: var(--success); }
 </style>
+    <%- include('partials/theme-toggle') %>
 </head>
 <body>
 <%- include('partials/sidebar') %>

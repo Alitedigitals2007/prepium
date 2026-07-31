@@ -7,9 +7,9 @@
         .page-content { padding: 0 1.5rem 1.5rem; }
 
         .quiz-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; }
-        .quiz-header .q-counter { font-size: 0.72rem; font-weight: 700; color: var(--text-sub); }
+        .quiz-header .q-counter { font-size: 0.72rem; font-weight: 700; color: var(--text-secondary); }
         .quiz-header .q-counter span { color: var(--brand); font-size: 1rem; }
-        .quiz-timer { font-weight: 800; font-size: 1rem; color: var(--text-dark); display: flex; align-items: center; gap: 6px; }
+        .quiz-timer { font-weight: 800; font-size: 1rem; color: var(--text-primary); display: flex; align-items: center; gap: 6px; }
 
         .question-card { background: var(--surface-solid); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1rem; box-shadow: var(--shadow-sm); }
         .question-card .q-num { font-size: 0.65rem; font-weight: 800; color: var(--brand); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
@@ -21,8 +21,8 @@
         .q-option.selected { border-color: var(--brand); background: var(--brand-soft); }
         .q-option .radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: var(--transition); }
         .q-option.selected .radio { border-color: var(--brand); background: var(--brand); }
-        .q-option.selected .radio::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: white; }
-        .q-option .q-letter { width: 20px; height: 20px; border-radius: 50%; background: var(--bg); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.7rem; color: var(--text-sub); flex-shrink: 0; }
+        .q-option.selected .radio::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--surface-solid); }
+        .q-option .q-letter { width: 20px; height: 20px; border-radius: 50%; background: var(--bg); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.7rem; color: var(--text-secondary); flex-shrink: 0; }
         .q-option.selected .q-letter { background: var(--brand); color: white; }
 
         .theory-input { width: 100%; padding: 14px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: inherit; font-size: 0.85rem; font-weight: 500; line-height: 1.5; resize: vertical; min-height: 100px; outline: none; }
@@ -30,7 +30,7 @@
 
         .q-nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 1rem; }
         .q-nav button { flex: 1; padding: 14px; border-radius: var(--radius-sm); border: none; font-family: inherit; font-weight: 700; font-size: 0.82rem; cursor: pointer; transition: var(--transition); }
-        .q-nav .prev-btn { background: var(--bg); color: var(--text-dark); }
+        .q-nav .prev-btn { background: var(--bg); color: var(--text-primary); }
         .q-nav .next-btn { background: var(--brand-gradient); color: white; }
         .q-nav .submit-btn { background: var(--success); color: white; }
         .q-nav button:active { transform: scale(0.97); }
@@ -40,7 +40,7 @@
         .result-card .score-circle { width: 120px; height: 120px; border-radius: 50%; margin: 0 auto 1rem; display: flex; align-items: center; justify-content: center; flex-direction: column; }
         .result-card .score-circle .score-num { font-size: 2.2rem; font-weight: 800; line-height: 1; }
         .result-card .score-circle .score-total { font-size: 0.85rem; font-weight: 600; opacity: 0.7; }
-        .result-card .score-label { font-size: 0.8rem; font-weight: 700; color: var(--text-sub); margin-bottom: 4px; }
+        .result-card .score-label { font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px; }
         .result-card .score-sub { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; }
 
         .review-item { background: var(--surface-solid); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 10px; }
@@ -48,7 +48,7 @@
         .review-item .r-answer { font-size: 0.78rem; font-weight: 600; }
         .review-item .r-answer.correct { color: var(--success); }
         .review-item .r-answer.wrong { color: var(--danger); }
-        .review-item .r-explain { font-size: 0.75rem; color: var(--text-sub); font-weight: 500; margin-top: 6px; padding: 10px; background: var(--bg); border-radius: 8px; }
+        .review-item .r-explain { font-size: 0.75rem; color: var(--text-secondary); font-weight: 500; margin-top: 6px; padding: 10px; background: var(--bg); border-radius: 8px; }
         .review-item .r-correct-ans { font-size: 0.75rem; font-weight: 700; color: var(--success); margin-top: 4px; }
 
         .hidden { display: none; }
@@ -121,7 +121,7 @@
             </div>
             <div style="display:flex;gap:8px;margin-bottom:1rem;">
                 <button style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--brand-gradient);color:white;font-weight:700;cursor:pointer;" onclick="location.href='/study'"><i class="fas fa-arrow-left"></i> Back to Study</button>
-                <button style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--bg);color:var(--text-dark);font-weight:700;cursor:pointer;" onclick="location.reload()"><i class="fas fa-redo"></i> Retry</button>
+                <button style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--bg);color:var(--text-primary);font-weight:700;cursor:pointer;" onclick="location.reload()"><i class="fas fa-redo"></i> Retry</button>
             </div>
             <div id="reviewContainer"></div>
         </div>
@@ -222,9 +222,9 @@ function submitQuiz() {
             document.getElementById('scoreTotal').textContent = '/' + d.total;
             var pct = Math.round((d.score / d.total) * 100);
             var circle = document.getElementById('scoreCircle');
-            if (pct >= 70) { circle.style.background = '#d1fae5'; circle.style.color = '#065f46'; document.getElementById('scoreLabel').textContent = 'Excellent!'; document.getElementById('scoreSub').textContent = 'You mastered this topic'; }
-            else if (pct >= 50) { circle.style.background = '#fef3c7'; circle.style.color = '#92400e'; document.getElementById('scoreLabel').textContent = 'Good effort!'; document.getElementById('scoreSub').textContent = 'Review the areas you missed'; }
-            else { circle.style.background = '#fee2e2'; circle.style.color = '#991b1b'; document.getElementById('scoreLabel').textContent = 'Keep practicing!'; document.getElementById('scoreSub').textContent = 'Review the material and try again'; }
+            if (pct >= 70) { circle.style.background = 'var(--success-soft)'; circle.style.color = '#065f46'; document.getElementById('scoreLabel').textContent = 'Excellent!'; document.getElementById('scoreSub').textContent = 'You mastered this topic'; }
+            else if (pct >= 50) { circle.style.background = 'var(--warning-soft)'; circle.style.color = '#92400e'; document.getElementById('scoreLabel').textContent = 'Good effort!'; document.getElementById('scoreSub').textContent = 'Review the areas you missed'; }
+            else { circle.style.background = 'var(--danger-soft)'; circle.style.color = '#991b1b'; document.getElementById('scoreLabel').textContent = 'Keep practicing!'; document.getElementById('scoreSub').textContent = 'Review the material and try again'; }
             loadResults();
         } else {
             Swal.fire({ icon: 'error', text: d.error });

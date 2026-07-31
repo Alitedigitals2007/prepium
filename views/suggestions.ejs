@@ -10,7 +10,7 @@
         /* Header */
         .chat-header {
             padding: 2.5rem 1.5rem 1.2rem;
-            background: white;
+            background: var(--surface-solid);
             border-bottom: 1px solid var(--border);
         }
         .chat-header h1 { font-size: 1.4rem; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
@@ -34,7 +34,7 @@
 
         .status-pill { font-size: 0.6rem; font-weight: 800; padding: 5px 10px; border-radius: 8px; text-transform: uppercase; }
         .status-pill.Open { background: var(--success-soft); color: var(--success); }
-        .status-pill.Closed { background: #f1f5f9; color: var(--text-sub); }
+        .status-pill.Closed { background: var(--surface); color: var(--text-sub); }
 
         /* Active Chat View */
         .chat-container { display: flex; flex-direction: column; height: 100%; }
@@ -49,7 +49,7 @@
 
         .bubble { max-width: 85%; padding: 14px 18px; border-radius: 20px; font-size: 0.88rem; font-weight: 600; line-height: 1.5; }
         .bubble.user { align-self: flex-end; background: var(--brand-gradient); color: white; border-bottom-right-radius: 4px; box-shadow: 0 4px 12px rgba(37,99,235,0.15); }
-        .bubble.admin { align-self: flex-start; background: white; border: 1px solid var(--border); color: var(--text-dark); border-bottom-left-radius: 4px; }
+        .bubble.admin { align-self: flex-start; background: var(--surface-solid); border: 1px solid var(--border); color: var(--text-dark); border-bottom-left-radius: 4px; }
         
         .time { font-size: 0.6rem; display: block; margin-top: 6px; opacity: 0.7; }
 

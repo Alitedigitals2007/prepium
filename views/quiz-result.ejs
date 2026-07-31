@@ -13,7 +13,7 @@
         .score-hero {
             margin: 1.25rem 1.5rem;
             padding: 32px 24px;
-            background: rgba(255,255,255,0.7);
+            background: var(--surface);
             border: 1px solid rgba(255,255,255,0.8);
             border-radius: 28px;
             text-align: center;
@@ -98,7 +98,7 @@
 
         .breakdown {
             margin: 0 1.5rem 1.5rem;
-            background: rgba(255,255,255,0.7);
+            background: var(--surface);
             border: 1px solid rgba(255,255,255,0.8);
             border-radius: 20px; overflow: hidden;
             box-shadow: 0 2px 12px rgba(0,0,0,0.02);
@@ -128,7 +128,7 @@
 
         .q-card {
             margin: 0 1.5rem 1rem;
-            background: rgba(255,255,255,0.7);
+            background: var(--surface);
             border: 1px solid rgba(255,255,255,0.8);
             border-radius: 20px;
             overflow: hidden;
@@ -164,7 +164,7 @@
             border: 1.5px solid var(--border);
             font-weight: 600; font-size: 0.85rem;
             display: flex; align-items: center; gap: 12px;
-            background: rgba(255,255,255,0.6);
+            background: var(--surface);
             transition: all 0.2s ease;
         }
         .opt-prefix {
@@ -196,7 +196,7 @@
         .sol-details {
             margin-top: 16px; border-radius: 14px;
             background: rgba(248,250,252,0.8);
-            border: 1px solid rgba(226,232,240,0.5);
+            border: 1px solid var(--border);
             overflow: hidden;
         }
         .sol-details summary {
@@ -254,7 +254,7 @@
                             <stop offset="100%" style="stop-color:#fbbf24"/>
                         </linearGradient>
                         <linearGradient id="dangerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#ef4444"/>
+                            <stop offset="0%" style="stop-color:var(--danger)"/>
                             <stop offset="100%" style="stop-color:#f87171"/>
                         </linearGradient>
                     </defs>

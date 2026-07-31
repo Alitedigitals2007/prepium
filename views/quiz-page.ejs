@@ -36,7 +36,7 @@
 
         /* Scientific Calculator Overlay */
         #calc-container { position: fixed; bottom: 90px; right: 20px; z-index: 2000; display: flex; flex-direction: column; align-items: flex-end; }
-        #calc-toggle { width: 56px; height: 56px; border-radius: 18px; background: var(--text); color: white; border: none; box-shadow: 0 8px 24px rgba(0,0,0,0.2); cursor: pointer; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; }
+        #calc-toggle { width: 56px; height: 56px; border-radius: 18px; background: var(--brand); color: white; border: none; box-shadow: 0 8px 24px rgba(0,0,0,0.2); cursor: pointer; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; }
         #calc-box { width: 300px; background: var(--surface-solid); border-radius: 28px; box-shadow: var(--shadow-xl); border: 1px solid var(--border-solid); padding: 15px; margin-bottom: 15px; display: none; transform-origin: bottom right; animation: popUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes popUp { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
         .calc-screen { width: 100%; background: var(--bg); border: 2px solid var(--border); padding: 12px; border-radius: 15px; text-align: right; font-size: 1.4rem; font-weight: 800; color: var(--text-primary); margin-bottom: 10px; outline: none; }
@@ -83,7 +83,7 @@
                 <button class="c-btn" onclick="press('7')">7</button>
                 <button class="c-btn" onclick="press('8')">8</button>
                 <button class="c-btn" onclick="press('9')">9</button>
-                <button class="c-btn op" onclick="press('/')">Ã·</button>
+                <button class="c-btn op" onclick="press('/')">÷</button>
                 
                 <button class="c-btn" onclick="press('4')">4</button>
                 <button class="c-btn" onclick="press('5')">5</button>
@@ -258,7 +258,7 @@
         function solve() {
             const d = document.getElementById('display');
             try {
-                let formula = d.value.replace(/Ã—/g, '*').replace(/Ã·/g, '/');
+                let formula = d.value.replace(/Ã—/g, '*').replace(/÷/g, '/');
                 let res = eval(formula);
                 d.value = Number.isInteger(res) ? res : parseFloat(res.toFixed(6));
             } catch(e) { d.value = "Error"; }

@@ -4,7 +4,7 @@
     <%- include('partials/head') %>
     <style>
         :root { 
-            --sub: #64748b; 
+            --sub: var(--text-secondary); 
         }
         
         .app-shell { 
@@ -14,7 +14,7 @@
 
         .header-main { 
             padding: 2.5rem 1.5rem 1.5rem;
-            background: linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%);
+            background: linear-gradient(180deg, var(--brand-soft) 0%, var(--surface-solid) 100%);
             border-bottom: 1px solid var(--bg);
         }
         .user-profile { display: flex; align-items: center; justify-content: space-between; }
@@ -51,8 +51,8 @@
             gap: 6px;
         }
         .btn-add { background: var(--brand); color: white; }
-        .btn-extract { background: #fef3c7; color: #d97706; }
-        .btn-print { background: #e0f2fe; color: var(--brand); }
+        .btn-extract { background: var(--warning-soft); color: var(--warning); }
+        .btn-print { background: var(--brand-soft); color: var(--brand); }
 
         /* Modal Overlay for inputting dynamic schedules */
         .modal-overlay {
@@ -65,7 +65,7 @@
             justify-content: center;
         }
         .modal-body {
-            background: white;
+            background: var(--surface-solid);
             width: 100%;
             max-width: 430px;
             border-top-left-radius: 32px;
@@ -91,7 +91,7 @@
         .day-label { font-size: 1rem; font-weight: 800; color: var(--text); margin-bottom: 12px; display: block; }
         
         .time-slot {
-            background: #ffffff;
+            background: var(--surface-solid)fff;
             border: 1px solid var(--bg);
             padding: 1.2rem;
             border-radius: 22px;
@@ -103,7 +103,7 @@
         }
         .slot-hour {
             font-size: 0.78rem; font-weight: 800; color: var(--brand);
-            background: #e0f2fe; padding: 6px 12px; border-radius: 12px; white-space: nowrap;
+            background: var(--brand-soft); padding: 6px 12px; border-radius: 12px; white-space: nowrap;
         }
         .slot-info { flex: 1; }
         .slot-info b { font-size: 0.92rem; font-weight: 800; color: var(--text); display: block; }
@@ -111,7 +111,7 @@
 
         /* Extracted Course Edit Cards */
         .extracted-card {
-            background: #f8fafc; border-radius: 16px; padding: 14px; margin-bottom: 10px;
+            background: var(--surface); border-radius: 16px; padding: 14px; margin-bottom: 10px;
             border: 1px solid var(--border-solid); position: relative; display: flex; gap: 10px; align-items: flex-start;
         }
         .extracted-fields { flex: 1; min-width: 0; }
@@ -120,12 +120,12 @@
         .ef-group label { font-size: 0.6rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
         .ef-input {
             width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-solid);
-            font-size: 0.78rem; font-family: inherit; font-weight: 600; background: white;
+            font-size: 0.78rem; font-family: inherit; font-weight: 600; background: var(--surface-solid);
             box-sizing: border-box; transition: border-color 0.2s;
         }
         .ef-input:focus { outline: none; border-color: var(--brand); }
         .ef-remove {
-            background: #fef2f2; border: 1px solid #fecaca; color: #ef4444;
+            background: var(--danger-soft); border: 1px solid #fecaca; color: var(--danger);
             width: 36px; height: 36px; border-radius: 10px; cursor: pointer;
             display: flex; align-items: center; justify-content: center; flex-shrink: 0;
             transition: 0.2s;
@@ -179,8 +179,8 @@
             color: white;
         }
         .time-slot.upcoming {
-            border-color: #fef3c7;
-            background: #fffbeb;
+            border-color: var(--warning-soft);
+            background: var(--surface-solid)beb;
         }
 
         /* PDF Preview & Printable Section Header */
@@ -190,8 +190,8 @@
         .pdf-brand-head h2 span { color: var(--brand); }
         .pdf-brand-head p { font-size: 0.8rem; font-weight: 600; color: var(--sub); margin: 4px 0 0; }
 
-    <%- include('partials/theme-toggle') %>
     </style>
+    <%- include('partials/theme-toggle') %>
 </head>
 <body>
 <%- include('partials/sidebar') %>
@@ -253,7 +253,7 @@
                                 </p>
                             </div>
                             <form action="/timetable/delete/<%= slot.id %>" method="POST" style="margin:0;" onsubmit="return confirm('Delete this slot?')">
-                                <button type="submit" style="background:none; border:none; color:#ef4444; font-size:1rem; cursor:pointer; padding:4px;"><i class="fas fa-trash"></i></button>
+                                <button type="submit" style="background:none; border:none; color:var(--danger); font-size:1rem; cursor:pointer; padding:4px;"><i class="fas fa-trash"></i></button>
                             </form>
                         </div>
                     <% }); %>
@@ -361,7 +361,7 @@
                         <span id="wizCourseTags" style="display:flex; gap:4px; flex-wrap:wrap;"></span>
                     </p>
 
-                    <div style="border:2px dashed var(--border-solid); border-radius:16px; padding:2rem; text-align:center; margin-bottom:1rem; background:#fafafa;" id="dropZone">
+                    <div style="border:2px dashed var(--border-solid); border-radius:16px; padding:2rem; text-align:center; margin-bottom:1rem; background:var(--surface);" id="dropZone">
                         <i class="fas fa-cloud-upload-alt" style="font-size:2rem; color:var(--text-muted); display:block; margin-bottom:0.5rem;"></i>
                         <p style="font-size:0.85rem; color:var(--text-secondary); margin:0;">Drop your timetable file here</p>
                         <p style="font-size:0.72rem; color:var(--text-muted); margin:4px 0 12px;">or click to browse (JPG, PNG, PDF, DOC)</p>
@@ -441,7 +441,7 @@
             document.getElementById('wizardStep1').style.display = 'block';
             document.getElementById('wizardStep2').style.display = 'none';
             document.getElementById('wizStep1Dot').style.background = 'var(--brand)';
-            document.getElementById('wizStep2Dot').style.background = '#e2e8f0';
+            document.getElementById('wizStep2Dot').style.background = 'var(--border)';
             extractedCourses = [];
             wizardCourses = [];
             renderWizardCourses();
@@ -479,12 +479,12 @@
                 nextBtn.disabled = true;
             } else {
                 list.innerHTML = wizardCourses.map((c, i) => `
-                    <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:#f8fafc; border-radius:12px; margin-bottom:6px; border:1px solid #f1f5f9;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:var(--surface); border-radius:12px; margin-bottom:6px; border:1px solid var(--border);">
                         <div>
                             <strong style="font-size:0.85rem;">${c.course_name}</strong>
                             <span style="font-size:0.72rem; color:var(--text-secondary); margin-left:6px;">${c.course_code} &middot; ${c.unit} Credits</span>
                         </div>
-                        <button onclick="removeWizardCourse(${i})" style="background:none; border:none; color:#ef4444; cursor:pointer; padding:4px 8px;"><i class="fas fa-times"></i></button>
+                        <button onclick="removeWizardCourse(${i})" style="background:none; border:none; color:var(--danger); cursor:pointer; padding:4px 8px;"><i class="fas fa-times"></i></button>
                     </div>
                 `).join('');
                 nextBtn.disabled = false;
@@ -506,7 +506,7 @@
             document.getElementById('wizStep2Dot').style.background = 'var(--brand)';
             document.getElementById('wizCourseCount').textContent = wizardCourses.length;
             document.getElementById('wizCourseTags').innerHTML = wizardCourses.map(c => 
-                `<span style="background:#e0f2fe; color:var(--brand); padding:2px 10px; border-radius:10px; font-size:0.65rem; font-weight:700;">${c.course_code || c.course_name}</span>`
+                `<span style="background:var(--brand-soft); color:var(--brand); padding:2px 10px; border-radius:10px; font-size:0.65rem; font-weight:700;">${c.course_code || c.course_name}</span>`
             ).join('');
         }
 
@@ -514,7 +514,7 @@
             document.getElementById('wizardStep1').style.display = 'block';
             document.getElementById('wizardStep2').style.display = 'none';
             document.getElementById('wizStep1Dot').style.background = 'var(--brand)';
-            document.getElementById('wizStep2Dot').style.background = '#e2e8f0';
+            document.getElementById('wizStep2Dot').style.background = 'var(--border)';
         }
 
         // Drag and drop support
@@ -524,16 +524,16 @@
                 dropZone.addEventListener('dragover', function(e) {
                     e.preventDefault();
                     this.style.borderColor = 'var(--brand)';
-                    this.style.background = '#f0f7ff';
+                    this.style.background = 'var(--brand-soft)';
                 });
                 dropZone.addEventListener('dragleave', function(e) {
                     e.preventDefault();
-                    this.style.borderColor = '#e2e8f0';
+                    this.style.borderColor = 'var(--border)';
                     this.style.background = '#fafafa';
                 });
                 dropZone.addEventListener('drop', function(e) {
                     e.preventDefault();
-                    this.style.borderColor = '#e2e8f0';
+                    this.style.borderColor = 'var(--border)';
                     this.style.background = '#fafafa';
                     if (e.dataTransfer.files.length > 0) {
                         uploadForExtraction(e.dataTransfer.files[0]);

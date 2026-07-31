@@ -4,13 +4,6 @@
     <%- include('partials/head') %>
     <style>
         :root {
-            --brand: #2563eb;
-            --brand-gradient: linear-gradient(135deg, #2563eb, #2563eb);
-            --bg: #f0f4f8;
-            --card: #ffffff;
-            --text: #0f172a;
-            --sub: #64748b;
-            --border: #e2e8f0;
             --green: #10b981;
             --amber: #f59e0b;
             --rose: #ef4444;
@@ -30,33 +23,33 @@
         .row { display: flex; gap: 12px; flex-wrap: wrap; }
         .form-group { flex: 1; min-width: 180px; }
         .form-group label { display: block; font-size: 0.7rem; font-weight: 700; color: var(--sub); margin-bottom: 4px; text-transform: uppercase; }
-        .form-group select, .form-group input { width: 100%; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border); font-family: inherit; font-size: 0.82rem; font-weight: 600; background: white; }
+        .form-group select, .form-group input { width: 100%; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border); font-family: inherit; font-size: 0.82rem; font-weight: 600; background: var(--surface-solid); }
         .btn { padding: 10px 20px; border-radius: 12px; border: none; font-family: inherit; font-weight: 700; font-size: 0.8rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; }
         .btn:active { transform: scale(0.96); }
         .btn-primary { background: var(--brand-gradient); color: white; }
         .btn-green { background: #10b981; color: white; }
         .btn-amber { background: #f59e0b; color: white; }
-        .btn-outline { background: white; border: 1px solid var(--border); color: var(--text); }
-        .btn-danger { background: #fee2e2; color: #ef4444; }
+        .btn-outline { background: var(--surface-solid); border: 1px solid var(--border); color: var(--text); }
+        .btn-danger { background: var(--danger-soft); color: var(--danger); }
         .btn:disabled { opacity: 0.5; pointer-events: none; }
         .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 6px; font-size: 0.65rem; font-weight: 700; }
-        .badge-draft { background: #f1f5f9; color: #64748b; }
-        .badge-courses { background: #dbeafe; color: #1d4ed8; }
-        .badge-questions { background: #fef3c7; color: #92400e; }
-        .badge-published { background: #dcfce7; color: #16a34a; }
-        .badge-approved { background: #dcfce7; color: #16a34a; }
-        .badge-pending { background: #fef3c7; color: #92400e; }
-        .badge-rejected { background: #fee2e2; color: #dc2626; }
+        .badge-draft { background: var(--surface); color: #64748b; }
+        .badge-courses { background: var(--brand-soft); color: var(--brand); }
+        .badge-questions { background: var(--warning-soft); color: var(--warning); }
+        .badge-published { background: var(--success-soft); color: var(--success); }
+        .badge-approved { background: var(--success-soft); color: var(--success); }
+        .badge-pending { background: var(--warning-soft); color: var(--warning); }
+        .badge-rejected { background: var(--danger-soft); color: var(--danger); }
         .course-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
         .course-table th { text-align: left; padding: 8px 12px; font-size: 0.65rem; font-weight: 700; color: var(--sub); text-transform: uppercase; border-bottom: 1px solid var(--border); }
-        .course-table td { padding: 10px 12px; font-size: 0.78rem; font-weight: 600; border-bottom: 1px solid #f1f5f9; }
+        .course-table td { padding: 10px 12px; font-size: 0.78rem; font-weight: 600; border-bottom: 1px solid var(--border); }
         .course-table .actions { display: flex; gap: 4px; }
         .course-table .actions button { width: 30px; height: 30px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.72rem; }
-        .course-table .approve { background: #dcfce7; color: #16a34a; }
-        .course-table .reject { background: #fee2e2; color: #ef4444; }
-        .course-table .edit { background: #dbeafe; color: #1d4ed8; }
+        .course-table .approve { background: var(--success-soft); color: var(--success); }
+        .course-table .reject { background: var(--danger-soft); color: var(--danger); }
+        .course-table .edit { background: var(--brand-soft); color: var(--brand); }
         .sessions-list { display: flex; flex-direction: column; gap: 8px; }
-        .session-card { background: white; border-radius: 16px; padding: 14px 16px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+        .session-card { background: var(--surface-solid); border-radius: 16px; padding: 14px 16px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
         .session-card:hover { border-color: var(--brand); }
         .session-card .sc-left { display: flex; flex-direction: column; gap: 2px; }
         .session-card .sc-title { font-size: 0.82rem; font-weight: 700; }

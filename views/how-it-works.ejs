@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <%- include('partials/head') %>
+    <%- include('partials/theme-toggle') %>
     <style>
         :root { 
             --sub: var(--text-muted); 
@@ -213,8 +214,8 @@
             <button class="slider-btn" onclick="showSlide(1)">ðŸ“š Library</button>
             <button class="slider-btn" onclick="showSlide(2)">ðŸ“Š Stats</button>
             <button class="slider-btn" onclick="showSlide(3)">ðŸ† Arena</button>
-            <button class="slider-btn" onclick="showSlide(4)">â³ Deadlines</button>
-            <button class="slider-btn" onclick="showSlide(5)">â±ï¸ Pomodoro</button>
+            <button class="slider-btn" onclick="showSlide(4)">⏳️ Deadlines</button>
+            <button class="slider-btn" onclick="showSlide(5)">⏱ Pomodoro</button>
             <button class="slider-btn" onclick="showSlide(6)">ðŸ“… Planner</button>
         </div>
 
@@ -308,7 +309,7 @@
             </div>
 
             <div class="motion-card" id="slide-4">
-                <i class="card-header-icon">â³</i>
+                <i class="card-header-icon">⏳️</i>
                 <h3>Deadlines</h3>
                 <p>Track test countdowns, CAs, and exams with real-time timers.</p>
                 <div class="workflow-box">
@@ -330,7 +331,7 @@
             </div>
 
             <div class="motion-card" id="slide-5">
-                <i class="card-header-icon">â±ï¸</i>
+                <i class="card-header-icon">⏱</i>
                 <h3>Pomodoro Timer</h3>
                 <p>Optimize study sessions with custom focus intervals.</p>
                 <div class="workflow-box">
