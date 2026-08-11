@@ -151,7 +151,6 @@
         <div class="mood-chip" onclick="location.href='/setup-test'"><i class="fas fa-bolt"></i> Quiz</div>
         <div class="mood-chip" onclick="location.href='/timetable'"><i class="fas fa-table"></i> Timetable</div>
         <div class="mood-chip" onclick="location.href='/cgpa'"><i class="fas fa-chart-line"></i> CGPA</div>
-        <div class="mood-chip" onclick="location.href='/refer'"><i class="fas fa-gift"></i> Refer</div>
         <div class="mood-chip" onclick="location.href='/history'"><i class="fas fa-chart-bar"></i> History</div>
         <div class="mood-chip" onclick="location.href='/daily-challenge'"><i class="fas fa-calendar-check"></i> Challenge</div>
     </div>
@@ -222,12 +221,6 @@
             <div class="fc-icon" style="background:#fef3c7;color:#f59e0b;"><i class="fas fa-chart-bar"></i></div>
             <div class="fc-label">History</div>
             <div class="fc-desc">Quiz performance</div>
-        </a>
-
-        <a href="/refer" class="feature-card">
-            <div class="fc-icon" style="background:#d1fae5;color:#10b981;"><i class="fas fa-gift"></i></div>
-            <div class="fc-label">Refer & Earn</div>
-            <div class="fc-desc">15% commission on referrals</div>
         </a>
 
         <a href="/deadlines" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">

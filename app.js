@@ -500,11 +500,11 @@ app.post('/auth/signup', rateLimit(5, 60000), async (req, res) => {
                 hashedPassword,
                 uniId,
                 cleanReferralCode,
-                false
+                true
             ]
         );
 
-        res.redirect('/login?msg=Account created! Please login.');
+        res.redirect('/login?msg=Account created! You now have full Premium access.');
 
     } catch (err) {
         console.error("Signup Error:", err);
@@ -1658,13 +1658,14 @@ app.get('/history', isAuth, requirePaid, async (req, res) => {
     });
 });
 
-// GET: Show Ambassador Login Page
+// GET: Show Ambassador Login Page (locked with Refer & Earn)
 app.get('/ambassador/login', (req, res) => {
-    res.render('ambassador-login');
+    res.redirect('/login');
 });
 
-// POST: Process Ambassador Login (Their unique code is both user & password)
+// POST: Process Ambassador Login (locked with Refer & Earn)
 app.post('/ambassador/login', async (req, res) => {
+    return res.status(403).json({ success: false, error: 'Refer & Earn is currently disabled' });
     const { unique_code } = req.body;
     try {
         const result = await pool.query('SELECT * FROM ambassadors WHERE unique_code = $1', [unique_code]);
@@ -1682,6 +1683,7 @@ app.post('/ambassador/login', async (req, res) => {
 });
 
 app.get('/ambassador/dashboard', async (req, res) => {
+    return res.redirect('/dashboard');
     if (!req.session.ambassador) return res.redirect('/ambassador/login');
 
     try {
@@ -1735,8 +1737,9 @@ app.get('/ambassador/dashboard', async (req, res) => {
     }
 });
 
-// POST: Update Ambassador Payout details
+// POST: Update Ambassador Payout details (locked with Refer & Earn)
 app.post('/ambassador/update-bank', async (req, res) => {
+    return res.status(403).json({ success: false, error: 'Refer & Earn is currently disabled' });
     if (!req.session.ambassador) return res.status(403).send("Unauthorized");
     const { bank_details } = req.body;
     try {
@@ -3128,12 +3131,13 @@ app.post('/admin/suggestions/status', isAdmin, async (req, res) => {
 // REFERRAL SYSTEM (replaces ambassador)
 // =========================================================
 
+// Referral / "Refer & Earn" system is locked (disabled) — everyone is now auto-premium
 app.get('/refer', (req, res) => {
-    const user = req.session.user || null;
-    res.render('refer', { user });
+    return res.redirect('/dashboard?msg=Referrals+are+currently+disabled');
 });
 
 app.get('/refer/dashboard', isAuth, async (req, res) => {
+    return res.redirect('/dashboard?msg=Referrals+are+currently+disabled');
     try {
         const uid = req.session.user.id;
         const userData = await pool.query('SELECT id, fullname, email, unique_code, has_paid FROM users WHERE id = $1', [uid]);
@@ -3195,6 +3199,7 @@ app.get('/refer/dashboard', isAuth, async (req, res) => {
 });
 
 app.post('/refer/withdraw', isAuth, async (req, res) => {
+    return res.status(403).json({ success: false, error: 'Refer & Earn is currently disabled' });
     try {
         const uid = req.session.user.id;
         const userData = await pool.query('SELECT unique_code FROM users WHERE id = $1', [uid]);
@@ -3235,6 +3240,7 @@ app.post('/refer/withdraw', isAuth, async (req, res) => {
 });
 
 app.post('/ambassador/register', async (req, res) => {
+    return res.status(403).json({ success: false, error: 'Refer & Earn is currently disabled' });
     try {
         // Log to see exactly what Express is receiving
         console.log("Incoming request body:", req.body);

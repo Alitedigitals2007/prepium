@@ -2,7 +2,7 @@
 
 > The ultimate CBT practice engine for ambitious students. Continuous Assessment Portal built for Nigerian universities.
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Version](https://img.shields.io/badge/version-2.0.0-blue)
 ![Node](https://img.shields.io/badge/node-%3E%3D18-green)
 ![License](https://img.shields.io/badge/license-ISC-lightgrey)
 
@@ -12,7 +12,7 @@
 
 | Feature | Description |
 |---------|-------------|
-| **Practice Quiz** | Timed CBT exams with real-time scoring and LaTeX formula support |
+| **Practice Quiz** | Unlimited timed CBT exams with real-time scoring and LaTeX formula support |
 | **AI Quiz Bot** | Upload PDFs — AI parses them into full CBT exam sets |
 | **Daily Challenge** | Compete live with peers on daily questions |
 | **Study Library** | Course notebooks and structural references |
@@ -23,11 +23,10 @@
 | **Competition Mode** | Head-to-head quiz battles |
 | **Student Dashboard** | Personalized greeting, live clock, motivational quotes |
 | **Admin Console** | Full user, question, and analytics management |
-| **Ambassador Portal** | Referral system with commission tracking |
 
-### Premium (₦1,000 one-time)
+### All Features Free
 
-Unlocks AI Quiz, CGPA Tracker, Study Library, Live Arena, Pomodoro, and Competition mode.
+Every account that registers **automatically gets full Premium access** — unlimited quizzes, AI tutor, CGPA tracker, study library, live arena, pomodoro, and competition mode. **No payment required. No paywall.**
 
 ---
 
@@ -40,7 +39,6 @@ Unlocks AI Quiz, CGPA Tracker, Study Library, Live Arena, Pomodoro, and Competit
 | Database | PostgreSQL (Neon Serverless) |
 | Auth | bcryptjs + express-session |
 | AI | Google Gemini API |
-| Payments | Paystack |
 | Email | Nodemailer |
 | Animations | Custom Canvas API (Framer-like flowing lines, particles, cursor glow) |
 
@@ -58,8 +56,6 @@ Create a `.env` file:
 
 ```env
 DATABASE_URL=postgresql://...
-PAYSTACK_PUBLIC_KEY=pk_live_...
-PAYSTACK_SECRET_KEY=sk_live_...
 GEMINI_API_KEY_PRIMARY=...
 GEMINI_API_KEY_SECONDARY=...
 EMAIL_USER=your@email.com
@@ -111,45 +107,13 @@ Prepium is already trusted by students at **UI, UNILAG, OAU, Babcock University,
 - **Track your CGPA** — know exactly what grade you need to hit your target
 - **Stay on schedule** — deadline tracker + pomodoro focus timer
 - **Compete & win** — daily challenges and live arena rankings
-- **Just ₦1,000 once** — no monthly subscriptions, no hidden fees
+- **100% free** — every registered account unlocks all features, forever
 
 Works on any phone, any network. No app download needed.
 
 > *"The LaTeX support for physics formulas is perfect. Finally, a platform that understands my curriculum!"* — Stephanie A., Physics Dept.
 
-👉 **[Create your free account](https://prepium.com/signup)** — start with 2 free quizzes, no card required.
-
----
-
-## Pitch to Ambassadors
-
-> **Earn commissions while helping your classmates level up.**
-
-**How it works:**
-
-1. Sign up as a Prepium Ambassador
-2. Share your unique referral code with friends and coursemates
-3. Earn **₦200 per Premium sale** — paid directly to your bank account
-4. Track your earnings, referrals, and withdrawals from your Ambassador Dashboard
-
-**Who makes a great ambassador?**
-
-- Class representatives and course reps
-- Departmental association leaders
-- Anyone active on campus WhatsApp/Twitter/Telegram groups
-- Tech-savvy students who love helping others
-
-**What you get:**
-
-- Personalized referral dashboard
-- Commission tracking in real-time
-- Verified ambassador certificate
-- Early access to new features
-- Direct line to the Prepium team
-
-> *"Being a Prepium ambassador helped me earn while adding real value to my department. Win-win."*
-
-👉 **[Apply to be an Ambassador](https://prepium.com/be-ambassador)**
+👉 **[Create your free account](https://prepium.com/signup)** — unlock everything instantly, no card required.
 
 ---
 
@@ -159,25 +123,23 @@ Works on any phone, any network. No app download needed.
 
 > Hey [Name]! 👋
 >
-> Are you prepping for your upcoming tests? I'm using Prepium — it's a CBT practice platform built for Nigerian uni students. You can take timed quizzes, upload PDFs and let AI generate questions, track your CGPA, and even compete with friends.
+> Are you prepping for your upcoming tests? I'm using Prepium — it's a CBT practice platform built for Nigerian uni students. You can take unlimited timed quizzes, upload PDFs and let AI generate questions, track your CGPA, and even compete with friends.
 >
-> It's just ₦1,000 **one-time** (no subscription). Wanna give it a shot? I can send you the link 🔗
+> It's **100% free** — no card needed. Wanna give it a shot? I can send you the link 🔗
 
 ### To a Class/Department Group
 
 > 📢 *Study smarter, not harder.*
 >
 > Hey everyone! I just found this platform called **Prepium** — it's designed for Nigerian university students. You can:
-> • Practice CBT exams with actual question formats
+> • Take unlimited CBT practice exams with actual question formats
 > • Upload your lecture PDFs and get AI-generated quiz questions
 > • Track your CGPA and set grade targets
 > • Compete on the daily challenge leaderboard
 >
-> All for **₦1,000 once** — no monthly fees.
+> Best part — it's **completely free** for every student who registers.
 >
 > Check it out: [prepium.com](https://prepium.com)
->
-> Use my code **PREP-XXXX** when you sign up 🚀
 
 ### To a School Department/SRC
 
@@ -195,22 +157,9 @@ Works on any phone, any network. No app download needed.
 >
 > Would you be open to a brief discussion about how Prepium can support your department's academic preparation?
 
-### Ambassador Recruitment (to a potential ambassador)
-
-> Hey [Name]! 👋
->
-> I'm looking for campus ambassadors for **Prepium** — a CBT exam prep platform for Nigerian uni students.
->
-> As an ambassador, you get:
-> • ₦200 commission per premium referral
-> • Personalized dashboard to track your earnings
-> • Verified ambassador certificate
->
-> If you're active on campus and love helping people, this is perfect. Interested? Check it out: [prepium.com/be-ambassador](https://prepium.com/be-ambassador)
-
 ### Follow-up / Reminder
 
-> Hey [Name]! Just a quick reminder about Prepium — your free 2 quizzes are waiting. If you like it, Premium is just ₦1,000 once and unlocks everything forever. Let me know if you have any questions! 🤝
+> Hey [Name]! Just a quick reminder about Prepium — your free account is waiting, and it already includes every feature. Create it here: [prepium.com](https://prepium.com). Let me know if you have any questions! 🤝
 
 ---
 
@@ -218,7 +167,6 @@ Works on any phone, any network. No app download needed.
 
 - **Live App**: [https://prepium.com](https://prepium.com)
 - **Sign Up**: [https://prepium.com/signup](https://prepium.com/signup)
-- **Become an Ambassador**: [https://prepium.com/be-ambassador](https://prepium.com/be-ambassador)
 - **Email**: [michaelbrainny842@gmail.com](mailto:michaelbrainny842@gmail.com)
 
 ---
