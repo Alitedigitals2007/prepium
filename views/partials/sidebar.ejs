@@ -1,3 +1,4 @@
+<%- include('glass-kit') %>
 <div class="bg-orb bg-orb-1"></div>
 <div class="bg-orb bg-orb-2"></div>
 <div class="bg-orb bg-orb-3"></div>
@@ -7,14 +8,14 @@
     <a href="/dashboard" class="sidebar-link">
       <i class="fas fa-home"></i> Dashboard
     </a>
+    <a href="/guide" class="sidebar-link">
+      <i class="fas fa-book"></i> User Guide
+    </a>
     <a href="/daily-task" class="sidebar-link">
       <i class="fas fa-tasks"></i> Daily Task
     </a>
     <a href="/study" class="sidebar-link">
       <i class="fas fa-graduation-cap"></i> Study Hub
-    </a>
-    <a href="/setup-test" class="sidebar-link">
-      <i class="fas fa-bolt"></i> Practice Quiz
     </a>
     <a href="/timetable" class="sidebar-link">
       <i class="fas fa-calendar-alt"></i> Timetable
@@ -23,7 +24,7 @@
       <i class="fas fa-book-open"></i> Reading Schedule
     </a>
     <a href="/cgpa" class="sidebar-link">
-      <i class="fas fa-graduation-cap"></i> CGPA Tracker
+      <i class="fas fa-chart-line"></i> CGPA Tracker
     </a>
     <a href="/history" class="sidebar-link">
       <i class="fas fa-chart-bar"></i> History
@@ -43,17 +44,21 @@
         <span class="notification-dot" style="position:static;display:inline-flex;margin-left:auto;"><%= unreadNotifs %></span>
       <% } %>
     </a>
-    <a href="/subjects" class="sidebar-link">
-      <i class="fas fa-book"></i> Study Library
-    </a>
     <a href="/ai-quiz" class="sidebar-link">
-      <i class="fas fa-robot"></i> AI Quiz
+      <i class="fas fa-robot"></i> Quiz Generator
     </a>
     <a href="/suggestions" class="sidebar-link">
       <i class="fas fa-lightbulb"></i> Feedback
     </a>
   </nav>
   <div class="sidebar-footer">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:0 0.5rem;">
+      <button class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle theme">
+        <i class="fas fa-moon" id="themeIconMoon" style="display:none;"></i>
+        <i class="fas fa-sun" id="themeIconSun" style="display:none;"></i>
+      </button>
+      <span style="font-size:0.72rem;font-weight:700;color:var(--text-muted);">Toggle Theme</span>
+    </div>
     <div class="sidebar-user">
       <div class="sidebar-avatar">
         <% if (typeof user !== 'undefined' && user.fullname) { %>

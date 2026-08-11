@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head') %>
+    <style>
+        :root {
+            --green: #10b981;
+            --amber: #f59e0b;
+            --rose: #ef4444;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+        .admin-shell { display: flex; min-height: 100vh; }
+        .admin-sidebar { width: 240px; background: #0b1437; color: white; padding: 1.25rem; display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+        .admin-sidebar a { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; color: rgba(255,255,255,0.7); text-decoration: none; font-weight: 600; font-size: 0.82rem; }
+        .admin-sidebar a:hover, .admin-sidebar a.active { background: rgba(255,255,255,0.08); color: white; }
+        .admin-main { flex: 1; padding: 1.5rem; overflow-y: auto; }
+        .page-head { margin-bottom: 1.5rem; }
+        .page-head h1 { font-size: 1.4rem; font-weight: 800; }
+        .page-head p { font-size: 0.75rem; color: var(--sub); font-weight: 600; margin-top: 2px; }
+        .card { background: var(--card); border-radius: 20px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); margin-bottom: 1rem; }
+        .card h2 { font-size: 0.95rem; font-weight: 800; margin-bottom: 12px; }
+        .row { display: flex; gap: 12px; flex-wrap: wrap; }
+        .form-group { flex: 1; min-width: 180px; }
+        .form-group label { display: block; font-size: 0.7rem; font-weight: 700; color: var(--sub); margin-bottom: 4px; text-transform: uppercase; }
+        .form-group select, .form-group input { width: 100%; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border); font-family: inherit; font-size: 0.82rem; font-weight: 600; background: var(--surface-solid); }
+        .btn { padding: 10px 20px; border-radius: 12px; border: none; font-family: inherit; font-weight: 700; font-size: 0.8rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; }
+        .btn:active { transform: scale(0.96); }
+        .btn-primary { background: var(--brand-gradient); color: white; }
+        .btn-green { background: #10b981; color: white; }
+        .btn-amber { background: #f59e0b; color: white; }
+        .btn-outline { background: var(--surface-solid); border: 1px solid var(--border); color: var(--text); }
+        .btn-danger { background: var(--danger-soft); color: var(--danger); }
+        .btn:disabled { opacity: 0.5; pointer-events: none; }
+        .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 6px; font-size: 0.65rem; font-weight: 700; }
+        .badge-draft { background: var(--surface); color: #64748b; }
+        .badge-courses { background: var(--brand-soft); color: var(--brand); }
+        .badge-questions { background: var(--warning-soft); color: var(--warning); }
+        .badge-published { background: var(--success-soft); color: var(--success); }
+        .badge-approved { background: var(--success-soft); color: var(--success); }
+        .badge-pending { background: var(--warning-soft); color: var(--warning); }
+        .badge-rejected { background: var(--danger-soft); color: var(--danger); }
+        .course-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        .course-table th { text-align: left; padding: 8px 12px; font-size: 0.65rem; font-weight: 700; color: var(--sub); text-transform: uppercase; border-bottom: 1px solid var(--border); }
+        .course-table td { padding: 10px 12px; font-size: 0.78rem; font-weight: 600; border-bottom: 1px solid var(--border); }
+        .course-table .actions { display: flex; gap: 4px; }
+        .course-table .actions button { width: 30px; height: 30px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.72rem; }
+        .course-table .approve { background: var(--success-soft); color: var(--success); }
+        .course-table .reject { background: var(--danger-soft); color: var(--danger); }
+        .course-table .edit { background: var(--brand-soft); color: var(--brand); }
+        .sessions-list { display: flex; flex-direction: column; gap: 8px; }
+        .session-card { background: var(--surface-solid); border-radius: 16px; padding: 14px 16px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+        .session-card:hover { border-color: var(--brand); }
+        .session-card .sc-left { display: flex; flex-direction: column; gap: 2px; }
+        .session-card .sc-title { font-size: 0.82rem; font-weight: 700; }
+        .session-card .sc-meta { font-size: 0.65rem; color: var(--sub); font-weight: 600; }
+        .inline-edit { padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 0.75rem; font-weight: 600; width: 120px; }
+        .loading-pulse { display: inline-block; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .mt-1 { margin-top: 1rem; }
+        .mt-2 { margin-top: 2rem; }
+        .gap-1 { gap: 8px; }
+        .flex-end { justify-content: flex-end; }
+    </style>
+<meta name="theme-color" content="#2563eb">
+<%- include('../partials/theme-toggle') %>
+</head>
+<body>
+<div class="admin-shell">
+    <aside class="admin-sidebar">
+        <div style="font-weight:800;font-size:1rem;margin-bottom:1rem;color:white;">PREPIUM<span style="color:var(--brand)">.</span></div>
+        <a href="/admin/dashboard"><i class="fas fa-home"></i> Dashboard</a>
+        <a href="/admin/students"><i class="fas fa-users"></i> Students</a>
+        <a href="/admin/universities"><i class="fas fa-university"></i> Universities</a>
+        <a href="/admin/daily-manage"><i class="fas fa-tasks"></i> Daily Task</a>
+        <a href="/admin/quiz-generator" class="active"><i class="fas fa-bolt"></i> Quiz Generator</a>
+        <a href="/admin/coupons"><i class="fas fa-tags"></i> Coupons</a>
+        <a href="/admin/analytics"><i class="fas fa-chart-bar"></i> Analytics</a>
+        <a href="/admin/notifications"><i class="fas fa-bell"></i> Notifications</a>
+        <a href="/admin/db-manager"><i class="fas fa-database"></i> DB Manager</a>
+        <a href="/admin/suggestions"><i class="fas fa-lightbulb"></i> Feedback</a>
+        <a href="/logout" style="margin-top:auto;"><i class="fas fa-sign-out"></i> Logout</a>
+    </aside>
+    <main class="admin-main" id="app">
+        <div class="page-head">
+            <h1>Quiz Generator</h1>
+            <p>Create AI-powered quizzes for students by school & level</p>
+        </div>
+
+        <!-- Create New Session -->
+        <div class="card">
+            <h2><i class="fas fa-plus-circle"></i> Create New Quiz Session</h2>
+            <div class="row">
+                <div class="form-group">
+                    <label>University</label>
+                    <select v-model="newSession.university_id">
+                        <option value="">-- Select --</option>
+                        <option v-for="u in universities" :value="u.id">{{ u.name }}</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Level</label>
+                    <select v-model="newSession.level">
+                        <option value="">-- Select --</option>
+                        <option value="100">100 Level</option>
+                        <option value="200">200 Level</option>
+                        <option value="300">300 Level</option>
+                        <option value="400">400 Level</option>
+                        <option value="500">500 Level</option>
+                    </select>
+                </div>
+                <div style="display:flex;align-items:flex-end;">
+                    <button class="btn btn-primary" @click="createSession" :disabled="!newSession.university_id || !newSession.level || creating">
+                        Create Session
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Existing Sessions -->
+        <div class="card" v-if="sessions.length > 0">
+            <h2><i class="fas fa-history"></i> Sessions</h2>
+            <div class="sessions-list">
+                <div v-for="s in sessions" :key="s.id" class="session-card" :class="{ selected: activeSession === s.id }" @click="selectSession(s)">
+                    <div class="sc-left">
+                        <div class="sc-title">{{ s.uni_name }} &bull; {{ s.level }}</div>
+                        <div class="sc-meta">{{ timeAgo(s.created_at) }} &middot; <span :class="'badge badge-' + statusClass(s.status)">{{ s.status.replace('_', ' ') }}</span></div>
+                    </div>
+                    <i class="fas fa-chevron-right" style="color:var(--sub);"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Session Detail (when selected) -->
+        <div v-if="activeSession">
+            <!-- Step 1: Generate Courses -->
+            <div class="card" v-if="activeStatus === 'draft'">
+                <h2><i class="fas fa-robot"></i> Step 1: Generate Courses</h2>
+                <p style="font-size:0.75rem;color:var(--sub);margin-bottom:12px;">AI will fetch standard CCMAS/BMAS courses for this school & level.</p>
+                <button class="btn btn-primary" @click="generateCourses" :disabled="generating">
+                    <i class="fas fa-magic"></i> {{ generating ? 'Generating...' : 'Generate Courses' }}
+                </button>
+            </div>
+
+            <!-- Step 2: Review/Approve Courses -->
+            <div class="card" v-if="activeSessionData.courses && coursesLoaded">
+                <h2><i class="fas fa-list-check"></i> Step 2: Review Courses</h2>
+                <p style="font-size:0.7rem;color:var(--sub);margin-bottom:8px;">{{ approvedCount }}/{{ activeSessionData.courses.length }} approved</p>
+                <table class="course-table">
+                    <thead><tr><th>Code</th><th>Title</th><th>Department</th><th>Status</th><th></th></tr></thead>
+                    <tbody>
+                        <tr v-for="c in activeSessionData.courses" :key="c.id">
+                            <td><input class="inline-edit" v-model="c.course_code" style="width:90px;"></td>
+                            <td><input class="inline-edit" v-model="c.course_title" style="width:200px;"></td>
+                            <td>{{ c.department }}</td>
+                            <td><span :class="'badge badge-' + (c.status === 'approved' ? 'approved' : c.status === 'rejected' ? 'rejected' : 'pending')">{{ c.status }}</span></td>
+                            <td class="actions">
+                                <button class="approve" @click="updateCourse(c, 'approved')" title="Approve"><i class="fas fa-check"></i></button>
+                                <button class="reject" @click="updateCourse(c, 'rejected')" title="Reject"><i class="fas fa-times"></i></button>
+                                <button class="edit" @click="saveCourseEdits(c)" title="Save Edits"><i class="fas fa-save"></i></button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="row" style="margin-top:12px;">
+                    <button class="btn btn-green" @click="approveAll">Approve All</button>
+                    <button class="btn btn-primary" @click="testQuestions" :disabled="approvedCount === 0">Generate Questions</button>
+                </div>
+            </div>
+
+            <!-- Step 3: Question Count & Generate -->
+            <div class="card" v-if="showQuestionCount">
+                <h2><i class="fas fa-cog"></i> Step 3: Questions Per Course</h2>
+                <div class="row" style="align-items:flex-end;">
+                    <div class="form-group" style="max-width:200px;">
+                        <label>Questions per course</label>
+                        <input type="number" v-model.number="questionCount" min="5" max="50" style="width:100px;">
+                    </div>
+                    <div style="display:flex;align-items:flex-end;">
+                        <button class="btn btn-primary" @click="generateQuestions" :disabled="generating">
+                            <i class="fas fa-wand-magic"></i> {{ generating ? 'Generating...' : 'Generate Questions' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4: Publish -->
+            <div class="card" v-if="isQuestionsReady">
+                <h2><i class="fas fa-rocket"></i> Step 4: Publish Quiz</h2>
+                <p style="font-size:0.75rem;color:var(--sub);">Questions are ready. Students can access once published.</p>
+                <button class="btn btn-green" @click="publishSession" :disabled="publishing">
+                    <i class="fas fa-upload"></i> {{ publishing ? 'Publishing...' : 'Publish Quiz' }}
+                </button>
+            </div>
+
+            <div class="card" v-if="isPublished">
+                <h2><i class="fas fa-check-circle" style="color:#10b981;"></i> Published & Live</h2>
+                <p style="font-size:0.75rem;color:var(--sub);">Students at {{ activeSessionData.uni_name }}, {{ activeSessionData.level }} can now access this quiz.</p>
+            </div>
+        </div>
+    </main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/vue@2.7.14/dist/vue.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+new Vue({
+    el: '#app',
+    data: {
+        universities: <%- JSON.stringify(universities || []) %>,
+        sessions: <%- JSON.stringify(sessions || []) %>,
+        newSession: { university_id: '', level: '' },
+        creating: false,
+        activeSession: null,
+        activeSessionData: { courses: [] },
+        coursesLoaded: false,
+        loadingCourses: false,
+        generatedCourses: false,
+        questionCount: 10,
+        generateQuestionsClicked: false,
+        generating: false,
+        publishing: false
+    },
+    computed: {
+        activeS() {
+            return this.sessions.find(s => s.id === this.activeSession) || {};
+        },
+        activeStatus() {
+            return (this.activeS || {}).status || 'draft';
+        },
+        showQuestionCount() {
+            return this.activeStatus === 'courses_ready';
+        },
+        approvedCount() {
+            return this.activeSessionData.courses.filter(c => c.status === 'approved').length;
+        },
+        isQuestionsReady() {
+            return this.activeStatus === 'questions_ready';
+        },
+        isPublished() {
+            return this.activeStatus === 'published';
+        }
+    },
+    methods: {
+        statusClass(s) {
+            if (s === 'draft') return 'draft';
+            if (s === 'courses_ready') return 'courses';
+            if (s === 'questions_ready') return 'questions';
+            if (s === 'published') return 'published';
+            return 'draft';
+        },
+        timeAgo(d) {
+            const sec = (new Date() - new Date(d)) / 1000;
+            if (sec < 60) return 'just now';
+            if (sec < 3600) return Math.floor(sec/60) + 'm ago';
+            if (sec < 86400) return Math.floor(sec/3600) + 'h ago';
+            return Math.floor(sec/86400) + 'd ago';
+        },
+        async createSession() {
+            this.creating = true;
+            const r = await fetch('/api/admin/quiz/create-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ university_id: this.newSession.university_id, level: this.newSession.level })
+            });
+            const d = await r.json();
+            this.creating = false;
+            if (d.error) return Swal.fire({ icon: 'error', text: d.error });
+            const uni = this.universities.find(u => u.id === this.newSession.university_id);
+            this.sessions.unshift({ id: d.id, university_id: this.newSession.university_id, level: this.newSession.level, status: 'draft', created_at: new Date().toISOString(), uni_name: uni?.name || '' });
+            this.activeSession = d.id;
+            this.coursesLoaded = false;
+            this.newSession = { university_id: '', level: '' };
+        },
+        async selectSession(s) {
+            this.activeSession = s.id;
+            this.coursesLoaded = false;
+            this.generateQuestionsClicked = false;
+            this.showQCountSelect = false;
+            if (s.status === 'draft') return;
+            await this.loadCourses();
+            if (s.status === 'courses_ready') { this.showQCountSelect = true; }
+        },
+        async loadCourses() {
+            this.coursesLoaded = false;
+            const r = await fetch('/api/admin/quiz/courses/' + this.activeSession);
+            const d = await r.json();
+            this.activeSessionData.courses = d.courses || [];
+            this.coursesLoaded = true;
+        },
+        async generateCourses() {
+            this.generating = true;
+            const r = await fetch('/api/admin/quiz/generate-courses', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId: this.activeSession })
+            });
+            const d = await r.json();
+            this.generating = false;
+            if (d.error) return Swal.fire({ icon: 'error', text: d.error });
+            const s = this.sessions.find(s => s.id === this.activeSession);
+            if (s) s.status = 'courses_ready';
+            await this.loadCourses();
+            this.showQCountSelect = true;
+            Swal.fire({ icon: 'success', text: d.count + ' courses generated!' });
+        },
+        async updateCourse(course, status) {
+            await fetch('/api/admin/quiz/update-course', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: course.id, status })
+            });
+            course.status = status;
+        },
+        async approveAll() {
+            const pending = this.activeSessionData.courses.filter(c => c.status !== 'approved');
+            for (const c of pending) {
+                await this.updateCourse(c, 'approved');
+            }
+            Swal.fire({ icon: 'success', title: 'All approved', timer: 1000, showConfirmButton: false });
+        },
+        async saveCourseEdits(c) {
+            await fetch('/api/admin/quiz/update-course', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: c.id, course_code: c.course_code, course_title: c.course_title })
+            });
+            Swal.fire({ icon: 'success', title: 'Saved', timer: 1000, showConfirmButton: false });
+        },
+        testQuestions() {
+            this.showQCountSelect = true;
+            this.generateQuestionsClicked = true;
+        },
+        async publishSession() {
+            this.publishing = true;
+            const r = await fetch('/api/admin/quiz/publish', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId: this.activeSession })
+            });
+            const d = await r.json();
+            this.publishing = false;
+            if (d.error) return Swal.fire({ icon: 'error', text: d.error });
+            const s = this.sessions.find(s => s.id === this.activeSession);
+            if (s) s.status = 'published';
+            Swal.fire({ icon: 'success', title: 'Published!', text: 'Quiz is now live for students.' });
+        },
+        async generateQuestions() {
+            if (this.approvedCount === 0) return Swal.fire({ icon: 'warn', text: 'Approve at least one course first.' });
+            this.generating = true;
+            const r = await fetch('/api/admin/quiz/generate-questions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId: this.activeSession, questionCount: this.questionCount })
+            });
+            const d = await r.json();
+            this.generating = false;
+            if (d.error) return Swal.fire({ icon: 'error', text: d.error });
+            const s = this.sessions.find(s => s.id === this.activeSession);
+            if (s) s.status = 'questions_ready';
+            this.showQCountSelect = false;
+            Swal.fire({ icon: 'success', text: d.total + ' questions generated!' });
+        }
+    }
+});
+</script>
+</body>
+</html>

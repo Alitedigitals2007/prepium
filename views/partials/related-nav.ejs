@@ -4,7 +4,7 @@
         padding: 14px 1.5rem 100px;
         margin-top: 1rem;
         border-top: 1px solid var(--border);
-        background: rgba(255,255,255,0.6);
+        background: var(--surface);
         backdrop-filter: blur(12px);
         flex-wrap: wrap;
     }
@@ -13,11 +13,11 @@
         min-width: 130px;
         display: flex; align-items: center; gap: 8px;
         padding: 12px 14px;
-        background: white;
+        background: var(--surface-solid);
         border: 1px solid var(--border);
         border-radius: 14px;
         text-decoration: none; color: inherit;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        box-shadow: var(--shadow-sm);
         transition: var(--transition);
         cursor: pointer;
     }
@@ -31,7 +31,7 @@
     }
     .related-nav-link .rn-info { line-height: 1.2; }
     .related-nav-link .rn-info .rn-eyebrow {
-        font-size: 0.55rem; font-weight: 700; color: var(--text-sub);
+        font-size: 0.55rem; font-weight: 700; color: var(--text-secondary);
         text-transform: uppercase; letter-spacing: 0.4px;
     }
     .related-nav-link .rn-info .rn-label {
@@ -39,12 +39,12 @@
         display: block; margin-top: 2px;
     }
     .related-nav-link.brand-soft .rn-icon { background: var(--brand-soft); color: var(--brand); }
-    .related-nav-link.violet .rn-icon { background:#f3e8ff; color:#7c3aed; }
-    .related-nav-link.amber .rn-icon { background:#fef3c7; color:#f59e0b; }
-    .related-nav-link.green .rn-icon { background:#d1fae5; color:#10b981; }
-    .related-nav-link.blue .rn-icon { background:#e0f2fe; color:#0284c7; }
-    .related-nav-link.red .rn-icon { background:#fee2e2; color:#ef4444; }
-    .related-nav-link.purple .rn-icon { background:#f5f3ff; color:#8b5cf6; }
+    .related-nav-link.violet .rn-icon { background: var(--brand-soft); color: var(--accent); }
+    .related-nav-link.amber .rn-icon { background: var(--warning-soft); color: var(--warning); }
+    .related-nav-link.green .rn-icon { background: var(--success-soft); color: var(--success); }
+    .related-nav-link.blue .rn-icon { background: var(--brand-soft); color: var(--brand); }
+    .related-nav-link.red .rn-icon { background: var(--danger-soft); color: var(--danger); }
+    .related-nav-link.purple .rn-icon { background: var(--brand-soft); color: var(--brand); }
 </style>
 
 <%

@@ -1,24 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Prepium | Referral Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/css/style.css"
-    <link rel="manifest" href="/manifest.json">>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <%- include('partials/head') %>
     <style>
-        :root { --dash-bg: #f0f2f8; }
+        :root { --dash-bg: var(--bg); }
         body { background: var(--dash-bg); font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; }
         body::before { display: none; }
         .app-shell { max-width: 500px; margin: 0 auto; background: transparent; backdrop-filter: none; border: none; padding: 1.25rem 1.25rem 6rem; }
-        @media (min-width: 431px) { .app-shell { border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; } }
+        @media (min-width: 431px) { .app-shell { border-left: 1px solid var(--border-solid); border-right: 1px solid var(--border-solid); } }
 
         .dash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
         .dash-header h1 { font-size: 1.4rem; font-weight: 800; margin: 0; }
-        .back-btn { color: var(--text-sub); text-decoration: none; font-size: 1.2rem; }
+        .back-btn { color: var(--text-secondary); text-decoration: none; font-size: 1.2rem; }
 
         .code-banner {
             background: linear-gradient(135deg,#0f172a,#1e1b4b); color: white; border-radius: 20px;
@@ -29,57 +22,58 @@
 
         .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 1.25rem; }
         .stat-card {
-            background: white; border-radius: 18px; padding: 16px; border: 1px solid rgba(226,232,240,0.5);
+            background: var(--surface-solid); border-radius: 18px; padding: 16px; border: 1px solid var(--border);
             box-shadow: 0 2px 12px rgba(0,0,0,0.04);
         }
-        .stat-card .stat-label { font-size: 0.6rem; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-card .stat-label { font-size: 0.6rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
         .stat-card .stat-value { font-size: 1.5rem; font-weight: 800; margin-top: 4px; }
         .stat-card .stat-value.green { color: #10b981; }
         .stat-card .stat-value.brand { color: var(--brand); }
         .stat-card .stat-value.amber { color: #f59e0b; }
 
-        .section-title { font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-sub); margin: 1.25rem 0 0.75rem; }
+        .section-title { font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin: 1.25rem 0 0.75rem; }
 
         .withdraw-card {
-            background: white; border-radius: 18px; padding: 1.25rem; border: 1px solid rgba(226,232,240,0.5);
+            background: var(--surface-solid); border-radius: 18px; padding: 1.25rem; border: 1px solid var(--border);
             box-shadow: 0 2px 12px rgba(0,0,0,0.04); margin-bottom: 1.25rem;
         }
         .withdraw-card h3 { font-size: 0.95rem; font-weight: 800; margin: 0 0 4px; }
-        .withdraw-card .sub { font-size: 0.7rem; color: var(--text-sub); font-weight: 600; margin-bottom: 1rem; }
+        .withdraw-card .sub { font-size: 0.7rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 1rem; }
 
         .form-row { display: flex; gap: 8px; margin-bottom: 10px; }
         .form-input {
-            flex: 1; padding: 12px 14px; border-radius: 12px; border: 1.5px solid #e2e8f0;
-            font-family: inherit; font-size: 0.85rem; font-weight: 600; background: #f8fafc; outline: none; box-sizing: border-box;
+            flex: 1; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--border-solid);
+            font-family: inherit; font-size: 0.85rem; font-weight: 600; background: var(--surface); outline: none; box-sizing: border-box;
         }
-        .form-input:focus { border-color: var(--brand); background: white; }
+        .form-input:focus { border-color: var(--brand); background: var(--surface-solid); }
 
         .btn-primary {
             width: 100%; padding: 13px; border-radius: 12px; border: none;
-            background: var(--brand-gradient, linear-gradient(135deg,#0062ff,#4f46e5));
+            background: var(--brand-gradient, linear-gradient(135deg,var(--brand),#1d4ed8));
             color: white; font-weight: 800; font-size: 0.85rem; cursor: pointer;
         }
         .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-secondary {
-            width: 100%; padding: 11px; border-radius: 12px; border: 1.5px solid #e2e8f0;
-            background: white; color: var(--text); font-weight: 700; font-size: 0.82rem; cursor: pointer; text-align: center; display: block;
+            width: 100%; padding: 11px; border-radius: 12px; border: 1.5px solid var(--border-solid);
+            background: var(--surface-solid); color: var(--text-primary); font-weight: 700; font-size: 0.82rem; cursor: pointer; text-align: center; display: block;
         }
 
-        .table-wrap { background: white; border-radius: 18px; overflow: hidden; border: 1px solid rgba(226,232,240,0.5); margin-bottom: 1.25rem; }
+        .table-wrap { background: var(--surface-solid); border-radius: 18px; overflow: hidden; border: 1px solid var(--border); margin-bottom: 1.25rem; }
         table { width: 100%; border-collapse: collapse; }
-        th { background: #f8fafc; padding: 0.8rem 1rem; font-size: 0.65rem; color: var(--text-sub); text-transform: uppercase; text-align: left; }
-        td { padding: 0.8rem 1rem; border-top: 1px solid #f1f5f9; font-size: 0.82rem; font-weight: 600; }
+        th { background: var(--surface); padding: 0.8rem 1rem; font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; text-align: left; }
+        td { padding: 0.8rem 1rem; border-top: 1px solid var(--bg); font-size: 0.82rem; font-weight: 600; }
         .badge { font-size: 0.6rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; }
-        .badge.active { background: #dcfce7; color: #15803d; }
-        .badge.pending { background: #fef3c7; color: #b45309; }
-        .badge.inactive { background: #f1f5f9; color: #64748b; }
+        .badge.active { background: var(--success-soft); color: var(--success); }
+        .badge.pending { background: var(--warning-soft); color: var(--warning); }
+        .badge.inactive { background: var(--bg); color: var(--text-secondary); }
 
-        .empty-state { text-align: center; padding: 2rem; color: var(--text-sub); }
+        .empty-state { text-align: center; padding: 2rem; color: var(--text-secondary); }
         .empty-state i { font-size: 2rem; color: #cbd5e1; display: block; margin-bottom: 0.8rem; }
         .empty-state p { font-size: 0.8rem; margin: 0; }
 
         .bottom-spacer { height: 20px; }
     </style>
+    <%- include('partials/theme-toggle') %>
 </head>
 <body>
 <div class="app-shell">
@@ -107,27 +101,27 @@
         </div>
         <div class="stat-card">
             <div class="stat-label">Available Balance</div>
-            <div class="stat-value amber">₦<%= availableBal %></div>
+            <div class="stat-value amber">â‚¦<%= availableBal %></div>
         </div>
         <div class="stat-card">
             <div class="stat-label">Total Earned</div>
-            <div class="stat-value brand">₦<%= referral ? referral.total_earned : 0 %></div>
+            <div class="stat-value brand">â‚¦<%= referral ? referral.total_earned : 0 %></div>
         </div>
     </div>
 
     <% if (availableBal >= 100) { %>
     <div class="withdraw-card">
         <h3>Withdraw Earnings</h3>
-        <div class="sub">10% service fee applies. Min withdrawal: ₦100</div>
+        <div class="sub">10% service fee applies. Min withdrawal: â‚¦100</div>
         <form id="withdrawForm">
             <div class="form-row">
-                <input type="number" class="form-input" id="withdrawAmount" placeholder="Amount (₦)" min="100" max="<%= availableBal %>" required>
+                <input type="number" class="form-input" id="withdrawAmount" placeholder="Amount (â‚¦)" min="100" max="<%= availableBal %>" required>
             </div>
             <div class="form-row">
                 <input type="text" class="form-input" id="bankDetails" placeholder="Bank | Account No | Name" value="<%= referral ? referral.bank_details : '' %>" required>
             </div>
-            <p style="font-size:0.68rem;color:var(--text-sub);font-weight:600;margin:8px 0;">
-                Fee: 10% | Net: ₦<span id="netAmount">0</span>
+            <p style="font-size:0.68rem;color:var(--text-secondary);font-weight:600;margin:8px 0;">
+                Fee: 10% | Net: â‚¦<span id="netAmount">0</span>
             </p>
             <button type="submit" class="btn-primary" id="withdrawBtn">Withdraw Now</button>
         </form>
@@ -142,7 +136,7 @@
                 <% if (referrals && referrals.length > 0) { %>
                     <% referrals.forEach(function(r) { %>
                     <tr>
-                        <td><%= r.fullname %><br><small style="font-weight:400;color:var(--text-sub);font-size:0.7rem;"><%= r.email %></small></td>
+                        <td><%= r.fullname %><br><small style="font-weight:400;color:var(--text-secondary);font-size:0.7rem;"><%= r.email %></small></td>
                         <td><span class="badge <%= r.has_paid ? 'active' : 'inactive' %>"><%= r.has_paid ? 'Active' : 'Pending' %></span></td>
                         <td style="font-size:0.7rem;"><%= new Date(r.created_at).toLocaleDateString('en-GB', {day:'numeric',month:'short'}) %></td>
                     </tr>
@@ -162,8 +156,8 @@
                 <% if (withdrawals && withdrawals.length > 0) { %>
                     <% withdrawals.forEach(function(w) { %>
                     <tr>
-                        <td>₦<%= w.amount_requested %></td>
-                        <td>₦<%= w.net_payout %></td>
+                        <td>â‚¦<%= w.amount_requested %></td>
+                        <td>â‚¦<%= w.net_payout %></td>
                         <td><span class="badge <%= w.status === 'completed' ? 'active' : w.status === 'rejected' ? 'inactive' : 'pending' %>"><%= w.status %></span></td>
                         <td style="font-size:0.7rem;"><%= new Date(w.created_at).toLocaleDateString('en-GB', {day:'numeric',month:'short'}) %></td>
                     </tr>

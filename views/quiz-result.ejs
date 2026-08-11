@@ -1,40 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Prepium | Performance Review</title>
-    
-    <script>
-      window.MathJax = {
-        tex: {
-          inlineMath: [['$', '$'], ['\\(', '\\)']],
-          displayMath: [['$$', '$$'], ['\\[', '\\]']],
-          processEscapes: true
-        },
-        options: {
-          ignoreHtmlClass: 'tex2jax_ignore',
-          processHtmlClass: 'tex2jax_process'
-        }
-      };
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/css/style.css"
-    <link rel="manifest" href="/manifest.json">>
+    <%- include('partials/head') %>
     <style>
-        :root {
-            --brand-gradient: linear-gradient(135deg, #0062ff 0%, #4f46e5 100%);
-            --success: #10b981;
-            --danger: #ef4444;
-            --text-dark: #0f172a;
-            --text-sub: #64748b;
-        }
-
         .session-tag {
-            background: linear-gradient(135deg, rgba(0, 98, 255, 0.08), rgba(79, 70, 229, 0.08));
+            background: var(--brand-light);
             color: var(--brand); padding: 6px 14px; border-radius: 10px;
             font-weight: 800; font-size: 0.65rem; text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -43,7 +13,7 @@
         .score-hero {
             margin: 1.25rem 1.5rem;
             padding: 32px 24px;
-            background: rgba(255,255,255,0.7);
+            background: var(--surface);
             border: 1px solid rgba(255,255,255,0.8);
             border-radius: 28px;
             text-align: center;
@@ -54,12 +24,12 @@
         .score-hero::before {
             content: ''; position: absolute; top: -60%; right: -30%;
             width: 200px; height: 200px; border-radius: 50%;
-            background: rgba(0, 98, 255, 0.04);
+            background: var(--brand-light);
         }
         .score-hero::after {
             content: ''; position: absolute; bottom: -40%; left: -20%;
             width: 160px; height: 160px; border-radius: 50%;
-            background: rgba(79, 70, 229, 0.04);
+            background: var(--brand-light);
         }
 
         .score-ring {
@@ -68,7 +38,7 @@
             position: relative;
         }
         .score-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
-        .score-ring-bg { fill: none; stroke: #e2e8f0; stroke-width: 10; }
+        .score-ring-bg { fill: none; stroke: var(--border-solid); stroke-width: 10; }
         .score-ring-fill {
             fill: none; stroke-width: 10; stroke-linecap: round;
             stroke-dasharray: 440;
@@ -87,13 +57,13 @@
         .score-pct.good { color: var(--success); }
         .score-pct.mid { color: #f59e0b; }
         .score-pct.low { color: var(--danger); }
-        .score-label { font-size: 0.65rem; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; }
+        .score-label { font-size: 0.65rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
 
         .score-summary {
-            font-size: 0.95rem; font-weight: 700; color: var(--text-sub);
+            font-size: 0.95rem; font-weight: 700; color: var(--text-secondary);
             margin-top: 8px; position: relative;
         }
-        .score-summary strong { color: var(--text-dark); font-weight: 800; }
+        .score-summary strong { color: var(--text-primary); font-weight: 800; }
 
         .result-stats {
             display: flex; gap: 10px; margin-top: 20px; position: relative;
@@ -103,7 +73,7 @@
             border-radius: 14px; text-align: center;
         }
         .result-stat .r-num { font-size: 1.1rem; font-weight: 800; display: block; }
-        .result-stat .r-label { font-size: 0.55rem; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.3px; }
+        .result-stat .r-label { font-size: 0.55rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.3px; }
         .correct-color { color: var(--success); }
         .wrong-color { color: var(--danger); }
         .total-color { color: var(--brand); }
@@ -113,22 +83,22 @@
             border-radius: 18px;
             display: flex; align-items: center; gap: 14px;
         }
-        .perf-msg.great { background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.1); }
-        .perf-msg.good { background: rgba(0, 98, 255, 0.06); border: 1px solid rgba(0, 98, 255, 0.1); }
-        .perf-msg.poor { background: rgba(239, 68, 68, 0.06); border: 1px solid rgba(239, 68, 68, 0.1); }
+        .perf-msg.great { background: var(--success-soft); border: 1px solid rgba(16, 185, 129, 0.1); }
+        .perf-msg.good { background: var(--brand-light); border: 1px solid rgba(99, 102, 241, 0.1); }
+        .perf-msg.poor { background: var(--danger-soft); border: 1px solid rgba(239, 68, 68, 0.1); }
         .perf-icon {
             width: 42px; height: 42px; border-radius: 14px;
             display: flex; align-items: center; justify-content: center;
             font-size: 1.1rem; flex-shrink: 0;
         }
-        .perf-msg.great .perf-icon { background: rgba(16, 185, 129, 0.1); color: var(--success); }
-        .perf-msg.good .perf-icon { background: rgba(0, 98, 255, 0.1); color: var(--brand); }
-        .perf-msg.poor .perf-icon { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
-        .perf-text { font-size: 0.8rem; font-weight: 600; color: var(--text-sub); line-height: 1.4; }
+        .perf-msg.great .perf-icon { background: var(--success-soft); color: var(--success); }
+        .perf-msg.good .perf-icon { background: var(--brand-light); color: var(--brand); }
+        .perf-msg.poor .perf-icon { background: var(--danger-soft); color: var(--danger); }
+        .perf-text { font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); line-height: 1.4; }
 
         .breakdown {
             margin: 0 1.5rem 1.5rem;
-            background: rgba(255,255,255,0.7);
+            background: var(--surface);
             border: 1px solid rgba(255,255,255,0.8);
             border-radius: 20px; overflow: hidden;
             box-shadow: 0 2px 12px rgba(0,0,0,0.02);
@@ -143,22 +113,22 @@
             font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
         }
         .breakdown[open] summary::after { content: 'Hide Details'; }
-        .breakdown-inner { padding: 0 18px 18px; border-top: 1px solid rgba(226,232,240,0.5); }
+        .breakdown-inner { padding: 0 18px 18px; border-top: 1px solid var(--border); }
         .subj-row {
             display: flex; justify-content: space-between; align-items: center;
             padding: 12px 0; border-bottom: 1px solid rgba(248,250,252,0.8);
         }
         .subj-row:last-child { border-bottom: none; }
-        .subj-name { font-weight: 700; font-size: 0.82rem; color: var(--text-dark); }
+        .subj-name { font-weight: 700; font-size: 0.82rem; color: var(--text-primary); }
         .subj-score {
             font-weight: 800; font-size: 0.82rem; color: var(--brand);
-            background: rgba(0, 98, 255, 0.06);
+            background: var(--brand-light);
             padding: 4px 12px; border-radius: 8px;
         }
 
         .q-card {
             margin: 0 1.5rem 1rem;
-            background: rgba(255,255,255,0.7);
+            background: var(--surface);
             border: 1px solid rgba(255,255,255,0.8);
             border-radius: 20px;
             overflow: hidden;
@@ -167,13 +137,13 @@
         .q-card-top {
             height: 4px; width: 100%;
         }
-        .q-card-top.correct { background: linear-gradient(90deg, #10b981, #34d399); }
-        .q-card-top.wrong { background: linear-gradient(90deg, #ef4444, #f87171); }
-        .q-card-top.skipped { background: linear-gradient(90deg, #94a3b8, #cbd5e1); }
+        .q-card-top.correct { background: linear-gradient(90deg, var(--success), #34d399); }
+        .q-card-top.wrong { background: linear-gradient(90deg, var(--danger), #f87171); }
+        .q-card-top.skipped { background: linear-gradient(90deg, var(--text-muted), var(--border-solid)); }
 
         .q-card-body { padding: 18px; }
         .q-num {
-            font-size: 0.6rem; font-weight: 800; color: var(--text-sub);
+            font-size: 0.6rem; font-weight: 800; color: var(--text-secondary);
             text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
             display: flex; align-items: center; gap: 8px;
         }
@@ -184,23 +154,23 @@
         .q-badge.wrong { background: rgba(239,68,68,0.1); color: var(--danger); }
 
         .q-text {
-            font-weight: 700; font-size: 0.95rem; color: var(--text-dark);
+            font-weight: 700; font-size: 0.95rem; color: var(--text-primary);
             margin-bottom: 20px; line-height: 1.5;
         }
 
         .opt-list { display: flex; flex-direction: column; gap: 10px; }
         .opt-item {
             padding: 14px 16px; border-radius: 14px;
-            border: 1.5px solid rgba(226,232,240,0.6);
+            border: 1.5px solid var(--border);
             font-weight: 600; font-size: 0.85rem;
             display: flex; align-items: center; gap: 12px;
-            background: rgba(255,255,255,0.6);
+            background: var(--surface);
             transition: all 0.2s ease;
         }
         .opt-prefix {
             width: 30px; height: 30px; background: rgba(241,245,249,0.8);
             border-radius: 10px; display: flex; align-items: center;
-            justify-content: center; font-weight: 800; color: var(--text-sub);
+            justify-content: center; font-weight: 800; color: var(--text-secondary);
             font-size: 0.75rem; flex-shrink: 0;
         }
         .opt-text { flex: 1; line-height: 1.4; }
@@ -226,7 +196,7 @@
         .sol-details {
             margin-top: 16px; border-radius: 14px;
             background: rgba(248,250,252,0.8);
-            border: 1px solid rgba(226,232,240,0.5);
+            border: 1px solid var(--border);
             overflow: hidden;
         }
         .sol-details summary {
@@ -236,9 +206,9 @@
         }
         .sol-text {
             padding: 14px; font-size: 0.82rem; line-height: 1.6;
-            color: var(--text-sub); border-top: 1px solid rgba(226,232,240,0.5);
+            color: var(--text-secondary); border-top: 1px solid var(--border);
         }
-        .sol-text b { color: var(--text-dark); }
+        .sol-text b { color: var(--text-primary); }
 
         .action-bar {
             display: flex; gap: 10px; padding: 0 1.5rem; margin-top: 1.5rem;
@@ -251,14 +221,15 @@
         }
         .btn-action.btn-primary {
             background: var(--brand-gradient); color: white;
-            box-shadow: 0 6px 20px rgba(0, 98, 255, 0.2);
+            box-shadow: var(--shadow-lg);
         }
         .btn-action.btn-secondary {
-            background: rgba(255,255,255,0.8); color: var(--text-dark);
-            border: 1px solid rgba(226,232,240,0.6);
+            background: var(--surface); color: var(--text-primary);
+            border: 1px solid var(--border);
         }
         .btn-action:active { transform: scale(0.97); }
     </style>
+    <%- include('partials/theme-toggle') %>
 </head>
 <body>
 <%- include('partials/sidebar') %>
@@ -283,7 +254,7 @@
                             <stop offset="100%" style="stop-color:#fbbf24"/>
                         </linearGradient>
                         <linearGradient id="dangerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#ef4444"/>
+                            <stop offset="0%" style="stop-color:var(--danger)"/>
                             <stop offset="100%" style="stop-color:#f87171"/>
                         </linearGradient>
                     </defs>
@@ -321,15 +292,15 @@
         <% 
             let perfClass = 'good';
             let perfIcon = 'fas fa-thumbs-up';
-            let perfText = 'Good effort! Keep practicing to reach 80%+.';
+            let                 perfText = 'Good effort! Keep practicing to improve.';
             if (percentage >= 80) { 
                 perfClass = 'great'; 
                 perfIcon = 'fas fa-star';
-                perfText = 'Excellent performance! You\'re mastering this material.';
+                perfText = 'Excellent! You\'ve mastered this material.';
             } else if (percentage < 40) { 
                 perfClass = 'poor'; 
                 perfIcon = 'fas fa-book-open';
-                perfText = 'Keep studying! Review the explanations below to improve.';
+                perfText = 'Keep studying. Review the explanations to improve.';
             }
         %>
         <div class="perf-msg <%= perfClass %>">

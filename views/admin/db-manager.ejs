@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head') %>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Plus Jakarta Sans',sans-serif; display:flex; background:var(--bg); color:var(--text-primary); min-height:100vh; }
+        .sidebar { width:260px; background:#0b1437; height:100vh; color:white; position:fixed; display:flex; flex-direction:column; z-index:100; overflow-y:auto; }
+        .sidebar-inner { padding:2rem 1.25rem; flex:1; }
+        .logo { font-size:1.5rem; font-weight:800; color:white; text-decoration:none; margin-bottom:2.5rem; display:block; padding-left:6px; letter-spacing:-0.5px; }
+        .logo span { color:#2563eb; }
+        .nav-label { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:1.2px; color:rgba(255,255,255,0.3); padding:0 12px; margin-bottom:10px; margin-top:8px; }
+        .nav-item { display:flex; align-items:center; gap:12px; color:rgba(255,255,255,0.5); text-decoration:none; padding:11px 14px; border-radius:12px; font-size:0.85rem; font-weight:600; margin-bottom:3px; transition:all 0.2s; }
+        .nav-item:hover { background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.9); }
+        .nav-item.active { background:rgba(37,99,235,0.18); color:white; }
+        .main { margin-left:260px; padding:2.5rem; width:calc(100% - 260px); }
+        h1 { font-size:1.6rem; font-weight:800; margin-bottom:0.3rem; }
+        .subtitle { color:#64748b; font-size:0.88rem; font-weight:500; margin-bottom:1.5rem; }
+        .card { background:var(--surface); backdrop-filter:blur(20px); border-radius:20px; padding:1.5rem; box-shadow:0 8px 32px rgba(15,23,42,0.07); margin-bottom:1.5rem; }
+        .card h3 { font-size:0.95rem; font-weight:700; margin-bottom:1rem; }
+        .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; }
+        .btn { padding:10px 20px; border:none; border-radius:14px; font-family:inherit; font-weight:700; font-size:0.82rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all 0.2s; }
+        .btn-primary { background:#2563eb; color:white; }
+        .btn-danger { background:#f43f5e; color:white; }
+        .btn-sm { padding:6px 14px; font-size:0.72rem; border-radius:8px; }
+        .btn-outline { background:transparent; border:1.5px solid var(--border); color:#64748b; }
+        table { width:100%; border-collapse:collapse; font-size:0.82rem; }
+        th { text-align:left; padding:10px 8px; font-weight:700; color:#64748b; font-size:0.65rem; text-transform:uppercase; border-bottom:1px solid var(--border); }
+        td { padding:10px 8px; border-bottom:1px solid var(--border); font-weight:600; max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+        .table-pill { display:inline-block;padding:6px 14px;border-radius:8px;background:var(--brand-soft);color:var(--brand);font-weight:700;font-size:0.8rem;margin:4px;cursor:pointer;border:1px solid #c7d2fe;transition:all 0.2s; }
+        .table-pill:hover { background:#c7d2fe; }
+        .table-pill.active { background:#4338ca; color:white; border-color:var(--brand); }
+        .inp { padding:8px 12px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-weight:600; font-size:0.82rem; outline:none; }
+        .inp:focus { border-color:#2563eb; }
+        .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:1000; align-items:center; justify-content:center; }
+        .modal-overlay.show { display:flex; }
+        .modal-box { background:var(--surface-solid); border-radius:20px; padding:2rem; max-width:700px; width:90%; max-height:80vh; overflow-y:auto; }
+        .empty { text-align:center; padding:2rem; color:#94a3b8; font-size:0.85rem; }
+        .empty i { font-size:2rem; display:block; margin-bottom:10px; opacity:0.3; }
+        .pin-overlay { display:flex; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:2000; align-items:center; justify-content:center; }
+        .pin-box { background:var(--surface-solid); border-radius:20px; padding:2.5rem; max-width:400px; width:90%; text-align:center; }
+        .pin-box input { width:100%; padding:14px; border:2px solid var(--border); border-radius:14px; font-size:1.5rem; text-align:center; letter-spacing:8px; font-weight:800; outline:none; margin:1rem 0; }
+        .pin-box input:focus { border-color:#2563eb; }
+        .pin-error { color:var(--danger); font-size:0.82rem; font-weight:600; display:none; }
+        .msg { padding:12px 16px; border-radius:14px; font-weight:600; font-size:0.82rem; margin-bottom:1rem; }
+        .msg.good { background:var(--success-soft); color:var(--success); }
+        .msg.bad { background:var(--danger-soft); color:var(--danger); }
+        .sql-box { width:100%; padding:12px; border:1.5px solid var(--border); border-radius:12px; font-family:'Courier New',monospace; font-size:0.82rem; resize:vertical; min-height:80px; outline:none; margin-bottom:10px; }
+        .sql-box:focus { border-color:#2563eb; }
+        .hamburger { display:none; position:fixed; top:14px; left:14px; z-index:200; width:40px; height:40px; border-radius:12px; background:#0b1437; color:white; border:none; font-size:1.2rem; cursor:pointer; align-items:center; justify-content:center; }
+        .sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:99; }
+        @media (max-width:900px) {
+            .hamburger { display:flex; }
+            .sidebar { transform:translateX(-100%); transition:transform 0.3s ease; }
+            .sidebar.open { transform:translateX(0); }
+            .sidebar-overlay.show { display:block; }
+            .main { margin-left:0; width:100%; padding:1rem; }
+            .grid-2 { grid-template-columns:1fr; }
+            .table-pill { font-size:0.72rem; padding:5px 10px; }
+            .pin-box { padding:1.5rem; }
+            .pin-box input { font-size:1.2rem; }
+        }
+    </style>
+<meta name="theme-color" content="#2563eb">
+<%- include('../partials/theme-toggle') %>
+</head>
+<body>
+<div class="pin-overlay" id="pinOverlay">
+    <div class="pin-box">
+        <i class="fas fa-shield-halved" style="font-size:2.5rem;color:#2563eb;margin-bottom:10px;"></i>
+        <h2 style="font-size:1.1rem;font-weight:800;margin-bottom:4px;">DB Manager Access</h2>
+        <p style="color:#64748b;font-size:0.82rem;font-weight:500;margin-bottom:6px;">Enter security PIN</p>
+        <input type="password" id="pinInput" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="off" onkeydown="if(event.key==='Enter')checkPin()">
+        <div class="pin-error" id="pinError">Incorrect PIN</div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="checkPin()"><i class="fas fa-lock-open"></i> Unlock</button>
+    </div>
+</div>
+
+<button class="hamburger" id="hamBtn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<nav class="sidebar" id="adminSidebar">
+    <div class="sidebar-inner">
+        <a href="/admin/dashboard" class="logo">PREPIUM<span>.</span></a>
+        <div class="nav-label">Main</div>
+        <a href="/admin/dashboard" class="nav-item"><i class="fas fa-th-large"></i> Dashboard</a>
+        <a href="/admin/analytics" class="nav-item"><i class="fas fa-chart-line"></i> Analytics</a>
+        <div class="nav-label">Management</div>
+        <a href="/admin/universities" class="nav-item"><i class="fas fa-landmark"></i> Universities</a>
+        <a href="/admin/students" class="nav-item"><i class="fas fa-user-graduate"></i> Students</a>
+        <a href="/admin/coupons" class="nav-item"><i class="fas fa-ticket"></i> Coupons</a>
+        <div class="nav-label">Developer</div>
+        <a href="/admin/db-manager" class="nav-item active"><i class="fas fa-database"></i> DB Manager</a>
+        <div class="nav-divider" style="height:1px;background:rgba(255,255,255,0.06);margin:12px 14px;"></div>
+        <a href="/logout" class="nav-item" style="color:rgba(244,63,94,0.7)"><i class="fas fa-right-from-bracket"></i> Logout</a>
+    </div>
+</nav>
+
+<main class="main">
+    <div style="display:none;" id="lockedMsg">
+        <div style="text-align:center;padding:4rem;">
+            <i class="fas fa-lock" style="font-size:3rem;color:#94a3b8;margin-bottom:1rem;"></i>
+            <h2 style="font-size:1.2rem;font-weight:800;color:#64748b;">Enter PIN to access DB Manager</h2>
+        </div>
+    </div>
+
+    <div id="mainContent">
+        <h1>Database Manager</h1>
+        <p class="subtitle">View and edit all database tables securely.</p>
+
+        <% if (msg) { %><div class="msg good"><%= msg %></div><% } %>
+
+        <div class="grid-2">
+            <div class="card">
+                <h3>Tables</h3>
+                <div id="tableList">
+                    <% if (tables && tables.length > 0) { %>
+                        <% tables.forEach(function(t) { %>
+                        <span class="table-pill" onclick="selectTable('<%= t %>')"><%= t %></span>
+                        <% }); %>
+                    <% } else { %>
+                        <div class="empty"><i class="fas fa-database"></i> No tables found</div>
+                    <% } %>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>SQL Query</h3>
+                <textarea class="sql-box" id="sqlInput" placeholder="SELECT * FROM users LIMIT 10"></textarea>
+                <button class="btn btn-primary" onclick="runSql()" style="width:100%;justify-content:center;"><i class="fas fa-play"></i> Run</button>
+            </div>
+        </div>
+
+        <div class="card" id="dataCard" style="display:none;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:8px;">
+                <h3 id="dataTableName">Data</h3>
+                <div style="display:flex;gap:6px;">
+                    <button class="btn btn-sm btn-outline" onclick="refreshTable()"><i class="fas fa-sync"></i> Refresh</button>
+                </div>
+            </div>
+            <div style="overflow-x:auto;" id="dataContainer"><div class="empty"><i class="fas fa-spinner fa-pulse"></i> Select a table</div></div>
+        </div>
+    </div>
+</main>
+
+<div class="modal-overlay" id="editModal">
+    <div class="modal-box">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+            <h3>Edit Row</h3>
+            <button class="btn btn-sm btn-outline" onclick="closeEdit()"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="editForm"></div>
+    </div>
+</div>
+
+<script>
+var dbPin = localStorage.getItem('db_pin') || '';
+var currentTable = '';
+var currentData = [];
+
+function checkPin() {
+    var pin = document.getElementById('pinInput').value.trim();
+    if (!pin) return;
+    fetch('/admin/db-manager/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: pin })
+    }).then(function(r){ return r.json(); }).then(function(d) {
+        if (d.success) {
+            localStorage.setItem('db_pin', pin);
+            document.getElementById('pinOverlay').style.display = 'none';
+        } else {
+            document.getElementById('pinError').style.display = 'block';
+        }
+    });
+}
+
+(function() {
+    var saved = localStorage.getItem('db_pin');
+    if (saved) {
+        fetch('/admin/db-manager/verify-pin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pin: saved })
+        }).then(function(r){ return r.json(); }).then(function(d) {
+            if (d.success) document.getElementById('pinOverlay').style.display = 'none';
+        });
+    }
+})();
+
+function selectTable(name) {
+    currentTable = name;
+    document.querySelectorAll('.table-pill').forEach(function(el) {
+        el.classList.toggle('active', el.textContent === name);
+    });
+    document.getElementById('dataCard').style.display = 'block';
+    document.getElementById('dataTableName').textContent = 'Table: ' + name;
+    document.getElementById('dataContainer').innerHTML = '<div class="empty"><i class="fas fa-spinner fa-pulse"></i> Loading…</div>';
+    fetch('/admin/db-manager/data/' + encodeURIComponent(name))
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+        currentData = d.rows || [];
+        renderTable(d.rows || [], d.columns || []);
+    })
+    .catch(function() {
+        document.getElementById('dataContainer').innerHTML = '<div class="empty" style="color:var(--danger);"><i class="fas fa-exclamation-triangle"></i> Failed to load</div>';
+    });
+}
+
+function renderTable(rows, cols) {
+    if (!rows.length) {
+        document.getElementById('dataContainer').innerHTML = '<div class="empty"><i class="fas fa-inbox"></i> Empty table</div>';
+        return;
+    }
+    var html = '<table><thead><tr>';
+    cols.forEach(function(c) { html += '<th>' + c + '</th>'; });
+    html += '<th style="width:60px;">Edit</th></tr></thead><tbody>';
+    rows.forEach(function(r) {
+        html += '<tr>';
+        cols.forEach(function(c) {
+            var v = r[c];
+            if (v === null || v === undefined) v = '<span style="color:#94a3b8;">NULL</span>';
+            else if (typeof v === 'object') v = JSON.stringify(v);
+            else v = String(v);
+            if (v.length > 100) v = v.substring(0, 100) + '…';
+            html += '<td title="' + String(v).replace(/"/g,'&quot;') + '">' + v + '</td>';
+        });
+        var pk = r[cols[0]];
+        html += '<td><button class="btn btn-sm btn-outline" onclick="editRow(' + JSON.stringify(r).replace(/"/g,'&quot;') + ',\'' + cols.join(',') + '\')"><i class="fas fa-edit"></i></button></td>';
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById('dataContainer').innerHTML = html;
+}
+
+function editRow(row, colStr) {
+    var cols = colStr.split(',');
+    var html = '';
+    cols.forEach(function(c) {
+        var v = row[c];
+        if (v === null || v === undefined) v = '';
+        else if (typeof v === 'object') v = JSON.stringify(v);
+        html += '<div style="margin-bottom:10px;">' +
+            '<label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;color:#64748b;display:block;margin-bottom:3px;">' + c + '</label>' +
+            '<input class="inp" style="width:100%;" id="ef-' + c + '" value="' + String(v).replace(/"/g,'&quot;') + '">' +
+            '</div>';
+    });
+    html += '<div style="display:flex;gap:8px;margin-top:1rem;">' +
+        '<button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="saveEdit(\'' + colStr + '\',' + (row[cols[0]] !== undefined ? JSON.stringify(row[cols[0]]) : 'null') + ')"><i class="fas fa-save"></i> Save</button>' +
+        '<button class="btn btn-outline" onclick="closeEdit()">Cancel</button>' +
+        '</div>';
+    document.getElementById('editForm').innerHTML = html;
+    document.getElementById('editModal').classList.add('show');
+}
+
+function saveEdit(colStr, pkVal) {
+    var cols = colStr.split(',');
+    var data = {};
+    cols.forEach(function(c) { data[c] = document.getElementById('ef-' + c).value; });
+    fetch('/admin/db-manager/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table: currentTable, columns: cols, row: data, pkCol: cols[0], pkVal: pkVal })
+    }).then(function(r){ return r.json(); }).then(function(d) {
+        if (d.success) {
+            Swal.fire({ icon: 'success', title: 'Saved!', timer: 1200, showConfirmButton: false });
+            closeEdit();
+            selectTable(currentTable);
+        } else {
+            Swal.fire({ icon: 'error', title: 'Error', text: d.error });
+        }
+    });
+}
+
+function closeEdit() { document.getElementById('editModal').classList.remove('show'); }
+
+function refreshTable() { if (currentTable) selectTable(currentTable); }
+
+function toggleSidebar() {
+    document.getElementById('adminSidebar').classList.toggle('open');
+    document.getElementById('sidebarOverlay').classList.toggle('show');
+}
+
+function runSql() {
+    var sql = document.getElementById('sqlInput').value.trim();
+    if (!sql) return;
+    document.getElementById('dataCard').style.display = 'block';
+    document.getElementById('dataTableName').textContent = 'SQL Result';
+    document.getElementById('dataContainer').innerHTML = '<div class="empty"><i class="fas fa-spinner fa-pulse"></i> Running…</div>';
+    fetch('/admin/db-manager/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sql: sql })
+    }).then(function(r){ return r.json(); }).then(function(d) {
+        if (d.success) {
+            currentData = d.rows || [];
+            renderTable(d.rows || [], d.columns || []);
+        } else {
+            document.getElementById('dataContainer').innerHTML = '<div class="empty" style="color:var(--danger);"><i class="fas fa-exclamation-triangle"></i> ' + (d.error || 'Query failed') + '</div>';
+        }
+    });
+}
+</script>
+</body>
+</html>

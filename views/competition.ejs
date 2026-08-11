@@ -1,20 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prepium Arena | Coming Soon</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/style.css"
-    <link rel="manifest" href="/manifest.json">>
+    <%- include('partials/head') %>
     <style>
         body { 
             flex-direction: column;
         }
         
         header { 
-            background: white;
-            border-bottom: 1px solid #f1f5f9;
+            background: var(--surface-solid);
+            border-bottom: 1px solid var(--bg);
             padding: 1.2rem 2rem;
             display: flex; 
             justify-content: space-between; 
@@ -24,7 +19,7 @@
             z-index: 100;
         }
         .logo span {
-            background: #eff6ff;
+            background: var(--brand-soft);
             font-size: 0.75rem;
             font-weight: 700;
             padding: 4px 10px;
@@ -32,7 +27,7 @@
             letter-spacing: 0.5px;
         }
         .btn-back { 
-            background: var(--text); 
+            background: var(--brand); 
             color: white; 
             text-decoration: none;
             padding: 0.7rem 1.3rem; 
@@ -54,10 +49,10 @@
         }
         
         .coming-soon-card {
-            background: white;
+            background: var(--surface-solid);
             padding: 3.5rem 2rem;
             border-radius: 32px;
-            border: 1px solid #f1f5f9;
+            border: 1px solid var(--bg);
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.02);
             text-align: center;
             width: 100%;
@@ -67,7 +62,7 @@
             display: inline-flex;
             align-items: center;
             gap: 10px;
-            background: #ecfdf5;
+            background: var(--success-soft);
             color: #047857;
             padding: 8px 18px;
             border-radius: 30px;
@@ -75,7 +70,7 @@
             font-size: 0.85rem;
             letter-spacing: 0.5px;
             margin-bottom: 1.5rem;
-            border: 1px solid #d1fae5;
+            border: 1px solid var(--success-soft);
         }
         .pulse-dot {
             width: 8px;
@@ -102,7 +97,7 @@
         }
         .subtitle {
             font-size: 1.1rem;
-            color: #64748b;
+            color: var(--text-secondary);
             max-width: 550px;
             margin: 0 auto 2.5rem auto;
             line-height: 1.6;
@@ -115,8 +110,8 @@
             margin-bottom: 2.5rem;
         }
         .teaser-item {
-            background: #f8fafc;
-            border: 1px solid #f1f5f9;
+            background: var(--surface);
+            border: 1px solid var(--bg);
             padding: 1.2rem;
             border-radius: 18px;
         }
@@ -129,10 +124,11 @@
         .teaser-item p {
             margin: 0;
             font-size: 0.85rem;
-            color: #64748b;
+            color: var(--text-secondary);
             font-weight: 600;
         }
     </style>
+<%- include('partials/theme-toggle') %>
 </head>
 <body>
 
@@ -154,15 +150,15 @@
 
             <div class="teaser-grid">
                 <div class="teaser-item">
-                    <h3>🏆 Grand Prizes</h3>
+                    <h3>ðŸ† Grand Prizes</h3>
                     <p>Financial rewards for top scorers</p>
                 </div>
                 <div class="teaser-item">
-                    <h3>⚡ Live Leaderboard</h3>
+                    <h3>âš¡ Live Leaderboard</h3>
                     <p>See your rank move in real-time</p>
                 </div>
                 <div class="teaser-item">
-                    <h3>🧩 CBT Gameplay</h3>
+                    <h3>ðŸ§© CBT Gameplay</h3>
                     <p>Curated logical & academic tasks</p>
                 </div>
             </div>

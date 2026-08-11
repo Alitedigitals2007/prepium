@@ -1,41 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prepium Admin | Dashboard</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <%- include('../partials/head') %>
     <style>
         :root {
-            --brand: #0062ff;
-            --brand-light: rgba(0, 98, 255, 0.08);
-            --brand-glow: rgba(0, 98, 255, 0.25);
+            --brand-glow: rgba(37, 99, 235, 0.25);
             --sidebar: #0b1437;
             --sidebar-hover: rgba(255, 255, 255, 0.06);
             --sidebar-active: rgba(0, 98, 255, 0.18);
-            --bg: #f0f4f8;
-            --card: rgba(255, 255, 255, 0.72);
-            --card-solid: #ffffff;
-            --text-primary: #0f172a;
-            --text-secondary: #64748b;
-            --text-muted: #94a3b8;
-            --border: rgba(226, 232, 240, 0.6);
-            --border-solid: #e2e8f0;
-            --indigo: #6366f1;
+            --indigo: var(--brand);
             --green: #16a34a;
-            --green-bg: #dcfce7;
+            --green-bg: var(--success-soft);
             --amber: #f59e0b;
-            --amber-bg: #fef3c7;
+            --amber-bg: var(--warning-soft);
             --rose: #f43f5e;
-            --rose-bg: #ffe4e6;
+            --rose-bg: var(--danger-soft);
             --blue: #3b82f6;
-            --blue-bg: #dbeafe;
-            --radius: 16px;
-            --radius-sm: 10px;
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+            --blue-bg: var(--brand-soft);
             --shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.03);
-            --shadow-lg: 0 12px 40px rgba(0,0,0,0.08);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -170,7 +152,7 @@
             right: -10%;
             width: 320px;
             height: 320px;
-            background: radial-gradient(circle, rgba(0,98,255,0.2) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(37,99,235,0.2) 0%, transparent 70%);
             border-radius: 50%;
         }
         .welcome-banner::after {
@@ -318,11 +300,11 @@
         }
         td {
             padding: 14px 16px;
-            border-bottom: 1px solid #f1f5f9;
+            border-bottom: 1px solid var(--border);
             font-size: 0.86rem;
         }
         tr:last-child td { border-bottom: none; }
-        tr:hover td { background: rgba(0,98,255,0.02); }
+        tr:hover td { background: rgba(37,99,235,0.02); }
 
         .user-info { display: flex; flex-direction: column; gap: 2px; }
         .user-name { font-weight: 700; color: var(--text-primary); }
@@ -345,7 +327,7 @@
             letter-spacing: 0.3px;
         }
         .status-paid { background: var(--green-bg); color: var(--green); }
-        .status-free { background: #f1f5f9; color: var(--text-muted); }
+        .status-free { background: var(--surface); color: var(--text-muted); }
         .status i { font-size: 0.55rem; }
 
         .empty-state {
@@ -389,6 +371,8 @@
             th, td { padding: 10px 8px; font-size: 0.75rem; }
         }
     </style>
+<meta name="theme-color" content="#2563eb">
+<%- include('../partials/theme-toggle') %>
 </head>
 <body>
 
@@ -406,18 +390,28 @@
                 <span>Analytics</span>
             </a>
 
+            <span class="sidebar-section">Dev</span>
+            <a href="/admin/db-manager" class="nav-item">
+                <i class="fas fa-database"></i>
+                <span>DB Manager</span>
+            </a>
+
             <span class="sidebar-section">Manage</span>
             <a href="/admin/universities" class="nav-item">
                 <i class="fas fa-building-columns"></i>
                 <span>Universities</span>
             </a>
-            <a href="/admin/subjects" class="nav-item">
-                <i class="fas fa-book-open"></i>
-                <span>Subjects</span>
+            <a href="/admin/coupons" class="nav-item">
+                <i class="fas fa-ticket"></i>
+                <span>Coupons</span>
             </a>
             <a href="/admin/daily" class="nav-item">
                 <i class="fas fa-fire-flame-curved"></i>
                 <span>Daily Arena</span>
+            </a>
+            <a href="/admin/quiz-generator" class="nav-item">
+                <i class="fas fa-bolt"></i>
+                <span>Quiz Generator</span>
             </a>
 
             <span class="sidebar-section">People</span>

@@ -19,10 +19,12 @@
     "ejs": "^5.0.2",
     "express": "^5.2.1",
     "express-session": "^1.19.0",
+    "helmet": "^8.3.0",
     "multer": "^2.1.1",
     "node-fetch": "^3.3.2",
     "nodemailer": "^8.0.7",
     "pdf-to-text": "^0.0.7",
-    "pg": "^8.20.0"
+    "pg": "^8.20.0",
+    "web-push": "^3.6.7"
   }
 }

@@ -1,19 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sign Up | Prepium</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/style.css"
-    <link rel="manifest" href="/manifest.json">>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <%- include('partials/head') %>
+    <%- include('partials/theme-toggle') %>
     <style>
         .intro-overlay {
             position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            background: white;
+            background: var(--surface-solid);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -24,7 +19,7 @@
         .intro-text {
             font-size: 1.65rem;
             font-weight: 800;
-            color: var(--text-dark);
+            color: var(--text-primary);
             letter-spacing: -0.5px;
             text-align: center;
             opacity: 0;
@@ -43,7 +38,7 @@
             position: absolute;
             right: 1.2rem;
             cursor: pointer;
-            color: var(--text-sub);
+            color: var(--text-secondary);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -117,7 +112,7 @@
             <div class="form-group">
                 <label>Create Password</label>
                 <div class="input-wrapper">
-                    <input type="password" name="password" id="passwordInput" placeholder="••••••••" required autocomplete="new-password">
+                    <input type="password" name="password" id="passwordInput" placeholder="........" required autocomplete="new-password">
                     <div class="password-toggle" id="togglePassword">
                         <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -128,7 +123,7 @@
             </div>
 
             <button type="submit" class="btn btn-primary" id="submitBtn">
-                <span id="btnText">Create My Account ➔</span>
+                <span id="btnText">Create My Account &rarr;</span>
                 <span class="spinner" id="btnSpinner"></span>
             </button>
         </form>

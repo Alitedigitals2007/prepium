@@ -1,16 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Prepium | Refer & Earn</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/css/style.css"
-    <link rel="manifest" href="/manifest.json">>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <%- include('partials/head') %>
     <style>
-        :root { --brand: #0062ff; --text: #1e293b; --sub: #64748b; }
+        :root { --sub: var(--text-secondary); }
         .app-shell { min-height: 100vh; padding: 2rem 1.5rem; max-width: 500px; margin: 0 auto; }
         .logo-head { font-weight: 800; font-size: 1.35rem; color: var(--brand); margin-bottom: 1.5rem; display: inline-block; text-decoration: none; }
         .logo-head span { color: var(--text); }
@@ -18,7 +11,7 @@
         p.desc { color: var(--sub); font-weight: 600; font-size: 0.9rem; margin-bottom: 1.75rem; }
 
         .perk-card {
-            background: #fafcfe; border: 1px solid #e2e8f0; border-radius: 20px; padding: 1.15rem;
+            background: var(--surface); border: 1px solid var(--border-solid); border-radius: 20px; padding: 1.15rem;
             margin-bottom: 12px; display: flex; align-items: flex-start; gap: 14px;
         }
         .perk-card i { font-size: 1.25rem; color: var(--brand); margin-top: 2px; width: 24px; text-align: center; }
@@ -32,17 +25,17 @@
             box-shadow: 0 8px 24px rgba(0,98,255,0.18); margin-top: 1.25rem;
         }
         .cta-btn:hover { background: #0056e0; }
-        .cta-btn.secondary { background: var(--text); box-shadow: none; }
+        .cta-btn.secondary { background: var(--brand); box-shadow: none; }
 
         .info-panel {
-            background: #f0f7ff; border: 1px solid #dbeafe; border-radius: 20px; padding: 1.25rem;
+            background: var(--brand-soft); border: 1px solid var(--brand-soft); border-radius: 20px; padding: 1.25rem;
             margin: 1.25rem 0; border-left: 4px solid var(--brand);
         }
         .info-panel strong { display: block; font-size: 0.88rem; margin-bottom: 4px; }
         .info-panel p { margin: 0; font-size: 0.82rem; color: var(--sub); font-weight: 600; }
 
         .code-display {
-            background: #eff6ff; border: 2px dashed rgba(0,98,255,0.3); border-radius: 20px;
+            background: var(--brand-soft); border: 2px dashed rgba(0,98,255,0.3); border-radius: 20px;
             padding: 1rem; font-size: 1.5rem; font-weight: 800; color: var(--brand);
             text-align: center; letter-spacing: 3px; margin: 1rem 0; cursor: pointer;
         }
@@ -51,18 +44,19 @@
         .input-group { margin-bottom: 1rem; }
         .input-group label { display: block; font-size: 0.72rem; font-weight: 800; color: var(--sub); margin-bottom: 6px; text-transform: uppercase; }
         .input-group input, .input-group textarea {
-            width: 100%; padding: 1rem; border-radius: 14px; border: 1.5px solid #e2e8f0;
-            font-family: inherit; font-size: 0.9rem; font-weight: 600; background: #f8fafc;
+            width: 100%; padding: 1rem; border-radius: 14px; border: 1.5px solid var(--border-solid);
+            font-family: inherit; font-size: 0.9rem; font-weight: 600; background: var(--surface);
             outline: none; box-sizing: border-box;
         }
-        .input-group input:focus, .input-group textarea:focus { border-color: var(--brand); background: white; }
+        .input-group input:focus, .input-group textarea:focus { border-color: var(--brand); background: var(--surface-solid); }
         .input-group textarea { resize: vertical; min-height: 80px; }
 
         .dash-link { text-align: center; margin-top: 1.5rem; }
         .dash-link a { color: var(--brand); font-weight: 700; font-size: 0.88rem; text-decoration: none; }
 
-        @media (min-width: 431px) { .app-shell { border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; } }
+        @media (min-width: 431px) { .app-shell { border-left: 1px solid var(--border-solid); border-right: 1px solid var(--border-solid); } }
     </style>
+    <%- include('partials/theme-toggle') %>
 </head>
 <body>
 <div class="app-shell">
@@ -70,13 +64,13 @@
 
     <div id="step1">
         <h1>Refer & Earn</h1>
-        <p class="desc">Share Prepium with friends and earn 15% commission on every premium activation.</p>
+        <p class="desc">Earn 15% commission on every referral</p>
 
         <div class="perk-card">
             <i class="fas fa-percentage"></i>
             <div>
                 <div class="perk-title">15% Commission</div>
-                <div class="perk-desc">Earn ₦150 for every friend who activates premium (₦1,000).</div>
+                <div class="perk-desc">â‚¦300 per premium activation (â‚¦2,000 plan)</div>
             </div>
         </div>
         <div class="perk-card">
@@ -90,29 +84,29 @@
             <i class="fas fa-wallet"></i>
             <div>
                 <div class="perk-title">Instant Withdrawal</div>
-                <div class="perk-desc">Withdraw your earnings anytime (10% service fee applies).</div>
+                <div class="perk-desc">Withdraw anytime (10% fee)</div>
             </div>
         </div>
 
         <div class="info-panel">
             <strong>How it works</strong>
-            <p>1. Click "Activate" to generate your unique referral code.<br>
-               2. Share your code with friends during signup.<br>
-               3. When they activate premium, you earn ₦150.<br>
-               4. Withdraw your earnings anytime!</p>
+            <p>1. Activate your referral code.<br>
+               2. Share it with friends during signup.<br>
+               3. Earn â‚¦300 when they activate premium.<br>
+               4. Withdraw anytime!</p>
         </div>
 
         <button class="cta-btn" onclick="activateReferral()"><i class="fas fa-bolt"></i> Activate Your Referral Link</button>
 
         <% if (user) { %>
-        <div class="dash-link"><a href="/refer/dashboard">Already have a code? View Dashboard →</a></div>
+        <div class="dash-link"><a href="/refer/dashboard">Already have a code? View Dashboard â†’</a></div>
         <% } %>
     </div>
 
     <div id="stepSuccess" style="display:none;">
         <span class="success-icon"><i class="fas fa-circle-check"></i></span>
         <h1>You're In!</h1>
-        <p class="desc">Your unique referral code is ready. Share it with friends to start earning.</p>
+        <p class="desc">Share your code and earn â‚¦300 per signup.</p>
 
         <p style="font-size:0.7rem;font-weight:800;color:var(--sub);text-transform:uppercase;text-align:center;">Your Referral Code</p>
         <div class="code-display" id="refCode" onclick="copyCode()">------</div>

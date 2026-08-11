@@ -1,25 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Prepium | AI Quiz Arena</title>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/css/style.css">
-    <link rel="manifest" href="/manifest.json">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        window.MathJax = {
-            tex: { inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]']] },
-            options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea'] }
-        };
-    </script>
-    <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-
+    <%- include('partials/head') %>
     <style>
         .status-bar { height: env(safe-area-inset-top, 0px); }
         .page-content { padding: 0 1.5rem 1.5rem; }
@@ -72,12 +54,8 @@
         .generate-btn:active { transform: scale(0.98); }
         .generate-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-        /* Skeleton loader */
-        .skeleton { background: linear-gradient(90deg, var(--border) 25%, var(--border-solid) 50%, var(--border) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; }
-        .skeleton-block { height: 120px; border-radius: var(--radius-sm); margin-bottom: 10px; }
-
         /* Inline error */
-        .inline-error { padding: 12px 16px; border-radius: var(--radius-sm); background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; font-size: 0.78rem; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        .inline-error { padding: 12px 16px; border-radius: var(--radius-sm); background: var(--danger-soft); border: 1px solid #fecaca; color: var(--danger); font-size: 0.78rem; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
         .inline-error button { padding: 6px 14px; border-radius: 6px; border: none; background: #dc2626; color: white; font-family: inherit; font-weight: 700; font-size: 0.7rem; cursor: pointer; white-space: nowrap; }
         @media (prefers-color-scheme: dark) {
             .inline-error { background: #450a0a; border-color: #7f1d1d; color: #fca5a5; }
@@ -88,7 +66,7 @@
         .quiz-card { background: var(--surface-solid); border: 1.5px solid var(--border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 1rem; }
         .quiz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
         .quiz-counter { font-size: 0.75rem; font-weight: 800; color: var(--brand); background: var(--brand-soft); padding: 6px 14px; border-radius: 20px; }
-        .quiz-timer { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 800; color: var(--danger); background: #fef2f2; padding: 6px 12px; border-radius: 20px; animation: pulse 2s ease-in-out infinite; }
+        .quiz-timer { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 800; color: var(--danger); background: var(--danger-soft); padding: 6px 12px; border-radius: 20px; animation: pulse 2s ease-in-out infinite; }
         @media (prefers-color-scheme: dark) { .quiz-timer { background: #450a0a; color: #fca5a5; } }
         .question-text { font-size: 1rem; font-weight: 700; line-height: 1.6; margin-bottom: 1.5rem; }
 
@@ -131,8 +109,8 @@
         .review-card { background: var(--surface-solid); border: 1.5px solid var(--border); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 10px; }
         .review-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .review-badge { font-size: 0.6rem; font-weight: 800; padding: 4px 10px; border-radius: 6px; text-transform: uppercase; }
-        .review-badge.pass { background: #dcfce7; color: #15803d; }
-        .review-badge.fail { background: #fee2e2; color: #b91c1c; }
+        .review-badge.pass { background: var(--success-soft); color: var(--success); }
+        .review-badge.fail { background: var(--danger-soft); color: var(--danger); }
         @media (prefers-color-scheme: dark) { .review-badge.pass { background: #064e3b; color: #34d399; } .review-badge.fail { background: #450a0a; color: #f87171; } }
         .review-q { font-size: 0.85rem; font-weight: 700; margin-bottom: 6px; color: var(--text-dark); }
         .review-detail { font-size: 0.75rem; color: var(--text-sub); line-height: 1.5; }
@@ -156,6 +134,7 @@
 
         @media (min-width: 431px) { .app-shell { border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); margin: 0 auto; } }
     </style>
+    <%- include('partials/theme-toggle') %>
 </head>
 <body>
 <%- include('partials/sidebar') %>
@@ -164,7 +143,7 @@
     <div class="header-nav">
         <a href="/dashboard" class="back-circle" title="Back to Dashboard"><i class="fas fa-arrow-left"></i></a>
         <div class="header-title-row">
-            <div class="header-title">AI Quiz Arena</div>
+            <div class="header-title">Quiz Generator</div>
             <span class="ai-badge">Premium</span>
         </div>
         <div style="width:42px"></div>
@@ -188,7 +167,7 @@
                 <div class="upload-zone" id="uploadZone">
                     <span class="upload-icon"><i class="fas fa-file-pdf"></i></span>
                     <div class="upload-text">Tap to upload PDF</div>
-                    <div class="upload-hint">Lecture notes, textbooks, past questions (max 20MB)</div>
+                    <div class="upload-hint">Lecture notes, textbooks, past questions (max 50MB)</div>
                     <input type="file" id="lecture_note" name="lecture_note" accept="application/pdf" required>
                 </div>
 
@@ -238,19 +217,16 @@
                 <a href="/dashboard" class="back-to-dashboard" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;padding:12px;border-radius:12px;background:var(--surface-solid);border:1.5px solid var(--border);color:var(--text-dark);text-decoration:none;font-weight:700;font-size:0.85rem"><i class="fas fa-home"></i> Back to Dashboard</a>
             </div>
 
-            <div id="loaderStep" style="display: none;">
-                <div class="skeleton skeleton-block"></div>
-                <div class="skeleton skeleton-block" style="height: 60px;"></div>
-                <div class="skeleton skeleton-block" style="height: 60px;"></div>
+            <div id="loaderStep" style="display: none; text-align: center; padding: 3rem 0;">
+                <i class="fas fa-spinner fa-pulse" style="font-size: 2rem; color: var(--brand);"></i>
+                <div style="margin-top: 1rem; font-weight: 600; color: var(--text-sub);">Generating your quiz…</div>
             </div>
         </div>
 
         <!-- HISTORY TAB -->
         <div class="tab-content" id="tab-history">
             <div id="historyContainer">
-                <div class="skeleton skeleton-block"></div>
-                <div class="skeleton skeleton-block"></div>
-                <div class="skeleton skeleton-block"></div>
+                <div style="text-align:center;padding:2rem;color:var(--text-muted);font-size:0.85rem;"><i class="fas fa-spinner fa-pulse"></i> Loading history…</div>
             </div>
         </div>
 
@@ -308,26 +284,42 @@ document.getElementById('lecture_note').addEventListener('change', e => {
 async function generateQuiz(e) {
     e.preventDefault();
     hideInlineError();
-    const btn = document.getElementById('generateBtn');
-    const file = document.getElementById('lecture_note').files[0];
+    var btn = document.getElementById('generateBtn');
+    var file = document.getElementById('lecture_note').files[0];
     if (!file) { showInlineError('Please select a PDF file'); return; }
+    if (file.size > 50 * 1024 * 1024) { showInlineError('File too large. Maximum is 50MB.'); return; }
 
     document.getElementById('setupStep').style.display = 'none';
     document.getElementById('loaderStep').style.display = 'block';
     btn.disabled = true;
 
     try {
-        const formData = new FormData();
-        formData.append('lecture_note', file);
-        formData.append('question_type', document.getElementById('question_type').value);
-        formData.append('num_questions', document.getElementById('num_questions').value);
-        formData.append('difficulty', document.getElementById('difficulty').value);
-        formData.append('quiz_duration', document.getElementById('quiz_duration').value);
-        const res = await fetch('/generate-ai-quiz', { method: 'POST', body: formData });
-        let data = null;
-        try { data = await res.json(); } catch(_) { /* ignore non-json */ }
+        var arrayBuffer = await file.arrayBuffer();
+        var pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        var fullText = '';
+        for (var pi = 1; pi <= Math.min(pdfDoc.numPages, 30); pi++) {
+            var page = await pdfDoc.getPage(pi);
+            var tc = await page.getTextContent();
+            fullText += tc.items.map(function(item) { return item.str; }).join(' ') + '\n\n';
+        }
+        if (!fullText.trim()) throw new Error('Could not extract text from PDF');
+
+        var res = await fetch('/generate-ai-quiz', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                pdfText: fullText.substring(0, 15000),
+                fileName: file.name,
+                question_type: document.getElementById('question_type').value,
+                num_questions: document.getElementById('num_questions').value,
+                difficulty: document.getElementById('difficulty').value,
+                quiz_duration: document.getElementById('quiz_duration').value
+            })
+        });
+        var data = null;
+        try { data = await res.json(); } catch(_) {}
         if (!res.ok) {
-            const msg = (data && data.message) ? data.message : ('Upload failed (HTTP ' + res.status + ')');
+            var msg = (data && data.message) ? data.message : ('Generation failed (HTTP ' + res.status + ')');
             throw new Error(msg);
         }
         examQuestions = (data && data.questions) || [];
@@ -383,9 +375,10 @@ function showQuestion() {
     let html = `<div class="question-text reveal">${q.question}</div>`;
     if(q.type === 'obj') {
         q.options.forEach((opt, i) => {
+            var letter = String.fromCharCode(65+i);
             html += `
-                <div class="option-card reveal ${responses[curIndex]===opt?'selected':''}" onclick="selectOpt(this, '${opt.replace(/'/g,"\\'")}')" style="animation-delay:${i*0.05}s">
-                    <div class="option-letter">${String.fromCharCode(65+i)}</div>
+                <div class="option-card reveal ${responses[curIndex]===letter?'selected':''}" onclick="selectOpt(this, '${letter}')" style="animation-delay:${i*0.05}s">
+                    <div class="option-letter">${letter}</div>
                     <div class="option-text">${opt}</div>
                 </div>`;
         });
@@ -456,7 +449,7 @@ async function submitQuiz() {
                 score = hits/q.keywords.length; pass = score>=0.7;
             }
             pts+=score;
-            detail = `<div class="review-detail">Your answer: ${uv||'No answer'}<br>Keywords: ${pills||'N/A'}</div>`;
+            detail = `<div class="review-detail">Your answer: ${uv||'No answer'}<br>Expected: <span style="color:var(--success)">${q.correct}</span><br>Keywords: ${pills||'N/A'}</div>`;
         }
         html += `
             <div class="review-card reveal">

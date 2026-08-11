@@ -1,15 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Prepium | Support</title>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/css/style.css"
-    <link rel="manifest" href="/manifest.json">>
-
+    <%- include('partials/head') %>
     <style>
         .app-shell { 
             display: flex; flex-direction: column;
@@ -18,7 +10,7 @@
         /* Header */
         .chat-header {
             padding: 2.5rem 1.5rem 1.2rem;
-            background: white;
+            background: var(--surface-solid);
             border-bottom: 1px solid var(--border);
         }
         .chat-header h1 { font-size: 1.4rem; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
@@ -29,51 +21,52 @@
         /* Thread List Styling */
         .thread-card {
             display: flex; align-items: center; justify-content: space-between;
-            padding: 18px; background: #f8fafc; border-radius: 22px;
+            padding: 18px; background: var(--surface); border-radius: 22px;
             margin-bottom: 12px; text-decoration: none; border: 1px solid transparent;
         }
-        .thread-card:active { transform: scale(0.98); background: #f1f5f9; }
+        .thread-card:active { transform: scale(0.98); background: var(--bg); }
         
         .thread-info-box { display: flex; align-items: center; gap: 12px; }
-        .unread-dot { width: 10px; height: 10px; background: var(--brand); border-radius: 50%; box-shadow: 0 0 10px rgba(0,98,255,0.5); }
+        .unread-dot { width: 10px; height: 10px; background: var(--brand); border-radius: 50%; box-shadow: 0 0 10px rgba(37,99,235,0.5); }
         
         .thread-title { font-size: 0.9rem; font-weight: 700; color: var(--text-dark); margin: 0; }
         .thread-date { font-size: 0.7rem; color: var(--text-sub); font-weight: 600; }
 
         .status-pill { font-size: 0.6rem; font-weight: 800; padding: 5px 10px; border-radius: 8px; text-transform: uppercase; }
-        .status-pill.Open { background: #e6fff1; color: var(--success); }
-        .status-pill.Closed { background: #f1f5f9; color: var(--text-sub); }
+        .status-pill.Open { background: var(--success-soft); color: var(--success); }
+        .status-pill.Closed { background: var(--surface); color: var(--text-sub); }
 
         /* Active Chat View */
         .chat-container { display: flex; flex-direction: column; height: 100%; }
         .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--brand); text-decoration: none; font-size: 0.85rem; font-weight: 700; margin-bottom: 1.5rem; }
 
         .messages-window { 
-            background: #fcfdfe; border: 1px solid var(--border); 
+            background: var(--surface); border: 1px solid var(--border); 
             border-radius: 28px; padding: 20px; display: flex; 
             flex-direction: column; gap: 12px; max-height: 400px; overflow-y: auto;
             margin-bottom: 1.5rem;
         }
 
         .bubble { max-width: 85%; padding: 14px 18px; border-radius: 20px; font-size: 0.88rem; font-weight: 600; line-height: 1.5; }
-        .bubble.user { align-self: flex-end; background: var(--brand-gradient); color: white; border-bottom-right-radius: 4px; box-shadow: 0 4px 12px rgba(0,98,255,0.15); }
-        .bubble.admin { align-self: flex-start; background: white; border: 1px solid var(--border); color: var(--text-dark); border-bottom-left-radius: 4px; }
+        .bubble.user { align-self: flex-end; background: var(--brand-gradient); color: white; border-bottom-right-radius: 4px; box-shadow: 0 4px 12px rgba(37,99,235,0.15); }
+        .bubble.admin { align-self: flex-start; background: var(--surface-solid); border: 1px solid var(--border); color: var(--text-dark); border-bottom-left-radius: 4px; }
         
         .time { font-size: 0.6rem; display: block; margin-top: 6px; opacity: 0.7; }
 
         /* Input Form */
-        .input-bar { display: flex; gap: 10px; background: #f8fafc; border: 1px solid var(--border); padding: 8px; border-radius: 20px; align-items: center; }
+        .input-bar { display: flex; gap: 10px; background: var(--surface); border: 1px solid var(--border); padding: 8px; border-radius: 20px; align-items: center; }
         .input-bar input { flex: 1; border: none; background: transparent; padding: 10px; font-family: inherit; font-weight: 600; font-size: 0.9rem; }
         .input-bar input:focus { outline: none; }
         .send-pill { background: var(--brand); color: white; border: none; padding: 10px 20px; border-radius: 14px; font-weight: 800; font-size: 0.8rem; cursor: pointer; }
 
         /* New Thread Form */
-        .composer-card { background: white; border: 1px solid var(--border); border-radius: 28px; padding: 20px; margin-bottom: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.02); }
+        .composer-card { background: var(--surface-solid); border: 1px solid var(--border); border-radius: 28px; padding: 20px; margin-bottom: 2rem; box-shadow: var(--shadow-md); }
         .form-label { display: block; font-size: 0.7rem; font-weight: 800; color: var(--text-sub); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
-        .input-field { width: 100%; background: #f8fafc; border: 1px solid var(--border); border-radius: 16px; padding: 14px; font-family: inherit; font-weight: 600; margin-bottom: 15px; }
-        .input-field:focus { border-color: var(--brand); outline: none; background: white; }
+        .input-field { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 16px; padding: 14px; font-family: inherit; font-weight: 600; margin-bottom: 15px; }
+        .input-field:focus { border-color: var(--brand); outline: none; background: var(--surface-solid); }
 
     </style>
+    <%- include('partials/theme-toggle') %>
 </head>
 <body>
 <%- include('partials/sidebar') %>

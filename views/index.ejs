@@ -1,21 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Prepium | Smart Exam Mastery</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/style.css"
-    <link rel="manifest" href="/manifest.json">>
+    <%- include('partials/head') %>
     <style>
-        :root {
-            --bg-light: #f4f7fa;
-        }
-
-        body {
-            background-color: var(--bg-light);
-        }
-
         .app-container {
             width: 100%;
             max-width: 430px;
@@ -24,13 +11,12 @@
             display: flex;
             flex-direction: column;
             position: relative;
-            box-shadow: 0 0 40px rgba(0,0,0,0.03);
+            box-shadow: var(--shadow-sm);
             overflow-x: hidden;
             padding-bottom: 140px;
             padding-top: 60px;
         }
 
-        /* Nav Bar */
         .nav-bar {
             position: fixed;
             top: 0;
@@ -38,7 +24,7 @@
             transform: translateX(-50%);
             width: 100%;
             max-width: 430px;
-            background: rgba(255, 255, 255, 0.85);
+            background: var(--surface);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             z-index: 1000;
@@ -54,7 +40,7 @@
             align-items: center;
             gap: 10px;
             text-decoration: none;
-            color: var(--text-dark);
+            color: var(--text-primary);
             font-weight: 800;
             font-size: 1.15rem;
         }
@@ -72,8 +58,8 @@
         }
 
         .nav-menu-btn {
-            background: var(--bg-light);
-            border: none;
+            background: var(--surface-solid);
+            border: 1px solid var(--border);
             width: 40px;
             height: 40px;
             border-radius: 12px;
@@ -82,13 +68,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            color: var(--text-secondary);
         }
 
-        /* Floating Menu */
         .mobile-menu {
             display: none;
             flex-direction: column;
-            background: white;
+            background: var(--surface-solid);
             border-bottom: 1px solid var(--border);
             padding: 0.8rem 1.5rem;
             gap: 6px;
@@ -104,10 +90,9 @@
             border-radius: 14px;
         }
 
-        /* Hero */
         .hero {
             padding: 3rem 1.5rem 2.2rem;
-            background: linear-gradient(180deg, var(--brand-soft) 0%, #ffffff 100%);
+            background: linear-gradient(180deg, var(--brand-soft) 0%, var(--surface-solid) 100%);
             text-align: center;
             border-bottom-left-radius: 40px;
             border-bottom-right-radius: 40px;
@@ -115,31 +100,29 @@
 
         .hero-badge {
             display: inline-flex;
-            background: white;
+            background: var(--surface-solid);
             padding: 6px 14px;
             border-radius: 30px;
             font-size: 0.72rem;
             font-weight: 800;
             color: var(--brand);
-            box-shadow: 0 4px 14px rgba(0,0,0,0.03);
+            box-shadow: var(--shadow-sm);
             margin-bottom: 1.2rem;
             text-transform: uppercase;
-            border: 1px solid rgba(0, 98, 255, 0.1);
+            border: 1px solid var(--brand-light);
         }
 
         h1 { font-size: 2.5rem; font-weight: 800; margin: 0; letter-spacing: -1.2px; color: var(--brand); }
-        .tagline { color: var(--text-muted); font-size: 0.98rem; margin-top: 12px; font-weight: 600; }
+        .tagline { color: var(--text-secondary); font-size: 0.98rem; margin-top: 12px; font-weight: 600; }
 
-        /* Smooth Moving University Carousel Container */
         .carousel-wrapper {
             position: relative;
             width: 100%;
             overflow: hidden;
             padding: 10px 0;
-            background: linear-gradient(90deg, transparent 0%, rgba(0,98,255,0.02) 50%, transparent 100%);
+            background: linear-gradient(90deg, transparent 0%, var(--brand-light) 50%, transparent 100%);
         }
         
-        /* Left and Right blur shadows for modern depth layout */
         .carousel-wrapper::before, .carousel-wrapper::after {
             content: "";
             position: absolute;
@@ -167,7 +150,7 @@
             display: flex; 
             align-items: center; 
             gap: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.01);
+            box-shadow: var(--shadow-sm);
         }
         .partner-card img { 
             width: 32px; 
@@ -177,7 +160,7 @@
         .partner-name { 
             font-size: 0.72rem; 
             font-weight: 800; 
-            color: var(--text-dark); 
+            color: var(--text-primary); 
             letter-spacing: 0.3px;
         }
 
@@ -192,7 +175,6 @@
             gap: 16px;
         }
 
-        /* Testimonials */
         .testimonials-container { padding: 0.5rem 0 1rem; overflow: hidden; }
         .testimonial-track {
             display: flex;
@@ -205,7 +187,7 @@
         .testimonial-track::-webkit-scrollbar { display: none; }
         .t-card {
             min-width: 280px;
-            background: white;
+            background: var(--surface-solid);
             padding: 1.5rem;
             border-radius: 24px;
             border: 1px solid var(--border);
@@ -213,19 +195,18 @@
         }
         .t-user { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
         .t-avatar { width: 36px; height: 36px; background: var(--brand-soft); color: var(--brand); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; }
-        .t-name { font-size: 0.85rem; font-weight: 800; }
-        .t-text { font-size: 0.85rem; color: var(--text-dark); line-height: 1.5; font-style: italic; }
+        .t-name { font-size: 0.85rem; font-weight: 800; color: var(--text-primary); }
+        .t-text { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; font-style: italic; }
 
-        /* FAQ */
         .faq-list { padding: 0.4rem 1.5rem; display: flex; flex-direction: column; gap: 10px; }
         .faq-item { border: 1px solid var(--border); border-radius: 18px; background: var(--surface); }
-        .faq-question { padding: 1.2rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: 700; font-size: 0.88rem; }
+        .faq-question { padding: 1.2rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: 700; font-size: 0.88rem; color: var(--text-primary); }
         .faq-answer { max-height: 0; overflow: hidden; padding: 0 1.2rem; color: var(--text-muted); font-size: 0.82rem; transition: 0.3s ease; }
         .faq-item.active .faq-answer { padding-bottom: 1.2rem; max-height: 150px; }
 
         .actions {
             padding: 1.25rem 1.5rem;
-            background: rgba(255, 255, 255, 0.9);
+            background: var(--surface);
             backdrop-filter: blur(20px);
             position: fixed;
             bottom: 0;
@@ -235,13 +216,13 @@
             z-index: 1000;
         }
         
-        /* Custom Keyframe for smooth infinite loops */
         @keyframes scrollMarquee {
             0% { transform: translateX(0); }
             100% { transform: translateX(calc(-50% - 8px)); }
         }
         @keyframes fadeInTop { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
+    <%- include('partials/theme-toggle') %>
 </head>
 <body>
 
@@ -251,24 +232,20 @@
                 <div class="nav-logo-box">P</div>
                 <span>Prepium</span>
             </a>
-            <button class="nav-menu-btn" onclick="toggleMenu()">☰</button>
+            <button class="nav-menu-btn" onclick="toggleMenu()">â˜°</button>
         </nav>
 
         <div class="mobile-menu" id="mobileMenu">
-            <a href="#features" class="menu-link" onclick="toggleMenu()">🛡️ Core Features</a>
-            <a href="#testimonials" class="menu-link" onclick="toggleMenu()">💬 Testimonials</a>
-            
-            <% if (locals.user && user.role === 'admin') { %>
-                <a href="/admin/analytics" class="menu-link" style="color: var(--brand)">📊 Strategic Intel</a>
-            <% } %>
-
-            <a href="/login" class="menu-link">🔐 Sign In</a>
+            <a href="#features" class="menu-link" onclick="toggleMenu()">Core Features</a>
+            <a href="/guide" class="menu-link" onclick="toggleMenu()">User Guide</a>
+            <a href="#testimonials" class="menu-link" onclick="toggleMenu()">Testimonials</a>
+            <a href="/login" class="menu-link" onclick="toggleMenu()">Sign In</a>
         </div>
 
         <header class="hero">
-            <span class="hero-badge">🚀 Continuous Assessment Portal</span>
+            <span class="hero-badge">Smart Learning Platform</span>
             <h1>Prepium</h1>
-            <p class="tagline">The ultimate CBT practice engine for ambitious students.</p>
+            <p class="tagline">AI-powered study tools, CGPA tracking & quizzes — all in one place.</p>
         </header>
 
       <div class="section-title reveal">Partnering Universities</div>
@@ -342,20 +319,41 @@
     </div>
 </div>
 
-        <div class="section-title reveal" id="features">Why Prepium?</div>
+        <div class="section-title reveal" id="features">Everything in Prepium</div>
         <section class="features-grid">
             <div class="card reveal">
-                <div style="font-size: 1.5rem;">⚡</div>
+                <i class="fas fa-book-open" style="font-size: 1.5rem; color: var(--brand);"></i>
                 <div>
-                    <h3 style="margin:0; font-size:0.95rem;">Fast-Track Mastery</h3>
-                    <p style="margin:3px 0 0; font-size:0.8rem; color:var(--text-muted);">Clean, distraction-free test environments.</p>
+                    <h3 style="margin:0; font-size:0.95rem;">Study Hub</h3>
+                    <p style="margin:3px 0 0; font-size:0.8rem; color:var(--text-muted);">Courses, AI tutor, flashcards & study quizzes.</p>
                 </div>
             </div>
             <div class="card reveal">
-                <div style="font-size: 1.5rem;">🎯</div>
+                <i class="fas fa-brain" style="font-size: 1.5rem; color: var(--brand);"></i>
                 <div>
-                    <h3 style="margin:0; font-size:0.95rem;">Mixed Topics</h3>
-                    <p style="margin:3px 0 0; font-size:0.8rem; color:var(--text-muted);">Combine subjects into one custom attempt.</p>
+                    <h3 style="margin:0; font-size:0.95rem;">AI Quiz Generator</h3>
+                    <p style="margin:3px 0 0; font-size:0.8rem; color:var(--text-muted);">Upload PDFs and generate custom quizzes instantly.</p>
+                </div>
+            </div>
+            <div class="card reveal">
+                <i class="fas fa-chart-line" style="font-size: 1.5rem; color: var(--brand);"></i>
+                <div>
+                    <h3 style="margin:0; font-size:0.95rem;">CGPA Tracker</h3>
+                    <p style="margin:3px 0 0; font-size:0.8rem; color:var(--text-muted);">Track semesters, forecast grades, AI advisor.</p>
+                </div>
+            </div>
+            <div class="card reveal">
+                <i class="fas fa-calendar-alt" style="font-size: 1.5rem; color: var(--brand);"></i>
+                <div>
+                    <h3 style="margin:0; font-size:0.95rem;">Daily Task & Timetable</h3>
+                    <p style="margin:3px 0 0; font-size:0.8rem; color:var(--text-muted);">AI schedules, deadlines, goals & weekly reports.</p>
+                </div>
+            </div>
+            <div class="card reveal">
+                <i class="fas fa-trophy" style="font-size: 1.5rem; color: var(--brand);"></i>
+                <div>
+                    <h3 style="margin:0; font-size:0.95rem;">Challenges & Arena</h3>
+                    <p style="margin:3px 0 0; font-size:0.8rem; color:var(--text-muted);">Daily free challenges + live ranked competition.</p>
                 </div>
             </div>
         </section>
@@ -368,14 +366,14 @@
                         <div class="t-avatar">AA</div>
                         <div><div class="t-name">Stephanie A.</div><div style="font-size:0.7rem; color:var(--text-muted)">Physics Dept.</div></div>
                     </div>
-                    <p class="t-text">"The LaTeX support for physics formulas is perfect. Finally, a platform that understands my curriculum!"</p>
+                    <p class="t-text">"LaTeX for physics formulas is perfect. Finally, a platform that gets my curriculum!"</p>
                 </div>
                 <div class="t-card">
                     <div class="t-user">
                         <div class="t-avatar">DO</div>
                         <div><div class="t-name">Daniel O.</div><div style="font-size:0.7rem; color:var(--text-muted)">Pharmacy</div></div>
                     </div>
-                    <p class="t-text">"Strategic analytics helped me see exactly where I was failing. My scores jumped by 30%."</p>
+                    <p class="t-text">"Analytics showed me where I was failing. My scores jumped 30%."</p>
                 </div>
             </div>
         </section>
@@ -383,12 +381,20 @@
         <div class="section-title reveal">Common Questions</div>
         <section class="faq-list reveal">
             <div class="faq-item">
-                <div class="faq-question" onclick="toggleFaq(this)">Is my payment renewable? <span>+</span></div>
-                <div class="faq-answer">No, its a one-time payment.</div>
+                <div class="faq-question" onclick="toggleFaq(this)">One-time payment? <span>+</span></div>
+                <div class="faq-answer">Yes — pay â‚¦2,000 once and unlock all premium features forever.</div>
             </div>
             <div class="faq-item">
-                <div class="faq-question" onclick="toggleFaq(this)">Can I use it on mobile? <span>+</span></div>
-                <div class="faq-answer">Prepium is fully optimized for mobile browsers with an app-like experience.</div>
+                <div class="faq-question" onclick="toggleFaq(this)">Mobile friendly? <span>+</span></div>
+                <div class="faq-answer">Fully optimized for mobile with an app-like experience on any browser.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">How does AI quiz generation work? <span>+</span></div>
+                <div class="faq-answer">Upload a PDF — our AI generates custom MCQs, theory, and fill-in-the-blank questions from it.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">How does CGPA tracking work? <span>+</span></div>
+                <div class="faq-answer">Set your grading scale (4 or 5 point), add courses with grades, and track semester by semester. Use the AI What-If Builder to plan improvements.</div>
             </div>
         </section>
 
@@ -404,7 +410,7 @@
         function toggleFaq(el) {
             const item = el.parentElement;
             item.classList.toggle('active');
-            el.querySelector('span').innerText = item.classList.contains('active') ? '−' : '+';
+            el.querySelector('span').innerText = item.classList.contains('active') ? 'âˆ’' : '+';
         }
         const reveals = document.querySelectorAll('.reveal');
         const observer = new IntersectionObserver((entries) => {

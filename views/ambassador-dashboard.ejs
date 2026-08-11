@@ -1,53 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ambassador Console | Prepium</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/style.css"
-    <link rel="manifest" href="/manifest.json">>
+    <%- include('partials/head') %>
     <style>
-        :root { 
-            --text: #1e293b; 
-        }
+        :root { }
         body { 
             padding: 2rem 1rem; 
         }
         
         .container { max-width: 950px; margin: 0 auto; }
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem; }
-        .logout { color: #ef4444; font-weight: 700; text-decoration: none; font-size: 0.9rem; }
+        .logout { color: var(--danger); font-weight: 700; text-decoration: none; font-size: 0.9rem; }
 
         .code-banner {
-            background: #eff6ff; border: 2px dashed var(--brand); border-radius: 20px;
+            background: var(--brand-soft); border: 2px dashed var(--brand); border-radius: 20px;
             padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;
         }
-        .code-banner h2 { margin: 0; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; color: #1e40af; }
+        .code-banner h2 { margin: 0; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; color: var(--brand); }
         .code-banner span { font-size: 1.5rem; font-weight: 800; color: var(--brand); font-family: monospace; }
 
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.2rem; margin-bottom: 2.5rem; }
-        .card { background: white; padding: 1.5rem; border-radius: 24px; border: 1px solid #f1f5f9; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03); }
-        .card h3 { margin: 0; font-size: 0.72rem; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; margin-bottom: 10px; }
+        .card { background: var(--surface-solid); padding: 1.5rem; border-radius: 24px; border: 1px solid var(--bg); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03); }
+        .card h3 { margin: 0; font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 1px; margin-bottom: 10px; }
         .card .val { font-size: 1.8rem; font-weight: 800; color: var(--text); }
         .card.active-balance .val { color: var(--success); }
-        .card.withdrawn .val { color: #64748b; }
+        .card.withdrawn .val { color: var(--text-secondary); }
 
 
-        .action-box { background: white; padding: 1.8rem; border-radius: 24px; border: 1px solid #f1f5f9; margin-bottom: 2.5rem; }
+        .action-box { background: var(--surface-solid); padding: 1.8rem; border-radius: 24px; border: 1px solid var(--bg); margin-bottom: 2.5rem; }
         
         textarea { width: 100%; resize: none; margin-bottom: 1rem; }
-        textarea:focus { border-color: var(--brand); background: white; }
-        .btn-action { background: var(--text); color: white; border: none; padding: 1rem 2rem; border-radius: 14px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        textarea:focus { border-color: var(--brand); background: var(--surface-solid); }
+        .btn-action { background: var(--brand); color: white; border: none; padding: 1rem 2rem; border-radius: 14px; font-weight: 700; cursor: pointer; transition: 0.2s; }
         .btn-action:hover { transform: translateY(-2px); opacity: 0.95; }
 
-        .table-wrap { background: white; border-radius: 24px; overflow: hidden; border: 1px solid #f1f5f9; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03); }
+        .table-wrap { background: var(--surface-solid); border-radius: 24px; overflow: hidden; border: 1px solid var(--bg); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03); }
         table { width: 100%; border-collapse: collapse; text-align: left; }
-        th { background: #f8fafc; padding: 1rem 1.5rem; font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; }
-        td { padding: 1.1rem 1.5rem; border-top: 1px solid #f1f5f9; font-size: 0.95rem; }
-        .badge-success { background: #dcfce7; color: #15803d; font-weight: 700; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; }
-        .badge-pending { background: #f1f5f9; color: #64748b; font-weight: 700; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; }
+        th { background: var(--bg); padding: 1rem 1.5rem; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
+        td { padding: 1.1rem 1.5rem; border-top: 1px solid var(--bg); font-size: 0.95rem; }
+        .badge-success { background: var(--success-soft); color: var(--success); font-weight: 700; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; }
+        .badge-pending { background: var(--bg); color: var(--text-secondary); font-weight: 700; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; }
     </style>
+    <%- include('partials/theme-toggle') %>
 </head>
 <body>
 
@@ -58,12 +52,12 @@
         </header>
 
         <h1 style="margin: 0 0 4px 0; font-size: 2rem;">Welcome back, <%= ambassador.name || 'Ambassador' %>!</h1>
-        <p style="color: #64748b; margin-top: 0; margin-bottom: 2rem;">Overview of your referral status and rewards.</p>
+        <p style="color: var(--text-secondary); margin-top: 0; margin-bottom: 2rem;">Your referral performance</p>
 
         <div class="code-banner">
             <div>
                 <h2>Your Unique Referral ID</h2>
-                <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #64748b;">Use this code exactly during student signup</p>
+                <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: var(--text-secondary);">Share this code when referring students</p>
             </div>
             <span><%= ambassador.unique_code %></span>
         </div>
@@ -75,15 +69,15 @@
             </div>
             <div class="card">
                 <h3>Total Earned</h3>
-                <div class="val">₦<%= ambassador.total_earned || 0 %></div>
+                <div class="val">â‚¦<%= ambassador.total_earned || 0 %></div>
             </div>
             <div class="card withdrawn">
                 <h3>Withdrawn</h3>
-                <div class="val">₦<%= ambassador.total_withdrawn || 0 %></div>
+                <div class="val">â‚¦<%= ambassador.total_withdrawn || 0 %></div>
             </div>
             <div class="card active-balance">
                 <h3>Available Balance</h3>
-                <div class="val">₦<%= ambassador.current_balance || 0 %></div>
+                <div class="val">â‚¦<%= ambassador.current_balance || 0 %></div>
             </div>
         </div>
 
@@ -122,7 +116,7 @@
                         <% }) %>
                     <% } else { %>
                         <tr>
-                            <td colspan="3" style="text-align: center; color: #94a3b8; padding: 3rem;">No referred accounts linked to your code yet.</td>
+                            <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 3rem;">No referred accounts linked to your code yet.</td>
                         </tr>
                     <% } %>
                 </tbody>

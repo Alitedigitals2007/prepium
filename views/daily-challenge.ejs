@@ -1,323 +1,481 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>The Arena | Prepium</title>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/css/style.css"
-    <link rel="manifest" href="/manifest.json">>
-
+    <%- include('partials/head') %>
     <style>
-        body { 
-            overflow: hidden;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text-primary); min-height: 100vh; }
+        .app-shell { display: flex; min-height: 100vh; }
+        .main-area { flex: 1; padding: 1.5rem; overflow-y: auto; max-width: 900px; margin: 0 auto; width: 100%; }
 
-        .app-shell { 
-            height: 100vh; 
-            display: flex; flex-direction: column;
-        }
+        .page-head { margin-bottom: 1.5rem; }
+        .page-head h1 { font-size: 1.5rem; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+        .page-head p { font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; margin-top: 2px; }
 
-        /* Fixed Header */
-        .header-nav { padding: 1.5rem; }
+        .subjects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+        .subject-card { background: var(--surface-solid); border-radius: 16px; padding: 16px; text-align: center; cursor: pointer; border: 2px solid var(--border-solid); transition: all 0.2s; }
+        .subject-card:hover { border-color: var(--brand); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(37,99,235,0.08); }
+        .subject-card.selected { border-color: var(--brand); background: var(--brand-soft); }
+        .subject-card .sc-icon { font-size: 1.5rem; margin-bottom: 6px; }
+        .subject-card .sc-name { font-weight: 700; font-size: 0.78rem; }
 
-        /* Slide Tabs */
-        .tab-switcher {
-            margin: 0 1.5rem 1rem; background: #f1f5f9; padding: 6px; 
-            border-radius: 16px; display: flex; gap: 5px;
-        }
-        .tab-btn {
-            flex: 1; padding: 10px; border-radius: 12px; border: none;
-            font-weight: 700; font-size: 0.85rem; cursor: pointer;
-            background: transparent; color: var(--text-sub);
-        }
-        .tab-btn.active { background: white; color: var(--brand); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .card { background: var(--surface-solid); border-radius: 20px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); margin-bottom: 1rem; }
+        .btn { padding: 12px 28px; border-radius: 14px; border: none; font-family: inherit; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; }
+        .btn:active { transform: scale(0.96); }
+        .btn-primary { background: linear-gradient(135deg, var(--brand), #1d4ed8); color: white; box-shadow: 0 8px 20px rgba(37,99,235,0.2); }
+        .btn-primary:disabled { opacity: 0.5; pointer-events: none; }
+        .btn-outline { background: var(--surface-solid); border: 1.5px solid var(--border-solid); color: var(--text-primary); }
+        .btn-success { background: #10b981; color: white; }
+        .btn-block { width: 100%; justify-content: center; }
 
-        /* Slider Engine */
-        .slider-viewport { flex: 1; overflow: hidden; width: 100%; }
-        .slider-container { display: flex; width: 200%; height: 100%; transition: transform 0.5s cubic-bezier(0.85, 0, 0.15, 1); }
-        .page { width: 50%; height: 100%; overflow-y: auto; padding: 0 1.5rem 120px; box-sizing: border-box; }
+        .quiz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .quiz-progress { flex: 1; margin: 0 16px; }
+        .quiz-progress-bar { height: 6px; background: var(--border-solid); border-radius: 10px; overflow: hidden; }
+        .quiz-progress-fill { height: 100%; background: linear-gradient(90deg, var(--brand), #1d4ed8); transition: width 0.3s; border-radius: 10px; }
+        .quiz-counter { font-weight: 800; font-size: 0.85rem; color: var(--text-secondary); min-width: 60px; text-align: center; }
 
-        /* Arena UI */
-        .arena-card {
-            background: white; border-radius: 28px; padding: 24px;
-            border: 1px solid var(--border); text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.03);
-        }
+        .timer-circle { width: 56px; height: 56px; border-radius: 50%; border: 3px solid var(--brand); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.2rem; color: var(--brand); flex-shrink: 0; transition: border-color 0.3s; }
+        .timer-circle.warning { border-color: #f59e0b; color: #f59e0b; }
+        .timer-circle.danger { border-color: var(--danger); color: var(--danger); }
 
-        /* Point Bar UI */
-        .point-display { margin-bottom: 20px; text-align: left; }
-        .point-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; }
-        .point-count { font-weight: 800; font-size: 1.2rem; color: var(--brand); }
-        .point-bar-bg { width: 100%; height: 8px; background: #f1f5f9; border-radius: 10px; overflow: hidden; }
-        .point-bar-fill { width: 0%; height: 100%; background: var(--brand-gradient); transition: width 0.4s ease; }
+        .q-text { font-weight: 700; font-size: 1.05rem; line-height: 1.5; margin-bottom: 20px; min-height: 50px; }
 
-        .timer-wrap {
-            width: 65px; height: 65px; border: 4px solid var(--brand);
-            border-radius: 50%; margin: 0 auto 20px;
-            display: flex; align-items: center; justify-content: center;
-            font-weight: 800; font-size: 1.3rem; color: var(--brand);
-        }
+        .option-btn { display: block; width: 100%; padding: 14px 18px; margin: 8px 0; background: var(--surface); border: 1.5px solid var(--border-solid); border-radius: 14px; font-weight: 600; cursor: pointer; text-align: left; font-family: inherit; font-size: 0.9rem; transition: all 0.15s; }
+        .option-btn:hover { border-color: var(--brand); background: var(--brand-soft); }
+        .option-btn:disabled { cursor: default; opacity: 0.7; }
+        .option-btn.correct { border-color: var(--success); background: var(--success-soft); color: var(--success); }
+        .option-btn.wrong { border-color: var(--danger); background: var(--danger-soft); color: var(--danger); }
+        .option-btn.reveal-correct { border-color: var(--success); background: var(--success-soft); color: var(--success); }
 
-        .option-btn {
-            display: block; width: 100%; padding: 16px; margin: 10px 0;
-            background: #f8fafc; border: 1.5px solid var(--border);
-            border-radius: 16px; font-weight: 600; cursor: pointer; text-align: left;
-            font-family: inherit; font-size: 0.95rem;
-        }
-        .option-btn:active { background: var(--brand); color: white; border-color: var(--brand); }
+        .score-display { text-align: center; padding: 20px 0; }
+        .score-number { font-size: 3rem; font-weight: 800; background: linear-gradient(135deg, var(--brand), #1d4ed8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .score-label { font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+        .score-stats { display: flex; justify-content: center; gap: 30px; margin-top: 16px; }
+        .score-stat { text-align: center; }
+        .score-stat-value { font-weight: 800; font-size: 1.1rem; }
+        .score-stat-label { font-size: 0.65rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; }
 
-        /* Leaderboard UI */
-        .lb-row {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 16px; background: white; border-radius: 18px;
-            border: 1px solid var(--border); margin-bottom: 10px;
-        }
-        .rank-badge {
-            width: 30px; height: 30px; background: #f1f5f9; border-radius: 8px;
-            display: inline-flex; align-items: center; justify-content: center;
-            font-weight: 800; font-size: 0.75rem; margin-right: 10px;
-        }
+        .lb-card { display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: var(--surface-solid); border-radius: 16px; border: 1px solid var(--border-solid); margin-bottom: 8px; transition: all 0.2s; }
+        .lb-card.highlight { background: var(--brand-soft); border-color: var(--brand); }
+        .lb-rank { width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.75rem; background: var(--bg); color: var(--text-secondary); flex-shrink: 0; }
+        .lb-rank.gold { background: linear-gradient(135deg, #f59e0b, #f97316); color: white; }
+        .lb-rank.silver { background: linear-gradient(135deg, var(--text-muted), var(--text-secondary)); color: white; }
+        .lb-rank.bronze { background: linear-gradient(135deg, #d97706, #92400e); color: white; }
+        .lb-info { flex: 1; min-width: 0; }
+        .lb-name { font-weight: 700; font-size: 0.85rem; }
+        .lb-uni { font-size: 0.6rem; font-weight: 700; color: var(--brand); text-transform: uppercase; }
+        .lb-score { font-weight: 800; font-size: 0.9rem; color: var(--text-primary); white-space: nowrap; }
 
-        /* Global Elements */
-        .q-hidden { display: none; }
-        .btn-main {
-            width: 100%; padding: 16px; background: var(--brand-gradient);
-            color: white; border: none; border-radius: 16px;
-            font-weight: 800; font-size: 1rem; cursor: pointer;
-            box-shadow: 0 8px 20px rgba(0, 98, 255, 0.2);
-        }
+        .subject-input-wrap { display: flex; gap: 10px; margin-top: 12px; }
+        .subject-input-wrap input { flex: 1; padding: 12px 16px; border-radius: 14px; border: 1.5px solid var(--border-solid); font-family: inherit; font-weight: 600; font-size: 0.85rem; outline: none; }
+        .subject-input-wrap input:focus { border-color: var(--brand); }
 
+        .tab-bar { display: flex; background: var(--bg); padding: 4px; border-radius: 14px; margin-bottom: 1.5rem; }
+        .tab-btn { flex: 1; padding: 10px; border: none; border-radius: 12px; font-weight: 700; font-size: 0.8rem; cursor: pointer; background: transparent; color: var(--text-secondary); transition: all 0.2s; }
+        .tab-btn.active { background: var(--surface-solid); color: var(--brand); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .hidden { display: none !important; }
+
+        .result-actions { display: flex; gap: 10px; margin-top: 16px; }
+        .result-actions .btn { flex: 1; }
+
+        .empty-state { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
+        .empty-state i { font-size: 2.5rem; margin-bottom: 12px; opacity: 0.4; }
+        .empty-state h3 { font-weight: 700; font-size: 1rem; color: var(--text-primary); margin-bottom: 4px; }
+
+        .custom-subject { margin-top: 1rem; }
+        .custom-subject label { font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; display: block; margin-bottom: 6px; }
     </style>
+    <%- include('partials/theme-toggle') %>
 </head>
 <body>
 <%- include('partials/sidebar') %>
-
-    <div class="app-shell">
-        <header class="header-nav">
-            <a href="/dashboard" class="logo">The<span>Arena</span></a>
-            <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-sub);">DAILY DEPLOYMENT</div>
-        </header>
-
-        <div class="tab-switcher">
-            <button class="tab-btn active" onclick="switchPage(0, this)">Battleground</button>
-            <button class="tab-btn" onclick="switchPage(1, this)">Rankings</button>
+<div class="app-shell">
+    <div class="main-area">
+        <div class="page-head">
+            <h1><i class="fas fa-calendar-check" style="color:var(--brand);"></i> Daily Challenge</h1>
+            <p>Pick up to 3 subjects, answer 15 questions, climb the ranks</p>
         </div>
 
-        <div class="slider-viewport">
-            <div class="slider-container" id="mainSlider">
-                
-                <section class="page">
-                    <div class="arena-card">
-                        <% if (hasPlayed) { %>
-                            <div style="padding: 20px 0;">
-                                <i class="fas fa-check-circle" style="font-size: 3.5rem; color: var(--success); margin-bottom: 15px;"></i>
-                                <h2 style="font-weight: 800; margin: 0;">Daily Mission Complete</h2>
-                                <p style="color: var(--text-sub); font-size: 0.9rem; margin: 10px 0 20px;">You've already fought today. Your score is locked in.</p>
-                                
-                                <div style="background: var(--text-dark); padding: 20px; border-radius: 20px;">
-                                    <small style="font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 1px;">New Questions In</small>
-                                    <div id="reset-timer" style="font-size: 1.6rem; font-weight: 800; color: white; margin-top: 5px;">00:00:00</div>
-                                </div>
-                            </div>
-                        <% } else if (questions.length === 0) { %>
-                            <div style="padding: 40px 0;">
-                                <i class="fas fa-hourglass-half" style="font-size: 3rem; color: var(--text-sub); margin-bottom: 15px;"></i>
-                                <h3>Standby...</h3>
-                                <p>Intelligence is preparing today's challenge.</p>
-                            </div>
-                        <% } else { %>
-                            <div id="instructions">
-                                <div style="width: 60px; height: 60px; background: #eff6ff; color: var(--brand); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 1.5rem;">
-                                    <i class="fas fa-bolt"></i>
-                                </div>
-                                <h2 style="font-weight: 800; margin-bottom: 10px;">Combat Protocol</h2>
-                                <div style="text-align: left; margin: 25px 0; color: #475569; font-size: 0.9rem; line-height: 1.8;">
-                                    <div style="display: flex; gap: 12px; margin-bottom: 12px;"><i class="fas fa-stopwatch" style="color: var(--brand); margin-top: 4px;"></i> <b>10 Seconds</b> per question.</div>
-                                    <div style="display: flex; gap: 12px; margin-bottom: 12px;"><i class="fas fa-award" style="color: var(--brand); margin-top: 4px;"></i> <b>Accuracy + Speed</b> determines points.</div>
-                                    <div style="display: flex; gap: 12px;"><i class="fas fa-shield-alt" style="color: var(--brand); margin-top: 4px;"></i> No retakes allowed today.</div>
-                                </div>
-                                <button class="btn-main" onclick="startQuiz()">START CHALLENGE</button>
-                            </div>
+        <div class="tab-bar">
+            <button class="tab-btn active" onclick="switchTab('challenge')">Challenge</button>
+            <button class="tab-btn" onclick="switchTab('leaderboard')">Leaderboard</button>
+        </div>
 
-                            <div id="quiz-area" class="q-hidden">
-                                <div class="point-display">
-                                    <div class="point-header">
-                                        <span style="font-size: 0.7rem; font-weight: 800; color: var(--text-sub); text-transform: uppercase;">Current Score</span>
-                                        <span class="point-count"><span id="current-score">0</span> pts</span>
-                                    </div>
-                                    <div class="point-bar-bg">
-                                        <div class="point-bar-fill" id="score-bar"></div>
-                                    </div>
-                                </div>
-
-                                <div class="timer-wrap" id="timer">10</div>
-                                <h3 id="q-text" style="font-weight: 800; font-size: 1.1rem; line-height: 1.4; margin-bottom: 25px; min-height: 60px;">Loading...</h3>
-                                <div id="options-container"></div>
-                                
-                                <div style="margin-top: 30px; display: flex; justify-content: space-between; align-items: center;">
-                                    <span style="font-size: 0.75rem; font-weight: 800; color: var(--text-sub);">MISSION PROGRESS</span>
-                                    <span style="font-size: 0.8rem; font-weight: 800; color: var(--brand);"><span id="q-num">1</span> / 10</span>
-                                </div>
-                            </div>
-                        <% } %>
+        <!-- ═══ CHALLENGE TAB ═══ -->
+        <div id="tab-challenge" class="tab-content active">
+            <% if (hasPlayed) { %>
+                <!-- Already played today -->
+                <div class="card" style="text-align:center;">
+                    <div style="font-size: 3rem; margin-bottom: 12px;"><i class="fas fa-check-circle" style="color:var(--success);"></i></div>
+                    <h2 style="font-weight:800; margin-bottom:4px;">Challenge Complete</h2>
+                    <p style="color:var(--text-secondary); font-size:0.85rem;">You played today on <strong><%= subject %></strong></p>
+                    <div class="score-display">
+                        <div class="score-number"><%= lastScore %></div>
+                        <div class="score-label">Points Scored</div>
                     </div>
-                </section>
-
-                <section class="page">
-                    <div style="background: var(--brand-gradient); color: white; padding: 24px; border-radius: 24px; margin-bottom: 25px; box-shadow: 0 10px 20px rgba(0, 98, 255, 0.15);">
-                        <small style="opacity: 0.8; font-weight: 700; text-transform: uppercase; font-size: 0.65rem; letter-spacing: 1px;">Season Reset In</small>
-                        <div id="monthly-timer" style="font-size: 1.5rem; font-weight: 800; margin-top: 5px;">00d 00h 00m</div>
+                    <p style="font-size:0.75rem; color:var(--text-secondary); margin-top:4px;">Come back tomorrow for a new challenge</p>
+                    <div style="margin-top:16px; background:var(--text-primary); padding:16px; border-radius:16px; color:white;">
+                        <small style="font-weight:700; text-transform:uppercase; opacity:0.6; letter-spacing:1px;">Next Challenge In</small>
+                        <div id="reset-timer" style="font-size:1.4rem; font-weight:800; margin-top:4px;">--:--:--</div>
                     </div>
-
-                    <h4 style="font-weight: 800; margin: 0 0 15px; display: flex; align-items: center; gap: 10px;">
-                        <i class="fas fa-fire" style="color: #ff4d4d;"></i> Live Rankings
-                    </h4>
-
-                    <% leaderboard.forEach((entry, i) => { %>
-                        <div class="lb-row">
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <span class="rank-badge"><%= i+1 %></span>
-                                <div>
-                                    <span style="font-weight: 700; font-size: 0.9rem; display: block; line-height: 1.1;">
-                                        <%= entry.username %>
-                                    </span>
-                                    <span style="font-size: 0.65rem; color: var(--brand); font-weight: 800; text-transform: uppercase;">
-                                        <%= entry.university_slug || 'PREPIUM' %>
-                                    </span>
-                                </div>
-                            </div>
-                            <span style="font-weight: 800; font-size: 0.9rem;"><%= entry.monthly_score %> pts</span>
+                </div>
+            <% } else { %>
+                <!-- Subject Picker -->
+                <div class="card">
+                    <h2 style="font-weight:800; font-size:1rem; margin-bottom:4px; display:flex; align-items:center; gap:8px;">
+                        <i class="fas fa-book" style="color:var(--brand);"></i> Choose Subjects
+                    </h2>
+                    <p style="font-size:0.72rem;color:var(--text-secondary);font-weight:600;margin-bottom:16px;">Select up to 3 subjects</p>
+                    <div class="subjects-grid" id="subjectGrid">
+                        <div class="subject-card" data-subject="Mathematics" onclick="pickSubject(this)">
+                            <div class="sc-icon">📐</div>
+                            <div class="sc-name">Mathematics</div>
                         </div>
-                    <% }) %>
-                </section>
-            </div>
+                        <div class="subject-card" data-subject="English Language" onclick="pickSubject(this)">
+                            <div class="sc-icon">📝</div>
+                            <div class="sc-name">English</div>
+                        </div>
+                        <div class="subject-card" data-subject="Physics" onclick="pickSubject(this)">
+                            <div class="sc-icon">⚡</div>
+                            <div class="sc-name">Physics</div>
+                        </div>
+                        <div class="subject-card" data-subject="Chemistry" onclick="pickSubject(this)">
+                            <div class="sc-icon">🧪</div>
+                            <div class="sc-name">Chemistry</div>
+                        </div>
+                        <div class="subject-card" data-subject="Biology" onclick="pickSubject(this)">
+                            <div class="sc-icon">🧬</div>
+                            <div class="sc-name">Biology</div>
+                        </div>
+                        <div class="subject-card" data-subject="Economics" onclick="pickSubject(this)">
+                            <div class="sc-icon">📊</div>
+                            <div class="sc-name">Economics</div>
+                        </div>
+                        <div class="subject-card" data-subject="Government" onclick="pickSubject(this)">
+                            <div class="sc-icon">🏛️</div>
+                            <div class="sc-name">Government</div>
+                        </div>
+                        <div class="subject-card" data-subject="Literature" onclick="pickSubject(this)">
+                            <div class="sc-icon">📖</div>
+                            <div class="sc-name">Literature</div>
+                        </div>
+                        <div class="subject-card" data-subject="History" onclick="pickSubject(this)">
+                            <div class="sc-icon">📜</div>
+                            <div class="sc-name">History</div>
+                        </div>
+                        <div class="subject-card" data-subject="Geography" onclick="pickSubject(this)">
+                            <div class="sc-icon">🌍</div>
+                            <div class="sc-name">Geography</div>
+                        </div>
+                        <div class="subject-card" data-subject="Commerce" onclick="pickSubject(this)">
+                            <div class="sc-icon">💼</div>
+                            <div class="sc-name">Commerce</div>
+                        </div>
+                        <div class="subject-card" data-subject="Accounting" onclick="pickSubject(this)">
+                            <div class="sc-icon">🧾</div>
+                            <div class="sc-name">Accounting</div>
+                        </div>
+                        <div class="subject-card" data-subject="Computer Science" onclick="pickSubject(this)">
+                            <div class="sc-icon">💻</div>
+                            <div class="sc-name">Computer Sci</div>
+                        </div>
+                        <div class="subject-card" data-subject="Current Affairs" onclick="pickSubject(this)">
+                            <div class="sc-icon">📰</div>
+                            <div class="sc-name">Current Affairs</div>
+                        </div>
+                    </div>
+                    <div style="margin-top:12px;display:flex;align-items:center;gap:10px;">
+                        <button class="btn btn-primary" id="startBtn" onclick="startChallenge()" disabled>
+                            <i class="fas fa-bolt"></i> Start Challenge
+                        </button>
+                        <span id="selCount" style="font-size:0.75rem;font-weight:700;color:var(--text-muted);">0 selected</span>
+                    </div>
+                </div>
+
+                <!-- Quiz Area (hidden until started) -->
+                <div id="quizArea" class="hidden">
+                    <div class="card">
+                        <div class="quiz-header">
+                            <div class="timer-circle" id="timerCircle">10</div>
+                            <div class="quiz-progress">
+                                <div class="quiz-progress-bar">
+                                    <div class="quiz-progress-fill" id="progressFill" style="width:0%"></div>
+                                </div>
+                            </div>
+                            <div class="quiz-counter"><span id="qNum">1</span>/15</div>
+                        </div>
+                        <div class="q-text" id="qText">Loading...</div>
+                        <div id="optionsContainer"></div>
+                    </div>
+                </div>
+            <% } %>
         </div>
 
-        <%- include('partials/bottom-nav', { activeNav: 'dashboard' }) %>
+        <!-- ═══ LEADERBOARD TAB ═══ -->
+        <div id="tab-leaderboard" class="tab-content">
+            <div class="card" style="background:linear-gradient(135deg,var(--text-primary),#1e293b);color:white;padding:20px;border-radius:20px;margin-bottom:1rem;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                        <small style="opacity:0.6;font-weight:700;text-transform:uppercase;font-size:0.6rem;letter-spacing:1px;">Weekly Leaderboard</small>
+                        <div style="font-size:1.2rem;font-weight:800;margin-top:2px;">Top Battlers</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <small style="opacity:0.6;font-weight:700;text-transform:uppercase;font-size:0.6rem;letter-spacing:1px;">Resets In</small>
+                        <div id="weekly-timer" style="font-size:0.95rem;font-weight:800;margin-top:2px;">--d --h</div>
+                    </div>
+                </div>
+            </div>
+
+            <% if (leaderboard.length === 0) { %>
+                <div class="empty-state">
+                    <i class="fas fa-trophy"></i>
+                    <h3>No scores yet</h3>
+                    <p>Be the first to take on today's challenge!</p>
+                </div>
+            <% } else { %>
+                <% leaderboard.forEach(function(entry, i) { %>
+                    <div class="lb-card <%= entry.username === currentUsername ? 'highlight' : '' %>">
+                        <div class="lb-rank <%= i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '' %>">
+                            <%= i === 0 ? '<i class="fas fa-crown"></i>' : i + 1 %>
+                        </div>
+                        <div class="lb-info">
+                            <div class="lb-name"><%= entry.username %></div>
+                            <div class="lb-uni"><%= entry.university_slug || 'PREPIUM' %></div>
+                        </div>
+                        <div class="lb-score"><%= entry.monthly_score %> pts</div>
+                    </div>
+                <% }) %>
+            <% } %>
+        </div>
     </div>
+</div>
+<%- include('partials/bottom-nav', { activeNav: 'dashboard' }) %>
 
-    <script>
-        function switchPage(index, btn) {
-            const slider = document.getElementById('mainSlider');
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            slider.style.transform = index === 1 ? 'translateX(-50%)' : 'translateX(0)';
+<script>
+let selectedSubjects = [];
+let attemptId = null;
+let questions = [];
+let currentIdx = 0;
+let score = 0;
+let timeLeft = 10;
+let timerInterval = null;
+let answering = false;
+const maxScore = 300;
+const maxSubjects = 3;
+
+function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    if (name === 'challenge') {
+        document.querySelectorAll('.tab-btn')[0].classList.add('active');
+        document.getElementById('tab-challenge').classList.add('active');
+    } else {
+        document.querySelectorAll('.tab-btn')[1].classList.add('active');
+        document.getElementById('tab-leaderboard').classList.add('active');
+    }
+}
+
+function pickSubject(el) {
+    const sub = el.dataset.subject;
+    const idx = selectedSubjects.indexOf(sub);
+    if (idx > -1) {
+        selectedSubjects.splice(idx, 1);
+        el.classList.remove('selected');
+    } else {
+        if (selectedSubjects.length >= maxSubjects) return;
+        selectedSubjects.push(sub);
+        el.classList.add('selected');
+    }
+    document.getElementById('startBtn').disabled = selectedSubjects.length === 0;
+    document.getElementById('selCount').textContent = selectedSubjects.length + ' selected';
+}
+
+async function startChallenge() {
+    if (selectedSubjects.length === 0) return;
+    const btn = document.getElementById('startBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+
+    try {
+        const r = await fetch('/api/daily-challenge/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subjects: selectedSubjects })
+        });
+        const d = await r.json();
+        if (d.error) {
+            alert(d.error);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-bolt"></i> Start Challenge';
+            return;
         }
+        attemptId = d.attemptId;
+        questions = d.questions;
+        document.querySelector('.card:first-of-type').classList.add('hidden');
+        document.getElementById('quizArea').classList.remove('hidden');
+        showQuestion();
+    } catch (e) {
+        alert('Failed to generate questions. Try again.');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-bolt"></i> Start Challenge';
+    }
+}
 
-        const questions = <%- JSON.stringify(questions) %>;
-        let currentIdx = 0;
-        let timeLeft = 10;
-        let timerInterval;
-        let score = 0;
-        const maxPossibleScore = 200; // 10 questions * 20 max pts
+function showQuestion() {
+    if (currentIdx >= questions.length) return submitQuiz();
+    const q = questions[currentIdx];
+    document.getElementById('qText').textContent = q.question_text;
+    document.getElementById('qNum').textContent = currentIdx + 1;
+    document.getElementById('progressFill').style.width = ((currentIdx / questions.length) * 100) + '%';
 
-        function startQuiz() {
-            document.getElementById('instructions').classList.add('q-hidden');
-            document.getElementById('quiz-area').classList.remove('q-hidden');
-            showQuestion();
-        }
+    const container = document.getElementById('optionsContainer');
+    container.innerHTML = '';
+    ['A','B','C','D'].forEach(opt => {
+        const key = 'option_' + opt.toLowerCase();
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.textContent = q[key] || '';
+        btn.onclick = () => selectOption(opt);
+        container.appendChild(btn);
+    });
 
-        function showQuestion() {
-            if (currentIdx >= questions.length) return submitQuiz();
-            
-            const q = questions[currentIdx];
-            document.getElementById('q-text').innerText = q.question_text;
-            document.getElementById('q-num').innerText = currentIdx + 1;
-            
-            const container = document.getElementById('options-container');
-            container.innerHTML = '';
-            ['a','b','c','d'].forEach(opt => {
-                const btn = document.createElement('button');
-                btn.className = 'option-btn';
-                btn.innerText = q[`option_${opt}`];
-                btn.onclick = () => selectOption(opt.toUpperCase());
-                container.appendChild(btn);
-            });
+    answering = true;
+    startTimer();
+}
 
-            startTimer();
-        }
-
-        function startTimer() {
+function startTimer() {
+    clearInterval(timerInterval);
+    timeLeft = 10;
+    const circle = document.getElementById('timerCircle');
+    circle.textContent = timeLeft;
+    circle.className = 'timer-circle';
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        circle.textContent = timeLeft;
+        if (timeLeft <= 5) circle.className = 'timer-circle warning';
+        if (timeLeft <= 2) circle.className = 'timer-circle danger';
+        if (timeLeft <= 0) {
             clearInterval(timerInterval);
-            timeLeft = 10;
-            const timerEl = document.getElementById('timer');
-            timerEl.innerText = timeLeft;
-            timerEl.style.borderColor = 'var(--brand)';
-            
-            timerInterval = setInterval(() => {
-                timeLeft--;
-                timerEl.innerText = timeLeft;
-                if(timeLeft <= 3) timerEl.style.borderColor = '#ef4444';
-                
-                if (timeLeft <= 0) {
-                    clearInterval(timerInterval);
-                    selectOption(null); 
-                }
-            }, 1000);
+            selectOption(null);
         }
+    }, 1000);
+}
 
-        function selectOption(choice) {
-            // Accuracy Points (10) + Speed Points (Remaining time)
-            if (choice === questions[currentIdx].correct_option) {
-                const pointsEarned = 10 + timeLeft;
-                score += pointsEarned;
-                updatePointBar();
-            }
-            
-            currentIdx++;
-            showQuestion();
-        }
+function selectOption(choice) {
+    if (!answering) return;
+    answering = false;
+    clearInterval(timerInterval);
 
-        function updatePointBar() {
-            document.getElementById('current-score').innerText = score;
-            const percent = (score / maxPossibleScore) * 100;
-            document.getElementById('score-bar').style.width = percent + '%';
-        }
+    const q = questions[currentIdx];
+    const isCorrect = choice === q.correct_option;
+    if (isCorrect) {
+        const pts = 10 + timeLeft;
+        score += pts;
+    }
 
-        async function submitQuiz() {
-            clearInterval(timerInterval);
-            document.getElementById('quiz-area').innerHTML = `
-                <div style="padding: 40px 0;">
-                    <i class="fas fa-sync fa-spin" style="font-size: 2.5rem; color: var(--brand); margin-bottom: 20px;"></i>
-                    <h3 style="font-weight:800;">Syncing with Command...</h3>
-                </div>`;
-            
-            try {
-                await fetch('/api/submit-arena', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ score })
-                });
-                location.reload(); 
-            } catch (e) {
-                location.reload();
-            }
-        }
+    const buttons = document.querySelectorAll('.option-btn');
+    buttons.forEach((btn, i) => {
+        btn.disabled = true;
+        const opt = ['A','B','C','D'][i];
+        if (opt === q.correct_option) btn.classList.add('correct');
+        if (opt === choice && !isCorrect) btn.classList.add('wrong');
+    });
 
-        function updateCountdowns() {
-            const now = new Date();
-            const tomorrow = new Date();
-            tomorrow.setHours(24, 0, 0, 0);
-            const diff = tomorrow - now;
-            const h = Math.floor(diff / 3600000);
-            const m = Math.floor((diff % 3600000) / 60000);
-            const s = Math.floor((diff % 60000) / 1000);
-            const resEl = document.getElementById('reset-timer');
-            if (resEl) resEl.innerText = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    setTimeout(() => {
+        currentIdx++;
+        showQuestion();
+    }, 800);
+}
 
-            const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-            const mDiff = nextMonth - now;
-            const mD = Math.floor(mDiff / (1000 * 60 * 60 * 24));
-            const mH = Math.floor((mDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const mM = Math.floor((mDiff % (1000 * 60 * 60)) / (1000 * 60));
-            const monEl = document.getElementById('monthly-timer');
-            if (monEl) monEl.innerText = `${mD}d ${mH}h ${mM}m`;
-        }
-        setInterval(updateCountdowns, 1000);
-        updateCountdowns();
-    </script>
+async function submitQuiz() {
+    clearInterval(timerInterval);
+    document.getElementById('quizArea').innerHTML = `
+        <div class="card" style="text-align:center;">
+            <div style="padding:30px 0;">
+                <i class="fas fa-sync fa-spin" style="font-size:2rem;color:var(--brand);"></i>
+                <p style="margin-top:12px;font-weight:600;">Submitting your score...</p>
+            </div>
+        </div>`;
+
+    try {
+        const r = await fetch('/api/submit-arena', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ attemptId, score })
+        });
+        const d = await r.json();
+        if (d.success) showResults();
+        else location.reload();
+    } catch (e) {
+        location.reload();
+    }
+}
+
+function showResults() {
+    const correct = questions.filter((q, i) => {
+        return true;
+    }).length;
+    const pct = Math.round((score / maxScore) * 100);
+    document.getElementById('quizArea').innerHTML = `
+        <div class="card" style="text-align:center;">
+            <div style="font-size:3rem;margin-bottom:8px;">
+                ${pct >= 70 ? '<i class="fas fa-trophy" style="color:#f59e0b;"></i>' : pct >= 40 ? '<i class="fas fa-star" style="color:#2563eb;"></i>' : '<i class="fas fa-flag-checkered" style="color:#64748b;"></i>'}
+            </div>
+            <h2 style="font-weight:800;margin-bottom:4px;">
+                ${pct >= 70 ? 'Outstanding!' : pct >= 40 ? 'Good Effort!' : 'Keep Practicing!'}
+            </h2>
+            <div class="score-display">
+                <div class="score-number">${score}</div>
+                <div class="score-label">Points</div>
+            </div>
+            <div class="score-stats">
+                <div class="score-stat">
+                    <div class="score-stat-value" style="color:#10b981;">${Math.round(score/20)}</div>
+                    <div class="score-stat-label">Correct</div>
+                </div>
+                <div class="score-stat">
+                    <div class="score-stat-value">${pct}%</div>
+                    <div class="score-stat-label">Accuracy</div>
+                </div>
+                <div class="score-stat">
+                    <div class="score-stat-value" style="color:var(--brand);">${maxScore}</div>
+                    <div class="score-stat-label">Max Possible</div>
+                </div>
+            </div>
+            <div class="result-actions">
+                <button class="btn btn-outline btn-block" onclick="switchTab('leaderboard')"><i class="fas fa-trophy"></i> Leaderboard</button>
+                <button class="btn btn-primary btn-block" onclick="location.reload()"><i class="fas fa-redo"></i> Dashboard</button>
+            </div>
+        </div>`;
+}
+
+// Countdown timers
+function updateCountdowns() {
+    const now = new Date();
+    const tomorrow = new Date();
+    tomorrow.setHours(24, 0, 0, 0);
+    const diff = tomorrow - now;
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    const resEl = document.getElementById('reset-timer');
+    if (resEl) resEl.textContent = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+
+    const nextMonday = new Date(now);
+    nextMonday.setDate(nextMonday.getDate() + ((8 - nextMonday.getDay()) % 7 || 7));
+    nextMonday.setHours(0, 0, 0, 0);
+    const wDiff = nextMonday - now;
+    const wD = Math.floor(wDiff / (1000 * 60 * 60 * 24));
+    const wH = Math.floor((wDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const weekEl = document.getElementById('weekly-timer');
+    if (weekEl) weekEl.textContent = `${wD}d ${wH}h`;
+}
+setInterval(updateCountdowns, 1000);
+updateCountdowns();
+</script>
 </body>
 </html>

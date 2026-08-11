@@ -1,37 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prepium | Students</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <%- include('../partials/head') %>
     <style>
         :root {
-            --brand: #0062ff;
-            --brand-light: rgba(0, 98, 255, 0.1);
             --brand-glow: rgba(0, 98, 255, 0.25);
             --sidebar: #0b1437;
             --sidebar-hover: rgba(255, 255, 255, 0.06);
             --sidebar-active: rgba(0, 98, 255, 0.18);
-            --bg: #f0f4f8;
-            --card-bg: rgba(255, 255, 255, 0.72);
-            --card-border: rgba(255, 255, 255, 0.5);
-            --text-primary: #0f172a;
-            --text-secondary: #64748b;
-            --text-muted: #94a3b8;
-            --border: rgba(226, 232, 240, 0.6);
-            --border-solid: #e2e8f0;
             --green: #10b981;
             --green-bg: rgba(16, 185, 129, 0.1);
             --amber: #f59e0b;
             --amber-bg: rgba(245, 158, 11, 0.1);
-            --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.04);
-            --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.06);
-            --shadow-lg: 0 8px 32px rgba(15, 23, 42, 0.08);
             --shadow-glass: 0 8px 32px rgba(15, 23, 42, 0.07), inset 0 1px 0 rgba(255,255,255,0.6);
-            --radius: 20px;
-            --radius-sm: 14px;
+        }
+
+        [data-theme="dark"] {
+            --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255,255,255,0.05);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -298,8 +283,8 @@
             color: white;
             flex-shrink: 0;
         }
-        .avatar-1 { background: linear-gradient(135deg, #6366f1, #818cf8); }
-        .avatar-2 { background: linear-gradient(135deg, #0062ff, #3b82f6); }
+        .avatar-1 { background: linear-gradient(135deg, #2563eb, #60a5fa); }
+        .avatar-2 { background: linear-gradient(135deg, #2563eb, #2563eb); }
         .avatar-3 { background: linear-gradient(135deg, #10b981, #34d399); }
         .avatar-4 { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
         .avatar-5 { background: linear-gradient(135deg, #f43f5e, #fb7185); }
@@ -392,6 +377,8 @@
             table { min-width: 600px; }
         }
     </style>
+<meta name="theme-color" content="#2563eb">
+<%- include('../partials/theme-toggle') %>
 </head>
 <body>
 
@@ -414,11 +401,6 @@
                 <i class="fas fa-building-columns"></i>
                 <span>Universities</span>
             </a>
-            <a href="/admin/subjects" class="nav-item">
-                <i class="fas fa-book-open"></i>
-                <span>Subjects</span>
-            </a>
-
             <span class="sidebar-section">People</span>
             <a href="/admin/users" class="nav-item active">
                 <i class="fas fa-user-graduate"></i>
@@ -429,6 +411,11 @@
             <a href="/admin/notifications" class="nav-item">
                 <i class="fas fa-bell"></i>
                 <span>Notifications</span>
+            </a>
+            <span class="sidebar-section">Developer</span>
+            <a href="/admin/db-manager" class="nav-item">
+                <i class="fas fa-database"></i>
+                <span>DB Manager</span>
             </a>
         </div>
 

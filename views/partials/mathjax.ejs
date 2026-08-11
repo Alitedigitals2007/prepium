@@ -1,0 +1,44 @@
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['$','$'],['\\(','\\)']], displayMath: [['$$','$$'],['\\[','\\]']] },
+  options: { enableMenu: false },
+  startup: { pageReady: function() { return MathJax.typesetPromise(); } }
+};
+(function() {
+  if (document.querySelector('script[src*="mathjax"]')) return;
+  var s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js';
+  s.async = true;
+  document.head.appendChild(s);
+})();
+function mathRender(el) {
+  if (window.MathJax && MathJax.typesetPromise) {
+    MathJax.typesetPromise([el || document.body]).catch(function(){});
+  }
+}
+(function() {
+  if (document.querySelector('script[src*="mermaid"]')) return;
+  var s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js';
+  s.onload = function() {
+    var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'base', themeVariables: { primaryColor: '#2563eb', primaryTextColor: '#fff', primaryBorderColor: '#1d4ed8', lineColor: '#64748b', secondaryColor: dark ? '#1e293b' : '#f1f5f9', tertiaryColor: dark ? '#121a2d' : '#eff6ff' } });
+  };
+  document.head.appendChild(s);
+})();
+function diagramRender(el) {
+  if (!el) return;
+  var attempt = function() {
+    if (window.mermaid) {
+      el.querySelectorAll('.mermaid').forEach(function(d) {
+        if (!d.getAttribute('data-processed')) {
+          try { mermaid.run({ nodes: [d] }); d.setAttribute('data-processed', 'true'); } catch(e){}
+        }
+      });
+    } else {
+      setTimeout(attempt, 300);
+    }
+  };
+  attempt();
+}
+</script>

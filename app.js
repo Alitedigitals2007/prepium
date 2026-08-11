@@ -1,4 +1,5 @@
 const express = require('express');
+const helmet = require('helmet');
 const nodemailer = require('nodemailer');
 const bcrypt = require('bcryptjs');
 const session = require('express-session');
@@ -11,6 +12,9 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { Pool } = require('pg');
+
+// Premium price (configurable via env)
+const PREMIUM_PRICE = parseInt(process.env.PREMIUM_PRICE) || 2000;
 
 const pdfToText = require('pdf-to-text');
 
@@ -26,13 +30,13 @@ const upload = multer({
             cb(null, uniqueName);
         }
     }),
-    limits: { fileSize: 50 * 1024 * 1024 }
+    limits: { fileSize: 100 * 1024 * 1024 }
 });
 
 // Memory storage for timetable extraction (need buffer)
 const uploadMemory = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 50 * 1024 * 1024 }
+    limits: { fileSize: 100 * 1024 * 1024 }
 });
 
 const pgSession = require('connect-pg-simple')(session);
@@ -60,14 +64,21 @@ const pool = new Pool({
   ssl: {
     rejectUnauthorized: false
   },
-  connectionTimeoutMillis: 10000,
-  idleTimeoutMillis: 30000
+  connectionTimeoutMillis: 30000,
+  idleTimeoutMillis: 60000,
+  family: 4
 });
 
 // Handle pool errors gracefully
 pool.on('error', (err) => {
     console.error('[DB] Pool error:', err.message);
 });
+
+// Keep the (free-tier) database awake — Neon suspends after ~5 min idle,
+// and a cold start can exceed the connection timeout and kill requests.
+setInterval(() => {
+    pool.query('SELECT 1').catch(() => {});
+}, 120000);
 
 // Test database connection on startup
 (async () => {
@@ -372,12 +383,84 @@ const transporter = (process.env.EMAIL_USER && process.env.EMAIL_PASS)
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.disable('view cache');
+
+// Paystack webhook needs raw body BEFORE express.json() consumes it
+app.post('/paystack-webhook', express.raw({ type: '*/*' }), async (req, res) => {
+    try {
+        const secret = process.env.PAYSTACK_SECRET_KEY;
+        if (!secret) return res.status(500).send('Server config missing');
+
+        const hash = crypto.createHmac('sha512', secret).update(req.body).digest('hex');
+        if (hash !== req.headers['x-paystack-signature']) {
+            return res.status(401).send('Invalid signature');
+        }
+
+        const event = JSON.parse(req.body.toString());
+        if (event.event === 'charge.success') {
+            const data = event.data;
+            const ref = data.reference;
+            const userId = data.metadata?.user_id;
+            const couponCode = data.metadata?.coupon_code || null;
+
+            if (!userId) {
+                console.log('[Paystack Webhook] No user_id in metadata for', ref);
+                return res.sendStatus(200);
+            }
+
+            const userCheck = await pool.query('SELECT has_paid, used_coupon FROM users WHERE id = $1', [userId]);
+            if (userCheck.rows[0]?.has_paid) return res.sendStatus(200);
+
+            const finalCoupon = (!userCheck.rows[0]?.used_coupon && couponCode) ? couponCode : null;
+            await pool.query(
+                'UPDATE users SET has_paid = true, used_coupon = COALESCE($1, used_coupon) WHERE id = $2',
+                [finalCoupon, userId]
+            );
+
+            const amount = data.amount || 0;
+            try {
+                await pool.query(
+                    `INSERT INTO payments (user_id, reference, amount, currency, status, coupon_code, channel, metadata, verified_at)
+                     VALUES ($1,$2,$3,$4,'success',$5,$6,$7,NOW())
+                     ON CONFLICT (reference) DO UPDATE SET status='success', verified_at=NOW()`,
+                    [userId, ref, amount, data.currency || 'NGN', finalCoupon || '', data.channel || '', JSON.stringify(data)]
+                );
+            } catch (_) {}
+
+            if (finalCoupon) {
+                try { await pool.query('UPDATE coupons SET times_used = times_used + 1 WHERE LOWER(code) = LOWER($1)', [finalCoupon]); } catch (_) {}
+            }
+
+            const uniqueCode = await pool.query('SELECT unique_code FROM users WHERE id = $1', [userId]);
+            if (uniqueCode.rows[0]?.unique_code) {
+                const codeClean = uniqueCode.rows[0].unique_code.trim().toLowerCase();
+                const amb = await pool.query('SELECT id, name FROM ambassadors WHERE LOWER(TRIM(unique_code)) = $1', [codeClean]);
+                if (amb.rows[0]) {
+                    const commission = Math.round(PREMIUM_PRICE * 0.15);
+                    await pool.query('UPDATE ambassadors SET total_earned = CAST(COALESCE(total_earned,0) AS INTEGER) + $1, total_referrals = CAST(COALESCE(total_referrals,0) AS INTEGER) + 1 WHERE id = $2', [commission, amb.rows[0].id]);
+                }
+            }
+
+            console.log(`[Paystack Webhook] User ${userId} activated via webhook (ref: ${ref})`);
+        }
+        res.sendStatus(200);
+    } catch (e) {
+        console.error('[Paystack Webhook] Error:', e.message);
+        res.sendStatus(200);
+    }
+});
+
+app.use(express.json({ limit: '200mb' }));
+app.use(express.urlencoded({ extended: true, limit: '200mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Add this line directly ABOVE your app.use(session({...})) middleware declaration
 app.set('trust proxy', 1);
+
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false
+}));
 
 app.use(session({
     secret: process.env.SESSION_SECRET,
@@ -411,11 +494,25 @@ const hasPaid = (req, res, next) => {
 };
 
 const requirePaid = (req, res, next) => {
-    if (req.session.user && req.session.user.has_paid === true) return next();
-    if (req.xhr || (req.headers.accept && req.headers.accept.includes('json')) || req.path.startsWith('/api/')) {
-        return res.status(402).json({ success: false, message: 'Premium required', premium_required: true });
+    if (!req.session.user) {
+        return res.redirect('/login');
     }
-    return res.redirect('/dashboard?msg=Premium+feature.+Tap+%22Unlock+Premium%22+to+continue');
+    if (req.session.user.has_paid === true) return next();
+    pool.query('SELECT has_paid FROM users WHERE id = $1', [req.session.user.id]).then(function(dbUser) {
+        if (dbUser.rows[0]?.has_paid) {
+            req.session.user.has_paid = true;
+            return next();
+        }
+        if (req.xhr || (req.headers.accept && req.headers.accept.includes('json')) || req.path.startsWith('/api/')) {
+            return res.status(402).json({ success: false, message: 'Premium required', premium_required: true });
+        }
+        return res.redirect('/dashboard?msg=Premium+feature.+Tap+%22Unlock+Premium%22+to+continue');
+    }).catch(function() {
+        if (req.xhr || (req.headers.accept && req.headers.accept.includes('json')) || req.path.startsWith('/api/')) {
+            return res.status(402).json({ success: false, message: 'Premium required', premium_required: true });
+        }
+        return res.redirect('/dashboard?msg=Premium+feature.+Tap+%22Unlock+Premium%22+to+continue');
+    });
 };
 
 const isAdmin = (req, res, next) => {
@@ -427,6 +524,61 @@ const isAdmin = (req, res, next) => {
     // If they aren't an admin, they stay out
     res.status(403).send("Access Denied: Admins Only");
 };
+
+// ======================== SEO Middleware ========================
+const BASE_URL = 'https://theprepium.vercel.app';
+
+app.use(function seoDefaults(req, res, next) {
+  res.locals.seo = {
+    title: 'Prepium | Smart Exam Mastery',
+    description: 'Your Academic CBT Practice Platform — master exams with AI-powered study tools, quizzes, and personalized learning.',
+    url: BASE_URL + req.originalUrl,
+    image: '/images/og-image.svg',
+    type: 'website',
+    robots: 'index,follow'
+  };
+  next();
+});
+
+// ======================== robots.txt ========================
+app.get('/robots.txt', function (req, res) {
+  res.type('text/plain').send('User-agent: *\nAllow: /\nSitemap: ' + BASE_URL + '/sitemap.xml\n');
+});
+
+// ======================== sitemap.xml ========================
+app.get('/sitemap.xml', async function (req, res) {
+  try {
+    const pages = [
+      { loc: BASE_URL + '/', priority: '1.0', changefreq: 'weekly' },
+      { loc: BASE_URL + '/guide', priority: '0.6', changefreq: 'monthly' },
+      { loc: BASE_URL + '/how-it-works', priority: '0.7', changefreq: 'monthly' },
+      { loc: BASE_URL + '/signup', priority: '0.5', changefreq: 'monthly' },
+      { loc: BASE_URL + '/login', priority: '0.5', changefreq: 'monthly' }
+    ];
+    const courses = await pool.query("SELECT id, course_name, updated_at FROM study_courses ORDER BY id").catch(() => ({ rows: [] }));
+    for (const c of courses.rows) {
+      pages.push({ loc: BASE_URL + '/study/course/' + c.id, priority: '0.8', changefreq: 'weekly', lastmod: c.updated_at });
+    }
+    const topics = await pool.query("SELECT id, topic_name, updated_at FROM study_topics ORDER BY id").catch(() => ({ rows: [] }));
+    for (const t of topics.rows) {
+      pages.push({ loc: BASE_URL + '/study/topic/' + t.id, priority: '0.7', changefreq: 'weekly', lastmod: t.updated_at });
+    }
+    const subtopics = await pool.query("SELECT id, subtopic_name, updated_at FROM study_subtopics ORDER BY id").catch(() => ({ rows: [] }));
+    for (const s of subtopics.rows) {
+      pages.push({ loc: BASE_URL + '/study/subtopic/' + s.id, priority: '0.6', changefreq: 'weekly', lastmod: s.updated_at });
+    }
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+    for (const p of pages) {
+      xml += '  <url>\n    <loc>' + p.loc + '</loc>\n    <priority>' + p.priority + '</priority>\n    <changefreq>' + p.changefreq + '</changefreq>\n';
+      if (p.lastmod) xml += '    <lastmod>' + new Date(p.lastmod).toISOString().split('T')[0] + '</lastmod>\n';
+      xml += '  </url>\n';
+    }
+    xml += '</urlset>';
+    res.type('application/xml').send(xml);
+  } catch (e) {
+    res.type('application/xml').status(500).send('<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>');
+  }
+});
 
 // Generate Test (The Logic)
 app.post('/start-test', isAuth, hasPaid, async (req, res) => {
@@ -465,6 +617,12 @@ app.post('/submit-test', isAuth, async (req, res) => {
 // Front Page
 app.get('/', (req, res) => {
     res.render('index');
+});
+
+app.get('/guide', (req, res) => {
+    res.locals.seo.title = 'Prepium | User Guide';
+    res.locals.seo.description = 'Complete guide to Prepium — learn how to use CBT practice, AI study tools, flashcards, quizzes, and more to ace your exams.';
+    res.render('guide', { user: req.session.user || null });
 });
 
 // Auth Routes
@@ -594,7 +752,65 @@ app.post('/auth/login', rateLimit(10, 60000), async (req, res) => {
     }
 });
 
-// Add this to your app.js / server file
+// ─── Coupon validate API ───
+app.post('/api/coupon/validate', isAuth, async (req, res) => {
+  try {
+    const { code } = req.body;
+    const uid = req.session.user.id;
+    if (!code || !code.trim()) return res.json({ valid: false, message: 'Enter a coupon code' });
+
+    // Check if this user already used a coupon
+    const userCheck = await pool.query('SELECT used_coupon, has_paid FROM users WHERE id = $1', [uid]);
+    if (userCheck.rows[0]?.used_coupon) return res.json({ valid: false, message: 'You already used a coupon' });
+    if (userCheck.rows[0]?.has_paid) return res.json({ valid: false, message: 'Account is already premium' });
+
+    const c = await pool.query('SELECT * FROM coupons WHERE LOWER(code) = LOWER($1) AND is_active = true AND (max_uses = 0 OR times_used < max_uses) AND (expires_at IS NULL OR expires_at > NOW())', [code.trim()]);
+    if (!c.rows[0]) return res.json({ valid: false, message: 'Invalid or expired coupon code' });
+    const coupon = c.rows[0];
+    let discountLabel = '';
+    let finalAmount = PREMIUM_PRICE;
+    if (coupon.discount_type === 'percent') {
+      finalAmount = Math.round(PREMIUM_PRICE * (100 - coupon.discount_value) / 100);
+      discountLabel = coupon.discount_value + '% off';
+    } else {
+      finalAmount = PREMIUM_PRICE - coupon.discount_value;
+      discountLabel = '₦' + coupon.discount_value + ' off';
+    }
+    finalAmount = Math.max(50, finalAmount);
+    res.json({ valid: true, code: coupon.code, discount_type: coupon.discount_type, discount_value: coupon.discount_value, original_amount: PREMIUM_PRICE, final_amount: finalAmount, discountLabel });
+  } catch (e) { res.json({ valid: false, message: 'Server error' }); }
+});
+
+// ─── Admin: Coupons ───
+app.get('/admin/coupons', isAdmin, async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM coupons ORDER BY created_at DESC');
+    res.render('admin/coupons', { coupons: r.rows });
+  } catch (e) { res.status(500).send(e.message); }
+});
+
+app.post('/admin/coupons/add', isAdmin, async (req, res) => {
+  try {
+    const { code, discount_type, discount_value, max_uses, expires_at } = req.body;
+    if (!code || !discount_type || !discount_value) return res.redirect('/admin/coupons?error=Missing fields');
+    await pool.query('INSERT INTO coupons (code, discount_type, discount_value, max_uses, expires_at) VALUES ($1, $2, $3, $4, $5)', [code.toUpperCase(), discount_type, parseInt(discount_value), parseInt(max_uses) || 0, expires_at || null]);
+    res.redirect('/admin/coupons?msg=Created');
+  } catch (e) { res.redirect('/admin/coupons?error=' + encodeURIComponent(e.message)); }
+});
+
+app.post('/admin/coupons/toggle/:id', isAdmin, async (req, res) => {
+  try {
+    await pool.query('UPDATE coupons SET is_active = NOT is_active WHERE id = $1', [req.params.id]);
+    res.redirect('/admin/coupons');
+  } catch (e) { res.redirect('/admin/coupons?error=' + encodeURIComponent(e.message)); }
+});
+
+app.post('/admin/coupons/delete/:id', isAdmin, async (req, res) => {
+  try { await pool.query('DELETE FROM coupons WHERE id = $1', [req.params.id]); res.redirect('/admin/coupons'); }
+  catch (e) { res.redirect('/admin/coupons?error=' + encodeURIComponent(e.message)); }
+});
+
+// Verify Payment (modified to track coupon usage)
 app.get('/verify-payment', rateLimit(5, 300000), async (req, res) => {
     const { reference } = req.query;
 
@@ -610,16 +826,35 @@ app.get('/verify-payment', rateLimit(5, 300000), async (req, res) => {
 
     try {
         // 0. Verify the transaction with Paystack API
+        const paystackSecret = process.env.PAYSTACK_SECRET_KEY;
+        if (!paystackSecret) {
+            console.error('[Paystack] Missing PAYSTACK_SECRET_KEY');
+            return res.redirect('/dashboard?payment=failed&reason=server_misconfigured');
+        }
         const paystackRes = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
             headers: {
-                'Authorization': `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+                'Authorization': `Bearer ${paystackSecret}`,
                 'Content-Type': 'application/json'
             }
         });
         const paystackData = await paystackRes.json();
 
-        if (!paystackData.status || paystackData.data.status !== 'success') {
+        // Basic sanity check on the response shape
+        if (!paystackData || !paystackData.status || !paystackData.data) {
+            console.error(`[Paystack] Unexpected response for ${reference}:`, JSON.stringify(paystackData).slice(0, 800));
+            return res.redirect('/dashboard?payment=failed&reason=invalid_response');
+        }
+
+        console.log(`[Paystack] Verify ${reference}: status=${paystackData.data.status}, amount=${paystackData.data.amount}, currency=${paystackData.data.currency}`);
+        if (paystackData.data.status !== 'success') {
             return res.redirect('/dashboard?payment=failed&reason=transaction_not_successful');
+        }
+
+        // Server-side amount validation (minimum N50 floor — prevents kobo fraud)
+        const paidAmount = paystackData.data.amount / 100;
+        if (paidAmount < 50) {
+            console.error(`[Paystack] Amount too low for ${reference}: paid N${paidAmount}`);
+            return res.redirect('/dashboard?payment=failed&reason=invalid_amount');
         }
 
         // 1. Fetch user data
@@ -641,11 +876,35 @@ app.get('/verify-payment', rateLimit(5, 300000), async (req, res) => {
         }
 
         // 3. Mark the user as activated (Paid)
-        await pool.query('UPDATE users SET has_paid = true WHERE id = $1', [userId]);
-        console.log(`[Paystack] Success: User ID ${userId} marked as paid.`);
+        const couponCode = req.query.coupon || null;
+        // Only set used_coupon if not already set (prevents overwriting)
+        const userCouponCheck = await pool.query('SELECT used_coupon FROM users WHERE id = $1', [userId]);
+        const finalCoupon = (!userCouponCheck.rows[0]?.used_coupon && couponCode) ? couponCode : null;
+        const updateRes = await pool.query(
+            'UPDATE users SET has_paid = true, used_coupon = COALESCE($1, used_coupon) WHERE id = $2 RETURNING has_paid',
+            [finalCoupon, userId]
+        );
+        console.log(`[Paystack] Success: User ID ${userId} marked as paid (has_paid=${updateRes.rows[0]?.has_paid})${finalCoupon ? ' (coupon: ' + finalCoupon + ')' : ''}.`);
+
+        // 3b. Log payment to payments table
+        try {
+            await pool.query(
+                `INSERT INTO payments (user_id, reference, amount, currency, status, coupon_code, channel, metadata, verified_at)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
+                 ON CONFLICT (reference) DO UPDATE SET status = 'success', verified_at = NOW()`,
+                [userId, reference, paidAmount * 100, paystackData.data.currency || 'NGN', 'success',
+                 finalCoupon || '', paystackData.data.channel || '', JSON.stringify(paystackData.data)]
+            );
+        } catch (_) {}
+
+        // 3c. Increment coupon usage if a coupon was used (only on first-time coupon use)
+        if (finalCoupon) {
+          try { await pool.query('UPDATE coupons SET times_used = times_used + 1 WHERE LOWER(code) = LOWER($1)', [finalCoupon]); } catch (_) {}
+        }
 
         // 4. Update the logged-in session right away
         req.session.user.has_paid = true;
+        req.session.save(function() { /* session persisted */ });
 
         // 5. Credit the Ambassador if a referral code was used
         if (user.unique_code) {
@@ -660,7 +919,7 @@ app.get('/verify-payment', rateLimit(5, 300000), async (req, res) => {
 
             if (ambCheck.rows.length > 0) {
                 const ambassador = ambCheck.rows[0];
-                const commission = Math.round(1000 * 0.15);
+                const commission = Math.round(PREMIUM_PRICE * 0.15);
                 console.log(`[Referral Match] Adding ₦${commission} (15%) to Ambassador: ${ambassador.name}`);
 
                 await pool.query(
@@ -846,203 +1105,13 @@ app.post('/admin/universities/add', isAdmin, async (req, res) => {
 // ==========================================
 
 // VIEW ALL SUBJECTS (Now shows school name and drive link)
-app.get('/admin/subjects', isAdmin, async (req, res) => {
-    try {
-        // Ensure drive_link is included in the SELECT statement
-        const result = await pool.query(`
-            SELECT subjects.*, universities.name as university_name 
-            FROM subjects 
-            LEFT JOIN universities ON subjects.university_id = universities.id 
-            ORDER BY subjects.id DESC`);
-        
-        const universities = await pool.query('SELECT * FROM universities ORDER BY name ASC');
-        
-        res.render('admin/subjects', { 
-            subjects: result.rows, 
-            universities: universities.rows 
-        });
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error loading subjects");
-    }
-});
-
-// ADD NEW SUBJECT (Added drive_link)
-app.post('/admin/subjects/add', isAdmin, async (req, res) => {
-    // Added drive_link to the destructuring
-    const { name, category, university_id, drive_link } = req.body; 
-    try {
-        await pool.query(
-            'INSERT INTO subjects (name, category, university_id, drive_link) VALUES ($1, $2, $3, $4)', 
-            [name, category, university_id, drive_link]
-        );
-        res.redirect('/admin/subjects');
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error adding subject");
-    }
-});
-
-// EDIT SUBJECT (GET THE DATA)
-app.get('/admin/subjects/edit/:id', isAdmin, async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM subjects WHERE id = $1', [req.params.id]);
-        const universities = await pool.query('SELECT * FROM universities ORDER BY name ASC');
-        res.render('admin/edit-subject', { 
-            subject: result.rows[0], 
-            universities: universities.rows 
-        });
-    } catch (err) {
-        res.redirect('/admin/subjects');
-    }
-});
-
-// UPDATE SUBJECT (SAVE CHANGES - Added drive_link)
-app.post('/admin/subjects/update/:id', isAdmin, async (req, res) => {
-    // Added drive_link to the destructuring
-    const { name, category, university_id, drive_link } = req.body; 
-    try {
-        await pool.query(
-            'UPDATE subjects SET name = $1, category = $2, university_id = $3, drive_link = $4 WHERE id = $5', 
-            [name, category, university_id, drive_link, req.params.id]
-        );
-        res.redirect('/admin/subjects');
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Update failed");
-    }
-});
-
-// DELETE SUBJECT
-app.post('/admin/subjects/delete/:id', isAdmin, async (req, res) => {
-    try {
-        await pool.query('DELETE FROM subjects WHERE id = $1', [req.params.id]);
-        res.redirect('/admin/subjects');
-    } catch (err) {
-        res.status(500).send("Delete failed");
-    }
-});
+// [REMOVED: Subjects, Questions, and AI Quiz admin pages — managed via DB Manager]
 
 // ==========================================
-// 3. QUESTION MANAGEMENT (RETAINED & LINKED)
+// PREMIUM UPGRADE PAGE
 // ==========================================
-
-// Add a Question with a Hint
-app.post('/admin/questions/add', isAdmin, async (req, res) => {
-    const { subject_id, question_text, option_a, option_b, option_c, option_d, correct_option, hint } = req.body;
-    try {
-        await pool.query(
-            `INSERT INTO questions (subject_id, question_text, option_a, option_b, option_c, option_d, correct_option, hint) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-            [subject_id, question_text, option_a, option_b, option_c, option_d, correct_option, hint]
-        );
-        res.redirect(`/admin/questions/manage/${subject_id}`);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Error saving question.");
-    }
-});
-
-// This route MUST exist to handle the page request
-app.get('/admin/questions/manage/:id', isAdmin, async (req, res) => {
-    const subjectId = req.params.id;
-    try {
-        // Fetch the subject details
-        const subjectRes = await pool.query('SELECT * FROM subjects WHERE id = $1', [subjectId]);
-        
-        // Fetch all questions for this subject
-        const questionsRes = await pool.query('SELECT * FROM questions WHERE subject_id = $1 ORDER BY id DESC', [subjectId]);
-
-        res.render('admin/manage-questions', {
-            subjects: subjectRes.rows, // The EJS expects an array based on your code
-            questions: questionsRes.rows
-        });
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Server Error");
-    }
-});
-
-// BULK IMPORT (TEXTAREA JSON)
-app.post('/admin/questions/bulk-import', isAdmin, async (req, res) => {
-    const { subject_id, university_id, json_data } = req.body;
-    try {
-        const questions = JSON.parse(json_data);
-        
-        if (!Array.isArray(questions) || questions.length === 0) {
-            return res.redirect(`/admin/questions/manage/${subject_id}?error=No questions provided`);
-        }
-
-        const client = await pool.connect();
-        try {
-            await client.query('BEGIN');
-            
-            for (const q of questions) {
-                await client.query(
-                    `INSERT INTO questions 
-                    (subject_id, university_id, question_text, option_a, option_b, option_c, option_d, correct_option, explanation, hint) 
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-                    [
-                        subject_id, 
-                        university_id || 1,
-                        q.question_text, 
-                        q.option_a, 
-                        q.option_b, 
-                        q.option_c, 
-                        q.option_d, 
-                        q.correct_option, 
-                        q.explanation || null,
-                        q.hint || null
-                    ]
-                );
-            }
-            
-            await client.query('COMMIT');
-        } catch (err) {
-            await client.query('ROLLBACK');
-            throw err;
-        } finally {
-            client.release();
-        }
-        
-        res.redirect(`/admin/questions/manage/${subject_id}`);
-    } catch (err) {
-        console.error("JSON Import Error:", err);
-        res.status(400).send("Invalid JSON Format. Please check the structure.");
-    }
-});
-
-// DELETE QUESTION
-app.post('/admin/questions/delete/:id/:subject_id', isAdmin, async (req, res) => {
-    await pool.query('DELETE FROM questions WHERE id = $1', [req.params.id]);
-    res.redirect(`/admin/questions/manage/${req.params.subject_id}`);
-});
-
-// GET EDIT PAGE
-app.get('/admin/questions/edit/:id', isAdmin, async (req, res) => {
-    const { id } = req.params;
-    try {
-        const question = await pool.query('SELECT * FROM questions WHERE id = $1', [id]);
-        const subject = await pool.query('SELECT * FROM subjects WHERE id = $1', [question.rows[0].subject_id]);
-        res.render('admin/edit-question', { q: question.rows[0], subject: subject.rows[0] });
-    } catch (err) {
-        res.redirect('/admin/subjects');
-    }
-});
-
-// POST UPDATE
-app.post('/admin/questions/update', isAdmin, async (req, res) => {
-    const { id, subject_id, question_text, option_a, option_b, option_c, option_d, correct_option, hint } = req.body;
-    try {
-        await pool.query(
-            `UPDATE questions SET question_text=$1, option_a=$2, option_b=$3, option_c=$4, option_d=$5, correct_option=$6, hint=$7 
-             WHERE id=$8`,
-            [question_text, option_a, option_b, option_c, option_d, correct_option, hint, id]
-        );
-        res.redirect(`/admin/questions/manage/${subject_id}`);
-    } catch (err) {
-        res.status(500).send("Error updating question");
-    }
+app.get('/upgrade', isAuth, async (req, res) => {
+  res.render('upgrade', { user: req.session.user });
 });
 
 // ==========================================
@@ -1169,19 +1238,36 @@ app.get('/dashboard', isStudent, async (req, res) => {
         const upcomingDeadlines = parseInt(deadlineCount.rows[0].count) || 0;
 
         // 6. Get study stats for dashboard
-        const [studyStatsRes, quizCountRes, avgScoreRes, streakRes] = await Promise.all([
+        const [studyStatsRes, quizStatsRes, streakRes] = await Promise.all([
             pool.query('SELECT COALESCE(SUM(elapsed_seconds), 0) as t, COUNT(*) as s FROM study_sessions WHERE user_id = $1 AND status = $2', [userId, 'completed']),
-            pool.query('SELECT COUNT(*) as c FROM results WHERE user_id = $1', [userId]),
-            pool.query('SELECT COALESCE(AVG(score::float/NULLIF(total_questions,0)*100), 0) as avg FROM results WHERE user_id = $1 AND total_questions > 0', [userId]),
+            pool.query(`SELECT
+                (SELECT COUNT(*) FROM quiz_results WHERE user_id = $1)
+              + (SELECT COUNT(*) FROM results WHERE user_id = $1) as c,
+                (SELECT COALESCE(AVG(pct), 0) FROM (
+                    SELECT (score::float / NULLIF(total_questions, 0) * 100) as pct FROM quiz_results WHERE user_id = $1 AND total_questions > 0
+                    UNION ALL
+                    SELECT (score::float / NULLIF(total_questions, 0) * 100) as pct FROM results WHERE user_id = $1 AND total_questions > 0
+                ) q) as avg`, [userId]),
             pool.query('SELECT current_streak FROM login_streaks WHERE user_id = $1', [userId])
         ]);
         const streak = parseInt(streakRes.rows[0]?.current_streak) || 0;
         const studySessions = parseInt(studyStatsRes.rows[0].s) || 0;
-        const quizCount = parseInt(quizCountRes.rows[0].c) || 0;
-        const avgScore = Math.round(parseFloat(avgScoreRes.rows[0].avg) || 0);
+        const quizCount = parseInt(quizStatsRes.rows[0].c) || 0;
+        const avgScore = Math.round(parseFloat(quizStatsRes.rows[0].avg) || 0);
+        const aiQuizRes = await pool.query('SELECT COUNT(*) FROM quiz_results WHERE user_id = $1 AND subject_id IS NULL', [userId]);
+        const aiQuizCount = parseInt(aiQuizRes.rows[0].count) || 0;
 
         // 7. Get recent quiz
-        const recentQuizRes = await pool.query('SELECT subject, score, total_questions, TO_CHAR(taken_at, \'YYYY-MM-DD\') as date_taken FROM results WHERE user_id = $1 ORDER BY taken_at DESC LIMIT 1', [userId]);
+        const recentQuizRes = await pool.query(`
+            SELECT COALESCE(s.name, qr.title, 'Quiz') as subject, qr.score, qr.total_questions, TO_CHAR(qr.created_at, 'YYYY-MM-DD') as date_taken
+            FROM quiz_results qr
+            LEFT JOIN subjects s ON qr.subject_id = s.id
+            WHERE qr.user_id = $1
+            UNION ALL
+            SELECT 'General Quiz' as subject, score, total_questions, TO_CHAR(taken_at, 'YYYY-MM-DD') as date_taken
+            FROM results WHERE user_id = $1
+            ORDER BY date_taken DESC
+            LIMIT 1`, [userId]);
 
         res.render('dashboard', { 
             user: { ...req.session.user, ...userData }, 
@@ -1194,8 +1280,10 @@ app.get('/dashboard', isStudent, async (req, res) => {
             studySessions,
             quizCount,
             avgScore,
+            aiQuizCount,
             recentQuiz: recentQuizRes.rows[0] || null,
             paystack_key: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_your_key',
+            premiumPrice: PREMIUM_PRICE,
             currentTime: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })
         });
     } catch (err) {
@@ -1395,6 +1483,7 @@ app.get('/setup-test', isStudent, async (req, res) => {
                 user: { ...req.session.user, ...userStatus },
                 message: "You've used up your 2 free quiz attempts. Upgrade to Prepium Pro for unlimited practice tests!",
                 paystack_key: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_your_key',
+                premiumPrice: PREMIUM_PRICE,
                 userEmail: req.session.user.email
             });
         }
@@ -1441,6 +1530,7 @@ app.post('/start-quiz', isStudent, async (req, res) => {
                 user: { ...req.session.user, ...userStatus },
                 message: "You've used up your 2 free quiz attempts. Upgrade to Prepium Pro for unlimited practice tests!",
                 paystack_key: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_your_key',
+                premiumPrice: PREMIUM_PRICE,
                 userEmail: req.session.user.email
             });
         }
@@ -1625,11 +1715,11 @@ app.get('/history', isAuth, requirePaid, async (req, res) => {
             SELECT id, NULL as subject_id, score, total_questions, 
                    CASE WHEN total_questions > 0 THEN ROUND((score::numeric / total_questions) * 100) ELSE 0 END as percentage,
                    NULL as title, NULL as time_taken,
-                   created_at,
+                   taken_at AS created_at,
                    'General Quiz' as subject_name
             FROM results
             WHERE user_id = $1
-            ORDER BY created_at DESC
+            ORDER BY taken_at DESC
         `, [uid]);
         oldRows = oldRes.rows;
     } catch (e) { console.error("History results table:", e.message); }
@@ -2669,163 +2759,42 @@ async function callGeminiWithImage(prompt, base64Data, mimeType) {
 
 // Call Gemini with text prompt + text content
 async function callGeminiWithText(prompt, textContent) {
-    const endpoints = [
-        { url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', key: process.env.GEMINI_API_KEY_PRIMARY },
-        { url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', key: process.env.GEMINI_API_KEY_SECONDARY }
-    ].filter(e => e.key);
+    const models = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
+    const keys = [process.env.GEMINI_API_KEY_PRIMARY, process.env.GEMINI_API_KEY_SECONDARY].filter(Boolean);
 
-    for (const ep of endpoints) {
-        try {
-            const body = {
-                contents: [{
-                    parts: [
-                        { text: prompt },
-                        { text: textContent }
-                    ]
-                }],
-                generationConfig: { temperature: 0.1, maxOutputTokens: 8192 }
-            };
+    for (const key of keys) {
+        for (const model of models) {
+            try {
+                const parts = [{ text: prompt }];
+                if (textContent) parts.push({ text: textContent });
+                const body = {
+                    contents: [{ parts }],
+                    generationConfig: { temperature: 0.1, maxOutputTokens: 16384 }
+                };
 
-            const resp = await fetch(`${ep.url}?key=${ep.key}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-                signal: AbortSignal.timeout(30000)
-            });
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+                const resp = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                    signal: AbortSignal.timeout(90000)
+                });
 
-            if (resp.ok) {
+                if (!resp.ok) {
+                    const errText = await resp.text().catch(() => '');
+                    console.error(`Gemini ${model} returned ${resp.status}: ${errText.slice(0, 200)}`);
+                    continue;
+                }
+
                 const data = await resp.json();
                 const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
                 if (text) return { success: true, text };
+            } catch (e) {
+                console.error(`Gemini ${model} failed:`, e.message);
             }
-        } catch (e) {
-            console.error('Gemini text call failed:', e.message);
         }
     }
     return { success: false, text: '' };
-}
-
-// Auto-generate daily challenge questions using Gemini
-async function generateDailyChallengeQuestions() {
-  const endpoints = [
-    { url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', key: process.env.GEMINI_API_KEY_PRIMARY },
-    { url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', key: process.env.GEMINI_API_KEY_SECONDARY }
-  ].filter(e => e.key);
-
-  const prompt = `You are a quiz generator. Generate exactly 10 multiple-choice questions for a general academic daily challenge. 
-Each question must have 4 options (A, B, C, D), one correct answer, and a brief explanation.
-Cover a variety of subjects: Mathematics, Science, English, History, Geography, Logic, Technology, Literature, and General Knowledge.
-Vary difficulty (mix of easy, medium, hard).
-Respond with ONLY valid JSON array (no markdown, no code fences):
-[
-  {
-    "question_text": "...",
-    "option_a": "...",
-    "option_b": "...",
-    "option_c": "...",
-    "option_d": "...",
-    "correct_option": "A",
-    "explanation": "..."
-  }
-]`;
-
-  for (const ep of endpoints) {
-    try {
-      const body = {
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseMimeType: "application/json",
-          temperature: 0.7,
-          maxOutputTokens: 8192
-        }
-      };
-
-      const resp = await fetch(`${ep.url}?key=${ep.key}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(30000)
-      });
-
-      if (resp.ok) {
-        const data = await resp.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-        if (!text) continue;
-        const questions = JSON.parse(text);
-        if (!Array.isArray(questions) || questions.length !== 10) continue;
-
-        const client = await pool.connect();
-        try {
-          await client.query('BEGIN');
-          for (const q of questions) {
-            if (!q.question_text || !q.option_a || !q.option_b || !q.option_c || !q.option_d || !q.correct_option) continue;
-            await client.query(
-              `INSERT INTO daily_questions (question_text, option_a, option_b, option_c, option_d, correct_option, explanation, date_scheduled) 
-               VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_DATE)`,
-              [q.question_text, q.option_a, q.option_b, q.option_c, q.option_d, q.correct_option, q.explanation || '']
-            );
-          }
-          await client.query('COMMIT');
-          console.log('[Daily] Auto-generated 10 questions for today');
-          return { success: true };
-        } catch (e) {
-          await client.query('ROLLBACK');
-          throw e;
-        } finally {
-          client.release();
-        }
-      }
-    } catch (e) {
-      console.error('Daily challenge Gemini generation failed:', e.message);
-    }
-  }
-
-  // Fallback: try Mistral
-  try {
-    const key = process.env.MISTRAL_API_KEY;
-    if (key) {
-      const orResp = await fetch('https://api.mistral.ai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-        body: JSON.stringify({ model: 'mistral-small-latest', messages: [{ role: 'user', content: prompt }], temperature: 0.7 }),
-        signal: AbortSignal.timeout(30000)
-      });
-      if (orResp.ok) {
-        const orData = await orResp.json();
-        const orText = orData.choices?.[0]?.message?.content?.trim();
-        if (orText) {
-          const cleaned = orText.replace(/```json|```/g, '').trim();
-          const questions = JSON.parse(cleaned);
-          if (Array.isArray(questions) && questions.length > 0) {
-            const client = await pool.connect();
-            try {
-              await client.query('BEGIN');
-              for (const q of questions) {
-                if (!q.question_text || !q.option_a || !q.option_b || !q.option_c || !q.option_d || !q.correct_option) continue;
-                await client.query(
-                  `INSERT INTO daily_questions (question_text, option_a, option_b, option_c, option_d, correct_option, explanation, date_scheduled) 
-                   VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_DATE)`,
-                  [q.question_text, q.option_a, q.option_b, q.option_c, q.option_d, q.correct_option, q.explanation || '']
-                );
-              }
-              await client.query('COMMIT');
-              console.log('[Daily] Auto-generated via OpenRouter fallback');
-              return { success: true };
-            } catch (e) {
-              await client.query('ROLLBACK');
-              throw e;
-            } finally {
-              client.release();
-            }
-          }
-        }
-      }
-    }
-  } catch (e) {
-    console.error('Daily challenge OpenRouter fallback failed:', e.message);
-  }
-
-  return { success: false, error: 'All AI endpoints failed' };
 }
 
 // Call LlamaParse API for PDFs
@@ -2928,7 +2897,8 @@ function minutesToTime(minutes) {
 
 // GET: Render the How It Works Guide
 app.get('/how-it-works', isAuth, (req, res) => {
-    
+    res.locals.seo.title = 'Prepium | How It Works';
+    res.locals.seo.description = 'Discover how Prepium works — AI-powered CBT practice, smart study tools, flashcards, quizzes, and personalized exam preparation.';
     res.render('how-it-works', { 
         user: req.session.user,
         hasNewNotifs: req.session.hasNewNotifs || false 
@@ -3346,19 +3316,16 @@ app.post('/admin/students/toggle-status/:id', isAdmin, async (req, res) => {
 
 app.get('/admin/daily', isAdmin, async (req, res) => {
     try {
-        const [leaderboard, counts, todayRes] = await Promise.all([
+        const [leaderboard, todayCount] = await Promise.all([
             pool.query('SELECT * FROM daily_leaderboard ORDER BY monthly_score DESC LIMIT 30'),
-            pool.query('SELECT COUNT(*) as total FROM daily_questions WHERE date_scheduled >= CURRENT_DATE'),
-            pool.query('SELECT * FROM daily_questions WHERE date_scheduled = CURRENT_DATE ORDER BY id ASC LIMIT 10')
+            pool.query("SELECT COUNT(*) as total FROM daily_challenge_attempts WHERE date = CURRENT_DATE")
         ]);
-
-        const totalCount = parseInt(counts.rows[0].total) || 0;
-        const daysLeft = Math.floor(totalCount / 10);
 
         res.render('admin/daily-manage', { 
             leaderboard: leaderboard.rows, 
-            daysLeft: daysLeft,
-            todayQuestions: todayRes.rows
+            daysLeft: 0,
+            todayQuestions: [],
+            todayChallenges: parseInt(todayCount.rows[0]?.total || 0)
         });
     } catch (err) {
         console.error("ARENA_ERROR:", err);
@@ -3368,88 +3335,151 @@ app.get('/admin/daily', isAdmin, async (req, res) => {
 
 app.get('/daily-challenge', isAuth, async (req, res) => {
     const sessionUser = req.session.user;
-    const userId = sessionUser.id; 
+    const userId = sessionUser.id;
     try {
-        // Auto-generate questions for today if missing
-        const countRes = await pool.query(
-            'SELECT COUNT(*) as cnt FROM daily_questions WHERE date_scheduled = CURRENT_DATE'
-        );
-        let questionsNeeded = 10 - parseInt(countRes.rows[0]?.cnt || 0);
-        if (questionsNeeded > 0) {
-            console.log(`[Daily] ${questionsNeeded} questions needed for today, generating...`);
-            const gen = await generateDailyChallengeQuestions();
-            if (!gen.success) {
-                console.error('[Daily] Generation failed:', gen.error);
-            }
-        }
+        const [attemptRes, leaderboardRes] = await Promise.all([
+            pool.query(
+                'SELECT * FROM daily_challenge_attempts WHERE user_id = $1 AND date = CURRENT_DATE ORDER BY id DESC LIMIT 1',
+                [userId]
+            ),
+            pool.query(`
+                SELECT dl.username, dl.monthly_score, univ.slug AS university_slug
+                FROM daily_leaderboard dl
+                INNER JOIN users u ON dl.user_id = u.id
+                INNER JOIN universities univ ON u.university_id = univ.id
+                ORDER BY dl.monthly_score DESC LIMIT 20
+            `)
+        ]);
 
-        const questionsRes = await pool.query(
-            'SELECT * FROM daily_questions WHERE date_scheduled = CURRENT_DATE ORDER BY id ASC LIMIT 10'
-        );
+        const attempt = attemptRes.rows[0] || null;
+        const hasPlayed = attempt ? attempt.completed : false;
+        const questions = attempt && !attempt.completed ? attempt.questions : [];
+        const attemptId = attempt ? attempt.id : null;
+        const lastScore = attempt ? attempt.score : null;
 
-        const statusRes = await pool.query(
-            'SELECT last_played FROM daily_leaderboard WHERE user_id = $1',
-            [userId]
-        );
-
-        let hasPlayed = false;
-        if (statusRes.rows.length > 0 && statusRes.rows[0].last_played) {
-            const lastPlayed = new Date(statusRes.rows[0].last_played).toDateString();
-            const today = new Date().toDateString();
-            if (lastPlayed === today) hasPlayed = true;
-        }
-
-        const leaderboardRes = await pool.query(`
-            SELECT 
-                dl.username, 
-                dl.monthly_score, 
-                univ.slug AS university_slug
-            FROM daily_leaderboard dl
-            INNER JOIN users u ON dl.user_id = u.id
-            INNER JOIN universities univ ON u.university_id = univ.id
-            ORDER BY dl.monthly_score DESC 
-            LIMIT 10
-        `);
+        const currentUserEntry = leaderboardRes.rows.find(r => r.username === sessionUser.fullname);
+        const userRank = currentUserEntry ? leaderboardRes.rows.indexOf(currentUserEntry) + 1 : null;
 
         res.render('daily-challenge', {
-            questions: questionsRes.rows,
+            user: sessionUser,
             hasPlayed,
+            attemptId,
+            questions,
+            subject: attempt ? attempt.subject : null,
+            lastScore,
             leaderboard: leaderboardRes.rows,
-            user: sessionUser
+            userRank,
+            currentUsername: sessionUser.fullname
         });
     } catch (err) {
-        console.error("ARENA_GET_ERROR:", err);
-        res.status(500).send("Arena maintenance.");
+        console.error("DAILY_CHALLENGE_ERROR:", err);
+        res.status(500).send("Maintenance.");
     }
 });
-app.post('/api/submit-arena', isAuth, async (req, res) => {
-    const sessionUser = req.session.user;
 
-    const { score } = req.body;
-    const userId = sessionUser.id;
-    const username = sessionUser.fullname; // matches 'fullname' in your users.json
+app.post('/api/daily-challenge/start', isAuth, async (req, res) => {
+    const userId = req.session.user.id;
+    const { subjects } = req.body;
+    if (!subjects || !Array.isArray(subjects) || subjects.length === 0) return res.json({ error: 'Select at least one subject.' });
+    if (subjects.length > 3) return res.json({ error: 'Max 3 subjects.' });
 
     try {
-        const check = await pool.query('SELECT last_played FROM daily_leaderboard WHERE user_id = $1', [userId]);
-        if (check.rows.length > 0) {
-            const lastPlayed = new Date(check.rows[0].last_played).toDateString();
-            if (lastPlayed === new Date().toDateString()) {
-                return res.status(403).json({ error: "Already played today" });
+        const existing = await pool.query(
+            'SELECT id FROM daily_challenge_attempts WHERE user_id = $1 AND date = CURRENT_DATE AND completed = true',
+            [userId]
+        );
+        if (existing.rows.length > 0) return res.json({ error: 'Already completed today.' });
+
+        const subjectList = subjects.join(', ');
+        const prompt = `Generate 15 multiple-choice questions covering: ${subjectList}. University level, mixed across subjects.
+Each: 4 options (A-D), one correct, brief explanation. Vary difficulty.
+Return ONLY valid JSON array:
+[{"question_text":"...","option_a":"...","option_b":"...","option_c":"...","option_d":"...","correct_option":"A","explanation":"..."}]`;
+
+        let questions;
+        const endpoints = [
+            { url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', key: process.env.GEMINI_API_KEY_PRIMARY },
+            { url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', key: process.env.GEMINI_API_KEY_SECONDARY }
+        ].filter(e => e.key);
+
+        let generated = false;
+        for (const ep of endpoints) {
+            try {
+                const body = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.5, maxOutputTokens: 4096 } };
+                const resp = await fetch(`${ep.url}?key=${ep.key}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(25000) });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+                    if (text) { questions = JSON.parse(text); generated = true; break; }
+                }
+            } catch (_) {}
+        }
+
+        if (!generated) {
+            const key = process.env.MISTRAL_API_KEY;
+            if (key) {
+                try {
+                    const orResp = await fetch('https://api.mistral.ai/v1/chat/completions', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+                        body: JSON.stringify({ model: 'mistral-small-latest', messages: [{ role: 'user', content: prompt }], temperature: 0.5 }),
+                        signal: AbortSignal.timeout(25000)
+                    });
+                    if (orResp.ok) {
+                        const orData = await orResp.json();
+                        const orText = orData.choices?.[0]?.message?.content?.trim();
+                        if (orText) { questions = JSON.parse(orText.replace(/```json|```/g, '').trim()); generated = true; }
+                    }
+                } catch (_) {}
             }
         }
+
+        if (!generated || !Array.isArray(questions) || questions.length < 5) {
+            return res.json({ error: 'Could not generate questions. Try again.' });
+        }
+        questions = questions.slice(0, 15);
+
+        const insert = await pool.query(
+            `INSERT INTO daily_challenge_attempts (user_id, subject, questions, total) VALUES ($1, $2, $3, $4) RETURNING id`,
+            [userId, subjectList, JSON.stringify(questions), questions.length]
+        );
+
+        res.json({ success: true, attemptId: insert.rows[0].id, questions });
+    } catch (e) {
+        console.error('DAILY_START_ERROR:', e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/submit-arena', isAuth, async (req, res) => {
+    const sessionUser = req.session.user;
+    const { attemptId, score } = req.body;
+    const userId = sessionUser.id;
+    const username = sessionUser.fullname;
+
+    try {
+        const attempt = await pool.query(
+            'SELECT id FROM daily_challenge_attempts WHERE id = $1 AND user_id = $2 AND completed = false',
+            [attemptId, userId]
+        );
+        if (!attempt.rows[0]) return res.status(403).json({ error: 'No active challenge.' });
+
+        await pool.query(
+            'UPDATE daily_challenge_attempts SET score = $1, completed = true WHERE id = $2',
+            [score, attemptId]
+        );
 
         await pool.query(
             `INSERT INTO daily_leaderboard (user_id, username, monthly_score, last_played)
              VALUES ($1, $2, $3, CURRENT_DATE)
-             ON CONFLICT (user_id) 
-             DO UPDATE SET 
+             ON CONFLICT (user_id)
+             DO UPDATE SET
                 monthly_score = daily_leaderboard.monthly_score + EXCLUDED.monthly_score,
                 last_played = CURRENT_DATE,
                 username = EXCLUDED.username`,
             [userId, username, score]
         );
 
-        res.json({ success: true });
+        res.json({ success: true, score });
     } catch (err) {
         console.error("ARENA_SUBMIT_ERROR:", err);
         res.status(500).json({ error: "Internal Server Error" });
@@ -3458,44 +3488,45 @@ app.post('/api/submit-arena', isAuth, async (req, res) => {
 
 app.get('/admin/analytics', isAdmin, async (req, res) => {
     try {
-        const [totals, signupTrend, popularPages] = await Promise.all([
-            // 1. Core Metrics for the top cards
+        const [totals, signupTrend, popularPages, couponStats] = await Promise.all([
             pool.query(`SELECT 
                 (SELECT COUNT(*) FROM users) as total_users,
                 (SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL '24 hours') as daily_signups,
                 (SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL '7 days') as weekly_signups,
                 (SELECT COUNT(*) FROM users WHERE has_paid = true) as premium_users,
-                (SELECT SUM(quiz_attempts) FROM users) as total_quizzes,
-                (SELECT COUNT(*) FROM daily_leaderboard) as active_battlers`),
+                (SELECT COUNT(*) FROM users WHERE has_paid = true AND created_at > NOW() - INTERVAL '7 days') as weekly_premium,
+                (SELECT (SELECT COUNT(*) FROM results) + (SELECT COUNT(*) FROM quiz_results)) as total_quizzes,
+                (SELECT COUNT(*) FROM study_quiz_attempts) as study_quiz_count,
+                (SELECT COUNT(*) FROM daily_leaderboard) as active_battlers,
+                (SELECT COUNT(*) FROM users WHERE used_coupon IS NOT NULL) as coupon_redemptions`),
 
-            // 2. Signup Trend for the Line Chart
             pool.query(`SELECT TO_CHAR(created_at, 'DD Mon') as date, COUNT(*) as count 
                         FROM users 
                         WHERE created_at > NOW() - INTERVAL '14 days'
                         GROUP BY date ORDER BY MIN(created_at) ASC`),
 
-            // 3. Most Visited Pages for the Bar Chart/List
             pool.query(`SELECT page_path, COUNT(*) as views 
                         FROM page_views 
-                        GROUP BY page_path ORDER BY views DESC LIMIT 6`).catch(() => ({ rows: [] }))
+                        GROUP BY page_path ORDER BY views DESC LIMIT 6`).catch(() => ({ rows: [] })),
+
+            pool.query(`SELECT code, discount_type, discount_value, times_used, max_uses, is_active 
+                        FROM coupons ORDER BY times_used DESC LIMIT 10`)
         ]);
 
-        const statsData = totals.rows[0];
+        const s = totals.rows[0];
+        const estimatedRevenue = (s.premium_users || 0) * 2000;
 
         res.render('admin/analytics', {
-            // Fixes the "signups is not defined" error
-            signups: {
-                daily: statsData.daily_signups || 0,
-                weekly: statsData.weekly_signups || 0
-            },
-            // Fixes the "stats is not defined" error
+            signups: { daily: s.daily_signups || 0, weekly: s.weekly_signups || 0 },
             stats: {
-                total_users: statsData.total_users || 0,
-                premium_users: statsData.premium_users || 0,
-                total_quizzes: statsData.total_quizzes || 0,
-                active_battlers: statsData.active_battlers || 0
+                total_users: s.total_users || 0,
+                premium_users: s.premium_users || 0,
+                weekly_premium: s.weekly_premium || 0,
+                total_quizzes: (s.total_quizzes || 0) + (s.study_quiz_count || 0),
+                active_battlers: s.active_battlers || 0
             },
-            // Data for the Graphics
+            revenue: { estimated: estimatedRevenue, coupon_redemptions: s.coupon_redemptions || 0 },
+            coupons: couponStats.rows,
             chartData: {
                 labels: signupTrend.rows.map(r => r.date),
                 values: signupTrend.rows.map(r => r.count)
@@ -3667,6 +3698,128 @@ app.get('/ai-quiz', isAuth, (req, res) => {
         user: req.session.user, 
         paystack_key: process.env.PAYSTACK_PUBLIC_KEY 
     });
+});
+
+// ─── ADMIN QUIZ GENERATOR ─────────────────────────────────────────────────
+const isAdminQuiz = (r, res, n) => {
+    if (r.session.user && r.session.user.is_admin) return n();
+    res.redirect('/admin/login');
+};
+
+app.get('/admin/quiz-generator', isAdminQuiz, async (req, res) => {
+    try {
+        const unis = await pool.query('SELECT id, name FROM universities ORDER BY name');
+        const sessions = await pool.query(
+            `SELECT s.*, u.name as uni_name FROM admin_quiz_sessions s JOIN universities u ON s.university_id = u.id ORDER BY s.created_at DESC`
+        );
+        res.render('admin/quiz-generator', { user: req.session.user, universities: unis.rows, sessions: sessions.rows });
+    } catch (e) { res.status(500).send(e.message); }
+});
+
+app.post('/api/admin/quiz/create-session', isAdminQuiz, async (req, res) => {
+    try {
+        const { university_id, level } = req.body;
+        const r = await pool.query(
+            'INSERT INTO admin_quiz_sessions (admin_id, university_id, level) VALUES ($1,$2,$3) RETURNING id',
+            [req.session.user.id, university_id, level]
+        );
+        res.json({ success: true, id: r.rows[0].id });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/admin/quiz/generate-courses', isAdminQuiz, async (req, res) => {
+    try {
+        const { sessionId } = req.body;
+        const sess = await pool.query('SELECT * FROM admin_quiz_sessions WHERE id = $1', [sessionId]);
+        if (!sess.rows[0]) return res.json({ error: 'Session not found' });
+        const s = sess.rows[0];
+        const uni = await pool.query('SELECT name FROM universities WHERE id = $1', [s.university_id]);
+        const uniName = uni.rows[0]?.name || 'University';
+        const prompt = `You are a Nigerian university curriculum expert. List the standard courses offered by ${uniName} at ${s.level} Level across all departments following CCMAS and BMAS standards.
+Return ONLY a raw JSON array (no markdown, no code fences) with objects:
+[{"code":"CourseCode","title":"Full Course Title","department":"Department Name"}]
+Include at least 15-20 courses covering different departments.`;
+        const aiRes = await studyPromptSmart(prompt);
+        if (!aiRes.text || aiRes.text.startsWith('AI error')) return res.json({ error: 'AI could not generate courses. ' + (aiRes.text || '') });
+        let courses;
+        try { courses = JSON.parse(aiRes.text); } catch(_) {
+            const m = aiRes.text.match(/\[[\s\S]*\]/);
+            if (m) try { courses = JSON.parse(m[0]); } catch(_2) { return res.json({ error: 'AI returned invalid data.' }); }
+            else return res.json({ error: 'AI returned invalid data.' });
+        }
+        for (const c of courses) {
+            await pool.query(
+                'INSERT INTO admin_quiz_courses (session_id, course_code, course_title, department) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING',
+                [sessionId, c.code, c.title, c.department || '']
+            );
+        }
+        await pool.query('UPDATE admin_quiz_sessions SET status = $1 WHERE id = $2', ['courses_ready', sessionId]);
+        res.json({ success: true, count: courses.length });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/admin/quiz/update-course', isAdminQuiz, async (req, res) => {
+    try {
+        const { id, status, course_code, course_title } = req.body;
+        await pool.query(
+            'UPDATE admin_quiz_courses SET status = $1, course_code = COALESCE($2, course_code), course_title = COALESCE($3, course_title) WHERE id = $4',
+            [status || 'pending', course_code || null, course_title || null, id]
+        );
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/admin/quiz/courses/:sessionId', isAdminQuiz, async (req, res) => {
+    try {
+        const courses = await pool.query(
+            'SELECT * FROM admin_quiz_courses WHERE session_id = $1 ORDER BY status, course_code',
+            [req.params.sessionId]
+        );
+        res.json({ courses: courses.rows });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/admin/quiz/generate-questions', isAdminQuiz, async (req, res) => {
+    try {
+        const { sessionId, questionCount } = req.body;
+        const courses = await pool.query(
+            "SELECT * FROM admin_quiz_courses WHERE session_id = $1 AND status = 'approved'", [sessionId]
+        );
+        if (courses.rows.length === 0) return res.json({ error: 'No approved courses.' });
+        const count = parseInt(questionCount) || 10;
+        let total = 0;
+        for (const course of courses.rows) {
+            const prompt = `You are a Nigerian university examiner. Generate exactly ${count} multiple-choice questions for the course "${course.course_code} - ${course.course_title}" at the university level. Each question must have 4 options (A-D), one correct answer, a clear explanation, and optionally a diagram description.
+Return ONLY a raw JSON array (no markdown):
+[{"question":"Question text here","options":["Option A","Option B","Option C","Option D"],"correct":"A","explanation":"Why this is correct","diagram":"description if needed or empty string"}]
+Make questions exam-standard, some with diagrams where applicable (circuits, graphs, structures).`;
+            const aiRes = await studyPromptSmart(prompt);
+            if (aiRes.text && !aiRes.text.startsWith('AI error')) {
+                let qs;
+                try { qs = JSON.parse(aiRes.text); } catch(_) {
+                    const m = aiRes.text.match(/\[[\s\S]*\]/);
+                    if (m) try { qs = JSON.parse(m[0]); } catch(_2) { continue; }
+                    else continue;
+                }
+                for (const q of qs) {
+                    await pool.query(
+                        'INSERT INTO admin_quiz_questions (course_id, question_text, options, correct_answer, explanation, diagram_url) VALUES ($1,$2,$3,$4,$5,$6)',
+                        [course.id, q.question, JSON.stringify(q.options || []), q.correct, q.explanation || '', q.diagram || '']
+                    );
+                }
+                total += qs.length;
+            }
+        }
+        await pool.query('UPDATE admin_quiz_sessions SET status = $1 WHERE id = $2', ['questions_ready', sessionId]);
+        res.json({ success: true, total });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/admin/quiz/publish', isAdminQuiz, async (req, res) => {
+    try {
+        await pool.query('UPDATE admin_quiz_sessions SET status = $1 WHERE id = $2', ['published', req.body.sessionId]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ─── DAILY TASK DASHBOARD ──────────────────────────────────────────────────
@@ -3871,7 +4024,7 @@ app.post('/api/daily-task/generate-tasks', isAuth, async (req, res) => {
 
         // If nothing generated, create default tasks
         if (count === 0) {
-            const defaults = ['Review lecture notes', 'Complete practice quiz', 'Read a chapter'];
+            const defaults = ['Review lecture notes', 'Read a chapter'];
             for (const label of defaults) {
                 await pool.query(
                     `INSERT INTO daily_task_items (user_id, task_date, task_type, task_label)
@@ -3934,7 +4087,7 @@ app.get('/api/daily-task/weekly-report', isAuth, async (req, res) => {
     }
 });
 
-app.post('/upload-pdf', upload.single('lecture_note'), async (req, res) => {
+app.post('/upload-pdf', uploadMemory.single('lecture_note'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: "No file uploaded." });
@@ -3959,21 +4112,22 @@ app.post('/upload-pdf', upload.single('lecture_note'), async (req, res) => {
     }
 });
 
-// POST: Process and Generate Contextual Quizzes from PDFs using pdfToText + OpenRouter
-app.post('/generate-ai-quiz', isAuth, requirePaid, upload.single('lecture_note'), async (req, res) => {
+// POST: Generate quizzes from client-extracted PDF text
+app.post('/generate-ai-quiz', isAuth, requirePaid, async (req, res) => {
     try {
-        if (!req.file) {
-            return res.status(400).json({ success: false, message: "No file uploaded." });
+        const { pdfText, fileName, num_questions, quiz_duration, question_type, difficulty } = req.body;
+
+        if (!pdfText || !pdfText.trim()) {
+            return res.status(400).json({ success: false, message: "Could not extract text from PDF. Try a different file." });
         }
 
-        const numQuestions = parseInt(req.body.num_questions) || 5;
-        const quizDuration = parseInt(req.body.quiz_duration) || 5;
-        const questionType = req.body.question_type || 'obj';
-        const difficulty = req.body.difficulty || 'medium';
-        const originalFileName = req.file.originalname;
-        const pdfBuffer = req.file.buffer;
+        const numQuestions = parseInt(num_questions) || 5;
+        const quizDuration = parseInt(quiz_duration) || 5;
+        const questionType = question_type || 'obj';
+        const difficultyLevel = difficulty || 'medium';
+        const originalFileName = fileName || 'document';
 
-        console.log(`[AI ENGINE] Compiling exactly ${numQuestions} [Format: ${questionType.toUpperCase()}] [Difficulty: ${difficulty.toUpperCase()}] questions for "${originalFileName}"`);
+        console.log(`[AI ENGINE] Generating ${numQuestions} questions from text "${originalFileName}"`);
 
         let styleInstruction = "";
         if (questionType === 'obj') {
@@ -3987,29 +4141,55 @@ app.post('/generate-ai-quiz', isAuth, requirePaid, upload.single('lecture_note')
         }
 
         const difficultyMap = { easy: 'basic recall and comprehension level', medium: 'application and analysis level', hard: 'synthesis and evaluation level', expert: 'critical thinking and expert level' };
-        const difficultyText = difficultyMap[difficulty] || 'application and analysis level';
-
-        // Extract text from PDF first
-        let pdfText = "";
-        try {
-            pdfText = await new Promise((resolve, reject) => {
-                pdfToText.pdfToText(pdfBuffer, (err, text) => {
-                    if (err) return reject(err);
-                    resolve(text || "");
-                });
-            });
-        } catch (e) {
-            console.error("PDF text extraction failed:", e);
-            return res.status(500).json({ success: false, message: "Failed to extract text from PDF. Ensure it's a text-based PDF." });
-        }
-
-        if (!pdfText.trim()) {
-            return res.status(400).json({ success: false, message: "Could not extract readable text from PDF. Try a text-based PDF." });
-        }
+        const difficultyText = difficultyMap[difficultyLevel] || 'application and analysis level';
 
         // Truncate if too long
         const maxChars = 12000;
-        if (pdfText.length > maxChars) pdfText = pdfText.substring(0, maxChars) + "\n...[truncated]";
+        var cleanText = pdfText;
+        if (cleanText.length > maxChars) cleanText = cleanText.substring(0, maxChars) + "\n...[truncated]";
+
+        // Generate questions via AI
+        let jsonStructure = '';
+        if (questionType === 'obj' || questionType === 'mixed') {
+            jsonStructure = `You MUST respond with a raw JSON array matching this structure:
+[
+  {
+    "type": "${questionType === 'mixed' ? 'obj' : questionType}",
+    "question": "Question text here...",
+    "options": ["Option A text", "Option B text", "Option C text", "Option D text"],
+    "correct": "A",
+    "keywords": ["key1", "key2"],
+    "explanation": "Clear explanation in plain text."
+  }
+]
+For 'obj' type, "correct" MUST be the LETTER of the correct option (A, B, C, or D).`;
+        } else if (questionType === 'german') {
+            jsonStructure = `You MUST respond with a raw JSON array matching this structure:
+[
+  {
+    "type": "german",
+    "question": "Text with a blank like ____ here",
+    "options": [],
+    "correct": "the exact expected answer text",
+    "keywords": ["key1", "key2"],
+    "explanation": "Clear explanation in plain text."
+  }
+]
+For 'german' type, "correct" MUST be the exact word or phrase that fills the blank. "options" MUST be an empty array [].`;
+        } else if (questionType === 'theory') {
+            jsonStructure = `You MUST respond with a raw JSON array matching this structure:
+[
+  {
+    "type": "theory",
+    "question": "Essay question text here...",
+    "options": [],
+    "correct": "key point that should be mentioned",
+    "keywords": ["expected keyword 1", "expected keyword 2"],
+    "explanation": "Clear explanation in plain text."
+  }
+]
+For 'theory' type, "correct" should be the main expected point, "options" MUST be an empty array [], and "keywords" should contain key terms to look for.`;
+        }
 
         const prompt = `You are an expert academic examiner. Analyze the following document content carefully.
 Generate exactly ${numQuestions} unique, highly relevant academic questions based strictly on its contents.
@@ -4018,27 +4198,20 @@ DIFFICULTY LEVEL: ${difficultyText} — adjust question complexity accordingly.
 
 CRITICAL STYLE RULE: ${styleInstruction}
 
-You MUST respond with a raw JSON array matching this structure format:
-[
-  {
-    "type": "${questionType === 'mixed' ? 'obj' : questionType}",
-    "question": "Question text here...",
-    "options": ["Option A", "Option B", "Option C", "Option D"],
-    "correct": "Correct option text or keyword answer definition",
-    "keywords": ["key1", "key2"],
-    "explanation": "Write a clear, thorough explanation of the correct answer. CRITICAL: Use PLAIN TEXT ONLY. NO markdown formatting whatsoever - no **bold**, no *italic*, no __underline__, no backticks, no headers. Use proper grammar and complete sentences. Structure the explanation logically in paragraphs. Include formulas using LaTeX like $E=mc^2$ if needed."
-  }
-]
+IMPORTANT: Use JSON key "question" for the question text. Each question MUST include an "explanation" key with a clear explanation.
+
+${jsonStructure}
 
 DOCUMENT CONTENT:
-${pdfText}`;
+${cleanText}`;
 
-        const aiRes = await openRouterPrompt(prompt, true);
-        let responseText = aiRes.text.trim();
+        const aiRes = await studyPromptJSON(prompt);
+        let responseText = (aiRes.text || '').trim();
+        if (!responseText) throw new Error('Failed to compile quiz questions. Try again.');
 
-        // Clean up markdown blocks if returned
         if (responseText.startsWith("```json")) responseText = responseText.replace(/^```json/, "").replace(/```$/, "");
         if (responseText.startsWith("```")) responseText = responseText.replace(/^```/, "").replace(/```$/, "");
+        responseText = extractJsonItems(responseText);
 
         let parsedData;
         try {
@@ -4048,19 +4221,39 @@ ${pdfText}`;
             throw new Error("Failed to parse AI response. Try again.");
         }
 
-        let structuredQuiz = Array.isArray(parsedData) ? parsedData : (parsedData.questions || parsedData.quiz || []);
+        let rawList = Array.isArray(parsedData) ? parsedData : (parsedData.questions || parsedData.quiz || []);
 
-        // Strict mapping sanitization
-        structuredQuiz = structuredQuiz.map(q => {
-            if (questionType !== 'mixed') q.type = questionType;
-            if (!q.options) q.options = [];
-            if (!q.keywords) q.keywords = [];
-            
-            if (questionType === 'obj' && q.options.length === 0) {
-                q.options = ["Option A", "Option B", "Option C", "Option D"];
+        function cleanOptPrefix(o) { return String(o).replace(/^[A-Da-d1-4][\.\)]\s*/, ''); }
+        function answerLetter(val, opts) {
+            if (!val) return 'A';
+            var s = String(val).trim();
+            var m = s.match(/^([A-Da-d])[\.\)]\s*/);
+            if (m) return m[1].toUpperCase();
+            if (/^[A-Da-d]$/i.test(s)) return s.toUpperCase();
+            var n = parseInt(s);
+            if (!isNaN(n)) return String.fromCharCode(65 + (n >= 1 && n <= 4 ? n - 1 : n));
+            if (Array.isArray(opts)) {
+                for (var i = 0; i < opts.length; i++) {
+                    if (cleanOptPrefix(opts[i]).toLowerCase() === s.toLowerCase() || opts[i].toLowerCase() === s.toLowerCase()) return String.fromCharCode(65 + i);
+                }
             }
-            return q;
-        });
+            return 'A';
+        }
+        let structuredQuiz = rawList.map(q => {
+            var question = q.question || q.text || q.questionText || q.question_text || '';
+            var options = Array.isArray(q.options) && q.options.length ? q.options : (Array.isArray(q.choices) ? q.choices : []);
+            var cleanOpts = options.map(function(o) { return cleanOptPrefix(o); });
+            var t = questionType;
+            if (t === 'mixed') t = q.type || 'obj';
+            return {
+                type: t,
+                question: question,
+                options: cleanOpts,
+                correct: (t === 'german' || t === 'theory') ? (q.correct || q.correctAnswer || q.answer || '') : answerLetter(q.correct || q.correctAnswer || q.answer || q.correct_option || '', cleanOpts),
+                keywords: q.keywords || [],
+                explanation: q.explanation || q.exp || ''
+            };
+        }).filter(q => q.question);
 
         res.json({ 
             success: true, 
@@ -4196,7 +4389,7 @@ app.get('/cgpa', isAuth, requirePaid, async (req, res) => {
         const profile = profileResult.rows[0];
 
         const coursesResult = await pool.query(
-            `SELECT id, id AS _id, course_code AS code, credit_units, grade, 
+            `SELECT id, id AS _id, course_code AS code, title, credit_units, grade, 
                     level_scope, semester, is_hidden, deleted 
              FROM public.cgpa_courses 
              WHERE user_id = $1 AND deleted = false 
@@ -4263,6 +4456,7 @@ app.post('/cgpa/setup', isAuth, requirePaid, async (req, res) => {
                 updated_at    = NOW()`,
             [userId, department ? department.trim() : 'General', parseInt(current_level) || 300, scale, pUnits, pGP, pCGPA]
         );
+        await pool.query('UPDATE users SET current_level = $1 WHERE id = $2', [parseInt(current_level) || 300, userId]);
         
         res.redirect('/cgpa?msg=Profile configured successfully!');
     } catch (err) {
@@ -4545,42 +4739,46 @@ setInterval(checkDeadlineNotifications, 5 * 60 * 1000);
 // Also run once on startup (after a short delay to let the server fully start)
 setTimeout(checkDeadlineNotifications, 10000);
 
+// ─── WEEKLY LEADERBOARD RESET ───────────────────────────────────────────────
+function getWeekKey(d) {
+    const tmp = new Date(d);
+    tmp.setHours(0,0,0,0);
+    tmp.setDate(tmp.getDate() - tmp.getDay());
+    return tmp.getFullYear() + '-W' + String(Math.ceil((tmp.getDate() + 1) / 7)).padStart(2, '0');
+}
+async function resetWeeklyLeaderboard() {
+    try {
+        const now = new Date();
+        const currentWeek = getWeekKey(now);
+        const r = await pool.query("SELECT value FROM app_config WHERE key = 'last_leaderboard_week'");
+        const lastWeek = r.rows[0]?.value;
+        if (lastWeek === currentWeek) return;
+        await pool.query('DELETE FROM daily_leaderboard');
+        await pool.query(
+            "INSERT INTO app_config (key, value) VALUES ('last_leaderboard_week', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
+            [currentWeek]
+        );
+        console.log('[Leaderboard] Reset for week', currentWeek);
+    } catch (e) {
+        console.error('[Leaderboard] Reset error:', e.message);
+    }
+}
+// Check every 30 minutes
+setInterval(resetWeeklyLeaderboard, 30 * 60 * 1000);
+setTimeout(resetWeeklyLeaderboard, 5000);
+
 // ======================== STUDY HUB ROUTES ========================
 
 // Study AI helper — uses OpenRouter
-function cleanLatex(t) {
-  if (!t) return t;
-  return t
-    .replace(/\\\(/g, '').replace(/\\\)/g, '')
-    .replace(/\\\[/g, '').replace(/\\\]/g, '')
-    .replace(/\$\$/g, '').replace(/\$(?!\d)/g, '')
-    .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '$1/$2')
-    .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
-    .replace(/\\alpha/g, 'α').replace(/\\beta/g, 'β').replace(/\\gamma/g, 'γ')
-    .replace(/\\delta/g, 'δ').replace(/\\epsilon/g, 'ε').replace(/\\theta/g, 'θ')
-    .replace(/\\lambda/g, 'λ').replace(/\\mu/g, 'μ').replace(/\\sigma/g, 'σ')
-    .replace(/\\omega/g, 'ω').replace(/\\pi/g, 'π').replace(/\\phi/g, 'φ')
-    .replace(/\\rightarrow/g, '→').replace(/\\Rightarrow/g, '⇒')
-    .replace(/\\leftarrow/g, '←').replace(/\\Leftarrow/g, '⇐')
-    .replace(/\\times/g, '×').replace(/\\cdot/g, '·').replace(/\\div/g, '÷')
-    .replace(/\\approx/g, '≈').replace(/\\neq/g, '≠').replace(/\\leq/g, '≤').replace(/\\geq/g, '≥')
-    .replace(/\\infty/g, '∞').replace(/\\partial/g, '∂').replace(/\\nabla/g, '∇')
-    .replace(/\\sum/g, '∑').replace(/\\prod/g, '∏').replace(/\\int/g, '∫')
-    .replace(/\\text\{([^}]+)\}/g, '$1')
-    .replace(/\\[a-zA-Z]+\{[^}]*\}/g, '')
-    .replace(/\\[a-zA-Z]+/g, '')
-    .replace(/\s+/g, ' ').trim();
-}
-
 function cleanAiText(t) {
   if (t == null) return '';
-  var s = cleanLatex(String(t));
-  s = s.replace(/```[a-zA-Z]*\n?/g, '').replace(/```/g, '');
+  var s = String(t);
+  s = s.replace(/```[a-zA-Z]*\n?/g, '```');
   s = s.replace(/\*\*([^*\n]+)\*\*/g, '$1');
   s = s.replace(/__([^_\n]+)__/g, '$1');
   s = s.replace(/(^|[^*])\*(?!\s)([^*\n]+?)\*(?!\*)/g, '$1$2');
   s = s.replace(/(^|[^_])_(?!_)([^_\n]+?)_(?!_)/g, '$1$2');
-  s = s.replace(/`+([^`\n]+?)`+/g, '$1');
+  s = s.replace(/`+([^`\n]+?)`+/g, function(m, inner){ if(inner.indexOf('\\(') >= 0 || inner.indexOf('\\[') >= 0) return ''+inner+''; return inner; });
   s = s.replace(/^#{1,6}\s*/gm, '');
   s = s.replace(/^\s*[-*+]\s+/gm, '\u2022 ');
   s = s.replace(/^\s*(\d+)\.\s+/gm, '$1) ');
@@ -4592,30 +4790,216 @@ function cleanAiText(t) {
   return s.trim();
 }
 
-const AI_MODELS = ['nvidia/nemotron-3-ultra-550b-a55b:free', 'google/gemma-4-26b-a4b-it:free'];
+function cleanLatex(t) {
+  if (t == null) return '';
+  var s = String(t);
+  s = s.replace(/\$\$([\s\S]*?)\$\$/g, '\\[$1\\]');
+  s = s.replace(/\$([^\$]*?)\$/g, '\\\($1\\\)');
+  return s;
+}
 
-async function openRouterPrompt(prompt, jsonMode) {
-  const key = process.env.OPENROUTER_API_KEY;
-  if (!key) return { text: 'AI not configured. Set OPENROUTER_API_KEY in .env' };
-  for (const model of AI_MODELS) {
+const CEREBRAS_MODELS = ['llama-3.3-70b', 'llama-3.1-70b'];
+const GROQ_FAST = ['llama-3.1-8b-instant'];
+const GROQ_SMART = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+
+async function cerebrasPrompt(prompt, jsonMode, maxTokens, noClean) {
+  const key = process.env.CEREBRAS_API_KEY;
+  if (!key) return { text: '', provider: 'cerebras-no-key' };
+  maxTokens = maxTokens || 4000;
+  for (const model of CEREBRAS_MODELS) {
     try {
-      const body = { model, messages: [{ role: 'user', content: prompt }], temperature: 0.15 };
-      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const body = {
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: jsonMode ? 0.15 : 0.25,
+        max_tokens: maxTokens,
+        stream: false,
+        ...(jsonMode ? { response_format: { type: 'json_object' } } : {})
+      };
+      const res = await fetch('https://api.cerebras.ai/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}`, 'HTTP-Referer': 'https://theprepium.vercel.app', 'X-Title': 'Prepium' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(60000)
+        signal: AbortSignal.timeout(45000)
       });
       if (!res.ok) continue;
       const data = await res.json();
       const raw = data.choices?.[0]?.message?.content;
-      if (raw) return { text: jsonMode ? raw : cleanLatex(raw) };
-    } catch (e) { continue; }
+      if (raw) return { text: jsonMode ? raw : (noClean ? raw : cleanLatex(raw)), provider: 'cerebras:' + model };
+    } catch (_) { continue; }
   }
-  return { text: 'AI error: all models failed' };
+  return { text: '', provider: 'cerebras-failed' };
 }
 
-async function studyPromptAI(prompt) { return openRouterPrompt(prompt); }
+async function groqPrompt(prompt, jsonMode, smart, maxTokens, noClean) {
+  const key = process.env.GROQ_API_KEY;
+  if (!key) return { text: '', provider: 'groq-no-key' };
+  const list = smart ? GROQ_SMART : GROQ_FAST;
+  maxTokens = maxTokens || 4000;
+  for (const model of list) {
+    try {
+      const body = {
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: jsonMode ? 0.15 : 0.3,
+        max_tokens: maxTokens,
+        stream: false,
+        ...(jsonMode ? { response_format: { type: 'json_object' } } : {})
+      };
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(25000)
+      });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const raw = data.choices?.[0]?.message?.content;
+      if (raw) return { text: jsonMode ? raw : (noClean ? raw : cleanLatex(raw)), provider: 'groq:' + model };
+    } catch (_) { continue; }
+  }
+  return { text: '', provider: 'groq-failed' };
+}
+
+async function groqStream(prompt, onChunk) {
+  const key = process.env.GROQ_API_KEY;
+  if (!key) return false;
+  for (const model of GROQ_FAST) {
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.3,
+          stream: true
+        }),
+        signal: AbortSignal.timeout(25000)
+      });
+      if (!res.ok || !res.body) continue;
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop() || '';
+        for (const line of lines) {
+          const s = line.trim();
+          if (!s.startsWith('data:')) continue;
+          const payload = s.slice(5).trim();
+          if (payload === '[DONE]') return true;
+          try {
+            const obj = JSON.parse(payload);
+            const delta = obj.choices?.[0]?.delta?.content || '';
+            if (delta) onChunk(delta);
+          } catch (_) { continue; }
+        }
+      }
+      return true;
+    } catch (_) { continue; }
+  }
+  return false;
+}
+
+async function openRouterPrompt(prompt, jsonMode, maxTokens, noClean) {
+  maxTokens = maxTokens || 4000;
+  noClean = noClean || false;
+  const fast = await groqPrompt(prompt, jsonMode, false, maxTokens, noClean);
+  if (fast.text) return { text: fast.text, provider: fast.provider };
+  const big = await cerebrasPrompt(prompt, jsonMode, maxTokens, noClean);
+  if (big.text) return { text: big.text, provider: big.provider };
+  const smart = await groqPrompt(prompt, jsonMode, true, maxTokens, noClean);
+  if (smart.text) return { text: smart.text, provider: smart.provider };
+  const orKey = process.env.OPENROUTER_API_KEY;
+  const OR_MODELS = ['google/gemma-3-27b-it:free', 'mistralai/mistral-7b-instruct:free', 'google/gemini-2.0-flash-lite-preview-02-05:free'];
+  if (orKey) {
+    for (const model of OR_MODELS) {
+      try {
+        const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${orKey}`, 'HTTP-Referer': 'https://theprepium.vercel.app', 'X-Title': 'Prepium' },
+          body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], temperature: 0.3, max_tokens: maxTokens }),
+          signal: AbortSignal.timeout(30000)
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const raw = data.choices?.[0]?.message?.content;
+          if (raw) return { text: jsonMode ? raw : (noClean ? raw : cleanLatex(raw)), provider: 'openrouter:' + model };
+        }
+      } catch (_) { continue; }
+    }
+  }
+  return { text: 'AI error: all providers failed', provider: 'none' };
+}
+
+async function studyPromptAI(prompt) { return openRouterPrompt(prompt, false, 4000, false); }
+
+function extractJsonItems(text) {
+  if (!text) return '';
+  const stripped = String(text).replace(/```json|```/g, '').trim();
+  const objMatch = stripped.match(/\{[\s\S]*\}/);
+  if (objMatch) {
+    try {
+      const obj = JSON.parse(objMatch[0]);
+      if (Array.isArray(obj)) return JSON.stringify(obj);
+      if (Array.isArray(obj.items)) return JSON.stringify(obj.items);
+      if (Array.isArray(obj.questions)) return JSON.stringify(obj.questions);
+      if (Array.isArray(obj.quiz)) return JSON.stringify(obj.quiz);
+      if (Array.isArray(obj.cards)) return JSON.stringify(obj.cards);
+      if (Array.isArray(obj.flashcards)) return JSON.stringify(obj.flashcards);
+      if (Array.isArray(obj.subtopics)) return JSON.stringify(obj.subtopics);
+      if (Array.isArray(obj.courses)) return JSON.stringify(obj.courses);
+      if (Array.isArray(obj.terms)) return JSON.stringify(obj.terms);
+    } catch (_) {}
+  }
+  const arrMatch = stripped.match(/\[[\s\S]*\]/);
+  if (arrMatch) return arrMatch[0];
+  return stripped;
+}
+
+async function studyPromptJSON(prompt) {
+  const wrapped = `${prompt.trim()}\n\nIMPORTANT: Return ONLY a single JSON object of the form { "items": [...the data array...] } Do not wrap in markdown. No prose outside JSON.`;
+  const res = await openRouterPrompt(wrapped, true);
+  if (res.text && !res.text.startsWith('AI error')) return res;
+  const fallback = await openRouterPrompt(wrapped, false);
+  if (fallback.text && !fallback.text.startsWith('AI error')) {
+    const extracted = extractJsonItems(fallback.text);
+    if (extracted) return { text: extracted, provider: 'extracted' };
+  }
+  const gemini = await callGeminiWithText(wrapped, '');
+  if (gemini.success && gemini.text) {
+    const extracted = extractJsonItems(gemini.text);
+    if (extracted) return { text: extracted, provider: 'gemini-json' };
+  }
+  return res;
+}
+
+async function studyPromptSmart(prompt, opts) {
+  opts = opts || {};
+  const maxTokens = opts.maxTokens || 8000;
+  const noClean = opts.noClean === true;
+  const cere = await cerebrasPrompt(prompt, false, maxTokens, noClean);
+  if (cere.text) return cere;
+  const smart = await groqPrompt(prompt, false, true, maxTokens, noClean);
+  if (smart.text) return smart;
+  const or = await openRouterPrompt(prompt, false, maxTokens, noClean);
+  if (or.text && !or.text.startsWith('AI error')) return or;
+  const gemini = await callGeminiWithText(prompt, '', maxTokens);
+  if (gemini.success && gemini.text) return { text: gemini.text, provider: 'gemini' };
+  return { text: 'AI error: all providers could not generate this content. Please try again in a moment.', provider: 'none' };
+}
+
+async function studyPromptFast(prompt) {
+  const fast = await groqPrompt(prompt, false, false);
+  if (fast.text) return fast;
+  const cere = await cerebrasPrompt(prompt, false);
+  if (cere.text) return cere;
+  return openRouterPrompt(prompt, false);
+}
 
 // Ensure study tables exist
 (async function initStudyDB() {
@@ -4666,6 +5050,66 @@ async function studyPromptAI(prompt) { return openRouterPrompt(prompt); }
   } catch(e) { console.error('[Study] Table init:', e.message); }
 })();
 
+// ==================== DB MANAGER ====================
+const DB_PIN = process.env.DB_MANAGER_PIN || '1030';
+const DB_PASS = process.env.DB_MANAGER_PASS || 'prepiumdb';
+
+app.get('/admin/db-manager', isAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT table_name FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+      ORDER BY table_name
+    `);
+    const tables = result.rows.map(r => r.table_name);
+    res.render('admin/db-manager', { tables, msg: req.query.msg || null, user: req.session.user });
+  } catch (err) { res.status(500).send('Error: ' + err.message); }
+});
+
+app.post('/admin/db-manager/verify-pin', isAdmin, async (req, res) => {
+  const { pin, password } = req.body;
+  if (pin === DB_PIN && (!password || password === DB_PASS)) {
+    res.json({ success: true });
+  } else {
+    res.json({ success: false });
+  }
+});
+
+app.get('/admin/db-manager/data/:table', isAdmin, async (req, res) => {
+  try {
+    const table = req.params.table.replace(/[^a-zA-Z0-9_]/g, '');
+    const result = await pool.query(`SELECT * FROM "${table}" LIMIT 200`);
+    const columns = result.fields.map(f => f.name);
+    res.json({ success: true, rows: result.rows, columns });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.post('/admin/db-manager/update', isAdmin, async (req, res) => {
+  try {
+    const { table, columns, row, pkCol, pkVal } = req.body;
+    const safeTable = table.replace(/[^a-zA-Z0-9_]/g, '');
+    const sets = columns.filter(c => c !== pkCol).map((c, i) => `"${c}" = $${i + 1}`);
+    const vals = columns.filter(c => c !== pkCol).map(c => row[c] === '' ? null : row[c]);
+    vals.push(pkVal);
+    const idx = sets.length + 1;
+    await pool.query(`UPDATE "${safeTable}" SET ${sets.join(', ')} WHERE "${pkCol}" = $${idx}`, vals);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.post('/admin/db-manager/query', isAdmin, async (req, res) => {
+  try {
+    const { sql } = req.body;
+    const lower = sql.trim().toLowerCase();
+    if (!/^\s*(select|show|describe|explain)\b/i.test(sql)) {
+      return res.status(400).json({ success: false, error: 'Only SELECT queries allowed' });
+    }
+    const result = await pool.query(sql);
+    const columns = result.fields ? result.fields.map(f => f.name) : [];
+    res.json({ success: true, rows: result.rows, columns });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
 // ==================== STUDY DASHBOARD ====================
 app.get('/study', isAuth, requirePaid, async (req, res) => {
   try {
@@ -4681,6 +5125,8 @@ app.get('/study', isAuth, requirePaid, async (req, res) => {
     const activeSession = activeRes.rows[0] || null;
     const streak = parseInt(streakRes.rows[0]?.current_streak) || 0;
     const todayStats = { sessions: parseInt(todayRes.rows[0]?.today_sessions) || 0, seconds: parseInt(todayRes.rows[0]?.today_seconds) || 0 };
+    res.locals.seo.title = 'Prepium | Study Dashboard';
+    res.locals.seo.description = 'Your personalized study dashboard — track courses, sessions, streaks, and progress with AI-powered learning tools on Prepium.';
     res.render('study', { user: req.session.user, courses: coursesRes.rows, progress: progressRes.rows, recentSessions: sessionsRes.rows, activeSession, streak, todayStats, subjects: [] });
   } catch (err) { console.error(err); res.status(500).send('Error loading study page'); }
 });
@@ -4696,6 +5142,8 @@ app.get('/study/course/:id', isAuth, requirePaid, async (req, res) => {
       pool.query('SELECT * FROM study_progress WHERE user_id = $1 AND course_id = $2', [req.session.user.id, req.params.id])
     ]);
     const topics = topicsRes.rows.map(t => { t.subtopics = subtopicsRes.rows.filter(s => s.topic_id === t.id); return t; });
+    res.locals.seo.title = 'Prepium | ' + (course.rows[0]?.course_name || 'Course');
+    res.locals.seo.description = 'Study ' + (course.rows[0]?.course_name || 'this course') + ' with AI-powered explanations, flashcards, quizzes, and progress tracking on Prepium.';
     res.render('study-course', { user: req.session.user, course: course.rows[0], topics, progress: progressRes.rows[0] || null });
   } catch (err) { console.error(err); res.status(500).send('Error loading course'); }
 });
@@ -4717,7 +5165,7 @@ app.get('/study/quiz/:attemptId', isAuth, requirePaid, async (req, res) => {
     let questions = (await pool.query('SELECT id, question, options, order_index FROM study_quiz_questions WHERE attempt_id = $1 ORDER BY order_index ASC', [req.params.attemptId])).rows;
     questions = questions.map(function(q) {
       q.question = cleanLatex(q.question);
-      if (q.options && Array.isArray(q.options)) q.options = q.options.map(function(o) { return cleanLatex(o); });
+      if (q.options && Array.isArray(q.options)) q.options = q.options.map(function(o) { return cleanLatex(o).replace(/^[A-Da-d1-4][\.\)]\s*/, ''); });
       return q;
     });
     res.render('study-quiz', { user: req.session.user, attempt: attempt.rows[0], questions: questions });
@@ -4742,6 +5190,10 @@ app.get('/study/subtopic/:id', isAuth, requirePaid, async (req, res) => {
     const topic = await pool.query('SELECT * FROM study_topics WHERE id = $1', [s.topic_id]).catch(() => ({ rows: [] }));
     const course = await pool.query('SELECT * FROM study_courses WHERE id = $1', [s.course_id || 0]).catch(() => ({ rows: [] }));
     const topicSubtopics = await pool.query('SELECT id, status FROM study_subtopics WHERE topic_id = $1', [s.topic_id]).catch(() => ({ rows: [] }));
+    const subName = s.subtopic_name || s.title || 'Subtopic';
+    const topicName = (topic.rows[0]?.topic_name || topic.rows[0]?.title || '');
+    const courseName = (course.rows[0]?.course_name || '');
+    res.locals.seo = { ...res.locals.seo, title: 'Prepium | ' + subName, description: 'Study ' + subName + (topicName ? ' as part of ' + topicName : '') + (courseName ? ' in ' + courseName : '') + ' with AI-powered explanations and quizzes on Prepium.' };
     res.render('study-subtopic', { user: req.session.user, subtopic: s, topic: topic.rows[0] || null, course: course.rows[0] || null, topicSubtopics: topicSubtopics.rows });
   } catch (err) { console.error(err); res.status(500).send('Error loading subtopic'); }
 });
@@ -4816,9 +5268,9 @@ app.get('/api/study/topics/:courseId', isAuth, async (req, res) => {
 // ==================== STUDY API: SUBTOPICS ====================
 app.post('/api/study/subtopics/ai-generate', isAuth, requirePaid, async (req, res) => {
   try {
-    const { topicId, courseId, topicTitle, courseName } = req.body;
-    const prompt = `For the topic "${topicTitle}" in the course "${courseName}", generate a list of 5-8 specific subtopics that should be studied. Return a JSON array of strings. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
-    const aiRes = await openRouterPrompt(prompt, true);
+    const { topicId, courseId, topicTitle, courseName, courseCode } = req.body;
+    const prompt = `For the topic "${topicTitle}" in the course "${courseName}", generate a comprehensive list of subtopics that cover every aspect of this topic that should be studied. Include foundational concepts first, then more advanced aspects. Be thorough — break the topic down into its natural parts. Return a JSON array of strings. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
+    const aiRes = await studyPromptJSON(prompt);
     if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
     let subtopics = [];
     try {
@@ -4836,7 +5288,7 @@ app.post('/api/study/subtopics/ai-generate', isAuth, requirePaid, async (req, re
     }
     const uid = req.session.user.id;
     const results = [];
-    for (const st of subtopics.slice(0, 10)) {
+    for (const st of subtopics.slice(0, 25)) {
       const cleanName = st.replace(/^["'\s]+|["'\s]+$/g, '').trim();
       if (!cleanName) continue;
       const r = await pool.query('INSERT INTO study_subtopics (topic_id, course_id, user_id, subtopic_name, title, status) VALUES ($1::integer, $2::integer, $3::integer, $4::text, $5::text, $6::text) RETURNING *', [parseInt(topicId) || 0, parseInt(courseId) || 0, parseInt(uid) || 0, cleanName, cleanName, 'pending']);
@@ -4861,9 +5313,15 @@ app.post('/api/study/subtopics/delete/:id', isAuth, requirePaid, async (req, res
 app.get('/api/study/subtopic/topic-progress', isAuth, async (req, res) => {
   try {
     const uid = req.session.user.id;
-    const { topicId } = req.query;
-    if (!topicId) return res.json({ subtopics: [] });
-    const r = await pool.query('SELECT id, status FROM study_subtopics WHERE topic_id = $1 AND user_id = $2', [parseInt(topicId), uid]);
+    const { topicId, subtopicId } = req.query;
+    if (!topicId && !subtopicId) return res.json({ subtopics: [] });
+    if (topicId) {
+      const r = await pool.query('SELECT id, status FROM study_subtopics WHERE topic_id = $1 AND user_id = $2', [parseInt(topicId), uid]);
+      return res.json({ subtopics: r.rows });
+    }
+    const st = await pool.query('SELECT topic_id FROM study_subtopics WHERE id = $1 AND user_id = $2', [parseInt(subtopicId), uid]);
+    if (!st.rows[0]) return res.json({ subtopics: [] });
+    const r = await pool.query('SELECT id, status FROM study_subtopics WHERE topic_id = $1 AND user_id = $2', [st.rows[0].topic_id, uid]);
     res.json({ subtopics: r.rows });
   } catch (err) { res.json({ subtopics: [] }); }
 });
@@ -4885,23 +5343,78 @@ app.post('/api/study/subtopic/:id/content', isAuth, requirePaid, async (req, res
     const s = st.rows[0];
     const topic = await pool.query('SELECT * FROM study_topics WHERE id = $1', [s.topic_id]).catch(() => ({ rows: [] }));
     const topicName = topic.rows[0] ? (topic.rows[0].topic_name || topic.rows[0].title) : 'General';
-    const prompt = `You are a university tutor teaching a full lesson on "${s.subtopic_name || s.title}" (part of "${topicName}"). Write a comprehensive explanation with proper paragraphs separated by blank lines. Use exactly these 3 section headers on their own line:
+    const prompt = `You are an expert university professor giving a complete, in-depth lecture on "${s.subtopic_name || s.title}" (part of "${topicName}"). Your goal is to make the learner truly master this topic — full understanding, not surface memorization. Write extensively, with rich detail, explicit explanations, and thorough reasoning in every section.
 
-Key Points:
-Write 3-4 paragraphs explaining the core concepts in detail. Each paragraph should be 2-4 sentences covering one idea. Use natural spacing between paragraphs.
+Structure your response using EXACTLY these section headers (each on its own line ending with a colon). Use PLAIN TEXT with LaTeX math. For ALL mathematical expressions, formulas, equations, symbols, and variables — ALWAYS use proper LaTeX notation:
+- Use \\( \\) for inline math like variables (x, y, derivatives), short formulas, and expressions within sentences.
+- Use \\[ \\] for display math — standalone equations, multi-step derivations, system of equations, integrals, limits, summations.
+- Always wrap mathematical variables in math mode: \\(x\\), \\(\\frac{dy}{dx}\\), \\(\\int_a^b f(x)\\,dx\\), \\(\\sum_{n=1}^{\\infty}\\), \\(\\lim_{x \\to 0}\\), \\(\\pi\\), \\(\\theta\\), \\(\\alpha\\), \\(\\beta\\).
+- Use proper LaTeX for fractions \\(\\frac{numerator}{denominator}\\), exponents \\(x^{n}\\), subscripts \\(x_{i}\\), square roots \\(\\sqrt{x}\\), and integrals \\(\\int_{a}^{b}\\).
+- NEVER write mathematical notation in plain text (e.g., write \\(x^2 + y^2 = 25\\) not "x^2 + y^2 = 25").
+- For step-by-step calculations, use \\[ \\] display blocks so equations are clearly separated.
 
-Note:
-Write 2-3 paragraphs about important things to remember, common mistakes, and how these concepts connect to other topics. Space paragraphs properly.
+No markdown, no asterisks for bold, no hashtags, no backticks. Separate paragraphs with blank lines. You can include a simple Mermaid diagram (flowchart, sequence, or mindmap) by wrapping it in a code block with the word "mermaid" after the opening backticks — this is optional, use only where it clarifies relationships or processes.
 
-Example:
-Write 2-3 paragraphs with detailed practical examples showing how the concepts apply. Each example should be 2-3 sentences.
+What You Should Know:
+Connect this topic to prerequisite concepts the learner should already know. Explain each prerequisite in detail — what it means, why it matters, and exactly how it connects to this new topic. Use mathematical notation where relevant. 5-8 sentences. If none, just say "No specific prerequisites."
 
-Make each section substantial — at least 4-6 lines per section. Use PLAIN TEXT only. No markdown. No asterisks, no hashtags, no backticks. Separate paragraphs with blank lines.`;
-    const aiRes = await openRouterPrompt(prompt);
-    if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
+Why It Matters:
+Explain thoroughly what real problem this concept solves, the historical or practical motivation behind it, and how it appears in real-world or academic contexts. Give at least 2-3 concrete real-life or professional applications with details — include formulas or mathematical relationships involved. 5-8 sentences.
+
+Plain Explanation:
+Explain the concept in plain, everyday language first — as if talking to someone with no background. Use a vivid real-life analogy or story to introduce the concept. Then give the formal definition or statement with full interpretation of every symbol, variable, and operation. Break it into small, digestible sub-parts and explain each one. Use multiple analogies if they genuinely help. Define any new terminology used in the definition. Include ALL relevant mathematical formulas using proper LaTeX display math. Make this section thorough and detailed — at least 8-12 sentences.
+
+Key Terms:
+Bullet each term on its own line starting with a dash. Format: "- term: short definition where any symbols or formulas use \\( \\)". Cover every term the learner needs to know for full mastery — not just obvious ones. Include variables, operations, and notation as terms with proper LaTeX. Keep definitions concise but precise.
+
+Step-by-Step Examples:
+2-3 fully worked examples of increasing difficulty. For each example: state the problem clearly using proper LaTeX notation, walk through EVERY step with explicit reasoning and ALL intermediate mathematical expressions in \\[ \\] display blocks — not just the answer. Explain WHY each step is done, what technique is being applied, and what the result means. Use realistic numbers and contexts. Show ALL algebraic manipulation, calculus operations, or derivations in proper LaTeX. State the final answer clearly inside \\[ \\] and verify it. Make each example thorough and pedagogical.
+
+Common Mistakes:
+Describe 2-3 common errors or misconceptions students make on this topic. For each: state the wrong approach explicitly with the INCORRECT mathematical reasoning shown using LaTeX, explain in detail WHY it is wrong and what misconception leads to it, then contrast with the correct approach showing the RIGHT mathematical reasoning in LaTeX. Use "Wrong:" and "Right:" labels. Be thorough — deeply explain the thinking behind the mistakes.
+
+Edge Cases:
+Mention any special cases, exceptions, degenerate situations, or scenarios where the concept behaves differently than expected. For each edge case: describe the situation, show what happens mathematically using LaTeX, and explain why. If there are common pitfalls at boundaries, explain those with proper notation. If none, say "No major edge cases for this topic."
+
+Practice Questions:
+Write 5-7 practice questions arranged from easy to challenging. Number them. Give ONLY the questions here — NO answers or solutions yet. ALL mathematical expressions in questions MUST use proper LaTeX notation. Vary the types: computational, conceptual, application-based, and edge-case reasoning. Write each question as a clear, complete sentence with all formulas in LaTeX.
+
+Step-by-Step Solutions:
+Give the full, detailed worked solutions to ALL practice questions above. For each solution: restate the problem briefly in LaTeX, show EVERY step with explicit reasoning in proper \\[ \\] display math blocks, explain the technique used, and state the final answer clearly inside \\[ \\]. Verify the answer where possible. Label each solution clearly (e.g., "Solution 1:", "Solution 2:"). Each solution should be thorough — cover all algebra, calculus, or reasoning steps.
+
+CRITICAL FORMATTING RULES:
+- Each section should be SUBSTANTIAL — minimum 8-12 lines of meaningful content where the topic warrants it.
+- Use blank lines between sections and between paragraphs.
+- Use proper line spacing.
+- Be explicit and verbose — assume the reader needs every detail spelled out.
+- Do NOT summarize or rush — thoroughness is more important than brevity.
+- Every mathematical symbol, variable, equation, or formula MUST be inside \\( \\) or \\[ \\] — never plain text math.`;
+    let aiRes = await studyPromptSmart(prompt, { maxTokens: 8000, noClean: true });
+    if (!aiRes.text || aiRes.text.startsWith('AI error')) {
+      const shortPrompt = `You are an expert professor giving an in-depth lecture on "${s.subtopic_name || s.title}" (part of "${topicName}"). Write a thorough, comprehensive explanation covering: prerequisites in detail, real-world importance with concrete applications, plain explanation with vivid analogies, key terms with definitions, fully worked step-by-step examples, common mistakes with explicit wrong/right contrasts, edge cases, and practice questions with full worked solutions. Use these section headers exactly: "What You Should Know:", "Why It Matters:", "Plain Explanation:", "Key Terms:", "Step-by-Step Examples:", "Common Mistakes:", "Edge Cases:", "Practice Questions:", "Step-by-Step Solutions:". Use plain text with LaTeX math \\( \\) and \\[ \\]. Include a Mermaid diagram in a mermaid code block if it helps clarify relationships. Be thorough, explicit, and detailed — minimum 6-10 lines per section. Do not summarize.`;
+      aiRes = await studyPromptSmart(shortPrompt, { maxTokens: 8000, noClean: true });
+    }
+    if (!aiRes.text || aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text || 'AI error' });
     const clean = cleanAiText(aiRes.text);
     await pool.query('UPDATE study_subtopics SET content = $1 WHERE id = $2', [clean, req.params.id]);
     res.json({ success: true, subtopic: s.subtopic_name || s.title, content: clean });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// ==================== STUDY API: AI DIAGNOSTIC ====================
+// ==================== STUDY API: EXPLANATION Q&A ====================
+app.post('/api/study/subtopic/:id/ask', isAuth, requirePaid, async (req, res) => {
+  try {
+    const { question } = req.body;
+    if (!question || !question.trim()) return res.json({ success: false, error: 'Question is required' });
+    const st = await pool.query('SELECT * FROM study_subtopics WHERE id = $1', [req.params.id]);
+    if (!st.rows[0]) return res.json({ success: false, error: 'Not found' });
+    const s = st.rows[0];
+    const content = s.content || '';
+    const prompt = `You are a university tutor. The student is studying "${s.subtopic_name || s.title}" and has just read the following explanation:\n\n"""\n${content.slice(0, 5000)}\n"""\n\nThe student now asks:\n"${question}"\n\nAnswer their question clearly and concisely, building on the explanation above. Use PLAIN TEXT only. If they ask for clarification, re-explain simply. If they ask something beyond the explanation, use your knowledge to help. Separate paragraphs with blank lines. Use LaTeX math delimiters \\( \\) for inline and \\[ \\] for display math when needed.`;
+    const aiRes = await studyPromptFast(prompt);
+    if (!aiRes.text || aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text || 'AI error' });
+    res.json({ success: true, answer: cleanAiText(aiRes.text) });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
@@ -4934,8 +5447,8 @@ app.post('/api/study/session/summarize', isAuth, requirePaid, async (req, res) =
     if (!notes || !notes.trim()) return res.json({ success: false, error: 'No notes to summarize.' });
     const ctx = courseName ? ` from a "${courseName}" study session` : '';
     const prompt = `Read these student study notes${ctx} and produce 3-6 short bullet points capturing the most important takeaways. Output PLAIN TEXT only. No markdown, no asterisks, no hashtags, no backticks. Each line should be a short key point. Lines separated by newline. Keep it concise (max 60 words total).\n\nNotes:\n"""${notes.slice(0, 4000)}"""\n\nKey points:`;
-    const aiRes = await openRouterPrompt(prompt);
-    if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
+    const aiRes = await studyPromptFast(prompt);
+    if (!aiRes.text || aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text || 'AI error' });
     res.json({ success: true, summary: cleanAiText(aiRes.text) });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
@@ -4948,7 +5461,7 @@ app.post('/api/study/sessions/update', isAuth, requirePaid, async (req, res) => 
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
-// ==================== STUDY API: AI CHAT ====================
+// ==================== STUDY API: AI CHAT (streaming SSE) ====================
 app.post('/api/study/chat', isAuth, requirePaid, async (req, res) => {
   try {
     const { message, courseId, subtopicId, courseName } = req.body;
@@ -4956,12 +5469,25 @@ app.post('/api/study/chat', isAuth, requirePaid, async (req, res) => {
     const cleanUser = cleanAiText(message);
     await pool.query('INSERT INTO study_chat_messages (user_id, course_id, subtopic_id, role, message) VALUES ($1, $2, $3, $4, $5)', [uid, courseId || 0, subtopicId || 0, 'user', cleanUser]);
     const ctx = courseName ? `Context: Student is studying "${courseName}". ` : '';
-    const prompt = `${ctx}You are a helpful study assistant for university students. Answer the following question in PLAIN TEXT only. Do NOT use markdown bullets that start with asterisks or hashes. Use short paragraphs separated by blank lines. Keep formatting simple — no asterisks, no hashtags, no backticks.\n\nStudent's question: ${cleanUser}\n\nProvide a thorough, educational response in clean plain text.`;
-    const aiRes = await studyPromptAI(prompt);
-    const clean = cleanAiText(aiRes.text);
-    await pool.query('INSERT INTO study_chat_messages (user_id, course_id, subtopic_id, role, message) VALUES ($1, $2, $3, $4, $5)', [uid, courseId || 0, subtopicId || 0, 'ai', clean]);
-    res.json({ success: true, reply: clean });
-  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    const prompt = `${ctx}You are a helpful study assistant for university students. Answer the question in PLAIN TEXT. Use \\( \\) for inline LaTeX math and \\[ \\] for display math when formulas are needed. No markdown, no asterisks for bold, no hashtags, no backticks. Use short paragraphs separated by blank lines.\n\nStudent's question: ${cleanUser}\n\nProvide a thorough, educational response.`;
+    let reply = '';
+    const streamed = await groqStream(prompt, async function(delta) { reply += delta; });
+    if (streamed) {
+      reply = cleanAiText(reply);
+    } else {
+      const fallback = await studyPromptFast(prompt);
+      if (!fallback.text || fallback.text.startsWith('AI error')) {
+        return res.json({ success: false, error: fallback.text || 'AI error' });
+      }
+      reply = cleanAiText(fallback.text);
+    }
+    try {
+      await pool.query('INSERT INTO study_chat_messages (user_id, course_id, subtopic_id, role, message) VALUES ($1, $2, $3, $4, $5)', [uid, courseId || 0, subtopicId || 0, 'ai', reply]);
+    } catch (e) { console.error('Chat message persist failed:', e.message); }
+    res.json({ success: true, reply: reply });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 app.get('/api/study/chat/history', isAuth, async (req, res) => {
@@ -4983,7 +5509,7 @@ app.post('/api/study/youtube/search', isAuth, requirePaid, async (req, res) => {
   try {
     const { query: searchQuery, subtopicId, courseId } = req.body;
     const prompt = `Generate a list of 5 YouTube video search queries for studying the topic: "${searchQuery}". Return a JSON array of strings. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
-    const aiRes = await openRouterPrompt(prompt, true);
+    const aiRes = await studyPromptJSON(prompt);
     let terms = [];
     try { terms = JSON.parse(aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim()); } catch { terms = [searchQuery]; }
     const html = terms.map(function(t) {
@@ -5005,32 +5531,58 @@ app.post('/api/study/quiz/generate', isAuth, requirePaid, async (req, res) => {
     const uid = req.session.user.id;
     var qType = questionType || 'multiple_choice';
     var typeGuide = qType === 'mixed' ? 'Mix of multiple choice (with 4 options) and theory questions (options: [])' : (qType === 'theory' ? 'All theory questions (options: [], correctAnswer is the expected answer)' : 'All multiple choice with 4 options each');
-    const prompt = `Generate ${count} ${typeGuide} about "${topicTitle || 'General Study'}" for university exam preparation. Each question: question text, options array (4 strings for MC, [] for theory), correctAnswer (letter for MC, text for theory), explanation. Return a JSON array of objects. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
-    const aiRes = await openRouterPrompt(prompt, true);
+    var notes = '';
+    if (subtopicId && parseInt(subtopicId) > 0) {
+      const st = await pool.query('SELECT content FROM study_subtopics WHERE id = $1', [subtopicId]).catch(() => ({ rows: [] }));
+      if (st.rows[0] && st.rows[0].content) notes = '\n\nStudy material for reference:\n' + String(st.rows[0].content).slice(0, 4000);
+    }
+    const prompt = `Generate ${count} ${typeGuide} about "${topicTitle || 'General Study'}" for university exam preparation. Use JSON key "question" for text, "options" array for choices (do NOT prefix options with A), "correctAnswer" must be the LETTER ONLY (e.g., "A", not the full text), "explanation" for explanation. Return a JSON array. Do NOT wrap in markdown. ONLY output raw JSON.${notes}`;
+    const aiRes = await studyPromptJSON(prompt);
     let questions = [];
     try {
       var txt = aiRes.text.trim();
       var m = txt.match(/\[[\s\S]*\]/);
       if (m) txt = m[0];
       questions = JSON.parse(txt);
-      questions.forEach(function(q) {
-        q.question = cleanLatex(q.question || '');
-        q.explanation = cleanLatex(q.explanation || '');
-        if (Array.isArray(q.options)) q.options = q.options.map(function(o) { return cleanLatex(o || ''); });
-      });
     } catch (e) {
       try {
         var cleaned = aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim();
         var m2 = cleaned.match(/\[[\s\S]*\]/);
         if (m2) cleaned = m2[0];
         questions = JSON.parse(cleaned);
-        questions.forEach(function(q) {
-          q.question = cleanLatex(q.question || '');
-          q.explanation = cleanLatex(q.explanation || '');
-          if (Array.isArray(q.options)) q.options = q.options.map(function(o) { return cleanLatex(o || ''); });
-        });
       } catch { throw new Error('Failed to parse AI response. Please try again.'); }
     }
+    // Normalize question keys and extract answer letter
+    function cleanOptPrefix(o) {
+      return String(o).replace(/^[A-Da-d1-4][\.\)]\s*/, '');
+    }
+    function answerLetter(val, options) {
+      if (!val) return 'A';
+      var s = String(val).trim();
+      var m = s.match(/^([A-Da-d])[\.\)]\s*/);
+      if (m) return m[1].toUpperCase();
+      if (/^[A-Da-d]$/i.test(s)) return s.toUpperCase();
+      var n = parseInt(s);
+      if (!isNaN(n)) return String.fromCharCode(65 + (n >= 1 && n <= 4 ? n - 1 : n));
+      if (Array.isArray(options)) {
+        for (var i = 0; i < options.length; i++) {
+          if (cleanOptPrefix(options[i]).toLowerCase() === s.toLowerCase() || options[i].toLowerCase() === s.toLowerCase()) return String.fromCharCode(65 + i);
+        }
+      }
+      return 'A';
+    }
+    questions = questions.map(function(q) {
+      var normQ = q.question || q.text || q.questionText || q.question_text || '';
+      var normExp = q.explanation || q.exp || '';
+      var raw = q.options || q.choices || [];
+      var cleaned = Array.isArray(raw) ? raw.map(function(o) { return cleanLatex(cleanOptPrefix(o)); }) : [];
+      return {
+        question: cleanLatex(normQ),
+        options: cleaned,
+        correctAnswer: answerLetter(q.correctAnswer || q.correct || q.answer || '', cleaned),
+        explanation: cleanLatex(normExp)
+      };
+    }).filter(function(q) { return q.question; });
     const attempt = await pool.query("INSERT INTO study_quiz_attempts (user_id, course_id, subtopic_id, question_type, question_count, time_limit, status) VALUES ($1, $2, $3, $4, $5, $6, 'in_progress') RETURNING *", [uid, courseId || 0, subtopicId || 0, questionType || 'multiple_choice', questions.length, timeLimit || 0]);
     const attemptId = attempt.rows[0].id;
     for (let i = 0; i < questions.length; i++) {
@@ -5086,8 +5638,8 @@ app.post('/api/study/flashcards/generate', isAuth, requirePaid, async (req, res)
     const { courseId, subtopicId, topicTitle, count } = req.body;
     const fcCount = parseInt(count) || 10;
     const uid = req.session.user.id;
-    const prompt = `Generate ${fcCount} flashcards for studying "${topicTitle || 'this course'}". Each flashcard: front (question/term), back (answer/definition), image (short visual scene description for illustration, 5-10 words). Return a JSON array of objects. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
-    const aiRes = await openRouterPrompt(prompt, true);
+    const prompt = `Generate ${fcCount} high-quality flashcards for studying "${topicTitle || 'this course'}". Each flashcard: front (a clear question, term, or concept prompt), back (a thorough answer, definition, or explanation — include a short example or mnemonic where helpful, 1-3 sentences). Make cards genuinely useful for learning — avoid trivial facts. Use LaTeX math where appropriate. Return a JSON array of objects with keys "front" and "back". Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
+    const aiRes = await studyPromptJSON(prompt);
     let cards = [];
     try {
       var txt = aiRes.text.trim();
@@ -5206,6 +5758,7 @@ app.post('/api/cgpa/forecast', isAuth, async (req, res) => {
     const scenarios = [];
     const grades = scale === 5 ? ['A','B','C','D','E','F'] : ['A','B','C','D','F'];
     const targetCourses = visible.rows.filter(c => c.grade === 'F' || c.grade === 'E' || c.grade === 'D');
+    const weakCoursesList = targetCourses.map(c => ({ code: c.course_code || c.title || 'Course', title: c.title || c.course_code || '', grade: c.grade, units: parseInt(c.credit_units)||0 }));
     if (targetCourses.length > 0) {
       for (const g of ['A', 'B', 'C']) {
         let newPoints = curPoints;
@@ -5240,7 +5793,7 @@ app.post('/api/cgpa/forecast', isAuth, async (req, res) => {
       targetData = { target: tgt, deficit: deficit.toFixed(1), unitsNeededA, coursesNeededA: Math.ceil(unitsNeededA / 3) };
     }
 
-    res.json({ success: true, currentCGPA: currentCGPA.toFixed(2), scenarios, addScenarios, targetData });
+    res.json({ success: true, currentCGPA: currentCGPA.toFixed(2), scenarios, addScenarios, targetData, weakCourses: weakCoursesList });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -5258,8 +5811,8 @@ Recent courses (code | title | units | grade | level-sem):
 ${courses.rows.map(c => '- ' + c.course_code + ' | ' + (c.title||'') + ' | ' + c.credit_units + 'u | ' + c.grade + ' | L' + c.level_scope + 'S' + c.semester).join('\n')}
 
 Predict their likely GPA range next semester, identify subjects they are at risk of failing, and give 4 short practical study tips to lift their CGPA. Output PLAIN TEXT only (no markdown, no asterisks, no hashtags, no backticks). Use short paragraphs and numbered points as 1), 2), 3) where useful. Maximum 200 words.`;
-    const aiRes = await studyPromptAI(prompt);
-    if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
+    const aiRes = await studyPromptSmart(prompt);
+    if (!aiRes.text || aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text || 'AI error' });
     res.json({ success: true, prediction: cleanAiText(aiRes.text) });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
@@ -5284,9 +5837,47 @@ app.post('/api/cgpa/ai-whatif', isAuth, async (req, res) => {
     const newCGPA = (curPoints + addPts) / (curUnits + addU);
     const warn = newCGPA < curCGPA ? 'This would lower your CGPA. Consider aiming higher if possible.' : 'Good — this move improves your cumulative GPA.';
     const advicePrompt = `You are an academic advisor. The student asks: "If I take "${courseName}" (${addU} units) and aim for grade ${anticipatedGrade}, what's the impact?" Their current CGPA is ${curCGPA.toFixed(2)} / ${scale}. New CGPA would be ${newCGPA.toFixed(2)}. Give a 3-sentence plain-text answer about the impact and what to focus on to actually achieve ${anticipatedGrade}. No markdown, no asterisks.`;
-    const aiRes = await studyPromptAI(advicePrompt);
-    const advice = aiRes.text.startsWith('AI error') ? warn : cleanAiText(aiRes.text);
+    const aiRes = await studyPromptSmart(advicePrompt);
+    const advice = (!aiRes.text || aiRes.text.startsWith('AI error')) ? warn : cleanAiText(aiRes.text);
     res.json({ success: true, currentCGPA: curCGPA.toFixed(2), newCGPA: newCGPA.toFixed(2), advice: advice });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.post('/api/cgpa/bulk-whatif', isAuth, async (req, res) => {
+  try {
+    const { courses: whatifCourses } = req.body;
+    if (!whatifCourses || !Array.isArray(whatifCourses) || whatifCourses.length === 0)
+      return res.json({ success: false, error: 'Add at least one course.' });
+    const uid = req.session.user.id;
+    const profile = await pool.query('SELECT * FROM public.cgpa_profiles WHERE user_id = $1', [uid]);
+    if (!profile.rows[0]) return res.json({ success: false, error: 'Set up your CGPA profile first.' });
+    const p = profile.rows[0];
+    const scale = p.grading_scale || 5;
+    const gpMap = scale === 5 ? { A:5, B:4, C:3, D:2, E:1, F:0 } : { A:4, B:3, C:2, D:1, F:0 };
+    const courses = await pool.query("SELECT credit_units, grade FROM public.cgpa_courses WHERE user_id = $1 AND deleted = false AND is_hidden = false", [uid]);
+    let curUnits = parseInt(p.prev_units) || 0;
+    let curPoints = parseFloat(p.prev_gp) || 0;
+    courses.rows.forEach(c => { const u = parseInt(c.credit_units)||0; curUnits += u; curPoints += (gpMap[c.grade]||0) * u; });
+    const curCGPA = curUnits > 0 ? (curPoints / curUnits) : 0;
+    let addUnits = 0, addPoints = 0;
+    const detail = [];
+    for (const c of whatifCourses) {
+      const u = parseInt(c.units) || 3;
+      const g = String(c.grade || 'A').toUpperCase();
+      addUnits += u;
+      addPoints += (gpMap[g] || 0) * u;
+      detail.push({ name: c.name || 'Course', units: u, grade: g });
+    }
+    const newCGPA = (curPoints + addPoints) / (curUnits + addUnits);
+    res.json({
+      success: true,
+      currentCGPA: curCGPA.toFixed(2),
+      newCGPA: newCGPA.toFixed(2),
+      change: (newCGPA - curCGPA).toFixed(3),
+      totalUnits: curUnits,
+      newTotalUnits: curUnits + addUnits,
+      detail
+    });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
@@ -5312,8 +5903,8 @@ app.post('/api/cgpa/ai-chat', isAuth, async (req, res) => {
       history.slice(-6).forEach(function(m){ convo += (m.role === 'user' ? 'Student' : 'Advisor') + ': ' + (m.text || '').slice(0, 500) + '\n'; });
     }
     const prompt = 'You are a helpful academic advisor chatbot. Answer clearly and practically. Output PLAIN TEXT only (no markdown, no asterisks, no hashtags, no backticks). Use short paragraphs. Maximum 180 words per reply.\n\n' + ctx + (convo ? 'Conversation so far:\n' + convo + '\n' : '') + 'Student: ' + cleanUser + '\nAdvisor:';
-    const aiRes = await studyPromptAI(prompt);
-    if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
+    const aiRes = await studyPromptFast(prompt);
+    if (!aiRes.text || aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text || 'AI error' });
     res.json({ success: true, reply: cleanAiText(aiRes.text) });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
@@ -5371,12 +5962,12 @@ app.use((err, req, res, next) => {
     console.error('Global error handler:', err);
     if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
-            return res.status(400).json({ success: false, message: 'File too large. Maximum size is 50MB.' });
+            return res.status(413).json({ success: false, message: 'File too large. Maximum size is 100MB.' });
         }
-        return res.status(400).json({ success: false, message: err.message });
+        return res.status(413).json({ success: false, message: err.message });
     }
     if (err.type === 'entity.too.large') {
-        return res.status(400).json({ success: false, message: 'File too large. Maximum size is 50MB.' });
+        return res.status(413).json({ success: false, message: 'File too large. Maximum size is 100MB.' });
     }
     res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
 });
@@ -5384,6 +5975,132 @@ app.use((err, req, res, next) => {
 const config = {
     maxDuration: 60,
 };
+
+(async function initAIQuiz() {
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS ai_courses (
+      id SERIAL PRIMARY KEY,
+      university_id INTEGER NOT NULL,
+      course_code VARCHAR(50) NOT NULL,
+      course_title VARCHAR(500) NOT NULL,
+      question_count INTEGER DEFAULT 10,
+      created_by INTEGER DEFAULT 0,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS ai_questions (
+      id SERIAL PRIMARY KEY,
+      course_id INTEGER NOT NULL,
+      question_text TEXT NOT NULL,
+      options JSONB DEFAULT '[]',
+      correct_answer VARCHAR(500),
+      explanation TEXT DEFAULT '',
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    console.log('[AI Quiz] Tables ready');
+  } catch(e) { console.error('[AI Quiz] Init:', e.message); }
+})();
+
+(async function initCoupons() {
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS coupons (
+      id SERIAL PRIMARY KEY,
+      code VARCHAR(50) UNIQUE NOT NULL,
+      discount_type VARCHAR(10) NOT NULL DEFAULT 'percent' CHECK (discount_type IN ('percent','fixed')),
+      discount_value INTEGER NOT NULL,
+      max_uses INTEGER DEFAULT 0,
+      times_used INTEGER DEFAULT 0,
+      is_active BOOLEAN DEFAULT true,
+      expires_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    try { await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS used_coupon VARCHAR(50)"); } catch (_) {}
+    try { await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS current_level INTEGER DEFAULT 0"); } catch (_) {}
+    console.log('[Coupons] Table ready');
+  } catch(e) { console.error('[Coupons] Init:', e.message); }
+})();
+
+// Payments log table
+(async function initPayments() {
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS payments (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      reference VARCHAR(100) UNIQUE NOT NULL,
+      amount INTEGER NOT NULL,
+      currency VARCHAR(10) DEFAULT 'NGN',
+      status VARCHAR(30) NOT NULL DEFAULT 'pending',
+      coupon_code VARCHAR(50) DEFAULT '',
+      channel VARCHAR(50) DEFAULT '',
+      metadata JSONB DEFAULT '{}',
+      verified_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    console.log('[Payments] Table ready');
+  } catch(e) { console.error('[Payments] Init:', e.message); }
+})();
+
+(async function initAdminQuiz() {
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS admin_quiz_sessions (
+      id SERIAL PRIMARY KEY,
+      admin_id INTEGER NOT NULL,
+      university_id INTEGER NOT NULL,
+      level VARCHAR(10) NOT NULL,
+      status VARCHAR(20) DEFAULT 'draft',
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS admin_quiz_courses (
+      id SERIAL PRIMARY KEY,
+      session_id INTEGER NOT NULL,
+      course_code VARCHAR(50),
+      course_title VARCHAR(500),
+      department VARCHAR(200) DEFAULT '',
+      status VARCHAR(20) DEFAULT 'pending',
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS admin_quiz_questions (
+      id SERIAL PRIMARY KEY,
+      course_id INTEGER NOT NULL,
+      question_text TEXT,
+      options JSONB DEFAULT '[]',
+      correct_answer VARCHAR(500),
+      explanation TEXT DEFAULT '',
+      question_type VARCHAR(20) DEFAULT 'mcq',
+      diagram_url TEXT DEFAULT '',
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS student_quiz_attempts (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      course_id INTEGER DEFAULT 0,
+      score INTEGER DEFAULT 0,
+      total INTEGER DEFAULT 0,
+      data JSONB DEFAULT '[]',
+      completed BOOLEAN DEFAULT false,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS app_config (
+      key VARCHAR(100) PRIMARY KEY,
+      value TEXT NOT NULL
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS daily_challenge_attempts (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      subject VARCHAR(200) NOT NULL,
+      date DATE NOT NULL DEFAULT CURRENT_DATE,
+      score INTEGER DEFAULT 0,
+      total INTEGER DEFAULT 20,
+      completed BOOLEAN DEFAULT false,
+      questions JSONB NOT NULL DEFAULT '[]',
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    // Drop old subject_groups and preset questions
+    await pool.query('DROP TABLE IF EXISTS subject_groups CASCADE').catch(()=>{});
+    await pool.query('DROP TABLE IF EXISTS preset_questions CASCADE').catch(()=>{});
+    await pool.query('DROP TABLE IF EXISTS group_questions CASCADE').catch(()=>{});
+    console.log('[Admin Quiz] Tables ready');
+  } catch(e) { console.error('[Admin Quiz] Init:', e.message); }
+})();
 
 if (require.main === module) {
     const PORT = process.env.PORT || 3000;

@@ -1,32 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prepium Admin | Universities</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <%- include('../partials/head') %>
     <style>
         :root {
-            --brand: #0062ff;
-            --brand-light: #eef4ff;
-            --brand-glow: rgba(0, 98, 255, 0.15);
-            --bg: #f0f4ff;
+            --brand-glow: rgba(37, 99, 235, 0.15);
             --sidebar: #0b1437;
             --sidebar-hover: rgba(255, 255, 255, 0.08);
-            --sidebar-active: #0062ff;
+            --sidebar-active: #2563eb;
             --danger: #ff4d4f;
             --success: #22c55e;
-            --text-main: #1b2559;
-            --text-muted: #a3aed0;
-            --border: rgba(224, 229, 242, 0.6);
-            --glass-bg: rgba(255, 255, 255, 0.7);
-            --glass-border: rgba(255, 255, 255, 0.5);
-            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
-            --shadow-md: 0 8px 32px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.08);
-            --radius: 20px;
-            --radius-sm: 14px;
         }
 
         * {
@@ -299,7 +282,7 @@
 
         .form-group input {
             width: 100%;
-            background: #f0f4ff;
+            background: var(--brand-soft);
             border: 2px solid transparent;
             padding: 14px 18px;
             border-radius: var(--radius-sm);
@@ -318,7 +301,7 @@
         .form-group input:focus {
             outline: none;
             border-color: var(--brand);
-            background: white;
+            background: var(--surface-solid);
             box-shadow: 0 0 0 4px var(--brand-glow);
         }
 
@@ -551,6 +534,8 @@
             }
         }
     </style>
+<meta name="theme-color" content="#2563eb">
+<%- include('../partials/theme-toggle') %>
 </head>
 <body>
 
@@ -582,9 +567,6 @@
                 <a href="/admin/universities" class="nav-item active">
                     <i class="fas fa-building-columns"></i> Universities
                 </a>
-                <a href="/admin/subjects" class="nav-item">
-                    <i class="fas fa-book-open"></i> Subjects
-                </a>
                 <a href="/admin/students" class="nav-item">
                     <i class="fas fa-user-graduate"></i> Students
                 </a>
@@ -594,6 +576,9 @@
                 <div class="nav-label">System</div>
                 <a href="/admin/notifications" class="nav-item">
                     <i class="fas fa-bell"></i> Notifications
+                </a>
+                <a href="/admin/db-manager" class="nav-item">
+                    <i class="fas fa-database"></i> DB Manager
                 </a>
             </div>
 

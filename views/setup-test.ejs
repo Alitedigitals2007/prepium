@@ -1,51 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Prepium | Exam Setup</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/css/style.css"
-    <link rel="manifest" href="/manifest.json">>
-
+    <%- include('partials/head') %>
     <style>
         .app-shell { padding-bottom: 240px; }
 
         .top-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
         .back-circle { 
             width: 42px; height: 42px; 
-            background: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.9);
+            background: var(--surface); border: 1px solid var(--border);
             border-radius: 14px;
             display: flex; align-items: center; justify-content: center;
-            text-decoration: none; color: var(--text-dark);
+            text-decoration: none; color: var(--text-primary);
             box-shadow: 0 2px 8px rgba(0,0,0,0.03);
         }
         .page-title { font-size: 1.15rem; font-weight: 800; letter-spacing: -0.5px; }
 
         .view-switcher { 
-            background: rgba(255,255,255,0.8); padding: 4px; border-radius: 12px; 
+            background: var(--surface); padding: 4px; border-radius: 12px; 
             display: flex; border: 1px solid rgba(255,255,255,0.9);
         }
         .v-btn { 
             border: none; background: transparent; padding: 8px 12px; border-radius: 10px; 
-            cursor: pointer; color: var(--text-sub); font-size: 0.8rem;
+            cursor: pointer; color: var(--text-secondary); font-size: 0.8rem;
             transition: all 0.3s ease;
         }
         .v-btn.active { 
             background: var(--brand-gradient); color: white; 
-            box-shadow: 0 2px 8px rgba(0, 98, 255, 0.2);
+            box-shadow: var(--shadow-lg);
         }
 
         .guide-box {
-            background: linear-gradient(135deg, rgba(0, 98, 255, 0.06) 0%, rgba(79, 70, 229, 0.06) 100%);
-            border: 1px solid rgba(0, 98, 255, 0.08);
+            background: var(--brand-light);
+            border: 1px solid rgba(99, 102, 241, 0.1);
             border-radius: 16px; padding: 16px 18px;
             margin-bottom: 14px;
         }
         .guide-box .guide-steps { margin: 0; padding: 0; list-style: none; }
         .guide-box .guide-steps li {
-            font-size: 0.78rem; color: var(--text-sub);
+            font-size: 0.78rem; color: var(--text-secondary);
             font-weight: 600; line-height: 1.5; padding: 4px 0;
             display: flex; align-items: flex-start; gap: 8px;
         }
@@ -57,7 +50,7 @@
         }
         .guide-box .guide-icon { color: var(--brand); margin-right: 6px; }
         .guide-box .guide-head {
-            font-size: 0.85rem; font-weight: 800; color: var(--text-dark);
+            font-size: 0.85rem; font-weight: 800; color: var(--text-primary);
             margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
         }
 
@@ -65,7 +58,7 @@
         .search-row { display: flex; gap: 10px; margin: 0 14px; }
         .search-bar { 
             flex: 1; 
-            background: rgba(255,255,255,0.8); 
+            background: var(--surface); 
             border: 1px solid rgba(255,255,255,0.9);
             border-radius: 14px; 
             padding: 12px 16px; display: flex; align-items: center; gap: 10px;
@@ -74,16 +67,16 @@
         .search-bar input { 
             border: none; background: transparent; width: 100%; 
             font-family: inherit; font-weight: 600; font-size: 0.85rem; 
-            color: var(--text-dark); outline: none;
+            color: var(--text-primary); outline: none;
         }
-        .search-bar input::placeholder { color: var(--text-sub); }
+        .search-bar input::placeholder { color: var(--text-secondary); }
 
         .course-grid { padding: 0 14px; display: grid; gap: 12px; }
         .course-grid.grid-layout { grid-template-columns: 1fr 1fr; }
         .course-grid.list-layout { grid-template-columns: 1fr; }
 
         .course-card {
-            background: rgba(255,255,255,0.7);
+            background: var(--surface);
             border: 1.5px solid rgba(255,255,255,0.8);
             border-radius: 20px; padding: 16px; position: relative;
             box-shadow: 0 2px 12px rgba(0,0,0,0.02);
@@ -91,8 +84,8 @@
         }
         .course-card.selected { 
             border-color: var(--brand); 
-            background: rgba(0, 98, 255, 0.04);
-            box-shadow: 0 4px 20px rgba(0,98,255,0.1);
+            background: var(--brand-light);
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.12);
         }
 
         .card-header { display: flex; align-items: center; gap: 12px; cursor: pointer; }
@@ -101,31 +94,31 @@
             cursor: pointer;
         }
         .course-name { 
-            font-weight: 800; font-size: 0.88rem; color: var(--text-dark); 
+            font-weight: 800; font-size: 0.88rem; color: var(--text-primary); 
             flex: 1; line-height: 1.2;
         }
 
         .avail-tag { 
             display: inline-flex; align-items: center; gap: 4px;
             font-size: 0.62rem; font-weight: 700; 
-            background: rgba(0, 98, 255, 0.06); color: var(--brand);
+            background: var(--brand-light); color: var(--brand);
             padding: 4px 10px; border-radius: 8px; margin-top: 10px;
         }
 
         .qty-box { 
-            margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(226,232,240,0.6);
+            margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border);
             display: none; animation: fadeIn 0.3s ease;
         }
         .qty-input {
             width: 100%; 
-            background: rgba(255,255,255,0.8); 
-            border: 2px solid rgba(226,232,240,0.6);
+            background: var(--surface); 
+            border: 2px solid var(--border);
             padding: 10px; border-radius: 12px; text-align: center;
             font-weight: 800; color: var(--brand); font-family: inherit;
             font-size: 0.9rem;
             transition: all 0.3s ease;
         }
-        .qty-input:focus { border-color: var(--brand); background: white; outline: none; }
+        .qty-input:focus { border-color: var(--brand); background: var(--surface-solid); outline: none; }
         .qty-input.error { border-color: var(--danger); }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
@@ -134,7 +127,7 @@
             position: fixed; bottom: 100px;
             left: 50%; transform: translateX(-50%);
             width: calc(100% - 28px); max-width: 430px;
-            background: rgba(255,255,255,0.95);
+            background: var(--surface-solid);
             backdrop-filter: blur(24px);
             -webkit-backdrop-filter: blur(24px);
             padding: 1.25rem 1.5rem; 
@@ -148,17 +141,17 @@
             display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; 
         }
         .total-display span:first-child { 
-            font-size: 0.6rem; font-weight: 800; color: var(--text-sub); 
+            font-size: 0.6rem; font-weight: 800; color: var(--text-secondary); 
             text-transform: uppercase; letter-spacing: 0.5px; display: block; 
         }
         .total-display span:last-child { 
-            font-size: 1.8rem; font-weight: 800; color: var(--text-dark); 
+            font-size: 1.8rem; font-weight: 800; color: var(--text-primary); 
             letter-spacing: -1px;
         }
 
         .timer-config { 
-            background: rgba(255,255,255,0.8); 
-            border: 1px solid rgba(226,232,240,0.6);
+            background: var(--surface); 
+            border: 1px solid var(--border);
             padding: 10px 16px; border-radius: 16px;
             display: flex; align-items: center; gap: 8px;
         }
@@ -168,54 +161,40 @@
             font-weight: 800; color: var(--brand); font-size: 1.1rem; 
             text-align: center; font-family: inherit;
         }
-        .timer-label { font-weight: 700; font-size: 0.65rem; color: var(--text-sub); text-transform: uppercase; }
+        .timer-label { font-weight: 700; font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; }
 
         .btn-launch {
             width: 100%; background: var(--brand-gradient); color: white;
             padding: 18px; border-radius: 18px; border: none;
             font-weight: 800; font-size: 0.95rem; cursor: pointer;
-            box-shadow: 0 8px 24px rgba(0, 98, 255, 0.25);
+            box-shadow: var(--shadow-lg);
             display: flex; align-items: center; justify-content: center; gap: 10px;
             transition: all 0.3s ease;
             letter-spacing: -0.2px;
         }
         .btn-launch:active { transform: scale(0.98); }
         .btn-launch:disabled { 
-            background: linear-gradient(135deg, #cbd5e1, #94a3b8); 
+            background: var(--text-muted); 
             box-shadow: none; cursor: not-allowed; 
         }
         .btn-launch:disabled:active { transform: none; }
     </style>
+    <%- include('partials/theme-toggle') %>
 </head>
 <body>
 <%- include('partials/sidebar') %>
 
     <div class="app-shell">
-        <div class="header-glass">
-            <div class="top-row">
-                <a href="/dashboard" class="back-circle"><i class="fas fa-chevron-left"></i></a>
-                <span class="page-title">Setup Exam</span>
-                <div class="view-switcher">
-                    <button class="v-btn active" id="gBtn" onclick="toggleLayout('grid')"><i class="fas fa-th-large"></i></button>
-                    <button class="v-btn" id="lBtn" onclick="toggleLayout('list')"><i class="fas fa-list"></i></button>
-                </div>
-            </div>
+        <div class="header-nav">
+            <a href="/dashboard" class="back-circle" title="Back"><i class="fas fa-arrow-left"></i></a>
+            <div class="header-title">Setup Test</div>
+            <div style="width:42px"></div>
+        </div>
 
-            <div class="guide-box">
-                <div class="guide-head"><i class="fas fa-info-circle guide-icon"></i> How to set up your test</div>
-                <ul class="guide-steps">
-                    <li><span class="step-num">1</span> Select up to <strong>4 courses</strong> by tapping the checkbox</li>
-                    <li><span class="step-num">2</span> For each course, enter how many questions you want</li>
-                    <li><span class="step-num">3</span> Set the total <strong>duration</strong> (in minutes) for the test</li>
-                    <li><span class="step-num">4</span> Tap <strong>"Generate Test"</strong> to begin — your timer starts immediately</li>
-                </ul>
-            </div>
-
-            <div class="search-row">
-                <div class="search-bar">
-                    <i class="fas fa-search" style="color: var(--text-sub); font-size: 0.85rem;"></i>
-                    <input type="text" id="courseSearch" placeholder="Search courses..." onkeyup="doSearch()">
-                </div>
+        <div style="padding: 0 14px; margin-bottom: 12px;">
+            <div class="search-bar" style="background:rgba(255,255,255,0.8);border:1px solid rgba(255,255,255,0.9);border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:10px;">
+                <i class="fas fa-search" style="color: var(--text-secondary); font-size: 0.85rem;"></i>
+                <input type="text" id="courseSearch" placeholder="Search courses..." onkeyup="doSearch()" style="border:none;background:transparent;width:100%;font-family:inherit;font-weight:600;font-size:0.85rem;color:var(--text-primary);outline:none;">
             </div>
         </div>
 

@@ -29,7 +29,7 @@
       this.amplitude = 15 + Math.random() * 40;
       this.frequency = 0.005 + Math.random() * 0.015;
       this.phase = Math.random() * Math.PI * 2;
-      this.hue = 210 + Math.random() * 30;
+      this.hue = 240 + Math.random() * 30;
       this.alpha = 0.06 + Math.random() * 0.08;
     }
     update() {
@@ -90,7 +90,7 @@
     const glow = document.createElement('div');
     glow.id = 'cursor-glow';
     glow.style.cssText =
-      'position:fixed;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(0,98,255,0.06) 0%,transparent 70%);pointer-events:none;z-index:1;transform:translate(-50%,-50%);transition:opacity 0.3s;';
+      'position:fixed;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(99,102,241,0.06) 0%,transparent 70%);pointer-events:none;z-index:1;transform:translate(-50%,-50%);transition:opacity 0.3s;';
     document.body.prepend(glow);
     let mx = -999, my = -999;
     document.addEventListener('mousemove', (e) => { mx = e.clientX; my = e.clientY; glow.style.opacity = '1'; });
@@ -113,7 +113,7 @@
       position:absolute;top:${e.clientY - rect.top - size / 2}px;
       left:${e.clientX - rect.left - size / 2}px;
       width:${size}px;height:${size}px;
-      border-radius:50%;background:rgba(0,98,255,0.15);
+      border-radius:50%;background:rgba(99,102,241,0.15);
       transform:scale(0);animation:rippleAnim 0.6s ease-out forwards;
       pointer-events:none;
     `;

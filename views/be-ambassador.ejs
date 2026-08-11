@@ -1,18 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Prepium | Become an Ambassador</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/css/style.css"
-    <link rel="manifest" href="/manifest.json">>
+    <%- include('partials/head') %>
     <style>
         :root { 
-            --brand-light: #e6efff;
-            --sub: #64748b;
-            --white: #ffffff;
+            --brand-light: var(--brand-soft);
+            --sub: var(--text-secondary);
+            --white: var(--surface-solid);
         }
 
         .app-shell { 
@@ -73,7 +67,7 @@
         p.desc { color: var(--sub); font-size: 0.88rem; font-weight: 600; line-height: 1.5; margin-bottom: 1.75rem; }
 
         .perk-card {
-            background: #fafcfe; border: 1px solid var(--border); border-radius: 20px;
+            background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
             padding: 1.15rem; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 14px;
         }
         .perk-card i { font-size: 1.25rem; color: var(--brand); margin-top: 2px; }
@@ -92,7 +86,7 @@
         textarea { resize: none; height: 110px; }
 
         .btn-action {
-            background: var(--brand); color: white; border: none; width: 100%; padding: 1.15rem;
+            background: var(--brand); color: var(--surface-solid); border: none; width: 100%; padding: 1.15rem;
             border-radius: 20px; font-size: 0.95rem; font-weight: 800; cursor: pointer; display: flex;
             justify-content: center; align-items: center; gap: 10px; margin-top: auto;
             box-shadow: 0 8px 24px rgba(0, 98, 255, 0.18); transition: all 0.25s; text-decoration: none;
@@ -111,7 +105,7 @@
         }
 
         .info-panel {
-            background: #fdfdfd; border: 1px solid var(--border); padding: 1.15rem;
+            background: var(--surface); border: 1px solid var(--border); padding: 1.15rem;
             border-radius: 20px; font-size: 0.88rem; font-weight: 600; color: var(--text);
             line-height: 1.6; margin: 1.25rem 0; text-align: left; border-left: 4px solid var(--brand);
         }
@@ -120,19 +114,19 @@
         .info-panel a:hover { text-decoration: underline; }
 
         .cert-container { 
-            background: #fdfdfd; border: 1px solid var(--border); padding: 14px; border-radius: 24px;
+            background: var(--surface); border: 1px solid var(--border); padding: 14px; border-radius: 24px;
             margin: 1.25rem 0; box-shadow: 0 4px 12px rgba(0,0,0,0.015);
         }
         canvas { width: 100%; border-radius: 16px; border: 1px solid var(--border); display: block; margin-bottom: 12px; }
         
         .download-btn {
-            background: white; border: 1.5px solid var(--brand); color: var(--brand); width: 100%;
+            background: var(--surface-solid); border: 1.5px solid var(--brand); color: var(--brand); width: 100%;
             padding: 0.95rem; border-radius: 16px; font-size: 0.88rem; font-weight: 800; cursor: pointer;
             display: flex; justify-content: center; align-items: center; gap: 10px; transition: all 0.25s;
         }
-        .download-btn:hover { background: #f4f8ff; }
+        .download-btn:hover { background: var(--brand-soft); }
 
-        .whatsapp-btn { background: #25d366; color: white; box-shadow: 0 8px 24px rgba(37, 211, 102, 0.22); margin-top: 1rem; }
+        .whatsapp-btn { background: #25d366; color: var(--surface-solid); box-shadow: 0 8px 24px rgba(37, 211, 102, 0.22); margin-top: 1rem; }
         .whatsapp-btn:hover { background: #1ebd5b; }
 
         .login-toggle-link {
@@ -141,6 +135,7 @@
         }
         .login-toggle-link span { color: var(--brand); font-weight: 800; }
     </style>
+    <%- include('partials/theme-toggle') %>
 </head>
 <body>
 
@@ -157,13 +152,13 @@
 
         <div class="step-panel active" id="step1">
             <h1>Ambassador Perks</h1>
-            <p class="desc">Earn commissions directly, build your network, and access premium exam prep tools.</p>
+            <p class="desc">Earn commissions, build your network, and access premium exam tools.</p>
 
             <div class="perk-card">
                 <i class="fas fa-wallet"></i>
                 <div>
                     <div class="perk-title">Instant Rewards</div>
-                    <div class="perk-desc">Direct payouts straight into your preferred bank account for every student signup.</div>
+                    <div class="perk-desc">Get paid directly for every student you refer.</div>
                 </div>
             </div>
 
@@ -171,17 +166,17 @@
                 <i class="fas fa-file-invoice"></i>
                 <div>
                     <div class="perk-title">Digital Certificate</div>
-                    <div class="perk-desc">An official personalized digital Prepium Brand Ambassador Certificate.</div>
+                    <div class="perk-desc">Receive an official Prepium Brand Ambassador certificate.</div>
                 </div>
             </div>
 
-            <button class="btn-action" onclick="goToStep(2)">Proceed to Form ➔</button>
+            <button class="btn-action" onclick="goToStep(2)">Proceed to Form âž”</button>
             <div class="login-toggle-link" onclick="goToStep('login')">Already registered? <span>Sign in</span></div>
         </div>
 
         <div class="step-panel" id="step2">
             <h1>Create Your Profile</h1>
-            <p class="desc">Fill in your full name and bank account details to start earning directly.</p>
+            <p class="desc">Enter your name and bank details to start earning.</p>
 
             <form id="ambassadorForm">
                 <div class="form-group">
@@ -194,14 +189,14 @@
                     <textarea id="bank_details" placeholder="OPay | 9154681851 | Atilola Israel" required></textarea>
                 </div>
 
-                <button type="submit" class="btn-action" id="submitBtn">Generate Unique ID ➔</button>
+                <button type="submit" class="btn-action" id="submitBtn">Generate Unique ID âž”</button>
             </form>
             <div class="login-toggle-link" onclick="goToStep(1)" style="margin-top: 1.25rem;">❮ Go Back</div>
         </div>
 
         <div class="step-panel" id="stepLogin">
             <h1>Ambassador Portal</h1>
-            <p class="desc">Access your portal with your unique referral code.</p>
+            <p class="desc">Sign in with your unique referral code.</p>
 
             <form id="loginForm">
                 <div class="form-group">
@@ -212,7 +207,7 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn-action" id="loginBtn">Log in to Portal ➔</button>
+                <button type="submit" class="btn-action" id="loginBtn">Log in to Portal âž”</button>
             </form>
             <div class="login-toggle-link" onclick="goToStep(1)" style="margin-top: 1.25rem;">❮ Back to Registration</div>
         </div>
@@ -220,7 +215,7 @@
         <div class="step-panel success-box" id="step3">
             <span class="success-icon"><i class="fas fa-circle-check"></i></span>
             <h1>Success!</h1>
-            <p class="desc">You are now an officially registered Prepium Ambassador!</p>
+            <p class="desc">You are now a Prepium Ambassador!</p>
 
             <p style="font-size: 0.72rem; font-weight: 800; color: var(--sub); text-transform: uppercase;">Your Referral Code</p>
             <div class="code-display" id="refCodeText" onclick="copyReferralCode()">000000</div>
@@ -228,7 +223,7 @@
 
             <div class="info-panel">
                 <i class="fas fa-info-circle" style="color: var(--brand); margin-right: 6px;"></i>
-                To track your earnings, referral stats, and withdrawals, log in to your dashboard anytime via <a id="dynamicPortalLink" href="#"><strong>Sign In Here</strong></a> using your unique referral code.
+                Track your earnings, referrals, and withdrawals from your dashboard. <a id="dynamicPortalLink" href="#"><strong>Sign in here</strong></a> with your referral code.
             </div>
 
             <div class="cert-container">
@@ -237,7 +232,7 @@
             </div>
 
             <a id="waShareBtn" href="#" class="btn-action whatsapp-btn" target="_blank"><i class="fab fa-whatsapp"></i> Share on WhatsApp</a>
-            <a id="portalBtn" href="#" class="btn-action" style="background: var(--text); box-shadow: none; margin-top: 1rem;"><i class="fas fa-sign-in-alt"></i> Go to Dashboard</a>
+            <a id="portalBtn" href="#" class="btn-action" style="background: var(--brand); box-shadow: none; margin-top: 1rem;"><i class="fas fa-sign-in-alt"></i> Go to Dashboard</a>
         </div>
     </div>
 
@@ -315,9 +310,9 @@
                     generateCertificate(data.name, data.referral_code);
 
                     const waText = encodeURIComponent(
-                        `Hi! 👋 I have officially registered as a Prepium Ambassador!\n\n` +
+                        `Hi! ðŸ‘‹ I have officially registered as a Prepium Ambassador!\n\n` +
                         `Use my referral code to prepare for your exams: *${data.referral_code}*\n\n` +
-                        `Register on Prepium and let's ace our exams together! 🚀`
+                        `Register on Prepium and let's ace our exams together! ðŸš€`
                     );
                     document.getElementById('waShareBtn').href = `https://wa.me/?text=${waText}`;
 
@@ -325,14 +320,14 @@
                 } else {
                     alert(data.error || "An error occurred. Please try again.");
                     submitBtn.disabled = false;
-                    submitBtn.textContent = "Generate Unique ID ➔";
+                    submitBtn.textContent = "Generate Unique ID âž”";
                 }
             })
             .catch(err => {
                 console.error(err);
                 alert("Please check your connection and try again.");
                 submitBtn.disabled = false;
-                submitBtn.textContent = "Generate Unique ID ➔";
+                submitBtn.textContent = "Generate Unique ID âž”";
             });
         });
 
@@ -365,14 +360,14 @@
                 } else {
                     alert(data.error || "Login failed. Please check your code.");
                     loginBtn.disabled = false;
-                    loginBtn.textContent = "Log in to Portal ➔";
+                    loginBtn.textContent = "Log in to Portal âž”";
                 }
             })
             .catch(err => {
                 console.error(err);
                 alert("Please check your internet connection.");
                 loginBtn.disabled = false;
-                loginBtn.textContent = "Log in to Portal ➔";
+                loginBtn.textContent = "Log in to Portal âž”";
             });
         });
 
@@ -383,7 +378,7 @@
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            ctx.strokeStyle = '#0062ff';
+            ctx.strokeStyle = '#2563eb';
             ctx.lineWidth = 16;
             ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
 
@@ -391,7 +386,7 @@
             ctx.lineWidth = 2;
             ctx.strokeRect(34, 34, canvas.width - 68, canvas.height - 68);
 
-            ctx.fillStyle = '#0062ff';
+            ctx.fillStyle = '#2563eb';
             ctx.font = '800 28px "Plus Jakarta Sans", sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText('PREPIUM.', canvas.width / 2, 105);
@@ -415,7 +410,7 @@
             ctx.font = '600 15px "Plus Jakarta Sans", sans-serif';
             ctx.fillText('HAS OFFICIALLY REGISTERED AS AN AUTHORIZED', canvas.width / 2, 380);
 
-            ctx.fillStyle = '#0062ff';
+            ctx.fillStyle = '#2563eb';
             ctx.font = '800 24px "Plus Jakarta Sans", sans-serif';
             ctx.fillText('PREPIUM BRAND AMBASSADOR', canvas.width / 2, 420);
 

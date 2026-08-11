@@ -1,68 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Prepium | Live Exam</title>
-
-    <script>
-        window.MathJax = {
-            tex: {
-                inlineMath: [['$', '$'], ['\\(', '\\)']],
-                displayMath: [['$$', '$$'], ['\\[', '\\]']],
-                processEscapes: true
-            },
-            options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'] }
-        };
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" id="MathJax-script" async></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/style.css"
-    <link rel="manifest" href="/manifest.json">>
-    
+    <%- include('partials/head') %>
     <style>
         body { padding-bottom: 120px; overflow-x: hidden; }
 
         /* Header & Progress */
-        .quiz-header { position: sticky; top: 0; background: white; z-index: 1000; border-bottom: 1px solid #f1f5f9; padding: 12px 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
+        .quiz-header { position: sticky; top: 0; background: var(--surface-solid); z-index: 1000; border-bottom: 1px solid var(--border); padding: 12px 16px; box-shadow: var(--shadow-sm); }
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        #timer { font-weight: 800; color: var(--brand); background: #eff6ff; padding: 6px 14px; border-radius: 10px; border: 1px solid #dbeafe; font-variant-numeric: tabular-nums; }
+        #timer { font-weight: 800; color: var(--brand); background: var(--brand-soft); padding: 6px 14px; border-radius: 10px; border: 1px solid var(--brand-soft); font-variant-numeric: tabular-nums; }
         
         /* Question Palette */
-        .palette-container { background: #f8fafc; border-radius: 16px; margin-top: 10px; border: 1px solid #e2e8f0; padding: 12px; }
+        .palette-container { background: var(--bg); border-radius: 16px; margin-top: 10px; border: 1px solid var(--border-solid); padding: 12px; }
         .palette-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(35px, 1fr)); gap: 6px; max-height: 100px; overflow-y: auto; }
-        .q-num { aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1.5px solid #e2e8f0; font-size: 0.75rem; font-weight: 800; background: white; cursor: pointer; transition: 0.2s; }
+        .q-num { aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1.5px solid var(--border-solid); font-size: 0.75rem; font-weight: 800; background: var(--surface-solid); cursor: pointer; transition: 0.2s; }
         .q-num.answered { background: var(--success); color: white; border-color: var(--success); }
-        .q-num.current { border: 2.5px solid var(--brand); color: var(--brand); background: #eff6ff; }
+        .q-num.current { border: 2.5px solid var(--brand); color: var(--brand); background: var(--brand-soft); }
 
         /* Question Card */
-        .question-card { margin: 20px 15px; background: white; padding: 28px; border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; }
-        #subject-label { font-size: 0.7rem; font-weight: 800; color: var(--brand); text-transform: uppercase; margin-bottom: 12px; display: inline-block; background: #eff6ff; padding: 4px 10px; border-radius: 6px; }
-        #q-text { font-size: 1.15rem; font-weight: 700; line-height: 1.6; margin-bottom: 24px; color: #0f172a; }
+        .question-card { margin: 20px 15px; background: var(--surface-solid); padding: 28px; border-radius: 24px; box-shadow: var(--shadow-md); border: 1px solid var(--border); }
+        #subject-label { font-size: 0.7rem; font-weight: 800; color: var(--brand); text-transform: uppercase; margin-bottom: 12px; display: inline-block; background: var(--brand-soft); padding: 4px 10px; border-radius: 6px; }
+        #q-text { font-size: 1.15rem; font-weight: 700; line-height: 1.6; margin-bottom: 24px; color: var(--text-primary); }
 
         /* Options */
-        .option-btn { width: 100%; padding: 18px; margin-bottom: 12px; border-radius: 16px; border: 2px solid #f1f5f9; background: white; text-align: left; font-family: inherit; font-weight: 700; cursor: pointer; transition: 0.2s; display: flex; align-items: center; }
-        .option-btn:hover { border-color: var(--brand); background: #fcfdfe; }
-        .option-btn.selected { background: var(--brand); color: white; border-color: var(--brand); box-shadow: 0 4px 12px rgba(0,98,255,0.2); }
+        .option-btn { width: 100%; padding: 18px; margin-bottom: 12px; border-radius: 16px; border: 2px solid var(--border); background: var(--surface-solid); text-align: left; font-family: inherit; font-weight: 700; cursor: pointer; transition: 0.2s; display: flex; align-items: center; }
+        .option-btn:hover { border-color: var(--brand); background: var(--bg); }
+        .option-btn.selected { background: var(--brand); color: white; border-color: var(--brand); box-shadow: var(--shadow-lg); }
         .opt-label { opacity: 0.5; margin-right: 15px; font-weight: 800; font-size: 0.85rem; }
         
         /* Footer Navigation */
-        .quiz-footer { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 16px 20px; display: flex; gap: 10px; border-top: 1px solid #f1f5f9; z-index: 1000; }
+        .quiz-footer { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface-solid); padding: 16px 20px; display: flex; gap: 10px; border-top: 1px solid var(--border); z-index: 1000; }
         .nav-btn { flex: 1; padding: 14px; border-radius: 16px; border: none; font-weight: 800; cursor: pointer; font-family: inherit; transition: 0.2s; }
         .nav-btn:active { transform: scale(0.98); }
         .submit-trigger { background: var(--danger) !important; color: white !important; flex: 0.4; }
 
         /* Scientific Calculator Overlay */
         #calc-container { position: fixed; bottom: 90px; right: 20px; z-index: 2000; display: flex; flex-direction: column; align-items: flex-end; }
-        #calc-toggle { width: 56px; height: 56px; border-radius: 18px; background: var(--text); color: white; border: none; box-shadow: 0 8px 24px rgba(0,0,0,0.2); cursor: pointer; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; }
-        #calc-box { width: 300px; background: white; border-radius: 28px; box-shadow: 0 20px 50px rgba(0,0,0,0.2); border: 1px solid #e2e8f0; padding: 15px; margin-bottom: 15px; display: none; transform-origin: bottom right; animation: popUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        #calc-toggle { width: 56px; height: 56px; border-radius: 18px; background: var(--brand); color: white; border: none; box-shadow: 0 8px 24px rgba(0,0,0,0.2); cursor: pointer; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; }
+        #calc-box { width: 300px; background: var(--surface-solid); border-radius: 28px; box-shadow: var(--shadow-xl); border: 1px solid var(--border-solid); padding: 15px; margin-bottom: 15px; display: none; transform-origin: bottom right; animation: popUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes popUp { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
-        .calc-screen { width: 100%; background: #f8fafc; border: 2px solid #f1f5f9; padding: 12px; border-radius: 15px; text-align: right; font-size: 1.4rem; font-weight: 800; color: var(--text); margin-bottom: 10px; outline: none; }
+        .calc-screen { width: 100%; background: var(--bg); border: 2px solid var(--border); padding: 12px; border-radius: 15px; text-align: right; font-size: 1.4rem; font-weight: 800; color: var(--text-primary); margin-bottom: 10px; outline: none; }
         .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-        .c-btn { padding: 12px 2px; border: none; border-radius: 10px; background: #f1f5f9; font-weight: 800; cursor: pointer; font-size: 0.85rem; }
-        .c-btn.op { color: var(--brand); background: #eff6ff; }
+        .c-btn { padding: 12px 2px; border: none; border-radius: 10px; background: var(--bg); font-weight: 800; cursor: pointer; font-size: 0.85rem; }
+        .c-btn.op { color: var(--brand); background: var(--brand-soft); }
         .c-btn.eq { background: var(--brand); color: white; }
     </style>
+    <%- include('partials/theme-toggle') %>
 </head>
 <body>
 
@@ -70,7 +53,7 @@
 
     <div class="quiz-header">
         <div class="top-bar">
-            <span id="progress-text" style="font-weight: 800; font-size: 0.9rem; color: #64748b;">Loading Exam...</span>
+            <span id="progress-text" style="font-weight: 800; font-size: 0.9rem; color: var(--text-secondary);">Loading...</span>
             <div id="timer">00:00</div>
         </div>
         <div class="palette-container">
@@ -86,14 +69,14 @@
 
     <div id="calc-container">
         <div id="calc-box">
-            <div style="font-size: 0.6rem; font-weight: 800; color: #94a3b8; margin-bottom: 8px; display: flex; justify-content: space-between;">
+            <div style="font-size: 0.6rem; font-weight: 800; color: var(--text-muted); margin-bottom: 8px; display: flex; justify-content: space-between;">
                 <span id="unit-indicator" style="color: var(--brand)">DEG</span>
                 <span>SCIENTIFIC</span>
             </div>
             <input type="text" id="display" class="calc-screen" readonly value="0">
             <div class="calc-grid">
                 <button class="c-btn" onclick="toggleUnit()">DRG</button>
-                <button class="c-btn" onclick="sciFunc('sqrt')">√</button>
+                <button class="c-btn" onclick="sciFunc('sqrt')">âˆš</button>
                 <button class="c-btn" onclick="trig('sin')">sin</button>
                 <button class="c-btn" style="color:var(--danger)" onclick="clearCalc()">AC</button>
                 
@@ -105,7 +88,7 @@
                 <button class="c-btn" onclick="press('4')">4</button>
                 <button class="c-btn" onclick="press('5')">5</button>
                 <button class="c-btn" onclick="press('6')">6</button>
-                <button class="c-btn op" onclick="press('*')">×</button>
+                <button class="c-btn op" onclick="press('*')">Ã—</button>
                 
                 <button class="c-btn" onclick="press('1')">1</button>
                 <button class="c-btn" onclick="press('2')">2</button>
@@ -114,13 +97,13 @@
                 
                 <button class="c-btn" onclick="press('0')">0</button>
                 <button class="c-btn" onclick="press('.')">.</button>
-                <button class="c-btn" onclick="backspace()">⌫</button>
+                <button class="c-btn" onclick="backspace()">âŒ«</button>
                 <button class="c-btn op" onclick="press('+')">+</button>
                 
                 <button class="c-btn eq" style="grid-column: span 4;" onclick="solve()">=</button>
             </div>
         </div>
-        <button id="calc-toggle" onclick="toggleCalc()">🖩</button>
+        <button id="calc-toggle" onclick="toggleCalc()">ðŸ–©</button>
     </div>
 
     <form id="submit-form" action="/submit-exam" method="POST" style="display: none;">
@@ -129,7 +112,7 @@
     </form>
 
     <div class="quiz-footer">
-        <button class="nav-btn" style="background: #f1f5f9; color: #1e293b;" onclick="changeQuestion(-1)">Back</button>
+        <button class="nav-btn" style="background: var(--bg); color: var(--text-primary);" onclick="changeQuestion(-1)">Back</button>
         <button class="nav-btn submit-trigger" onclick="triggerSubmit()">Submit</button>
         <button class="nav-btn" id="next-btn" style="background: var(--brand); color: white;" onclick="changeQuestion(1)">Next</button>
     </div>
@@ -212,7 +195,7 @@
 
         /* --- SUBMISSION --- */
         function triggerSubmit() {
-            if (confirm("Are you sure you want to end this session and see your results?")) {
+            if (confirm("Submit your answers and see your results?")) {
                 const now = Date.now();
                 const totalSeconds = Math.floor((now - startTime) / 1000);
                 const m = Math.floor(totalSeconds / 60);
@@ -275,7 +258,7 @@
         function solve() {
             const d = document.getElementById('display');
             try {
-                let formula = d.value.replace(/×/g, '*').replace(/÷/g, '/');
+                let formula = d.value.replace(/Ã—/g, '*').replace(/÷/g, '/');
                 let res = eval(formula);
                 d.value = Number.isInteger(res) ? res : parseFloat(res.toFixed(6));
             } catch(e) { d.value = "Error"; }
