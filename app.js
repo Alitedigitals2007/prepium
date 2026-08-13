@@ -4773,7 +4773,12 @@ setTimeout(resetWeeklyLeaderboard, 5000);
 function cleanAiText(t) {
   if (t == null) return '';
   var s = String(t);
-  s = s.replace(/```[a-zA-Z]*\n?/g, '```');
+  // Protect LaTeX math and code blocks so the markdown cleaners below never strip subscripts/superscripts (e.g. x_{i}, H_{2}O)
+  var keep = [];
+  s = s.replace(/(```[\s\S]*?```)|(\\\[[\s\S]*?\\\])|(\\\([\s\S]*?\\\))|(\$\$[\s\S]*?\$\$)|(\$[^$\n]*?\$)/g, function(m){
+    keep.push(m);
+    return '\u0000M' + (keep.length - 1) + '\u0000';
+  });
   s = s.replace(/\*\*([^*\n]+)\*\*/g, '$1');
   s = s.replace(/__([^_\n]+)__/g, '$1');
   s = s.replace(/(^|[^*])\*(?!\s)([^*\n]+?)\*(?!\*)/g, '$1$2');
@@ -4787,6 +4792,7 @@ function cleanAiText(t) {
   s = s.replace(/\r\n/g, '\n');
   s = s.replace(/[ \t]+\n/g, '\n');
   s = s.replace(/\n{3,}/g, '\n\n');
+  s = s.replace(/\u0000M(\d+)\u0000/g, function(m, i){ return keep[parseInt(i)]; });
   return s.trim();
 }
 
@@ -5269,7 +5275,7 @@ app.get('/api/study/topics/:courseId', isAuth, async (req, res) => {
 app.post('/api/study/subtopics/ai-generate', isAuth, requirePaid, async (req, res) => {
   try {
     const { topicId, courseId, topicTitle, courseName, courseCode } = req.body;
-    const prompt = `For the topic "${topicTitle}" in the course "${courseName}", generate a comprehensive list of subtopics that cover every aspect of this topic that should be studied. Include foundational concepts first, then more advanced aspects. Be thorough — break the topic down into its natural parts. Return a JSON array of strings. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
+    const prompt = `For the topic "${topicTitle}" in the course "${courseName}"${courseCode ? ' (' + courseCode + ')' : ''}, generate between 8 and 15 RELEVANT subtopics that cover the most important aspects of this topic within this specific course. Only include subtopics that are genuinely relevant to this course and topic — do NOT pad the list, do NOT generate more than 15, and aim for at least 8. Arrange them from foundational concepts first to more advanced aspects later. Return a JSON array of strings. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
     const aiRes = await studyPromptJSON(prompt);
     if (aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text });
     let subtopics = [];
@@ -5288,9 +5294,12 @@ app.post('/api/study/subtopics/ai-generate', isAuth, requirePaid, async (req, re
     }
     const uid = req.session.user.id;
     const results = [];
-    for (const st of subtopics.slice(0, 25)) {
+    const seen = {};
+    for (const st of subtopics.slice(0, 15)) {
       const cleanName = st.replace(/^["'\s]+|["'\s]+$/g, '').trim();
-      if (!cleanName) continue;
+      const key = cleanName.toLowerCase();
+      if (!cleanName || seen[key]) continue;
+      seen[key] = true;
       const r = await pool.query('INSERT INTO study_subtopics (topic_id, course_id, user_id, subtopic_name, title, status) VALUES ($1::integer, $2::integer, $3::integer, $4::text, $5::text, $6::text) RETURNING *', [parseInt(topicId) || 0, parseInt(courseId) || 0, parseInt(uid) || 0, cleanName, cleanName, 'pending']);
       results.push(r.rows[0]);
     }
@@ -5342,8 +5351,12 @@ app.post('/api/study/subtopic/:id/content', isAuth, requirePaid, async (req, res
     if (!st.rows[0]) return res.json({ success: false, error: 'Not found' });
     const s = st.rows[0];
     const topic = await pool.query('SELECT * FROM study_topics WHERE id = $1', [s.topic_id]).catch(() => ({ rows: [] }));
+    const course = await pool.query('SELECT * FROM study_courses WHERE id = $1', [s.course_id || 0]).catch(() => ({ rows: [] }));
     const topicName = topic.rows[0] ? (topic.rows[0].topic_name || topic.rows[0].title) : 'General';
-    const prompt = `You are an expert university professor giving a complete, in-depth lecture on "${s.subtopic_name || s.title}" (part of "${topicName}"). Your goal is to make the learner truly master this topic — full understanding, not surface memorization. Write extensively, with rich detail, explicit explanations, and thorough reasoning in every section.
+    const courseName = course.rows[0] ? (course.rows[0].course_name || '') : '';
+    const courseCode = course.rows[0] ? (course.rows[0].course_code || '') : '';
+    const courseCtx = courseName + (courseCode ? ' (' + courseCode + ')' : '');
+    const prompt = `You are an expert university professor giving a complete, in-depth lecture on "${s.subtopic_name || s.title}", which is part of the topic "${topicName}" in the course "${courseCtx}". Base EVERYTHING in this lecture strictly on this specific course and topic — stay focused on exactly what students of "${courseCtx}" learn under "${topicName}", and never drift into unrelated or generic material. Your goal is to make the learner truly master this exact topic within this course — full understanding, not surface memorization. Write extensively, with rich detail, explicit explanations, and thorough reasoning in every section.
 
 Structure your response using EXACTLY these section headers (each on its own line ending with a colon). Use PLAIN TEXT with LaTeX math. For ALL mathematical expressions, formulas, equations, symbols, and variables — ALWAYS use proper LaTeX notation:
 - Use \\( \\) for inline math like variables (x, y, derivatives), short formulas, and expressions within sentences.
@@ -5391,7 +5404,7 @@ CRITICAL FORMATTING RULES:
 - Every mathematical symbol, variable, equation, or formula MUST be inside \\( \\) or \\[ \\] — never plain text math.`;
     let aiRes = await studyPromptSmart(prompt, { maxTokens: 8000, noClean: true });
     if (!aiRes.text || aiRes.text.startsWith('AI error')) {
-      const shortPrompt = `You are an expert professor giving an in-depth lecture on "${s.subtopic_name || s.title}" (part of "${topicName}"). Write a thorough, comprehensive explanation covering: prerequisites in detail, real-world importance with concrete applications, plain explanation with vivid analogies, key terms with definitions, fully worked step-by-step examples, common mistakes with explicit wrong/right contrasts, edge cases, and practice questions with full worked solutions. Use these section headers exactly: "What You Should Know:", "Why It Matters:", "Plain Explanation:", "Key Terms:", "Step-by-Step Examples:", "Common Mistakes:", "Edge Cases:", "Practice Questions:", "Step-by-Step Solutions:". Use plain text with LaTeX math \\( \\) and \\[ \\]. Include a Mermaid diagram in a mermaid code block if it helps clarify relationships. Be thorough, explicit, and detailed — minimum 6-10 lines per section. Do not summarize.`;
+      const shortPrompt = `You are an expert professor giving an in-depth lecture on "${s.subtopic_name || s.title}", which is part of the topic "${topicName}" in the course "${courseCtx}". Base the lecture strictly on this specific course and topic. Write a thorough, comprehensive explanation covering: prerequisites in detail, real-world importance with concrete applications, plain explanation with vivid analogies, key terms with definitions, fully worked step-by-step examples, common mistakes with explicit wrong/right contrasts, edge cases, and practice questions with full worked solutions. Use these section headers exactly: "What You Should Know:", "Why It Matters:", "Plain Explanation:", "Key Terms:", "Step-by-Step Examples:", "Common Mistakes:", "Edge Cases:", "Practice Questions:", "Step-by-Step Solutions:". Use plain text with LaTeX math \\( \\) and \\[ \\]. Include a Mermaid diagram in a mermaid code block if it helps clarify relationships. Be thorough, explicit, and detailed — minimum 6-10 lines per section. Do not summarize.`;
       aiRes = await studyPromptSmart(shortPrompt, { maxTokens: 8000, noClean: true });
     }
     if (!aiRes.text || aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text || 'AI error' });
@@ -5411,7 +5424,13 @@ app.post('/api/study/subtopic/:id/ask', isAuth, requirePaid, async (req, res) =>
     if (!st.rows[0]) return res.json({ success: false, error: 'Not found' });
     const s = st.rows[0];
     const content = s.content || '';
-    const prompt = `You are a university tutor. The student is studying "${s.subtopic_name || s.title}" and has just read the following explanation:\n\n"""\n${content.slice(0, 5000)}\n"""\n\nThe student now asks:\n"${question}"\n\nAnswer their question clearly and concisely, building on the explanation above. Use PLAIN TEXT only. If they ask for clarification, re-explain simply. If they ask something beyond the explanation, use your knowledge to help. Separate paragraphs with blank lines. Use LaTeX math delimiters \\( \\) for inline and \\[ \\] for display math when needed.`;
+    const topic = await pool.query('SELECT * FROM study_topics WHERE id = $1', [s.topic_id]).catch(() => ({ rows: [] }));
+    const course = await pool.query('SELECT * FROM study_courses WHERE id = $1', [s.course_id || 0]).catch(() => ({ rows: [] }));
+    const topicName = topic.rows[0] ? (topic.rows[0].topic_name || topic.rows[0].title) : 'General';
+    const courseName = course.rows[0] ? (course.rows[0].course_name || '') : '';
+    const courseCode = course.rows[0] ? (course.rows[0].course_code || '') : '';
+    const courseCtx = courseName + (courseCode ? ' (' + courseCode + ')' : '');
+    const prompt = `You are a university tutor. The student is studying "${s.subtopic_name || s.title}", which is part of the topic "${topicName}" in the course "${courseCtx}". Base your answer on this specific course and topic and on the explanation the student has just read:\n\n"""\n${content.slice(0, 5000)}\n"""\n\nThe student now asks:\n"${question}"\n\nAnswer their question clearly and concisely, building on the explanation above and staying focused on "${courseCtx}" — "${topicName}". Use PLAIN TEXT only. If they ask for clarification, re-explain simply. If they ask something beyond the explanation, use your knowledge to help but keep it relevant to this course and topic. Separate paragraphs with blank lines. Use LaTeX math delimiters \\( \\) for inline and \\[ \\] for display math when needed.`;
     const aiRes = await studyPromptFast(prompt);
     if (!aiRes.text || aiRes.text.startsWith('AI error')) return res.json({ success: false, error: aiRes.text || 'AI error' });
     res.json({ success: true, answer: cleanAiText(aiRes.text) });
