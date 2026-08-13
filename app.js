@@ -488,31 +488,42 @@ const isAuth = (req, res, next) => {
 };
 
 // Middleware to check payment status
-const hasPaid = (req, res, next) => {
-    if (req.session.user.has_paid) return next();
-    res.redirect('/dashboard');
-};
-
-const requirePaid = (req, res, next) => {
-    if (!req.session.user) {
-        return res.redirect('/login');
-    }
-    if (req.session.user.has_paid === true) return next();
-    pool.query('SELECT has_paid FROM users WHERE id = $1', [req.session.user.id]).then(function(dbUser) {
-        if (dbUser.rows[0]?.has_paid) {
+const hasPaid = async (req, res, next) => {
+    if (!req.session.user) return res.redirect('/login');
+    try {
+        const r = await pool.query('SELECT has_paid FROM users WHERE id = $1', [req.session.user.id]);
+        if (r.rows[0]?.has_paid) {
             req.session.user.has_paid = true;
             return next();
         }
-        if (req.xhr || (req.headers.accept && req.headers.accept.includes('json')) || req.path.startsWith('/api/')) {
+    } catch (_) { }
+    res.redirect('/dashboard');
+};
+
+const requirePaid = async (req, res, next) => {
+    if (!req.session.user) {
+        return res.redirect('/login');
+    }
+    try {
+        const r = await pool.query('SELECT has_paid, migrated_locked FROM users WHERE id = $1', [req.session.user.id]);
+        const u = r.rows[0];
+        if (u && u.has_paid) {
+            req.session.user.has_paid = true;
+            return next();
+        }
+        if (u && u.migrated_locked) req.session.user.has_paid = false;
+        const isAPI = req.xhr || (req.headers.accept && req.headers.accept.includes('json')) || req.path.startsWith('/api/');
+        if (isAPI) {
             return res.status(402).json({ success: false, message: 'Premium required', premium_required: true });
         }
-        return res.redirect('/dashboard?msg=Premium+feature.+Tap+%22Unlock+Premium%22+to+continue');
-    }).catch(function() {
-        if (req.xhr || (req.headers.accept && req.headers.accept.includes('json')) || req.path.startsWith('/api/')) {
+        return res.redirect('/dashboard?msg=Premium+feature.+Recharge+to+continue');
+    } catch (err) {
+        const isAPI = req.xhr || (req.headers.accept && req.headers.accept.includes('json')) || req.path.startsWith('/api/');
+        if (isAPI) {
             return res.status(402).json({ success: false, message: 'Premium required', premium_required: true });
         }
-        return res.redirect('/dashboard?msg=Premium+feature.+Tap+%22Unlock+Premium%22+to+continue');
-    });
+        return res.redirect('/dashboard?msg=Premium+feature.+Recharge+to+continue');
+    }
 };
 
 const isAdmin = (req, res, next) => {
@@ -778,8 +789,129 @@ app.post('/api/coupon/validate', isAuth, async (req, res) => {
     }
     finalAmount = Math.max(50, finalAmount);
     res.json({ valid: true, code: coupon.code, discount_type: coupon.discount_type, discount_value: coupon.discount_value, original_amount: PREMIUM_PRICE, final_amount: finalAmount, discountLabel });
-  } catch (e) { res.json({ valid: false, message: 'Server error' }); }
+    } catch (e) { res.json({ valid: false, message: 'Server error' }); }
 });
+
+// ─── Premium Migration (for users who registered before auto-premium) ───
+app.get('/migrate-premium', (req, res) => {
+    res.render('migrate-premium', { user: req.session.user || null });
+});
+
+app.post('/api/premium/migrate/lookup', rateLimit(15, 60000), async (req, res) => {
+    try {
+        const email = (req.body.email || '').trim().toLowerCase();
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.json({ success: false, error: 'Enter a valid email address' });
+        }
+        const r = await pool.query(
+            `SELECT u.id, u.fullname, u.email, u.has_paid, u.migrated_free, u.migrated_locked, uni.name AS school
+             FROM users u LEFT JOIN universities uni ON u.university_id = uni.id
+             WHERE LOWER(TRIM(u.email)) = $1 LIMIT 1`, [email]);
+        if (!r.rows[0]) return res.json({ success: false, error: 'No account found with this email.' });
+        const u = r.rows[0];
+        res.json({ success: true, found: true, alreadyPremium: !!u.has_paid, locked: !!u.migrated_locked && !u.has_paid, email: u.email, name: u.fullname, school: u.school || 'Not set', id: u.id });
+    } catch (err) { res.status(500).json({ success: false, error: 'Server error. Try again.' }); }
+});
+
+app.post('/api/premium/migrate/activate', rateLimit(10, 60000), async (req, res) => {
+    try {
+        const email = (req.body.email || '').trim().toLowerCase();
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.json({ success: false, error: 'Enter a valid email address' });
+        }
+        const r = await pool.query(
+            `SELECT u.id, u.fullname, u.email, u.has_paid, u.migrated_locked, uni.name AS school
+             FROM users u LEFT JOIN universities uni ON u.university_id = uni.id
+             WHERE LOWER(TRIM(u.email)) = $1 LIMIT 1`, [email]);
+        if (!r.rows[0]) return res.json({ success: false, error: 'No account found with this email.' });
+        const u = r.rows[0];
+        if (u.has_paid) return res.json({ success: true, alreadyPremium: true, name: u.fullname, email: u.email });
+        if (u.migrated_locked) return res.json({ success: false, error: 'This account already got free migration. Recharge from your dashboard to keep Premium.' });
+        await pool.query('UPDATE users SET has_paid = true, migrated_free = true, migrated_at = COALESCE(migrated_at, NOW()) WHERE id = $1', [u.id]);
+        if (req.session && req.session.user && req.session.user.id === u.id) req.session.user.has_paid = true;
+        res.json({ success: true, name: u.fullname, email: u.email });
+    } catch (err) { res.status(500).json({ success: false, error: 'Server error. Try again.' }); }
+});
+
+// ─── Admin: Premium Migration Management ───
+const PREMIUM_FEATURES = [
+  { key: 'study', label: 'Study Hub & AI', icon: 'fa-graduation-cap' },
+  { key: 'timetable', label: 'Timetable', icon: 'fa-calendar-alt' },
+  { key: 'reading', label: 'Reading Schedule', icon: 'fa-book-open' },
+  { key: 'cgpa', label: 'CGPA Tracker', icon: 'fa-chart-line' },
+  { key: 'ai_quiz', label: 'AI Quiz Generator', icon: 'fa-wand-magic-sparkles' },
+  { key: 'history', label: 'History & Stats', icon: 'fa-chart-bar' },
+  { key: 'competition', label: 'Live Arena', icon: 'fa-trophy' },
+  { key: 'deadlines', label: 'Deadlines', icon: 'fa-hourglass-half' }
+];
+
+async function getPremiumSettings() {
+  const defaults = { recharge_price: PREMIUM_PRICE, locked_features: [], migrated_locked: false };
+  try {
+    const r = await pool.query('SELECT key, value FROM premium_settings');
+    r.rows.forEach(row => {
+      if (row.key === 'recharge_price') defaults.recharge_price = parseInt(row.value) || PREMIUM_PRICE;
+      else if (row.key === 'locked_features') { try { defaults.locked_features = JSON.parse(row.value || '[]'); } catch (_) { defaults.locked_features = []; } }
+      else if (row.key === 'migrated_locked') defaults.migrated_locked = row.value === 'true';
+    });
+  } catch (_) { }
+  return defaults;
+}
+
+async function savePremiumSettings(patch) {
+  for (const k of Object.keys(patch)) {
+    const v = typeof patch[k] === 'object' ? JSON.stringify(patch[k]) : String(patch[k]);
+    await pool.query(`INSERT INTO premium_settings (key, value, updated_at) VALUES ($1, $2, NOW())
+      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`, [k, v]);
+  }
+}
+
+app.get('/admin/migrations', isAdmin, async (req, res) => {
+  try {
+    const users = await pool.query(`
+      SELECT u.id, u.fullname, u.email, u.has_paid, u.migrated_free, u.migrated_at, u.migrated_locked, uni.name AS school
+      FROM users u LEFT JOIN universities uni ON u.university_id = uni.id
+      WHERE u.migrated_free = true
+      ORDER BY u.migrated_at DESC NULLS LAST, u.id DESC`);
+    const locked = await pool.query('SELECT COUNT(*) FROM users WHERE migrated_free = true AND migrated_locked = true');
+    const settings = await getPremiumSettings();
+    res.render('admin/migrations', {
+      users: users.rows,
+      lockedCount: parseInt(locked.rows[0].count) || 0,
+      settings,
+      features: PREMIUM_FEATURES,
+      user: req.session.user
+    });
+  } catch (e) { res.status(500).send('Error: ' + e.message); }
+});
+
+app.post('/admin/migrations/settings', isAdmin, async (req, res) => {
+  try {
+    const price = parseInt(req.body.recharge_price) || 0;
+    const lockedFeatures = Array.isArray(req.body.locked_features)
+      ? req.body.locked_features
+      : (req.body.locked_features ? [req.body.locked_features] : []);
+    await savePremiumSettings({ recharge_price: price, locked_features: lockedFeatures });
+    res.redirect('/admin/migrations?msg=Settings+saved');
+  } catch (e) { res.redirect('/admin/migrations?error=' + encodeURIComponent(e.message)); }
+});
+
+app.post('/admin/migrations/lock', isAdmin, async (req, res) => {
+  try {
+    const r = await pool.query('UPDATE users SET has_paid = false, migrated_locked = true WHERE migrated_free = true AND has_paid = true RETURNING id');
+    await savePremiumSettings({ migrated_locked: true });
+    res.redirect('/admin/migrations?msg=Locked+' + r.rowCount + '+migrated+users+out');
+  } catch (e) { res.redirect('/admin/migrations?error=' + encodeURIComponent(e.message)); }
+});
+
+app.post('/admin/migrations/unlock', isAdmin, async (req, res) => {
+  try {
+    const r = await pool.query('UPDATE users SET has_paid = true, migrated_locked = false WHERE migrated_free = true AND migrated_locked = true RETURNING id');
+    await savePremiumSettings({ migrated_locked: false });
+    res.redirect('/admin/migrations?msg=Restored+premium+for+' + r.rowCount + '+users');
+  } catch (e) { res.redirect('/admin/migrations?error=' + encodeURIComponent(e.message)); }
+});
+
 
 // ─── Admin: Coupons ───
 app.get('/admin/coupons', isAdmin, async (req, res) => {
@@ -1206,7 +1338,7 @@ app.get('/dashboard', isStudent, async (req, res) => {
 
         // 1. Fetch Fresh User Data (Payment, Streak, and Quiz Attempts)
         const userRes = await pool.query(
-            'SELECT has_paid, current_streak, quiz_attempts FROM users WHERE id = $1', 
+            'SELECT has_paid, current_streak, quiz_attempts, migrated_free, migrated_at, migrated_locked FROM users WHERE id = $1', 
             [userId]
         );
         const userData = userRes.rows[0];
@@ -1284,6 +1416,8 @@ app.get('/dashboard', isStudent, async (req, res) => {
             recentQuiz: recentQuizRes.rows[0] || null,
             paystack_key: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_your_key',
             premiumPrice: PREMIUM_PRICE,
+            rechargePrice: (await getPremiumSettings()).recharge_price,
+            migratedLocked: !!(userData && userData.migrated_free && userData.migrated_locked && !userData.has_paid),
             currentTime: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })
         });
     } catch (err) {
@@ -6036,6 +6170,20 @@ const config = {
     try { await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS current_level INTEGER DEFAULT 0"); } catch (_) {}
     console.log('[Coupons] Table ready');
   } catch(e) { console.error('[Coupons] Init:', e.message); }
+})();
+
+(async function initPremiumMigration() {
+  try {
+    await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS migrated_free BOOLEAN DEFAULT false");
+    await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS migrated_at TIMESTAMP");
+    await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS migrated_locked BOOLEAN DEFAULT false");
+    await pool.query(`CREATE TABLE IF NOT EXISTS premium_settings (
+      key VARCHAR(100) PRIMARY KEY,
+      value TEXT,
+      updated_at TIMESTAMP DEFAULT NOW()
+    )`);
+    console.log('[Premium Migration] Table ready');
+  } catch(e) { console.error('[Premium Migration] Init:', e.message); }
 })();
 
 // Payments log table

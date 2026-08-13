@@ -141,14 +141,25 @@
     </div>
 
     <% if (!user.has_paid) { %>
+    <% if (migratedLocked) { %>
+    <div class="upgrade-strip" style="background:linear-gradient(135deg,#fdf3e6 0%,var(--surface) 100%);border-color:var(--accent);">
+        <div class="us-icon"><i class="fas fa-rotate-left"></i></div>
+        <div class="us-content">
+            <h4>Recharge Premium</h4>
+            <p>Your free migration period is over — pay ₦<%= rechargePrice.toLocaleString() %> to continue</p>
+        </div>
+        <button class="us-btn" onclick="payWithPaystack(event)">Recharge Now</button>
+    </div>
+    <% } else { %>
     <div class="upgrade-strip">
         <div class="us-icon"><i class="fas fa-crown"></i></div>
         <div class="us-content">
             <h4>Unlock Premium</h4>
             <p>AI tutors, CGPA tracker & more</p>
         </div>
-        <button class="us-btn" onclick="payWithPaystack()">₦2,000</button>
+        <button class="us-btn" onclick="location.href='/migrate-premium'">Migrate to Premium</button>
     </div>
+    <% } %>
     <% } %>
 
     <div class="section-head">
@@ -167,14 +178,14 @@
             <div class="fc-arrow"><i class="fas fa-arrow-right"></i></div>
         </a>
 
-        <a href="/cgpa" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
+        <a href="/cgpa" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
             <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
             <div class="fc-icon" style="background:var(--brand-soft);color:var(--accent);"><i class="fas fa-chart-line"></i></div>
             <div class="fc-label">CGPA Tracker</div>
             <div class="fc-desc">Forecast & AI advisor</div>
         </a>
 
-        <a href="/ai-quiz" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
+        <a href="/ai-quiz" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
             <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
             <div class="fc-icon" style="background:var(--success-soft);color:var(--success);"><i class="fas fa-wand-magic-sparkles"></i></div>
             <div class="fc-label">AI Quiz Generator</div>
@@ -191,21 +202,21 @@
             <div class="fc-arrow"><i class="fas fa-arrow-right"></i></div>
         </a>
 
-        <a href="/timetable" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
+        <a href="/timetable" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
             <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
             <div class="fc-icon" style="background:var(--brand-light);color:var(--brand);"><i class="fas fa-table"></i></div>
             <div class="fc-label">Timetable</div>
             <div class="fc-desc">AI-powered schedule</div>
         </a>
 
-        <a href="/reading-timetable" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
+        <a href="/reading-timetable" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
             <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
             <div class="fc-icon" style="background:var(--brand-soft);color:var(--accent);"><i class="fas fa-book-open"></i></div>
             <div class="fc-label">Reading Schedule</div>
             <div class="fc-desc">Smart study plan</div>
         </a>
 
-<a href="/deadlines" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
+<a href="/deadlines" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
             <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
             <div class="fc-icon" style="background:var(--danger-soft);color:var(--danger);"><i class="fas fa-hourglass-half"></i></div>
             <div class="fc-label">Deadlines</div>
@@ -213,7 +224,7 @@
         </a>
 
         <!-- ═══ EXTRAS ═══ -->
-        <a href="/history" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
+        <a href="/history" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
             <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
             <div class="fc-icon" style="background:var(--warning-soft);color:var(--warning);"><i class="fas fa-chart-bar"></i></div>
             <div class="fc-label">History</div>
@@ -226,7 +237,7 @@
             <div class="fc-desc">Free daily competition</div>
         </a>
 
-        <a href="/competition" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'payWithPaystack(event)' %>" style="position:relative;">
+        <a href="/competition" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
             <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
             <div class="fc-icon" style="background:var(--brand-light);color:var(--accent);"><i class="fas fa-trophy"></i></div>
             <div class="fc-label">Live Arena</div>
@@ -291,10 +302,21 @@
 </div>
 
 <script>
+function migrateToPremium(e) {
+    if (e) { e.preventDefault(); }
+    window.location.href = '/migrate-premium';
+}
+
+function lockedAction(e) {
+    if (e) { e.preventDefault(); }
+    if (<%= migratedLocked %>) { payWithPaystack(null); return; }
+    window.location.href = '/migrate-premium';
+}
+
 function payWithPaystack(e, presets) {
     if (e) { e.preventDefault(); }
     if (typeof PaystackPop === 'undefined') { alert('Payment system loading. Please try again.'); return; }
-    var pAmount = (presets && presets.amount) || <%= premiumPrice %>;
+    var pAmount = (presets && presets.amount) || <%= migratedLocked ? rechargePrice : premiumPrice %>;
     var pCoupon = (presets && presets.coupon) || '';
     Swal.fire({
         title: 'Have a coupon code?',

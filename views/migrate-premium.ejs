@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <%- include('partials/theme-toggle') %>
+    <style>
+        .intro-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--surface-solid); display: flex; justify-content: center;
+            align-items: center; z-index: 2000;
+            animation: fadeOutScreen 0.6s ease-in-out 1.6s forwards;
+        }
+        .intro-text {
+            font-size: 1.65rem; font-weight: 800; color: var(--text-primary);
+            text-align: center; opacity: 0; transform: translateY(20px);
+            animation: fadeInUpText 0.6s ease-out 0.2s forwards;
+        }
+        .intro-text span { color: var(--brand); }
+        .auth-shell {
+            opacity: 0; transform: translateY(25px);
+            animation: displayForm 0.8s cubic-bezier(0.16, 1, 0.3, 1) 1.8s forwards;
+        }
+        .toggle-btn {
+            position: absolute; right: 12px; background: var(--brand-soft);
+            border: none; color: var(--brand); font-size: 0.65rem;
+            font-weight: 800; padding: 6px 10px; border-radius: 8px;
+            cursor: pointer; transition: 0.2s;
+        }
+        .toggle-btn:hover { background: var(--brand-light); }
+        .btn-primary { display: flex; justify-content: center; align-items: center; gap: 10px; }
+        .btn-primary:disabled { background: var(--text-muted); cursor: not-allowed; transform: none; }
+        .spinner { display: none; width: 18px; height: 18px; border: 3px solid rgba(255, 255, 255, 0.3); border-radius: 50%; border-top-color: white; animation: spin 0.8s linear infinite; }
+        .migrate-tip { font-size: 0.72rem; color: var(--text-secondary); font-weight: 600; line-height: 1.6; background: var(--bg); border: 1px dashed var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 1.5rem; }
+        .result-card { background: var(--bg); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin-bottom: 1.5rem; }
+        .result-card .rc-icon { width: 46px; height: 46px; border-radius: 14px; background: var(--brand-soft); color: var(--brand); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 12px; }
+        .detail-row { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-row .d-label { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-secondary); }
+        .detail-row .d-value { font-size: 0.85rem; font-weight: 700; color: var(--text-primary); text-align: right; word-break: break-word; }
+        .already-badge { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 20px; background: var(--success-soft); color: var(--success); font-size: 0.78rem; font-weight: 800; margin-bottom: 12px; }
+        .auth-footer { text-align: center; margin-top: 2rem; font-size: 0.88rem; color: var(--text-secondary); font-weight: 600; }
+        .auth-footer a { color: var(--brand); text-decoration: none; font-weight: 800; }
+        @keyframes fadeInUpText { to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeOutScreen { to { opacity: 0; visibility: hidden; } }
+        @keyframes displayForm { to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <div class="intro-overlay" id="introOverlay">
+        <h2 class="intro-text">Unlock your <span>Premium.</span></h2>
+    </div>
+
+    <div class="auth-shell">
+        <a href="/" class="auth-logo">PREPIUM<span>.</span></a>
+
+        <div class="auth-header">
+            <h1>Migrate to Premium</h1>
+            <p>Registered before? Enter your email so we can restore your full Premium access.</p>
+        </div>
+
+        <div class="migrate-tip">
+            <i class="fas fa-info-circle" style="color:var(--brand);margin-right:6px;"></i>
+            Find your account, confirm the details below, then tap <strong>Move to Premium</strong>. It only takes a few seconds.
+        </div>
+
+        <!-- Step 1: Lookup -->
+        <form id="lookupForm">
+            <div class="form-group">
+                <label>Email Address</label>
+                <div class="input-wrapper">
+                    <input type="email" id="email" name="email" placeholder="e.g., scholar@prepium.com" required autocomplete="email">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" id="lookupBtn">
+                <span id="lookupText">Find My Account &rarr;</span>
+                <span class="spinner" id="lookupSpinner"></span>
+            </button>
+        </form>
+
+        <!-- Step 2: Result / activate -->
+        <div id="resultWrap" style="display:none;margin-top:1.5rem;"></div>
+
+        <div class="auth-footer">
+            Already premium? <a href="/login">Sign in</a>
+        </div>
+    </div>
+
+    <script src="/js/animations.js"></script>
+    <script>
+        const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true });
+
+        setTimeout(() => {
+            const overlay = document.getElementById('introOverlay');
+            if (overlay) overlay.remove();
+            document.body.style.overflow = "auto";
+        }, 2400);
+
+        function setBusy(btn, txt, spinnerId, textId, busy) {
+            btn.disabled = busy;
+            document.getElementById(txt).textContent = busy ? 'Loading...' : 'Find My Account \u2192';
+            document.getElementById(spinnerId).style.display = busy ? 'inline-block' : 'none';
+        }
+
+        function detail(label, value) {
+            return '<div class="detail-row"><span class="d-label">' + label + '</span><span class="d-value">' + (value || 'Not set') + '</span></div>';
+        }
+
+        document.getElementById('lookupForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+            if (!email) return;
+            const btn = document.getElementById('lookupBtn');
+            setBusy(btn, 'lookupText', 'lookupSpinner', 'lookupText', true);
+            try {
+                const r = await fetch('/api/premium/migrate/lookup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const d = await r.json();
+                const wrap = document.getElementById('resultWrap');
+                if (!d.success) {
+                    wrap.style.display = 'block';
+                    wrap.innerHTML = '<div class="result-card"><div class="rc-icon"><i class="fas fa-user-slash"></i></div><div style="color:var(--danger);font-weight:800;margin-bottom:4px">Account not found</div><div style="font-size:0.8rem;color:var(--text-secondary);font-weight:600">' + (d.error || 'No account found with this email.') + '</div></div>';
+                    return;
+                }
+                if (d.alreadyPremium) {
+                    wrap.innerHTML =
+                        '<div class="already-badge"><i class="fas fa-check-circle"></i> You are already Premium</div>' +
+                        '<div class="result-card"><div class="rc-icon"><i class="fas fa-crown"></i></div>' +
+                        detail('Email', esc(d.email)) + detail('Name', esc(d.name)) + detail('School', esc(d.school)) + '</div>' +
+                        '<a href="/login" class="btn btn-primary" style="text-decoration:none">Continue &rarr;</a>';
+                } else if (d.locked) {
+                    wrap.innerHTML =
+                        '<div class="result-card">' +
+                        '<div class="rc-icon" style="background:var(--warn-soft);color:var(--warn);"><i class="fas fa-clock"></i></div>' +
+                        '<div style="font-weight:800;font-size:0.9rem;color:var(--text-primary);margin-bottom:4px">Free migration already used</div>' +
+                        '<div style="font-size:0.8rem;color:var(--text-secondary);font-weight:600;margin-bottom:12px">This account already got free migration. Recharge from your dashboard to keep Premium access.</div>' +
+                        detail('Email', esc(d.email)) + detail('Name', esc(d.name)) + detail('School', esc(d.school)) +
+                        '</div>' +
+                        '<a href="/login" class="btn btn-primary" style="text-decoration:none">Sign In to Recharge &rarr;</a>';
+                } else {
+                    wrap.innerHTML =
+                        '<div class="result-card">' +
+                        '<div class="rc-icon"><i class="fas fa-user-check"></i></div>' +
+                        '<div style="font-weight:800;font-size:0.9rem;color:var(--text-primary);margin-bottom:12px">We found your account</div>' +
+                        detail('Email', esc(d.email)) + detail('Name', esc(d.name)) + detail('School', esc(d.school)) +
+                        '</div>' +
+                        '<button type="button" class="btn btn-primary" id="activateBtn"><span id="activateText"><i class="fas fa-crown"></i> Move to Premium</span><span class="spinner" id="activateSpinner"></span></button>';
+                }
+                wrap.style.display = 'block';
+
+                const act = document.getElementById('activateBtn');
+                if (act) act.addEventListener('click', async function() {
+                    act.disabled = true;
+                    document.getElementById('activateText').textContent = 'Activating...';
+                    document.getElementById('activateSpinner').style.display = 'inline-block';
+                    try {
+                        const ar = await fetch('/api/premium/migrate/activate', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email })
+                        });
+                        const ad = await ar.json();
+                        if (ad.success) {
+                            Toast.fire({ icon: 'success', title: 'Premium activated!' });
+                            wrap.innerHTML =
+                                '<div class="already-badge"><i class="fas fa-crown"></i> Premium Active</div>' +
+                                '<div class="result-card"><div class="rc-icon"><i class="fas fa-check-circle"></i></div>' +
+                                '<div style="font-weight:800;font-size:0.9rem;color:var(--text-primary);margin-bottom:4px">You are all set, ' + esc(ad.name) + '!</div>' +
+                                '<div style="font-size:0.8rem;color:var(--text-secondary);font-weight:600;margin-bottom:12px">Your full Premium access has been restored. Sign in and start studying.</div>' +
+                                '</div>' +
+                                '<a href="/login" class="btn btn-primary" style="text-decoration:none">Sign In &amp; Start &rarr;</a>';
+                        } else {
+                            act.disabled = false;
+                            document.getElementById('activateText').innerHTML = '<i class="fas fa-crown"></i> Move to Premium';
+                            document.getElementById('activateSpinner').style.display = 'none';
+                            Toast.fire({ icon: 'error', title: ad.error || 'Could not activate. Try again.' });
+                        }
+                    } catch (err) {
+                        act.disabled = false;
+                        document.getElementById('activateText').innerHTML = '<i class="fas fa-crown"></i> Move to Premium';
+                        document.getElementById('activateSpinner').style.display = 'none';
+                        Toast.fire({ icon: 'error', title: 'Network error. Try again.' });
+                    }
+                });
+            } catch (err) {
+                Toast.fire({ icon: 'error', title: 'Network error. Try again.' });
+            } finally {
+                setBusy(btn, 'lookupText', 'lookupSpinner', 'lookupText', false);
+            }
+        });
+
+        function esc(s) {
+            return (s == null ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+    </script>
+</body>
+</html>
