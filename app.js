@@ -799,6 +799,7 @@ app.get('/migrate-premium', (req, res) => {
 
 app.post('/api/premium/migrate/lookup', rateLimit(15, 60000), async (req, res) => {
     try {
+        await ensureMigrationColumns();
         const email = (req.body.email || '').trim().toLowerCase();
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             return res.json({ success: false, error: 'Enter a valid email address' });
@@ -815,6 +816,7 @@ app.post('/api/premium/migrate/lookup', rateLimit(15, 60000), async (req, res) =
 
 app.post('/api/premium/migrate/activate', rateLimit(10, 60000), async (req, res) => {
     try {
+        await ensureMigrationColumns();
         const email = (req.body.email || '').trim().toLowerCase();
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             return res.json({ success: false, error: 'Enter a valid email address' });
@@ -868,6 +870,7 @@ async function savePremiumSettings(patch) {
 
 app.get('/admin/migrations', isAdmin, async (req, res) => {
   try {
+    await ensureMigrationColumns();
     const users = await pool.query(`
       SELECT u.id, u.fullname, u.email, u.has_paid, u.migrated_free, u.migrated_at, u.migrated_locked, uni.name AS school
       FROM users u LEFT JOIN universities uni ON u.university_id = uni.id
@@ -1335,6 +1338,8 @@ const isStudent = (req, res, next) => {
 app.get('/dashboard', isStudent, async (req, res) => {
     try {
         const userId = req.session.user.id;
+
+        await ensureMigrationColumns();
 
         // 1. Fetch Fresh User Data (Payment, Streak, and Quiz Attempts)
         const userRes = await pool.query(
@@ -6172,18 +6177,26 @@ const config = {
   } catch(e) { console.error('[Coupons] Init:', e.message); }
 })();
 
+let migrationColumnsReady = null;
+async function ensureMigrationColumns() {
+  if (!migrationColumnsReady) {
+    migrationColumnsReady = (async () => {
+      await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS migrated_free BOOLEAN DEFAULT false");
+      await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS migrated_at TIMESTAMP");
+      await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS migrated_locked BOOLEAN DEFAULT false");
+      await pool.query(`CREATE TABLE IF NOT EXISTS premium_settings (
+        key VARCHAR(100) PRIMARY KEY,
+        value TEXT,
+        updated_at TIMESTAMP DEFAULT NOW()
+      )`);
+    })().catch(err => { migrationColumnsReady = null; throw err; });
+  }
+  return migrationColumnsReady;
+}
+
 (async function initPremiumMigration() {
-  try {
-    await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS migrated_free BOOLEAN DEFAULT false");
-    await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS migrated_at TIMESTAMP");
-    await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS migrated_locked BOOLEAN DEFAULT false");
-    await pool.query(`CREATE TABLE IF NOT EXISTS premium_settings (
-      key VARCHAR(100) PRIMARY KEY,
-      value TEXT,
-      updated_at TIMESTAMP DEFAULT NOW()
-    )`);
-    console.log('[Premium Migration] Table ready');
-  } catch(e) { console.error('[Premium Migration] Init:', e.message); }
+  try { await ensureMigrationColumns(); console.log('[Premium Migration] Table ready'); }
+  catch(e) { console.error('[Premium Migration] Init:', e.message); }
 })();
 
 // Payments log table
