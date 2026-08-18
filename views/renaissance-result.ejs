@@ -64,16 +64,20 @@
                         <i class="fas <%= q.is_correct ? 'fa-check' : 'fa-times' %>"></i> <%= q.is_correct ? 'Correct' : 'Incorrect' %>
                     </span>
                     <div class="ans-line">
-                        <b>Your answer:</b> <span class="<%= q.is_correct ? 'ans-correct' : 'ans-user-wrong' %>"><%= q.user_answer || '(no answer)' %></span>
+                        <b>Your answer:</b> <span class="rnz-render <%= q.is_correct ? 'ans-correct' : 'ans-user-wrong' %>" data-tex="<%= (q.user_answer || '(no answer)').replace(/"/g, '&quot;') %>"><%= q.user_answer || '(no answer)' %></span>
                     </div>
                     <% if (!q.is_correct && q.correct_answer) { %>
-                        <div class="ans-line"><b>Correct answer:</b> <span class="ans-correct"><%= q.correct_answer %></span></div>
+                        <div class="ans-line"><b>Correct answer:</b> <span class="rnz-render ans-correct" data-tex="<%= q.correct_answer.replace(/"/g, '&quot;') %>"><%= q.correct_answer %></span></div>
                     <% } %>
                     <% if (q.question_type === 'mcq' && q.options.length) { %>
-                        <div class="ans-line" style="font-size:0.75rem;color:var(--text-muted);">A. <%= q.options[0] || '' %> &nbsp; B. <%= q.options[1] || '' %> &nbsp; C. <%= q.options[2] || '' %> &nbsp; D. <%= q.options[3] || '' %></div>
+                        <div class="ans-line" style="font-size:0.75rem;color:var(--text-muted);">
+                            <% q.options.forEach(function(o, oi){ %>
+                                <span class="rnz-render" data-tex="<%= (o || '').replace(/"/g, '&quot;') %>"><%= o %></span><%= oi < q.options.length - 1 ? ' &nbsp; ' : '' %>
+                            <% }); %>
+                        </div>
                     <% } %>
                     <% if (q.explanation) { %>
-                        <div class="explain"><b>Explanation:</b> <%= q.explanation %></div>
+                        <div class="explain"><b>Explanation:</b> <span class="rnz-render" data-tex="<%= q.explanation.replace(/"/g, '&quot;') %>"><%= q.explanation %></span></div>
                     <% } %>
                 </div>
             <% }) %>

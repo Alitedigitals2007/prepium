@@ -4189,6 +4189,52 @@ function rnzSplitChunk(work) {
   return parts;
 }
 
+// Locate the line index of an answer-key heading (e.g. "\section*{Answer Key}", "Answers:", "Marking Scheme").
+// Only headings in the second half of the paper are treated as answer keys so a header sheet
+// at the front of the paper never truncates the questions.
+function rnzFindAnswerKey(src) {
+  const lines = String(src || '').split('\n');
+  const half = Math.floor(lines.length / 2);
+  for (let i = half; i < lines.length; i++) {
+    const plain = lines[i]
+      .replace(/\\[a-zA-Z]+\*?/g, ' ')
+      .replace(/[{}\[\]()*\\&]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (/^(?:Answer\s*Key|Answers?|Answer\s*Sheet|Solutions?|Solution\s*Key|Marking\s*Scheme)\s*[:.]?\s*$/i.test(plain)) return i;
+  }
+  return -1;
+}
+
+// Parse the answer key body (e.g. a tabular of "1 & B" or lines "1. B") into { questionNumber: letter }.
+function rnzExtractAnswerKey(src) {
+  const map = {};
+  const idx = rnzFindAnswerKey(src);
+  if (idx < 0) return map;
+  let body = String(src).split('\n').slice(idx + 1).join('\n');
+  body = body
+    .replace(/\\hline/g, ' ')
+    .replace(/\\(?:begin|end)\{(?:tabular|table|center|enumerate|itemize|flushleft|flushright)\}/gi, ' ')
+    .replace(/\\(?:textbf|textit|textsc|mathrm|text)\{([^}]*)\}/g, '$1')
+    .replace(/\\(?:newpage|pagebreak|clearpage|noindent|hfill|vfill|rule\{[^}]*\}\{[^}]*\})/gi, ' ')
+    .replace(/&/g, ' ')
+    .replace(/\s+/g, ' ');
+  const re = /(\d+)\s*[.)]?\s+([A-Ea-e])\b/g;
+  let m;
+  while ((m = re.exec(body)) !== null) {
+    const n = parseInt(m[1], 10);
+    if (n >= 1 && n <= 200) map[n] = m[2].toUpperCase();
+  }
+  return map;
+}
+
+// Cut everything from the answer-key heading onwards out of the paper.
+function rnzStripAnswerKey(src) {
+  const idx = rnzFindAnswerKey(src);
+  if (idx < 0) return src;
+  return String(src).split('\n').slice(0, idx).join('\n');
+}
+
 function parseRenaissanceLatex(latex) {
   let src = String(latex || '');
   src = src.replace(/^\s*%.*$/gm, '');
@@ -4200,6 +4246,9 @@ function parseRenaissanceLatex(latex) {
   src = src.replace(/\\maketitle/gi, '');
   src = src.replace(/\\begin\{document\}/gi, '');
   src = src.replace(/\\end\{document\}/gi, '');
+  const answerMap = rnzExtractAnswerKey(src);
+  src = rnzStripAnswerKey(src);
+  src = src.replace(/\\(?:newpage|pagebreak|clearpage)\b/gi, '');
   // Convert option-list enumerate blocks like \begin{enumerate}[label=\Alph*.] ... \item A ... \end{enumerate}
   // into plain lettered option lines (A. B. C. ...). Must run BEFORE stripping enumerate tags.
   src = src.replace(/\\begin\{enumerate\}\s*\[[^\]]*(?:\\[Aa]lph)[^\]]*\]\s*([\s\S]*?)\s*\\end\{enumerate\}/gi, function (m, body) {
@@ -4224,6 +4273,7 @@ function parseRenaissanceLatex(latex) {
 
   const chunks = rnzSplitChunk(src);
   const out = [];
+  let qi = 0;
   for (const raw of chunks) {
     let q = String(raw || '').trim();
     if (!q) continue;
@@ -4233,8 +4283,10 @@ function parseRenaissanceLatex(latex) {
     out.push({
       question_text: parsed.text,
       options: parsed.options,
-      question_type: parsed.options.length >= 2 ? 'mcq' : 'theory'
+      question_type: parsed.options.length >= 2 ? 'mcq' : 'theory',
+      correct_answer: answerMap[qi + 1] || ''
     });
+    qi++;
   }
   return out;
 }
@@ -4293,7 +4345,7 @@ app.post('/api/admin/renaissance/import/save', isAdmin, async (req, res) => {
          VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
         [exam_id, q.question_type === 'theory' ? 'theory' : 'mcq', text, JSON.stringify(Array.isArray(q.options) ? q.options : []), q.correct_answer || '', q.explanation || '', false]
       );
-      ids.push({ id: r.rows[0].id, text, options: q.options || [] });
+      ids.push({ id: r.rows[0].id, text, options: q.options || [], correct_answer: q.correct_answer || '' });
       saved++;
     }
     if (ai_fill && saved) {
@@ -4301,8 +4353,9 @@ app.post('/api/admin/renaissance/import/save', isAdmin, async (req, res) => {
         try {
           const ai = await renaissanceAIAnswer(item.text, item.options);
           if (ai.answer || ai.explanation) {
+            const keepAnswer = item.correct_answer || ai.answer || '';
             await pool.query('UPDATE renaissance_questions SET correct_answer = $1, explanation = $2, ai_generated = true WHERE id = $3',
-              [ai.answer || '', ai.explanation || '', item.id]);
+              [keepAnswer, ai.explanation || '', item.id]);
             aiFilled++;
           }
         } catch (_) {}

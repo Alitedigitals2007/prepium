@@ -1,0 +1,116 @@
+% ============================================================
+% PREPIUM RENAISSANCE MOCK — IMPORT TEMPLATE
+% ============================================================
+% HOW TO USE:
+%   1. Copy EVERYTHING below into the "Full LaTeX" box in
+%      Admin > Renaissance > Builder > Bulk Import.
+%   2. Click "Preview Split" to check the questions.
+%   3. Click "Import" — answers from the Answer Key at the
+%      bottom are filled in automatically.
+%
+% RULES THE IMPORTER UNDERSTANDS:
+%   - Questions: use \item inside the numbered enumerate below.
+%   - Options:    use \begin{enumerate}[label=\Alph*.] ... \item ...
+%   - Math:       use $...$ (inline) or $$...$$ (display).
+%   - Diagrams:   use \begin{circuitikz}...\end{circuitikz} or
+%                 \begin{tikzpicture}...\end{tikzpicture} (inside
+%                 \begin{center}...\end{center}).
+%   - Answer key: a heading line "Answer Key" / "Answers" at the
+%                 END of the paper, then one line per answer,
+%                 e.g.  1 & B   or   1. B   or   1  B.
+%   - Comments (lines starting with %) are ignored.
+%
+% NOTE: You can write "A. ..." instead of the option enumerate too.
+% ============================================================
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+% ---------- Example 1: plain MCQ ----------
+\item What is the current in a wire when a charge of $6\,\mathrm{C}$ flows in $3\,\mathrm{s}$?
+
+\begin{enumerate}[label=\Alph*.]
+    \item $0.5\,\mathrm{A}$
+    \item $2.0\,\mathrm{A}$
+    \item $3.0\,\mathrm{A}$
+    \item $18.0\,\mathrm{A}$
+\end{enumerate}
+
+% ---------- Example 2: MCQ with a circuit diagram ----------
+\item Consider the circuit below.
+
+\begin{center}
+\begin{circuitikz}
+\draw
+(0,0) to[battery1,l=$12\,V$] (0,3)
+      to[R,l=$6\,\Omega$] (4,3)
+      -- (4,0)
+      -- (0,0);
+\end{circuitikz}
+\end{center}
+
+What is the current flowing through the resistor?
+
+\begin{enumerate}[label=\Alph*.]
+    \item $0.5\,\mathrm{A}$
+    \item $2.0\,\mathrm{A}$
+    \item $6.0\,\mathrm{A}$
+    \item $72\,\mathrm{A}$
+\end{enumerate}
+
+% ---------- Example 3: MCQ with a graph ----------
+\item The graph shows potential difference $V$ against current $I$ for an ohmic conductor.
+
+\begin{center}
+\begin{tikzpicture}[scale=0.9]
+\draw[->] (0,0) -- (5,0) node[right] {$I$};
+\draw[->] (0,0) -- (0,4) node[above] {$V$};
+\draw[thick] (0,0) -- (4,3.2);
+\end{tikzpicture}
+\end{center}
+
+What does the gradient of the graph represent?
+
+\begin{enumerate}[label=\Alph*.]
+    \item Current
+    \item Resistance
+    \item Charge
+    \item Power
+\end{enumerate}
+
+% ---------- Example 4: theory / open question ----------
+\item State Ohm's law and give the equation $V = IR$.
+
+% ---------- Example 5: MCQ using letters instead of enumerate ----------
+\item Which equation represents Ohm's law?
+
+A. $V = IR$
+B. $V = I/R$
+C. $R = VI$
+D. $I = VR$
+
+\end{enumerate}
+
+% ============================================================
+% ANSWER KEY  (keep at the very end of the paper)
+% Question number  &  Correct letter, one per line.
+% Works as a table OR plain lines:  1. B   /   1 & B   /   1  B
+% ============================================================
+\newpage
+
+\section*{Answer Key}
+
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Question} & \textbf{Answer} \\
+\hline
+1 & B \\
+\hline
+2 & B \\
+\hline
+3 & B \\
+\hline
+4 & --- \\
+\hline
+5 & A \\
+\hline
+\end{tabular}

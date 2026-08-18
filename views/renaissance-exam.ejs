@@ -146,8 +146,10 @@ var REMAINING = <%= remainingSeconds %>;
                 var letter = String.fromCharCode(65 + oi);
                 var d = document.createElement('div');
                 d.className = 'option' + (answers[q.id] === letter ? ' sel' : '');
-                d.innerHTML = '<span class="letter">' + letter + '</span><span class="otext"></span>';
-                d.querySelector('.otext').textContent = opt;
+                d.innerHTML = '<span class="letter">' + letter + '</span><span class="otext rnz-render"></span>';
+                var otext = d.querySelector('.otext');
+                otext.setAttribute('data-tex', opt || '');
+                otext.textContent = opt || '';
                 d.addEventListener('click', function () {
                     answers[q.id] = letter;
                     refreshNav();
@@ -156,6 +158,7 @@ var REMAINING = <%= remainingSeconds %>;
                 qBody.appendChild(d);
             });
         }
+        if (window.rnzRender) rnzRender(qBody);
         prevBtn.disabled = idx === 0;
         nextBtn.disabled = idx === QUESTIONS.length - 1;
         refreshNav();
