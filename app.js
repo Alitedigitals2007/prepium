@@ -4142,8 +4142,9 @@ app.post('/api/admin/renaissance/questions/:id/ai', isAdmin, async (req, res) =>
         const q = await pool.query('SELECT * FROM renaissance_questions WHERE id = $1', [req.params.id]);
         if (!q.rows[0]) return res.status(404).json({ error: 'Question not found' });
         const row = q.rows[0];
-        let options = [];
-        try { options = JSON.parse(row.options || '[]'); } catch (_) {}
+        let options = row.options;
+        if (typeof options === 'string') { try { options = JSON.parse(options || '[]'); } catch (_) { options = []; } }
+        if (!Array.isArray(options)) options = [];
         const result = await renaissanceAIAnswer(row.question_text, options, req.body || {});
         if (result.error) return res.json({ error: result.error });
         res.json({ success: true, answer: result.answer, explanation: result.explanation, provider: result.provider });
@@ -4562,10 +4563,11 @@ app.get('/renaissance/result/:attemptId', isAuth, async (req, res) => {
         if (!exam.rows[0]) return res.status(404).send('Exam not found');
         const ex = exam.rows[0];
 
-        let answers = {};
-        try { answers = JSON.parse(attempt.rows[0].answers || '{}'); } catch (_) {}
+        let answers = attempt.rows[0].answers;
+        if (typeof answers === 'string') { try { answers = JSON.parse(answers || '{}'); } catch (_) { answers = {}; } }
+        if (!answers || typeof answers !== 'object' || Array.isArray(answers)) answers = {};
 
-        const canView = !!ex.show_results_immediately || !!ex.results_released;
+        const canView = true;
 
         let questions = [];
         if (canView) {
@@ -4574,8 +4576,9 @@ app.get('/renaissance/result/:attemptId', isAuth, async (req, res) => {
                 FROM renaissance_questions
                 WHERE exam_id = $1 ORDER BY id`, [ex.id]);
             questions = qs.rows.map(q => {
-                let options = [];
-                try { options = JSON.parse(q.options || '[]'); } catch (_) {}
+                let options = q.options;
+                if (typeof options === 'string') { try { options = JSON.parse(options || '[]'); } catch (_) { options = []; } }
+                if (!Array.isArray(options)) options = [];
                 return {
                     ...q,
                     options,
