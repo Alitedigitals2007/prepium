@@ -16,7 +16,7 @@ const { Pool } = require('pg');
 // Premium price (configurable via env)
 const PREMIUM_PRICE = parseInt(process.env.PREMIUM_PRICE) || 2000;
 
-const pdfToText = require('pdf-to-text');
+const pdfParse = require('pdf-parse');
 
 const upload = multer({ 
     storage: multer.diskStorage({
@@ -3975,38 +3975,34 @@ app.get('/api/admin/renaissance/exams', isAdmin, async (req, res) => {
     try {
         const r = await pool.query(`
             SELECT e.*,
-                   (SELECT COUNT(*) FROM renaissance_courses c WHERE c.exam_id = e.id) as course_count,
-                   (SELECT COUNT(*) FROM renaissance_questions q JOIN renaissance_courses c ON q.course_id = c.id WHERE c.exam_id = e.id) as question_count,
+                   (SELECT COUNT(*) FROM renaissance_questions q WHERE q.exam_id = e.id) as question_count,
                    (SELECT COUNT(*) FROM renaissance_attempts a WHERE a.exam_id = e.id AND a.status = 'submitted') as attempt_count
             FROM renaissance_exams e ORDER BY e.created_at DESC`);
         res.json({ exams: r.rows });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Get one exam with courses + questions
+// Get one exam with its questions
 app.get('/api/admin/renaissance/exams/:id', isAdmin, async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         const ex = await pool.query('SELECT * FROM renaissance_exams WHERE id = $1', [id]);
         if (!ex.rows[0]) return res.status(404).json({ error: 'Exam not found' });
-        const courses = await pool.query('SELECT * FROM renaissance_courses WHERE exam_id = $1 ORDER BY course_code', [id]);
-        const qs = await pool.query(`
-            SELECT q.*, c.course_name, c.course_code FROM renaissance_questions q
-            JOIN renaissance_courses c ON q.course_id = c.id
-            WHERE c.exam_id = $1 ORDER BY q.created_at`, [id]);
-        res.json({ exam: ex.rows[0], courses: courses.rows, questions: qs.rows });
+        const qs = await pool.query(
+            'SELECT * FROM renaissance_questions WHERE exam_id = $1 ORDER BY id', [id]);
+        res.json({ exam: ex.rows[0], questions: qs.rows });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // Create exam
 app.post('/api/admin/renaissance/exams', isAdmin, async (req, res) => {
     try {
-        const { title, description, duration_minutes, opens_at, closes_at, show_results_immediately } = req.body;
+        const { title, description, duration_minutes, opens_at, closes_at, show_results_immediately, max_attempts } = req.body;
         if (!title || !title.trim()) return res.status(400).json({ error: 'Title is required' });
         const r = await pool.query(`
-            INSERT INTO renaissance_exams (title, description, duration_minutes, opens_at, closes_at, show_results_immediately, created_by)
-            VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
-            [title.trim(), description || '', parseInt(duration_minutes) || 30, opens_at || null, closes_at || null, show_results_immediately !== false, req.session.user.id]);
+            INSERT INTO renaissance_exams (title, description, duration_minutes, opens_at, closes_at, show_results_immediately, max_attempts, created_by)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
+            [title.trim(), description || '', parseInt(duration_minutes) || 30, opens_at || null, closes_at || null, show_results_immediately !== false, Math.max(0, parseInt(max_attempts) || 0), req.session.user.id]);
         res.json({ success: true, id: r.rows[0].id });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -4015,7 +4011,7 @@ app.post('/api/admin/renaissance/exams', isAdmin, async (req, res) => {
 app.post('/api/admin/renaissance/exams/:id', isAdmin, async (req, res) => {
     try {
         const id = parseInt(req.params.id);
-        const { title, description, duration_minutes, opens_at, closes_at, show_results_immediately } = req.body;
+        const { title, description, duration_minutes, opens_at, closes_at, show_results_immediately, max_attempts } = req.body;
         await pool.query(`
             UPDATE renaissance_exams SET
               title = COALESCE($1, title),
@@ -4023,9 +4019,10 @@ app.post('/api/admin/renaissance/exams/:id', isAdmin, async (req, res) => {
               duration_minutes = COALESCE($3, duration_minutes),
               opens_at = COALESCE($4, opens_at),
               closes_at = COALESCE($5, closes_at),
-              show_results_immediately = COALESCE($6, show_results_immediately)
-            WHERE id = $7`,
-            [title || null, description || null, parseInt(duration_minutes) || null, opens_at || null, closes_at || null, (typeof show_results_immediately === 'boolean') ? show_results_immediately : null, id]);
+              show_results_immediately = COALESCE($6, show_results_immediately),
+              max_attempts = COALESCE($7, max_attempts)
+            WHERE id = $8`,
+            [title || null, description || null, parseInt(duration_minutes) || null, opens_at || null, closes_at || null, (typeof show_results_immediately === 'boolean') ? show_results_immediately : null, (typeof max_attempts === 'number') ? Math.max(0, max_attempts) : null, id]);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -4056,42 +4053,66 @@ app.post('/api/admin/renaissance/exams/:id/release-results', isAdmin, async (req
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// List attempts for an exam (live: in-progress + submitted)
+app.get('/api/admin/renaissance/exams/:id/attempts', isAdmin, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        const r = await pool.query(`
+            SELECT a.id, a.user_id, a.score, a.total, a.percentage, a.time_taken, a.status,
+                   a.started_at, a.submitted_at, u.fullname, u.email
+            FROM renaissance_attempts a
+            JOIN users u ON u.id = a.user_id
+            WHERE a.exam_id = $1
+            ORDER BY a.started_at DESC`, [id]);
+        res.json({ attempts: r.rows });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Printable result sheet for one attempt (admin)
+app.get('/admin/renaissance/exams/:id/attempts/:attemptId/print', isAdmin, async (req, res) => {
+    try {
+        const attemptId = parseInt(req.params.attemptId);
+        const attempt = await pool.query(
+            `SELECT a.*, u.fullname, u.email, e.title as exam_title, e.duration_minutes, e.show_results_immediately, e.results_released
+             FROM renaissance_attempts a
+             JOIN users u ON u.id = a.user_id
+             JOIN renaissance_exams e ON e.id = a.exam_id
+             WHERE a.id = $1`, [attemptId]);
+        if (!attempt.rows[0]) return res.status(404).send('Attempt not found');
+        const att = attempt.rows[0];
+        const questions = await pool.query(`
+            SELECT * FROM renaissance_questions
+            WHERE exam_id = $1 ORDER BY id`, [att.exam_id]);
+        const answers = typeof att.answers === 'string' ? JSON.parse(att.answers || '{}') : (att.answers || {});
+        let correct = 0;
+        const review = questions.rows.map((q) => {
+            const opts = Array.isArray(q.options) ? q.options : [];
+            const given = answers[q.id];
+            const isCorrect = q.question_type === 'mcq'
+                ? String(given || '').trim().toUpperCase() === String(q.correct_answer || '').trim().toUpperCase()
+                : String(given || '').trim().toLowerCase() === String(q.correct_answer || '').trim().toLowerCase();
+            if (isCorrect) correct++;
+            return { q, opts, given, isCorrect, correctAnswer: q.correct_answer || '' };
+        });
+        res.render('admin/renaissance-print', {
+            att, review, correct,
+            total: questions.rows.length,
+            submitted: att.status === 'submitted',
+            showScore: att.status === 'submitted' && (att.show_results_immediately || att.results_released)
+        });
+    } catch (e) { res.status(500).send('Error: ' + e.message); }
+});
+
 // Courses
-app.post('/api/admin/renaissance/courses', isAdmin, async (req, res) => {
-    try {
-        const { exam_id, course_name, course_code } = req.body;
-        if (!exam_id || !course_name || !course_name.trim()) return res.status(400).json({ error: 'Course name is required' });
-        const r = await pool.query(
-            'INSERT INTO renaissance_courses (exam_id, course_name, course_code) VALUES ($1,$2,$3) RETURNING id',
-            [exam_id, course_name.trim(), (course_code || '').trim().toUpperCase()]);
-        res.json({ success: true, id: r.rows[0].id });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.post('/api/admin/renaissance/courses/:id', isAdmin, async (req, res) => {
-    try {
-        await pool.query('UPDATE renaissance_courses SET course_name = COALESCE($1, course_name), course_code = COALESCE($2, course_code) WHERE id = $3',
-            [req.body.course_name || null, req.body.course_code || null, req.params.id]);
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.delete('/api/admin/renaissance/courses/:id', isAdmin, async (req, res) => {
-    try {
-        await pool.query('DELETE FROM renaissance_courses WHERE id = $1', [req.params.id]);
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Questions
+// Questions (attached directly to an exam)
 app.post('/api/admin/renaissance/questions', isAdmin, async (req, res) => {
     try {
-        const { course_id, question_type, question_text, options, correct_answer, explanation, ai_generated } = req.body;
-        if (!course_id || !question_text || !question_text.trim()) return res.status(400).json({ error: 'Question text is required' });
+        const { exam_id, question_type, question_text, options, correct_answer, explanation, ai_generated } = req.body;
+        if (!exam_id || !question_text || !question_text.trim()) return res.status(400).json({ error: 'Question text is required' });
         const r = await pool.query(`
-            INSERT INTO renaissance_questions (course_id, question_type, question_text, options, correct_answer, explanation, ai_generated)
+            INSERT INTO renaissance_questions (exam_id, question_type, question_text, options, correct_answer, explanation, ai_generated)
             VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
-            [course_id, question_type === 'theory' ? 'theory' : 'mcq', question_text, JSON.stringify(Array.isArray(options) ? options : []), correct_answer || '', explanation || '', !!ai_generated]);
+            [exam_id, question_type === 'theory' ? 'theory' : 'mcq', question_text, JSON.stringify(Array.isArray(options) ? options : []), correct_answer || '', explanation || '', !!ai_generated]);
         res.json({ success: true, id: r.rows[0].id });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -4258,8 +4279,8 @@ app.post('/api/admin/renaissance/import/parse', isAdmin, async (req, res) => {
 // Bulk import: save the parsed questions (optionally AI-fill answers)
 app.post('/api/admin/renaissance/import/save', isAdmin, async (req, res) => {
   try {
-    const { course_id, questions, ai_fill } = req.body;
-    if (!course_id) return res.status(400).json({ error: 'Select a course first' });
+    const { exam_id, questions, ai_fill } = req.body;
+    if (!exam_id) return res.status(400).json({ error: 'Select an exam first' });
     if (!Array.isArray(questions) || !questions.length) return res.status(400).json({ error: 'Nothing to import' });
     let saved = 0;
     let aiFilled = 0;
@@ -4268,9 +4289,9 @@ app.post('/api/admin/renaissance/import/save', isAdmin, async (req, res) => {
       const text = String(q.question_text || '').trim();
       if (!text) continue;
       const r = await pool.query(
-        `INSERT INTO renaissance_questions (course_id, question_type, question_text, options, correct_answer, explanation, ai_generated)
+        `INSERT INTO renaissance_questions (exam_id, question_type, question_text, options, correct_answer, explanation, ai_generated)
          VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
-        [course_id, q.question_type === 'theory' ? 'theory' : 'mcq', text, JSON.stringify(Array.isArray(q.options) ? q.options : []), q.correct_answer || '', q.explanation || '', false]
+        [exam_id, q.question_type === 'theory' ? 'theory' : 'mcq', text, JSON.stringify(Array.isArray(q.options) ? q.options : []), q.correct_answer || '', q.explanation || '', false]
       );
       ids.push({ id: r.rows[0].id, text, options: q.options || [] });
       saved++;
@@ -4291,6 +4312,55 @@ app.post('/api/admin/renaissance/import/save', isAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Extract text from a PDF buffer (pure JS, no external binaries)
+async function extractPdfText(buffer) {
+    try {
+        const data = await pdfParse(buffer);
+        return String(data && data.text ? data.text : '');
+    } catch (_) { return ''; }
+}
+
+// Bulk import from a PDF or image (AI vision fallback for scans/photos)
+const RENAISSANCE_OCR_PROMPT = 'Transcribe this question paper into LaTeX question text. Output ONLY the questions as a LaTeX document body using \\item for each question and lines like A. / B. / C. / D. for options. Keep all math in $...$ or \\[...\\] form exactly. If a diagram or circuit is present, include a \\begin{tikzpicture}...\\end{tikzpicture} or \\begin{circuitikz}...\\end{circuitikz} block plus a short % note describing the diagram. Do not include any documentclass, preamble, headings or explanation text.';
+app.post('/api/admin/renaissance/import/file', isAdmin, uploadMemory.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const buffer = req.file.buffer;
+    if (buffer.length > 20 * 1024 * 1024) return res.status(400).json({ error: 'File is too large (max 20MB)' });
+    const mime = String(req.file.mimetype || '').toLowerCase();
+    const ext = path.extname(String(req.file.originalname || '')).toLowerCase();
+    const isPdf = mime === 'application/pdf' || ext === '.pdf';
+    const isImage = /^image\/(png|jpe?g|webp)$/.test(mime) || ['.png', '.jpg', '.jpeg', '.webp'].includes(ext);
+    if (!isPdf && !isImage) return res.status(400).json({ error: 'Only PDF or image files are supported' });
+
+    const base64 = buffer.toString('base64');
+    let raw = '';
+    let source = '';
+
+    if (isPdf) {
+      const text = await extractPdfText(buffer);
+      if (text && text.trim().length > 30) {
+        raw = text.trim();
+        source = 'pdf';
+      } else {
+        const ai = await callGeminiWithImage(RENAISSANCE_OCR_PROMPT, base64, 'application/pdf');
+        if (!ai.success) return res.status(422).json({ error: 'Could not read this PDF (it may be a scanned page). Try uploading a photo of the page instead.' });
+        raw = ai.text;
+        source = 'vision';
+      }
+    } else {
+      const ai = await callGeminiWithImage(RENAISSANCE_OCR_PROMPT, base64, mime || 'image/jpeg');
+      if (!ai.success) return res.status(422).json({ error: 'AI could not read this image. Try a clearer photo or use the PDF/LaTeX option.' });
+      raw = ai.text;
+      source = 'vision';
+    }
+
+    const questions = parseRenaissanceLatex(raw);
+    if (!questions.length) return res.status(422).json({ error: 'No questions could be detected in that file. Try the LaTeX paste option instead.' });
+    res.json({ success: true, questions, raw, source });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Settings (group link)
 app.post('/api/admin/renaissance/settings', isAdmin, async (req, res) => {
     try {
@@ -4307,7 +4377,7 @@ app.get('/renaissance', isAuth, async (req, res) => {
         const groupLink = await getRenaissanceSetting('group_link', '');
         const exams = await pool.query(`
             SELECT e.*,
-                   (SELECT COUNT(*) FROM renaissance_questions q JOIN renaissance_courses c ON q.course_id = c.id WHERE c.exam_id = e.id) as question_count,
+                   (SELECT COUNT(*) FROM renaissance_questions q WHERE q.exam_id = e.id) as question_count,
                    (SELECT COUNT(*) FROM renaissance_attempts a WHERE a.exam_id = e.id AND a.user_id = $1 AND a.status = 'submitted') as my_attempts,
                    (SELECT id FROM renaissance_attempts a WHERE a.exam_id = e.id AND a.user_id = $1 AND a.status = 'submitted' ORDER BY a.submitted_at DESC LIMIT 1) as my_attempt_id
             FROM renaissance_exams e
@@ -4329,10 +4399,10 @@ app.get('/renaissance/exam/:id', isAuth, async (req, res) => {
 
         const now = new Date();
         if (exam.opens_at && new Date(exam.opens_at) > now) {
-            return res.render('quiz-locked', { user: req.session.user, message: 'This exam has not opened yet. Please come back when it opens.' });
+            return res.render('quiz-locked', { user: req.session.user, message: 'This exam has not opened yet. Please come back when it opens.', paystack_key: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_your_key', premiumPrice: PREMIUM_PRICE, userEmail: req.session.user.email });
         }
         if (exam.closes_at && new Date(exam.closes_at) < now) {
-            return res.render('quiz-locked', { user: req.session.user, message: 'This exam is now closed.' });
+            return res.render('quiz-locked', { user: req.session.user, message: 'This exam is now closed.', paystack_key: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_your_key', premiumPrice: PREMIUM_PRICE, userEmail: req.session.user.email });
         }
 
         // Reuse an existing in-progress attempt or create one
@@ -4343,6 +4413,16 @@ app.get('/renaissance/exam/:id', isAuth, async (req, res) => {
         if (attempt.rows[0]) {
             attemptId = attempt.rows[0].id;
         } else {
+            // Trial limit: block starting a new attempt once max_attempts submitted attempts are reached
+            const maxAttempts = parseInt(exam.max_attempts) || 0;
+            if (maxAttempts > 0) {
+                const used = await pool.query(
+                    "SELECT COUNT(*)::int as c FROM renaissance_attempts WHERE user_id = $1 AND exam_id = $2 AND status = 'submitted'",
+                    [req.session.user.id, id]);
+                if (used.rows[0].c >= maxAttempts) {
+                    return res.render('quiz-locked', { user: req.session.user, message: 'You have used all ' + maxAttempts + ' allowed attempt' + (maxAttempts === 1 ? '' : 's') + ' for this exam. You cannot take it again.', paystack_key: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_your_key', premiumPrice: PREMIUM_PRICE, userEmail: req.session.user.email });
+                }
+            }
             const created = await pool.query(
                 'INSERT INTO renaissance_attempts (user_id, exam_id, started_at) VALUES ($1,$2,NOW()) RETURNING id',
                 [req.session.user.id, id]);
@@ -4350,9 +4430,9 @@ app.get('/renaissance/exam/:id', isAuth, async (req, res) => {
         }
 
         const questions = await pool.query(`
-            SELECT q.id, q.question_type, q.question_text, q.options, c.course_name
-            FROM renaissance_questions q JOIN renaissance_courses c ON q.course_id = c.id
-            WHERE c.exam_id = $1 ORDER BY c.course_code, q.id`, [id]);
+            SELECT id, question_type, question_text, options
+            FROM renaissance_questions
+            WHERE exam_id = $1 ORDER BY id`, [id]);
 
         const attemptRow = await pool.query('SELECT started_at FROM renaissance_attempts WHERE id = $1', [attemptId]);
         const started = attemptRow.rows[0] ? new Date(attemptRow.rows[0].started_at) : new Date();
@@ -4381,9 +4461,9 @@ app.post('/renaissance/exam/:id/submit', isAuth, async (req, res) => {
 
         const answers = req.body.answers || {};
         const questions = await pool.query(`
-            SELECT q.id, q.correct_answer, q.question_type
-            FROM renaissance_questions q JOIN renaissance_courses c ON q.course_id = c.id
-            WHERE c.exam_id = $1`, [examId]);
+            SELECT id, correct_answer, question_type
+            FROM renaissance_questions
+            WHERE exam_id = $1`, [examId]);
 
         let score = 0;
         const total = questions.rows.length;
@@ -4437,9 +4517,9 @@ app.get('/renaissance/result/:attemptId', isAuth, async (req, res) => {
         let questions = [];
         if (canView) {
             const qs = await pool.query(`
-                SELECT q.id, q.question_type, q.question_text, q.options, q.correct_answer, q.explanation, c.course_name
-                FROM renaissance_questions q JOIN renaissance_courses c ON q.course_id = c.id
-                WHERE c.exam_id = $1 ORDER BY c.course_code, q.id`, [ex.id]);
+                SELECT id, question_type, question_text, options, correct_answer, explanation
+                FROM renaissance_questions
+                WHERE exam_id = $1 ORDER BY id`, [ex.id]);
             questions = qs.rows.map(q => {
                 let options = [];
                 try { options = JSON.parse(q.options || '[]'); } catch (_) {}
@@ -4733,15 +4813,12 @@ app.post('/upload-pdf', uploadMemory.single('lecture_note'), async (req, res) =>
         // memoryStorage gives us req.file.buffer, not a file path
         const pdfBuffer = req.file.buffer;
 
-        pdfToText.pdfToText(pdfBuffer, (err, text) => {
-            if (err) {
-                console.error("PDF Parsing Error:", err);
-                return res.status(500).json({ success: false, message: "Failed to parse PDF." });
-            }
-
-            console.log("Extracted text successfully.");
-            res.json({ success: true, text: text });
-        });
+        const text = await extractPdfText(pdfBuffer);
+        if (!text) {
+            return res.status(500).json({ success: false, message: "Failed to parse PDF." });
+        }
+        console.log("Extracted text successfully.");
+        res.json({ success: true, text: text });
 
     } catch (err) {
         console.error("Route Error:", err);
@@ -6792,6 +6869,7 @@ async function ensureMigrationColumns() {
       closes_at TIMESTAMP,
       show_results_immediately BOOLEAN DEFAULT true,
       results_released BOOLEAN DEFAULT false,
+      max_attempts INTEGER DEFAULT 0,
       status VARCHAR(20) DEFAULT 'draft',
       created_by INTEGER DEFAULT 0,
       created_at TIMESTAMP DEFAULT NOW()
@@ -6805,7 +6883,8 @@ async function ensureMigrationColumns() {
     )`);
     await pool.query(`CREATE TABLE IF NOT EXISTS renaissance_questions (
       id SERIAL PRIMARY KEY,
-      course_id INTEGER NOT NULL REFERENCES renaissance_courses(id) ON DELETE CASCADE,
+      course_id INTEGER REFERENCES renaissance_courses(id) ON DELETE CASCADE,
+      exam_id INTEGER REFERENCES renaissance_exams(id) ON DELETE CASCADE,
       question_type VARCHAR(20) DEFAULT 'mcq',
       question_text TEXT NOT NULL,
       options JSONB DEFAULT '[]',
@@ -6814,6 +6893,13 @@ async function ensureMigrationColumns() {
       ai_generated BOOLEAN DEFAULT false,
       created_at TIMESTAMP DEFAULT NOW()
     )`);
+    // Flattened model: questions attach directly to an exam. Add exam_id column, then backfill from legacy courses.
+    await pool.query(`ALTER TABLE renaissance_questions ADD COLUMN IF NOT EXISTS exam_id INTEGER`);
+    await pool.query(`ALTER TABLE renaissance_questions ALTER COLUMN course_id DROP NOT NULL`);
+    await pool.query(`UPDATE renaissance_questions q SET exam_id = c.exam_id
+                      FROM renaissance_courses c WHERE q.course_id = c.id AND q.exam_id IS NULL`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_rnz_q_exam ON renaissance_questions(exam_id)`);
+    await pool.query(`ALTER TABLE renaissance_exams ADD COLUMN IF NOT EXISTS max_attempts INTEGER DEFAULT 0`);
     await pool.query(`CREATE TABLE IF NOT EXISTS renaissance_attempts (
       id SERIAL PRIMARY KEY,
       user_id INTEGER NOT NULL,

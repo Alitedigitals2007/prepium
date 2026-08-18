@@ -56,7 +56,7 @@
 
             <% questions.forEach(function(q, i) { %>
                 <div class="review-card">
-                    <div class="course"><%= q.course_name %> · Q<%= i + 1 %></div>
+                    <div class="course">Q<%= i + 1 %></div>
                     <div class="q">
                         <div class="rnz-render" data-tex="<%- q.question_text.replace(/"/g, '&quot;') %>"></div>
                     </div>

@@ -89,6 +89,7 @@
         <div class="tabs">
             <button class="tab" :class="{active: tab==='exams'}" @click="tab='exams'"><i class="fas fa-file-signature"></i> Exams</button>
             <button class="tab" :class="{active: tab==='builder'}" @click="openBuilder"><i class="fas fa-tasks"></i> Builder</button>
+            <button class="tab" :class="{active: tab==='attempts'}" @click="openAttempts"><i class="fas fa-chart-line"></i> Attempts <span class="badge badge-live" v-if="liveInProgress">LIVE</span></button>
             <button class="tab" :class="{active: tab==='settings'}" @click="tab='settings'"><i class="fas fa-cog"></i> Settings</button>
         </div>
 
@@ -104,6 +105,11 @@
                     <div class="form-group">
                         <label>Duration (minutes)</label>
                         <input type="number" v-model.number="examForm.duration_minutes" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Max Attempts per Student</label>
+                        <input type="number" v-model.number="examForm.max_attempts" min="0" placeholder="0 = unlimited">
+                        <div class="code-hint">0 means students can take it unlimited times.</div>
                     </div>
                     <div class="form-group">
                         <label>Opens At</label>
@@ -188,59 +194,22 @@
             </div>
 
             <template v-if="exam">
-                <!-- Courses -->
-                <div class="card">
-                    <h2><i class="fas fa-book"></i> Courses</h2>
-                    <div class="row">
-                        <div class="form-group">
-                            <label>Course Name</label>
-                            <input v-model="courseForm.course_name" placeholder="e.g. Engineering Mathematics III">
-                        </div>
-                        <div class="form-group">
-                            <label>Course Code</label>
-                            <input v-model="courseForm.course_code" placeholder="e.g. MEE 301">
-                        </div>
-                        <div style="display:flex;align-items:flex-end;">
-                            <button class="btn btn-primary" @click="addCourse"><i class="fas fa-plus"></i> Add Course</button>
-                        </div>
-                    </div>
-                    <div v-if="courses.length === 0" class="empty" style="padding:16px;">No courses yet. Add a course to start adding questions.</div>
-                    <table class="table" v-else>
-                        <thead><tr><th>Course</th><th>Code</th><th>Questions</th><th>Actions</th></tr></thead>
-                        <tbody>
-                            <tr v-for="c in courses" :key="c.id">
-                                <td>
-                                    <a href="#" @click.prevent="selectCourse(c)" style="font-weight:800;color:var(--brand);text-decoration:none;">{{ c.course_name }}</a>
-                                </td>
-                                <td>{{ c.course_code }}</td>
-                                <td>{{ qCount(c) }}</td>
-                                <td>
-                                    <div class="actions">
-                                        <button class="mini-btn btn-green" @click="selectCourse(c)"><i class="fas fa-edit"></i> Questions</button>
-                                        <button class="mini-btn btn-danger" @click="deleteCourse(c)"><i class="fas fa-trash"></i></button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
                 <!-- Bulk import: paste full paper -->
                 <div class="card" v-if="exam">
-                    <h2><i class="fas fa-file-import"></i> Bulk Import — Paste Full Paper</h2>
-                    <div class="row">
-                        <div class="form-group">
-                            <label>Target Course</label>
-                            <select v-model="importCourseId">
-                                <option value="" disabled>-- Select course --</option>
-                                <option v-for="c in courses" :value="c.id" :key="c.id">{{ c.course_name }} ({{ c.course_code }})</option>
-                            </select>
-                        </div>
-                    </div>
+                    <h2><i class="fas fa-file-import"></i> Bulk Import — {{ exam.title }}</h2>
+                    <div class="code-hint" style="margin-bottom:12px;">Questions are added straight into this exam.</div>
                     <div class="form-group" style="margin-top:12px;">
                         <label>Full LaTeX (all questions in one code)</label>
                         <textarea v-model="importLatex" style="min-height:200px;font-family:monospace;font-size:0.78rem;" placeholder="Paste the whole paper here. Questions separated with \item, numbered lines like '1.', or \section headings. Options like 'A.', '(B)' or \item C. are auto-detected."></textarea>
                         <div class="code-hint">Splits automatically on \item, numbered questions, or \section headings. Lines like A. / (B) become MCQ choices; no options detected = theory question.</div>
+                    </div>
+                    <div class="form-group" style="margin-top:12px;">
+                        <label>... or upload a PDF / photo of a paper</label>
+                        <div class="row" style="gap:8px;">
+                            <input type="file" ref="importFile" accept=".pdf,.png,.jpg,.jpeg,.webp" class="file-input" style="flex:1;">
+                            <button class="btn btn-blue" @click="uploadImportFile" :disabled="uploading"><i class="fas fa-upload"></i> {{ uploading ? 'Reading...' : 'Upload & Read' }}</button>
+                        </div>
+                        <div class="code-hint">PDFs: text is read automatically. Scanned pages / photos: AI vision reads them (math and circuit diagrams are approximated).</div>
                     </div>
                     <div class="checkbox-row" style="margin-top:12px;">
                         <input type="checkbox" id="aiFill" v-model="importAI">
@@ -265,8 +234,8 @@
                 </div>
 
                 <!-- Question editor -->
-                <div class="card" v-if="selectedCourse">
-                    <h2><i class="fas fa-pen-square"></i> {{ editing ? 'Edit Question' : 'Add Question' }} — {{ selectedCourse.course_name }}</h2>
+                <div class="card" v-if="exam">
+                    <h2><i class="fas fa-pen-square"></i> {{ editing ? 'Edit Question' : 'Add Question' }}</h2>
                     <div class="row" style="margin-bottom:12px;">
                         <div class="form-group" style="max-width:180px;">
                             <label>Type</label>
@@ -321,8 +290,8 @@
                 </div>
 
                 <!-- Questions list -->
-                <div class="card" v-if="selectedCourse">
-                    <h2><i class="fas fa-list-ul"></i> Questions — {{ selectedCourse.course_name }} ({{ questions.length }})</h2>
+                <div class="card" v-if="exam">
+                    <h2><i class="fas fa-list-ul"></i> Questions ({{ questions.length }})</h2>
                     <div v-if="questions.length === 0" class="empty">No questions yet. Use the editor above to add one.</div>
                     <div v-for="q in questions" :key="q.id" class="question-row">
                         <div class="q-top">
@@ -343,6 +312,56 @@
                     </div>
                 </div>
             </template>
+        </div>
+
+        <!-- ════════════════ ATTEMPTS ════════════════ -->
+        <div v-show="tab==='attempts'">
+            <div class="card" v-if="exams.length">
+                <h2><i class="fas fa-chart-line"></i> Attempts / Results — Live</h2>
+                <div class="row">
+                    <div class="form-group" style="flex:2;">
+                        <label>Select Exam</label>
+                        <select v-model="attemptExamId" @change="loadAttempts">
+                            <option value="" disabled>-- Select exam --</option>
+                            <option v-for="e in exams" :value="e.id" :key="e.id">{{ e.title }} · {{ e.attempt_count }} submitted</option>
+                        </select>
+                    </div>
+                    <div style="display:flex;align-items:flex-end;gap:8px;">
+                        <span class="chip" v-if="liveInProgress">{{ liveInProgress }} in progress</span>
+                        <span class="chip" v-if="liveTimer">{{ liveTimer }}</span>
+                    </div>
+                </div>
+            </div>
+            <div v-if="attemptExamId && !attempts.length" class="card">
+                <div class="empty">No attempts yet. They appear here live as students start and submit.</div>
+            </div>
+            <div class="card" v-if="attempts.length">
+                <table class="table">
+                    <thead><tr><th>Student</th><th>Status</th><th>Score</th><th>Time Used</th><th>Started</th><th>Submitted</th><th>Actions</th></tr></thead>
+                    <tbody>
+                        <tr v-for="a in attempts" :key="a.id">
+                            <td>
+                                <div style="font-weight:800;">{{ a.fullname }}</div>
+                                <div style="font-size:0.7rem;color:var(--sub);">{{ a.email }}</div>
+                            </td>
+                            <td><span class="badge" :class="a.status === 'submitted' ? 'badge-published' : 'badge-live'">{{ a.status }}</span></td>
+                            <td>
+                                <template v-if="a.status === 'submitted'"><b>{{ a.percentage }}%</b> ({{ a.score }}/{{ a.total }})</template>
+                                <template v-else>—</template>
+                            </td>
+                            <td>{{ fmtDur(a.time_taken) }}</td>
+                            <td>{{ fmtDT(a.started_at) }}</td>
+                            <td>{{ a.submitted_at ? fmtDT(a.submitted_at) : '—' }}</td>
+                            <td>
+                                <div class="actions">
+                                    <a :href="'/admin/renaissance/exams/' + attemptExamId + '/attempts/' + a.id + '/print'" target="_blank" class="mini-btn btn-purple"><i class="fas fa-print"></i> Print</a>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="code-hint" style="margin-top:8px;"><i class="fas fa-sync"></i> Refreshes automatically every 5 seconds while this tab is open.</div>
+            </div>
         </div>
 
         <!-- ════════════════ SETTINGS ════════════════ -->
@@ -384,28 +403,29 @@ var app = new Vue({
     data: {
         tab: 'exams',
         exams: [],
-        examForm: { id: null, title: '', description: '', duration_minutes: 30, opens_at: '', closes_at: '', show_results_immediately: true },
+        examForm: { id: null, title: '', description: '', duration_minutes: 30, max_attempts: 0, opens_at: '', closes_at: '', show_results_immediately: true },
         selectedExamId: null,
         exam: null,
-        courses: [],
         allQuestions: [],
-        selectedCourse: null,
-        qForm: { id: null, course_id: null, question_type: 'mcq', question_text: '', options: ['', '', '', ''], correct_answer: '', explanation: '', ai_generated: false },
+        qForm: { id: null, exam_id: null, question_type: 'mcq', question_text: '', options: ['', '', '', ''], correct_answer: '', explanation: '', ai_generated: false },
         editing: false,
-        courseForm: { course_name: '', course_code: '' },
         groupLink: '',
         aiStatus: '',
         previewTimer: null,
-        importCourseId: '',
         importLatex: '',
         importPreview: [],
         importError: '',
-        importAI: true
+        importAI: true,
+        uploading: false,
+        attempts: [],
+        attemptExamId: '',
+        liveInProgress: 0,
+        liveTimer: '',
+        attemptsPoll: null
     },
     computed: {
         questions: function () {
-            var sc = this.selectedCourse;
-            return sc ? this.allQuestions.filter(function (q) { return q.course_id === sc.id; }) : [];
+            return this.allQuestions;
         }
     },
     methods: {
@@ -429,6 +449,7 @@ var app = new Vue({
                 title: e.title,
                 description: e.description || '',
                 duration_minutes: e.duration_minutes,
+                max_attempts: e.max_attempts || 0,
                 opens_at: rnzDTLocal(e.opens_at),
                 closes_at: rnzDTLocal(e.closes_at),
                 show_results_immediately: !!e.show_results_immediately
@@ -436,7 +457,7 @@ var app = new Vue({
             window.scrollTo({ top: 0, behavior: 'smooth' });
         },
         resetExamForm() {
-            this.examForm = { id: null, title: '', description: '', duration_minutes: 30, opens_at: '', closes_at: '', show_results_immediately: true };
+            this.examForm = { id: null, title: '', description: '', duration_minutes: 30, max_attempts: 0, opens_at: '', closes_at: '', show_results_immediately: true };
         },
         async saveExam() {
             if (!this.examForm.title || !this.examForm.title.trim()) return Swal.fire({ icon: 'warning', text: 'Enter an exam title' });
@@ -464,10 +485,10 @@ var app = new Vue({
             Swal.fire({ icon: 'success', title: released ? 'Results released' : 'Results hidden', timer: 1000, showConfirmButton: false });
         },
         async deleteExam(e) {
-            const c = await Swal.fire({ title: 'Delete "' + e.title + '"?', text: 'This removes its courses and questions too.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete', confirmButtonColor: '#ef4444' });
+            const c = await Swal.fire({ title: 'Delete "' + e.title + '"?', text: 'This removes its questions and attempts too.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete', confirmButtonColor: '#ef4444' });
             if (!c.isConfirmed) return;
             await fetch('/api/admin/renaissance/exams/' + e.id, { method: 'DELETE' });
-            if (this.exam && this.exam.id === e.id) { this.exam = null; this.courses = []; this.allQuestions = []; this.selectedCourse = null; this.selectedExamId = null; }
+            if (this.exam && this.exam.id === e.id) { this.exam = null; this.allQuestions = []; this.selectedExamId = null; }
             await this.loadExams();
         },
         buildExam(e) {
@@ -480,35 +501,9 @@ var app = new Vue({
             const d = await r.json();
             if (d.error) return Swal.fire({ icon: 'error', text: d.error });
             this.exam = d.exam;
-            this.courses = d.courses;
             this.allQuestions = d.questions || [];
-            this.selectedCourse = null;
             this.cancelEdit();
             this.$nextTick(function () { rnzRender(document.getElementById('app')); });
-        },
-        async addCourse() {
-            if (!this.courseForm.course_name || !this.courseForm.course_name.trim()) return Swal.fire({ icon: 'warning', text: 'Enter a course name' });
-            const r = await fetch('/api/admin/renaissance/courses', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ exam_id: this.exam.id, course_name: this.courseForm.course_name, course_code: this.courseForm.course_code }) });
-            const d = await r.json();
-            if (d.error) return Swal.fire({ icon: 'error', text: d.error });
-            this.courseForm = { course_name: '', course_code: '' };
-            await this.loadExam(this.exam.id);
-        },
-        async deleteCourse(c) {
-            const cf = await Swal.fire({ title: 'Delete course?', text: 'All its questions are removed too.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete', confirmButtonColor: '#ef4444' });
-            if (!cf.isConfirmed) return;
-            await fetch('/api/admin/renaissance/courses/' + c.id, { method: 'DELETE' });
-            if (this.selectedCourse && this.selectedCourse.id === c.id) this.selectedCourse = null;
-            await this.loadExam(this.exam.id);
-        },
-        selectCourse(c) {
-            this.selectedCourse = c;
-            this.editing = false;
-            this.qForm = { id: null, course_id: c.id, question_type: 'mcq', question_text: '', options: ['', '', '', ''], correct_answer: '', explanation: '', ai_generated: false };
-            this.refreshPreview();
-        },
-        qCount(c) {
-            return this.allQuestions.filter(function (q) { return q.course_id === c.id; }).length;
         },
         addOption() {
             if (this.qForm.options.length < 6) this.qForm.options.push('');
@@ -533,7 +528,7 @@ var app = new Vue({
             try { opts = JSON.parse(q.options || '[]'); } catch (e) {}
             this.qForm = {
                 id: q.id,
-                course_id: q.course_id,
+                exam_id: q.exam_id || this.exam.id,
                 question_type: q.question_type,
                 question_text: q.question_text,
                 options: opts.length ? opts : ['', '', '', ''],
@@ -547,12 +542,12 @@ var app = new Vue({
         },
         cancelEdit() {
             this.editing = false;
-            this.qForm = { id: null, course_id: this.selectedCourse ? this.selectedCourse.id : null, question_type: 'mcq', question_text: '', options: ['', '', '', ''], correct_answer: '', explanation: '', ai_generated: false };
+            this.qForm = { id: null, exam_id: this.exam ? this.exam.id : null, question_type: 'mcq', question_text: '', options: ['', '', '', ''], correct_answer: '', explanation: '', ai_generated: false };
         },
         async saveQuestion() {
-            if (!this.selectedCourse) return;
+            if (!this.exam) return;
             if (!this.qForm.question_text || !this.qForm.question_text.trim()) return Swal.fire({ icon: 'warning', text: 'Question text is required' });
-            const payload = { course_id: this.selectedCourse.id, question_type: this.qForm.question_type, question_text: this.qForm.question_text, options: this.qForm.question_type === 'mcq' ? this.qForm.options.filter(o => o.trim() !== '') : [], correct_answer: this.qForm.correct_answer, explanation: this.qForm.explanation, ai_generated: this.qForm.ai_generated };
+            const payload = { exam_id: this.exam.id, question_type: this.qForm.question_type, question_text: this.qForm.question_text, options: this.qForm.question_type === 'mcq' ? this.qForm.options.filter(o => o.trim() !== '') : [], correct_answer: this.qForm.correct_answer, explanation: this.qForm.explanation, ai_generated: this.qForm.ai_generated };
             const url = this.qForm.id ? '/api/admin/renaissance/questions/' + this.qForm.id : '/api/admin/renaissance/questions';
             const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             const d = await r.json();
@@ -569,10 +564,10 @@ var app = new Vue({
             await this.loadExam(this.exam.id);
         },
         async aiGenerate() {
-            if (!this.selectedCourse) return;
+            if (!this.exam) return;
             if (!this.qForm.question_text || !this.qForm.question_text.trim()) return Swal.fire({ icon: 'warning', text: 'Write the question first' });
             if (!this.qForm.id) {
-                const p = { course_id: this.selectedCourse.id, question_type: this.qForm.question_type, question_text: this.qForm.question_text, options: this.qForm.question_type === 'mcq' ? this.qForm.options.filter(o => o.trim() !== '') : [], correct_answer: '', explanation: '' };
+                const p = { exam_id: this.exam.id, question_type: this.qForm.question_type, question_text: this.qForm.question_text, options: this.qForm.question_type === 'mcq' ? this.qForm.options.filter(o => o.trim() !== '') : [], correct_answer: '', explanation: '' };
                 const r = await fetch('/api/admin/renaissance/questions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) });
                 const d = await r.json();
                 if (d.error) return Swal.fire({ icon: 'error', text: d.error });
@@ -596,7 +591,7 @@ var app = new Vue({
         },
         async previewImport() {
             this.importError = '';
-            if (!this.importCourseId) return Swal.fire({ icon: 'warning', text: 'Select a target course first' });
+            if (!this.exam) return;
             if (!this.importLatex.trim()) return Swal.fire({ icon: 'warning', text: 'Paste the LaTeX code first' });
             const r = await fetch('/api/admin/renaissance/import/parse', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ latex: this.importLatex }) });
             const d = await r.json();
@@ -604,11 +599,11 @@ var app = new Vue({
             this.importPreview = d.questions;
         },
         async doImport() {
-            if (!this.importPreview.length || !this.importCourseId) return;
+            if (!this.exam || !this.importPreview.length) return;
             const cf = await Swal.fire({ title: 'Import ' + this.importPreview.length + ' question' + (this.importPreview.length === 1 ? '' : 's') + '?', icon: 'question', showCancelButton: true, confirmButtonText: 'Import' });
             if (!cf.isConfirmed) return;
             Swal.fire({ title: 'Importing...', html: this.importAI ? 'AI-filling answers (this can take a minute)...' : 'Please wait...', allowOutsideClick: false, didOpen: function () { Swal.showLoading(); } });
-            const r = await fetch('/api/admin/renaissance/import/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ course_id: this.importCourseId, questions: this.importPreview, ai_fill: this.importAI }) });
+            const r = await fetch('/api/admin/renaissance/import/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ exam_id: this.exam.id, questions: this.importPreview, ai_fill: this.importAI }) });
             const d = await r.json();
             Swal.close();
             if (d.error) return Swal.fire({ icon: 'error', text: d.error });
@@ -616,6 +611,63 @@ var app = new Vue({
             this.importPreview = [];
             await this.loadExam(this.exam.id);
             Swal.fire({ icon: 'success', title: d.count + ' questions imported' + (d.aiFilled ? ' · ' + d.aiFilled + ' AI-filled' : ''), timer: 1600, showConfirmButton: false });
+        },
+        async uploadImportFile() {
+            const input = this.$refs.importFile;
+            if (!input || !input.files || !input.files.length) return Swal.fire({ icon: 'warning', text: 'Choose a PDF or image first' });
+            this.importError = '';
+            this.uploading = true;
+            const fd = new FormData();
+            fd.append('file', input.files[0]);
+            try {
+                const r = await fetch('/api/admin/renaissance/import/file', { method: 'POST', body: fd });
+                const d = await r.json();
+                if (d.error) { this.importError = d.error; return; }
+                if (!d.questions || !d.questions.length) { this.importError = 'No questions could be read from that file.'; return; }
+                this.importLatex = d.raw || '';
+                this.importPreview = d.questions;
+                Swal.fire({ icon: 'success', title: d.questions.length + ' questions read from ' + (d.source === 'vision' ? 'AI vision' : 'PDF text'), text: 'Review below, then click Import.', timer: 1800, showConfirmButton: false });
+            } catch (e) {
+                this.importError = e.message;
+            } finally {
+                this.uploading = false;
+            }
+        },
+        fmtDur(sec) {
+            sec = parseInt(sec) || 0;
+            var m = Math.floor(sec / 60), s = sec % 60;
+            return (m ? m + 'm ' : '') + s + 's';
+        },
+        openAttempts() {
+            this.tab = 'attempts';
+            if (!this.attemptExamId && this.exams.length) {
+                this.attemptExamId = this.exams[0].id;
+            }
+            this.loadAttempts();
+            this.startAttemptsPoll();
+        },
+        startAttemptsPoll() {
+            this.stopAttemptsPoll();
+            var self = this;
+            this.attemptsPoll = setInterval(function () { self.loadAttempts(); }, 5000);
+        },
+        stopAttemptsPoll() {
+            if (this.attemptsPoll) { clearInterval(this.attemptsPoll); this.attemptsPoll = null; }
+        },
+        async loadAttempts() {
+            if (!this.attemptExamId) { this.attempts = []; return; }
+            try {
+                const r = await fetch('/api/admin/renaissance/exams/' + this.attemptExamId + '/attempts');
+                const d = await r.json();
+                this.attempts = d.attempts || [];
+                this.liveInProgress = this.attempts.filter(function (a) { return a.status === 'in_progress'; }).length;
+                this.liveTimer = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            } catch (e) {}
+        }
+    },
+    watch: {
+        tab: function (val) {
+            if (val !== 'attempts') this.stopAttemptsPoll();
         }
     },
     mounted: function () {

@@ -66,9 +66,16 @@
                     <% } %>
                 </div>
                 <div class="exam-actions">
+                    <% if (ex.max_attempts && ex.max_attempts > 0) { %>
+                        <span class="m" style="display:block;margin-bottom:8px;"><i class="fas fa-hourglass-half"></i> <%= ex.my_attempts %>/<%= ex.max_attempts %> attempts used</span>
+                    <% } %>
                     <% if (isOpen) { %>
-                        <% if (ex.my_attempts > 0) { %>
+                        <% const trialsLeft = (ex.max_attempts && ex.max_attempts > 0) ? (ex.max_attempts - ex.my_attempts) : 9999; %>
+                        <% if (trialsLeft <= 0) { %>
+                            <div class="btn-locked"><i class="fas fa-lock"></i> Trial limit reached</div>
+                        <% } else if (ex.my_attempts > 0) { %>
                             <a class="btn-result" href="/renaissance/result/<%= ex.my_attempt_id %>"><i class="fas fa-trophy"></i> View My Result</a>
+                            <% if (trialsLeft > 0) { %><a class="btn-start" href="/renaissance/exam/<%= ex.id %>"><i class="fas fa-rocket"></i> Retake</a><% } %>
                         <% } else { %>
                             <a class="btn-start" href="/renaissance/exam/<%= ex.id %>"><i class="fas fa-rocket"></i> Start Exam</a>
                         <% } %>

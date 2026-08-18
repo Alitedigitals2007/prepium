@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Result Sheet — <%= att.exam_title %> — <%= att.fullname %></title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; margin: 0; padding: 24px; background: #f1f5f9; }
+  .sheet { max-width: 800px; margin: 0 auto; background: #fff; padding: 32px; border: 1px solid #e2e8f0; border-radius: 10px; }
+  .brand { font-size: 13px; letter-spacing: 2px; font-weight: 800; text-transform: uppercase; color: #7c3aed; margin-bottom: 16px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .meta { color: #64748b; font-size: 13px; line-height: 1.6; margin-bottom: 20px; }
+  .score-box { display: flex; gap: 16px; flex-wrap: wrap; background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
+  .score-item { flex: 1; min-width: 120px; text-align: center; }
+  .score-item .val { font-size: 26px; font-weight: 800; color: #7c3aed; }
+  .score-item .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #6b7280; margin-top: 2px; }
+  .status-pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+  .status-submitted { background: #dcfce7; color: #166534; }
+  .status-progress { background: #fef9c3; color: #854d0e; }
+  .status-hidden { background: #fee2e2; color: #991b1b; }
+  .question { border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; margin-bottom: 14px; page-break-inside: avoid; }
+  .qhead { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .qnum { background: #7c3aed; color: #fff; font-size: 12px; font-weight: 800; border-radius: 6px; padding: 2px 8px; }
+  .qcourse { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
+  .qmark { margin-left: auto; font-size: 12px; font-weight: 700; }
+  .mark-correct { color: #15803d; }
+  .mark-wrong { color: #b91c1c; }
+  .qtext { font-size: 14px; line-height: 1.6; margin-bottom: 8px; }
+  .options { font-size: 13px; line-height: 1.7; }
+  .opt { padding: 3px 8px; border-radius: 6px; display: block; }
+  .opt-chosen { font-weight: 700; }
+  .opt-correct { background: #dcfce7; }
+  .opt-wrong { background: #fee2e2; }
+  .opt-normal { color: #475569; }
+  .given-none { color: #94a3b8; font-style: italic; }
+  .explain { margin-top: 8px; font-size: 12px; color: #475569; background: #f8fafc; border-left: 3px solid #7c3aed; padding: 6px 10px; }
+  .print-btn { display: block; margin: 24px auto 0; background: #7c3aed; color: #fff; border: 0; padding: 10px 22px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .note { font-size: 11px; color: #94a3b8; text-align: center; margin-top: 16px; }
+  mjx-container { overflow-x: auto; }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .sheet { border: 0; max-width: 100%; padding: 0; }
+    .print-btn, .no-print { display: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="brand">Prepium · Renaissance Mocks</div>
+  <h1><%= att.exam_title %></h1>
+  <div class="meta">
+    Student: <strong><%= att.fullname %></strong><br>
+    Email: <%= att.email %><br>
+    Started: <%= att.started_at ? new Date(att.started_at).toLocaleString() : '—' %>
+    <% if (att.submitted_at) { %> · Submitted: <%= new Date(att.submitted_at).toLocaleString() %><% } %>
+  </div>
+
+  <% if (att.status === 'submitted' && showScore) { %>
+    <div class="status-pill status-submitted">Submitted</div>
+    <div class="score-box">
+      <div class="score-item"><div class="val"><%= att.score %>/<%= att.total %></div><div class="lbl">Score</div></div>
+      <div class="score-item"><div class="val"><%= Math.round(att.percentage || 0) %>%</div><div class="lbl">Percentage</div></div>
+      <div class="score-item"><div class="val"><%= Math.round((att.time_taken || 0) / 60) %> min</div><div class="lbl">Time Used</div></div>
+    </div>
+  <% } else if (att.status === 'in_progress') { %>
+    <div class="status-pill status-progress">In Progress</div>
+    <p class="meta">This attempt is still in progress — no score shown yet.</p>
+  <% } else { %>
+    <div class="status-pill status-hidden">Results Not Released</div>
+    <p class="meta">Results for this exam have not been released yet.</p>
+  <% } %>
+
+  <% if (review && review.length) { %>
+    <% review.forEach((r, i) => { %>
+      <div class="question">
+        <div class="qhead">
+          <span class="qnum"><%= i + 1 %></span>
+          <% if (att.status === 'submitted' && showScore) { %>
+            <span class="qmark <%= r.isCorrect ? 'mark-correct' : 'mark-wrong' %>"><%= r.isCorrect ? '✓ Correct' : '✗ Wrong' %></span>
+          <% } %>
+        </div>
+        <div class="qtext rnz-render" data-tex="<%- String(r.q.question_text || '').replace(/"/g, '&quot;') %>"></div>
+        <% if (r.opts && r.opts.length) { %>
+          <div class="options">
+            <% r.opts.forEach((o, j) => { %>
+              <% const letter = String.fromCharCode(65 + j); %>
+              <% const chosen = String(r.given || '').trim().toUpperCase() === letter; %>
+              <% const isAns = att.status === 'submitted' && showScore && String(r.correctAnswer).trim().toUpperCase() === letter; %>
+              <span class="opt
+                <%= (att.status === 'submitted' && showScore && isAns) ? 'opt-correct' : '' %>
+                <%= (att.status === 'submitted' && showScore && chosen && !isAns) ? 'opt-wrong' : '' %>
+                <%= (!(att.status === 'submitted' && showScore && (isAns || (chosen && !isAns)))) ? 'opt-normal' : '' %>
+                <%= chosen ? 'opt-chosen' : '' %>">
+                <%= letter %>. <%= o %>
+              </span>
+            <% }) %>
+          </div>
+        <% } %>
+        <% if (att.status === 'submitted' && showScore) { %>
+          <div class="explain">
+            <strong>Student answer:</strong> <%= r.given ? r.given : '<span class="given-none">no answer</span>' %>
+            <% if (r.correctAnswer) { %> &nbsp;·&nbsp; <strong>Correct answer:</strong> <%= r.correctAnswer %><% } %>
+          </div>
+          <% if (r.q.explanation) { %>
+            <div class="explain"><strong>Explanation:</strong> <span class="rnz-render" data-tex="<%- String(r.q.explanation).replace(/"/g, '&quot;') %>"></span></div>
+          <% } %>
+        <% } %>
+      </div>
+    <% }) %>
+  <% } %>
+
+  <button class="print-btn" onclick="printPage()">🖨 Print Result Sheet</button>
+  <p class="note">Generated by Prepium — <%= new Date().toLocaleString() %></p>
+</div>
+
+<%- include('../partials/tikzjax') %>
+<%- include('../partials/mathjax') %>
+<script>
+function printPage() {
+  var wait = function () {
+    if (window.MathJax && MathJax.typesetPromise) {
+      MathJax.typesetPromise().then(function () { setTimeout(function () { window.print(); }, 300); }).catch(function () { window.print(); });
+    } else {
+      setTimeout(function () { window.print(); }, 600);
+    }
+  };
+  wait();
+}
+</script>
+</body>
+</html>
