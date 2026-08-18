@@ -69,13 +69,22 @@
                     <% if (ex.max_attempts && ex.max_attempts > 0) { %>
                         <span class="m" style="display:block;margin-bottom:8px;"><i class="fas fa-hourglass-half"></i> <%= ex.my_attempts %>/<%= ex.max_attempts %> attempts used</span>
                     <% } %>
+                    <% if (ex.my_attempt_list && ex.my_attempt_list.length) { %>
+                        <div style="margin-bottom:10px;">
+                            <div style="font-size:0.68rem;font-weight:800;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;"><i class="fas fa-trophy"></i> My Results</div>
+                            <% ex.my_attempt_list.forEach(function(att, ai) { %>
+                                <a class="btn-result" href="/renaissance/result/<%= att.id %>" style="margin-bottom:6px;">
+                                    <i class="fas fa-trophy"></i> Attempt <%= ex.my_attempt_list.length - ai %> &middot; <%= att.score %>/<%= ex.question_count %> &middot; <%= att.percentage %>%
+                                </a>
+                            <% }); %>
+                        </div>
+                    <% } %>
                     <% if (isOpen) { %>
                         <% const trialsLeft = (ex.max_attempts && ex.max_attempts > 0) ? (ex.max_attempts - ex.my_attempts) : 9999; %>
                         <% if (trialsLeft <= 0) { %>
                             <div class="btn-locked"><i class="fas fa-lock"></i> Trial limit reached</div>
                         <% } else if (ex.my_attempts > 0) { %>
-                            <a class="btn-result" href="/renaissance/result/<%= ex.my_attempt_id %>"><i class="fas fa-trophy"></i> View My Result</a>
-                            <% if (trialsLeft > 0) { %><a class="btn-start" href="/renaissance/exam/<%= ex.id %>"><i class="fas fa-rocket"></i> Retake</a><% } %>
+                            <a class="btn-start" href="/renaissance/exam/<%= ex.id %>"><i class="fas fa-rocket"></i> Retake</a>
                         <% } else { %>
                             <a class="btn-start" href="/renaissance/exam/<%= ex.id %>"><i class="fas fa-rocket"></i> Start Exam</a>
                         <% } %>

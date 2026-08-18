@@ -4433,7 +4433,11 @@ app.get('/renaissance', isAuth, async (req, res) => {
             SELECT e.*,
                    (SELECT COUNT(*) FROM renaissance_questions q WHERE q.exam_id = e.id) as question_count,
                    (SELECT COUNT(*) FROM renaissance_attempts a WHERE a.exam_id = e.id AND a.user_id = $1 AND a.status = 'submitted') as my_attempts,
-                   (SELECT id FROM renaissance_attempts a WHERE a.exam_id = e.id AND a.user_id = $1 AND a.status = 'submitted' ORDER BY a.submitted_at DESC LIMIT 1) as my_attempt_id
+                   (SELECT COALESCE(jsonb_agg(jsonb_build_object(
+                           'id', a.id, 'score', a.score, 'percentage', a.percentage, 'submitted_at', a.submitted_at)
+                         ORDER BY a.submitted_at DESC), '[]'::jsonb)
+                    FROM renaissance_attempts a
+                    WHERE a.exam_id = e.id AND a.user_id = $1 AND a.status = 'submitted') as my_attempt_list
             FROM renaissance_exams e
             WHERE e.status = 'published'
             ORDER BY e.created_at DESC`, [req.session.user.id]);
