@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <%- include('partials/tikzjax') %>
+    <style>
+        .exam-shell { padding: 2rem 1.5rem 110px; }
+        @media (min-width: 1024px) { .exam-shell { padding-left: 1.5rem !important; } }
+        .topbar { position: sticky; top: 0; z-index: 50; background: var(--bg); padding: 12px 0; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
+        .timer-pill { display: inline-flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--border-solid); padding: 8px 14px; border-radius: 12px; font-weight: 800; font-size: 0.9rem; }
+        .timer-pill.danger { background: var(--danger-soft); color: var(--danger); border-color: var(--danger-soft); }
+        .q-card { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 1.4rem; margin-bottom: 1rem; }
+        .q-text { font-size: 0.92rem; line-height: 1.8; font-weight: 600; }
+        .option { display: flex; gap: 12px; align-items: flex-start; background: var(--surface-solid); border: 1px solid var(--border-solid); border-radius: 14px; padding: 13px 15px; margin-bottom: 10px; cursor: pointer; }
+        .option.sel { border-color: var(--brand); background: var(--brand-soft); }
+        .option .letter { width: 28px; height: 28px; border-radius: 50%; background: var(--card); border: 1px solid var(--border-solid); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; flex-shrink: 0; }
+        .option.sel .letter { background: var(--brand); color: white; border-color: var(--brand); }
+        .option .otext { font-weight: 600; font-size: 0.88rem; flex: 1; }
+        .theory-answer textarea { width: 100%; min-height: 110px; background: var(--surface-solid); border: 1px solid var(--border-solid); border-radius: 14px; padding: 13px; font-family: inherit; font-weight: 600; font-size: 0.88rem; color: var(--text); }
+        .nav-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+        .qnav { width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border-solid); background: var(--surface-solid); font-weight: 800; font-size: 0.78rem; cursor: pointer; color: var(--text); }
+        .qnav.answered { background: var(--success-soft); color: var(--success); border-color: var(--success-soft); }
+        .qnav.current { border-color: var(--brand); background: var(--brand); color: white; }
+        .ctrl-row { display: flex; gap: 10px; margin-top: 1rem; }
+        .btn { flex: 1; border: none; padding: 14px; border-radius: 14px; font-family: inherit; font-weight: 800; font-size: 0.9rem; cursor: pointer; }
+        .btn-prev { background: var(--surface-solid); color: var(--text); border: 1px solid var(--border-solid); }
+        .btn-next { background: var(--brand); color: white; }
+        .btn-submit { background: linear-gradient(135deg, #16a34a, #15803d); color: white; }
+        .hint { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; margin-top: 8px; }
+        .progress-bar { height: 8px; background: var(--surface-solid); border-radius: 8px; overflow: hidden; margin-top: 8px; }
+        .progress-fill { height: 100%; background: var(--brand-gradient); border-radius: 8px; transition: width 0.3s; }
+    </style>
+    <%- include('partials/theme-toggle') %>
+</head>
+<body>
+    <div class="exam-shell">
+        <div class="topbar">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+                <div>
+                    <div style="font-weight:800;font-size:1rem;"><%= exam.title %></div>
+                    <div style="font-size:0.72rem;color:var(--text-secondary);font-weight:700;"><%= questions.length %> questions · <%= exam.duration_minutes %> minutes</div>
+                </div>
+                <div class="timer-pill" id="timerPill"><i class="fas fa-hourglass-half"></i> <span id="timerDisplay"></span></div>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+        </div>
+
+        <div class="q-card">
+            <div class="nav-grid" id="navGrid"></div>
+        </div>
+
+        <div class="q-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <span style="font-size:0.7rem;font-weight:800;color:var(--text-secondary);text-transform:uppercase;" id="qCourse"></span>
+                <span style="font-size:0.7rem;font-weight:800;color:var(--brand);" id="qCount"></span>
+            </div>
+            <div class="q-text">
+                <div id="qText" class="rnz-render" data-tex=""></div>
+            </div>
+            <div id="qBody" style="margin-top:16px;"></div>
+        </div>
+
+        <div class="ctrl-row">
+            <button class="btn btn-prev" id="prevBtn"><i class="fas fa-arrow-left"></i> Prev</button>
+            <button class="btn btn-next" id="nextBtn">Next <i class="fas fa-arrow-right"></i></button>
+            <button class="btn btn-submit" id="submitBtn"><i class="fas fa-check"></i> Submit</button>
+        </div>
+        <div class="hint" style="text-align:center;">All answers are submitted automatically when the timer reaches zero.</div>
+    </div>
+
+<script>
+var QUESTIONS = <%- JSON.stringify(questions.map(function(q){ return { id: q.id, question_type: q.question_type, question_text: q.question_text, options: q.options || [], course_name: q.course_name }; })) %>;
+var EXAM_ID = <%= exam.id %>;
+var ATTEMPT_ID = <%= attemptId %>;
+var REMAINING = <%= remainingSeconds %>;
+</script>
+<script src="/js/animations.js"></script>
+<script>
+(function () {
+    var idx = 0;
+    var answers = {};
+    var timerEnded = false;
+
+    var timerDisplay = document.getElementById('timerDisplay');
+    var timerPill = document.getElementById('timerPill');
+    var progressFill = document.getElementById('progressFill');
+    var navGrid = document.getElementById('navGrid');
+    var qText = document.getElementById('qText');
+    var qBody = document.getElementById('qBody');
+    var qCourse = document.getElementById('qCourse');
+    var qCount = document.getElementById('qCount');
+    var prevBtn = document.getElementById('prevBtn');
+    var nextBtn = document.getElementById('nextBtn');
+    var submitBtn = document.getElementById('submitBtn');
+
+    function fmt(sec) {
+        sec = Math.max(0, sec);
+        var m = Math.floor(sec / 60);
+        var s = sec % 60;
+        return m + ':' + (s < 10 ? '0' : '') + s;
+    }
+
+    function buildNav() {
+        navGrid.innerHTML = '';
+        QUESTIONS.forEach(function (_, i) {
+            var b = document.createElement('button');
+            b.className = 'qnav';
+            b.textContent = i + 1;
+            b.addEventListener('click', function () { go(i); });
+            navGrid.appendChild(b);
+        });
+        refreshNav();
+    }
+
+    function refreshNav() {
+        Array.prototype.forEach.call(navGrid.children, function (b, i) {
+            b.className = 'qnav';
+            if (answers[QUESTIONS[i].id] !== undefined) b.classList.add('answered');
+            if (i === idx) b.classList.add('current');
+        });
+        var answeredCount = QUESTIONS.filter(function (q) { return answers[q.id] !== undefined; }).length;
+        progressFill.style.width = (QUESTIONS.length ? (answeredCount / QUESTIONS.length) * 100 : 0) + '%';
+    }
+
+    function render() {
+        var q = QUESTIONS[idx];
+        qText.setAttribute('data-tex', q.question_text || '');
+        qCourse.textContent = q.course_name || '';
+        qCount.textContent = 'Question ' + (idx + 1) + ' of ' + QUESTIONS.length;
+        if (window.rnzRender) rnzRender(qText); else if (window.mathRender) mathRender(qText);
+
+        qBody.innerHTML = '';
+        if (q.question_type === 'theory') {
+            var ta = document.createElement('div');
+            ta.className = 'theory-answer';
+            ta.innerHTML = '<textarea id="theoryInput" placeholder="Type your answer here (LaTeX allowed, e.g. $x^2 + 1$)..."></textarea>';
+            qBody.appendChild(ta);
+            var inp = ta.querySelector('textarea');
+            inp.value = answers[q.id] !== undefined ? answers[q.id] : '';
+            inp.addEventListener('input', function () {
+                if (inp.value.trim() !== '') answers[q.id] = inp.value; else delete answers[q.id];
+                refreshNav();
+            });
+        } else {
+            q.options.forEach(function (opt, oi) {
+                var letter = String.fromCharCode(65 + oi);
+                var d = document.createElement('div');
+                d.className = 'option' + (answers[q.id] === letter ? ' sel' : '');
+                d.innerHTML = '<span class="letter">' + letter + '</span><span class="otext"></span>';
+                d.querySelector('.otext').textContent = opt;
+                d.addEventListener('click', function () {
+                    answers[q.id] = letter;
+                    refreshNav();
+                    render();
+                });
+                qBody.appendChild(d);
+            });
+        }
+        prevBtn.disabled = idx === 0;
+        nextBtn.disabled = idx === QUESTIONS.length - 1;
+        refreshNav();
+    }
+
+    function go(i) {
+        if (i < 0 || i >= QUESTIONS.length) return;
+        idx = i;
+        render();
+    }
+
+    function submit() {
+        if (timerEnded) return;
+        timerEnded = true;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+        fetch('/renaissance/exam/' + EXAM_ID + '/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ attemptId: ATTEMPT_ID, answers: answers })
+        }).then(function (r) { return r.json(); }).then(function (d) {
+            if (d.error) {
+                submitBtn.innerHTML = '<i class="fas fa-check"></i> Submit';
+                submitBtn.disabled = false;
+                timerEnded = false;
+                alert(d.error);
+                return;
+            }
+            window.location.href = '/renaissance/result/' + d.attemptId;
+        }).catch(function () {
+            submitBtn.innerHTML = '<i class="fas fa-check"></i> Submit';
+            submitBtn.disabled = false;
+            timerEnded = false;
+        });
+    }
+
+    function startTimer() {
+        var total = REMAINING;
+        var left = REMAINING;
+        timerDisplay.textContent = fmt(left);
+        if (left <= 60) timerPill.classList.add('danger');
+        var iv = setInterval(function () {
+            left--;
+            timerDisplay.textContent = fmt(left);
+            if (left <= 60) timerPill.classList.add('danger');
+            if (left <= 0) {
+                clearInterval(iv);
+                submit();
+            }
+        }, 1000);
+    }
+
+    prevBtn.addEventListener('click', function () { go(idx - 1); });
+    nextBtn.addEventListener('click', function () { go(idx + 1); });
+    submitBtn.addEventListener('click', function () {
+        if (QUESTIONS.length && Object.keys(answers).length < QUESTIONS.length) {
+            if (!confirm('You still have unanswered questions. Submit anyway?')) return;
+        }
+        submit();
+    });
+
+    buildNav();
+    render();
+    startTimer();
+})();
+</script>
+</body>
+</html>

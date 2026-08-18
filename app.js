@@ -3961,6 +3961,342 @@ app.post('/api/admin/quiz/publish', isAdminQuiz, async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ─── RENAISSANCE MOCK EXAMS (ADMIN) ────────────────────────────────────────
+
+app.get('/admin/renaissance', isAdmin, async (req, res) => {
+    try {
+        const groupLink = await getRenaissanceSetting('group_link', '');
+        res.render('admin/renaissance', { user: req.session.user, groupLink, groupLinkJSON: JSON.stringify(groupLink || '') });
+    } catch (e) { res.status(500).send('Error: ' + e.message); }
+});
+
+// List all exams (with counts)
+app.get('/api/admin/renaissance/exams', isAdmin, async (req, res) => {
+    try {
+        const r = await pool.query(`
+            SELECT e.*,
+                   (SELECT COUNT(*) FROM renaissance_courses c WHERE c.exam_id = e.id) as course_count,
+                   (SELECT COUNT(*) FROM renaissance_questions q JOIN renaissance_courses c ON q.course_id = c.id WHERE c.exam_id = e.id) as question_count,
+                   (SELECT COUNT(*) FROM renaissance_attempts a WHERE a.exam_id = e.id AND a.status = 'submitted') as attempt_count
+            FROM renaissance_exams e ORDER BY e.created_at DESC`);
+        res.json({ exams: r.rows });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Get one exam with courses + questions
+app.get('/api/admin/renaissance/exams/:id', isAdmin, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        const ex = await pool.query('SELECT * FROM renaissance_exams WHERE id = $1', [id]);
+        if (!ex.rows[0]) return res.status(404).json({ error: 'Exam not found' });
+        const courses = await pool.query('SELECT * FROM renaissance_courses WHERE exam_id = $1 ORDER BY course_code', [id]);
+        const qs = await pool.query(`
+            SELECT q.*, c.course_name, c.course_code FROM renaissance_questions q
+            JOIN renaissance_courses c ON q.course_id = c.id
+            WHERE c.exam_id = $1 ORDER BY q.created_at`, [id]);
+        res.json({ exam: ex.rows[0], courses: courses.rows, questions: qs.rows });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Create exam
+app.post('/api/admin/renaissance/exams', isAdmin, async (req, res) => {
+    try {
+        const { title, description, duration_minutes, opens_at, closes_at, show_results_immediately } = req.body;
+        if (!title || !title.trim()) return res.status(400).json({ error: 'Title is required' });
+        const r = await pool.query(`
+            INSERT INTO renaissance_exams (title, description, duration_minutes, opens_at, closes_at, show_results_immediately, created_by)
+            VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+            [title.trim(), description || '', parseInt(duration_minutes) || 30, opens_at || null, closes_at || null, show_results_immediately !== false, req.session.user.id]);
+        res.json({ success: true, id: r.rows[0].id });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Update exam
+app.post('/api/admin/renaissance/exams/:id', isAdmin, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        const { title, description, duration_minutes, opens_at, closes_at, show_results_immediately } = req.body;
+        await pool.query(`
+            UPDATE renaissance_exams SET
+              title = COALESCE($1, title),
+              description = COALESCE($2, description),
+              duration_minutes = COALESCE($3, duration_minutes),
+              opens_at = COALESCE($4, opens_at),
+              closes_at = COALESCE($5, closes_at),
+              show_results_immediately = COALESCE($6, show_results_immediately)
+            WHERE id = $7`,
+            [title || null, description || null, parseInt(duration_minutes) || null, opens_at || null, closes_at || null, (typeof show_results_immediately === 'boolean') ? show_results_immediately : null, id]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Delete exam
+app.delete('/api/admin/renaissance/exams/:id', isAdmin, async (req, res) => {
+    try {
+        await pool.query('DELETE FROM renaissance_exams WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Publish / close exam
+app.post('/api/admin/renaissance/exams/:id/publish', isAdmin, async (req, res) => {
+    try {
+        const status = req.body.status === 'closed' ? 'closed' : 'published';
+        await pool.query('UPDATE renaissance_exams SET status = $1 WHERE id = $2', [status, req.params.id]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Release (or re-hide) results for a delayed-results exam
+app.post('/api/admin/renaissance/exams/:id/release-results', isAdmin, async (req, res) => {
+    try {
+        const released = !!req.body.released;
+        await pool.query('UPDATE renaissance_exams SET results_released = $1 WHERE id = $2', [released, req.params.id]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Courses
+app.post('/api/admin/renaissance/courses', isAdmin, async (req, res) => {
+    try {
+        const { exam_id, course_name, course_code } = req.body;
+        if (!exam_id || !course_name || !course_name.trim()) return res.status(400).json({ error: 'Course name is required' });
+        const r = await pool.query(
+            'INSERT INTO renaissance_courses (exam_id, course_name, course_code) VALUES ($1,$2,$3) RETURNING id',
+            [exam_id, course_name.trim(), (course_code || '').trim().toUpperCase()]);
+        res.json({ success: true, id: r.rows[0].id });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/admin/renaissance/courses/:id', isAdmin, async (req, res) => {
+    try {
+        await pool.query('UPDATE renaissance_courses SET course_name = COALESCE($1, course_name), course_code = COALESCE($2, course_code) WHERE id = $3',
+            [req.body.course_name || null, req.body.course_code || null, req.params.id]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/admin/renaissance/courses/:id', isAdmin, async (req, res) => {
+    try {
+        await pool.query('DELETE FROM renaissance_courses WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Questions
+app.post('/api/admin/renaissance/questions', isAdmin, async (req, res) => {
+    try {
+        const { course_id, question_type, question_text, options, correct_answer, explanation, ai_generated } = req.body;
+        if (!course_id || !question_text || !question_text.trim()) return res.status(400).json({ error: 'Question text is required' });
+        const r = await pool.query(`
+            INSERT INTO renaissance_questions (course_id, question_type, question_text, options, correct_answer, explanation, ai_generated)
+            VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+            [course_id, question_type === 'theory' ? 'theory' : 'mcq', question_text, JSON.stringify(Array.isArray(options) ? options : []), correct_answer || '', explanation || '', !!ai_generated]);
+        res.json({ success: true, id: r.rows[0].id });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/admin/renaissance/questions/:id', isAdmin, async (req, res) => {
+    try {
+        const { question_type, question_text, options, correct_answer, explanation, ai_generated } = req.body;
+        await pool.query(`
+            UPDATE renaissance_questions SET
+              question_type = $1, question_text = $2, options = $3, correct_answer = $4, explanation = $5, ai_generated = $6
+            WHERE id = $7`,
+            [question_type === 'theory' ? 'theory' : 'mcq', question_text, JSON.stringify(Array.isArray(options) ? options : []), correct_answer || '', explanation || '', !!ai_generated, req.params.id]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/admin/renaissance/questions/:id', isAdmin, async (req, res) => {
+    try {
+        await pool.query('DELETE FROM renaissance_questions WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// AI generate answer + explanation for a question
+app.post('/api/admin/renaissance/questions/:id/ai', isAdmin, async (req, res) => {
+    try {
+        const q = await pool.query('SELECT * FROM renaissance_questions WHERE id = $1', [req.params.id]);
+        if (!q.rows[0]) return res.status(404).json({ error: 'Question not found' });
+        const row = q.rows[0];
+        let options = [];
+        try { options = JSON.parse(row.options || '[]'); } catch (_) {}
+        const result = await renaissanceAIAnswer(row.question_text, options, req.body || {});
+        if (result.error) return res.json({ error: result.error });
+        res.json({ success: true, answer: result.answer, explanation: result.explanation, provider: result.provider });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Settings (group link)
+app.post('/api/admin/renaissance/settings', isAdmin, async (req, res) => {
+    try {
+        await pool.query('INSERT INTO renaissance_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value',
+            ['group_link', (req.body.group_link || '').trim()]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── RENAISSANCE MOCK EXAMS (STUDENT) ──────────────────────────────────────
+
+app.get('/renaissance', isAuth, async (req, res) => {
+    try {
+        const groupLink = await getRenaissanceSetting('group_link', '');
+        const exams = await pool.query(`
+            SELECT e.*,
+                   (SELECT COUNT(*) FROM renaissance_questions q JOIN renaissance_courses c ON q.course_id = c.id WHERE c.exam_id = e.id) as question_count,
+                   (SELECT COUNT(*) FROM renaissance_attempts a WHERE a.exam_id = e.id AND a.user_id = $1 AND a.status = 'submitted') as my_attempts,
+                   (SELECT id FROM renaissance_attempts a WHERE a.exam_id = e.id AND a.user_id = $1 AND a.status = 'submitted' ORDER BY a.submitted_at DESC LIMIT 1) as my_attempt_id
+            FROM renaissance_exams e
+            WHERE e.status = 'published'
+            ORDER BY e.created_at DESC`, [req.session.user.id]);
+        res.render('renaissance', { user: req.session.user, exams: exams.rows, groupLink });
+    } catch (e) {
+        console.error('Renaissance dashboard error:', e.message);
+        res.status(500).send('Error loading Renaissance');
+    }
+});
+
+app.get('/renaissance/exam/:id', isAuth, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        const ex = await pool.query('SELECT * FROM renaissance_exams WHERE id = $1 AND status = $2', [id, 'published']);
+        if (!ex.rows[0]) return res.status(404).send('Exam not found or not published');
+        const exam = ex.rows[0];
+
+        const now = new Date();
+        if (exam.opens_at && new Date(exam.opens_at) > now) {
+            return res.render('quiz-locked', { user: req.session.user, message: 'This exam has not opened yet. Please come back when it opens.' });
+        }
+        if (exam.closes_at && new Date(exam.closes_at) < now) {
+            return res.render('quiz-locked', { user: req.session.user, message: 'This exam is now closed.' });
+        }
+
+        // Reuse an existing in-progress attempt or create one
+        let attempt = await pool.query(
+            "SELECT * FROM renaissance_attempts WHERE user_id = $1 AND exam_id = $2 AND status = 'in_progress' ORDER BY started_at DESC LIMIT 1",
+            [req.session.user.id, id]);
+        let attemptId;
+        if (attempt.rows[0]) {
+            attemptId = attempt.rows[0].id;
+        } else {
+            const created = await pool.query(
+                'INSERT INTO renaissance_attempts (user_id, exam_id, started_at) VALUES ($1,$2,NOW()) RETURNING id',
+                [req.session.user.id, id]);
+            attemptId = created.rows[0].id;
+        }
+
+        const questions = await pool.query(`
+            SELECT q.id, q.question_type, q.question_text, q.options, c.course_name
+            FROM renaissance_questions q JOIN renaissance_courses c ON q.course_id = c.id
+            WHERE c.exam_id = $1 ORDER BY c.course_code, q.id`, [id]);
+
+        const attemptRow = await pool.query('SELECT started_at FROM renaissance_attempts WHERE id = $1', [attemptId]);
+        const started = attemptRow.rows[0] ? new Date(attemptRow.rows[0].started_at) : new Date();
+        const remaining = Math.max(0, (exam.duration_minutes || 30) * 60 - Math.floor((Date.now() - started.getTime()) / 1000));
+
+        res.render('renaissance-exam', { user: req.session.user, exam, attemptId, questions: questions.rows, remainingSeconds: remaining });
+    } catch (e) {
+        console.error('Renaissance exam error:', e.message);
+        res.status(500).send('Error loading exam');
+    }
+});
+
+app.post('/renaissance/exam/:id/submit', isAuth, async (req, res) => {
+    try {
+        const examId = parseInt(req.params.id);
+        const attemptId = parseInt(req.body.attemptId || req.query.attemptId);
+        const uid = req.session.user.id;
+
+        const attempt = await pool.query(
+            'SELECT * FROM renaissance_attempts WHERE id = $1 AND user_id = $2 AND exam_id = $3 AND status = $4',
+            [attemptId, uid, examId, 'in_progress']);
+        if (!attempt.rows[0]) return res.status(400).json({ error: 'Attempt not found or already submitted' });
+
+        const exam = await pool.query('SELECT * FROM renaissance_exams WHERE id = $1', [examId]);
+        if (!exam.rows[0]) return res.status(404).json({ error: 'Exam not found' });
+
+        const answers = req.body.answers || {};
+        const questions = await pool.query(`
+            SELECT q.id, q.correct_answer, q.question_type
+            FROM renaissance_questions q JOIN renaissance_courses c ON q.course_id = c.id
+            WHERE c.exam_id = $1`, [examId]);
+
+        let score = 0;
+        const total = questions.rows.length;
+        const graded = questions.rows.map(q => {
+            const userAns = answers[q.id] !== undefined ? String(answers[q.id]).trim() : '';
+            const correctAns = (q.correct_answer || '').trim();
+            let isCorrect = false;
+            if (q.question_type === 'mcq' && correctAns) {
+                isCorrect = userAns.toLowerCase() === correctAns.toLowerCase();
+            } else if (correctAns) {
+                isCorrect = userAns.toLowerCase() === correctAns.toLowerCase();
+            }
+            if (isCorrect) score++;
+            return { id: q.id, question_type: q.question_type, correct_answer: correctAns, user_answer: userAns, is_correct: isCorrect };
+        });
+
+        const started = new Date(attempt.rows[0].started_at);
+        const timeTaken = Math.max(0, Math.round((Date.now() - started.getTime()) / 1000));
+        const pct = total > 0 ? Math.round((score / total) * 10000) / 100 : 0;
+
+        await pool.query(`
+            UPDATE renaissance_attempts SET status = 'submitted', score = $1, total = $2, percentage = $3,
+              time_taken = $4, answers = $5, submitted_at = NOW() WHERE id = $6`,
+            [score, total, pct, timeTaken, JSON.stringify(answers), attemptId]);
+
+        const showNow = !!exam.rows[0].show_results_immediately;
+        res.json({ success: true, attemptId, showNow });
+    } catch (e) {
+        console.error('Renaissance submit error:', e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/renaissance/result/:attemptId', isAuth, async (req, res) => {
+    try {
+        const attemptId = parseInt(req.params.attemptId);
+        const attempt = await pool.query(
+            'SELECT * FROM renaissance_attempts WHERE id = $1 AND user_id = $2 AND status = $3',
+            [attemptId, req.session.user.id, 'submitted']);
+        if (!attempt.rows[0]) return res.status(404).send('Result not found');
+
+        const exam = await pool.query('SELECT * FROM renaissance_exams WHERE id = $1', [attempt.rows[0].exam_id]);
+        if (!exam.rows[0]) return res.status(404).send('Exam not found');
+        const ex = exam.rows[0];
+
+        let answers = {};
+        try { answers = JSON.parse(attempt.rows[0].answers || '{}'); } catch (_) {}
+
+        const canView = !!ex.show_results_immediately || !!ex.results_released;
+
+        let questions = [];
+        if (canView) {
+            const qs = await pool.query(`
+                SELECT q.id, q.question_type, q.question_text, q.options, q.correct_answer, q.explanation, c.course_name
+                FROM renaissance_questions q JOIN renaissance_courses c ON q.course_id = c.id
+                WHERE c.exam_id = $1 ORDER BY c.course_code, q.id`, [ex.id]);
+            questions = qs.rows.map(q => {
+                let options = [];
+                try { options = JSON.parse(q.options || '[]'); } catch (_) {}
+                return {
+                    ...q,
+                    options,
+                    user_answer: answers[q.id] !== undefined ? String(answers[q.id]) : '',
+                    is_correct: String(answers[q.id] || '').trim().toLowerCase() === (q.correct_answer || '').trim().toLowerCase()
+                };
+            });
+        }
+
+        res.render('renaissance-result', { user: req.session.user, exam: ex, attempt: attempt.rows[0], questions, canView });
+    } catch (e) {
+        console.error('Renaissance result error:', e.message);
+        res.status(500).send('Error loading result');
+    }
+});
+
 // ─── DAILY TASK DASHBOARD ──────────────────────────────────────────────────
 
 app.get('/daily-task', isAuth, async (req, res) => {
@@ -6281,6 +6617,90 @@ async function ensureMigrationColumns() {
     console.log('[Admin Quiz] Tables ready');
   } catch(e) { console.error('[Admin Quiz] Init:', e.message); }
 })();
+
+// ─── RENAISSANCE MOCK EXAM TABLES ──────────────────────────────────────────
+(async function initRenaissance() {
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS renaissance_exams (
+      id SERIAL PRIMARY KEY,
+      title VARCHAR(255) NOT NULL,
+      description TEXT DEFAULT '',
+      duration_minutes INTEGER DEFAULT 30,
+      opens_at TIMESTAMP,
+      closes_at TIMESTAMP,
+      show_results_immediately BOOLEAN DEFAULT true,
+      results_released BOOLEAN DEFAULT false,
+      status VARCHAR(20) DEFAULT 'draft',
+      created_by INTEGER DEFAULT 0,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS renaissance_courses (
+      id SERIAL PRIMARY KEY,
+      exam_id INTEGER NOT NULL REFERENCES renaissance_exams(id) ON DELETE CASCADE,
+      course_name VARCHAR(255) NOT NULL,
+      course_code VARCHAR(50) DEFAULT '',
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS renaissance_questions (
+      id SERIAL PRIMARY KEY,
+      course_id INTEGER NOT NULL REFERENCES renaissance_courses(id) ON DELETE CASCADE,
+      question_type VARCHAR(20) DEFAULT 'mcq',
+      question_text TEXT NOT NULL,
+      options JSONB DEFAULT '[]',
+      correct_answer TEXT DEFAULT '',
+      explanation TEXT DEFAULT '',
+      ai_generated BOOLEAN DEFAULT false,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS renaissance_attempts (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      exam_id INTEGER NOT NULL,
+      score INTEGER DEFAULT 0,
+      total INTEGER DEFAULT 0,
+      percentage DECIMAL(5,2) DEFAULT 0,
+      time_taken INTEGER DEFAULT 0,
+      answers JSONB DEFAULT '{}',
+      status VARCHAR(20) DEFAULT 'in_progress',
+      started_at TIMESTAMP DEFAULT NOW(),
+      submitted_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS renaissance_settings (
+      key VARCHAR(100) PRIMARY KEY,
+      value TEXT DEFAULT ''
+    )`);
+    console.log('[Renaissance] Tables ready');
+  } catch(e) { console.error('[Renaissance] Init:', e.message); }
+})();
+
+async function getRenaissanceSetting(key, fallback) {
+  try {
+    const r = await pool.query('SELECT value FROM renaissance_settings WHERE key = $1', [key]);
+    if (r.rows[0]) return r.rows[0].value;
+  } catch (_) {}
+  return fallback || '';
+}
+
+// AI helper: generate correct answer + explanation for a Renaissance question
+async function renaissanceAIAnswer(questionText, options, opts) {
+  const optsList = Array.isArray(options) && options.length ? options.map((o, i) => String.fromCharCode(65 + i) + '. ' + o).join('\n') : '';
+  const prompt = `You are a university examiner. Given this exam question (which may contain LaTeX math and TikZ diagrams), provide the CORRECT answer and a short clear explanation.
+Question: ${questionText}
+${optsList ? 'Options:\n' + optsList + '\n\nIf one of the options is correct, answer with its LETTER (e.g. "B") AND the option text. If it is a theory/open question, give the full expected answer.' : ''}
+Return ONLY raw JSON (no markdown, no code fences) exactly like:
+{"answer":"the correct answer here","explanation":"short explanation here"}`;
+  const res = await studyPromptSmart(prompt, opts || {});
+  if (!res.text || res.text.startsWith('AI error')) return { error: res.text || 'AI could not generate.' };
+  let parsed;
+  try { parsed = JSON.parse(res.text); }
+  catch (_) {
+    const m = res.text.match(/\{[\s\S]*\}/);
+    if (m) { try { parsed = JSON.parse(m[0]); } catch (_2) {} }
+  }
+  if (!parsed) return { error: 'AI returned invalid data.' };
+  return { answer: (parsed.answer || '').trim(), explanation: (parsed.explanation || '').trim(), provider: res.provider };
+}
 
 if (require.main === module) {
     const PORT = process.env.PORT || 3000;

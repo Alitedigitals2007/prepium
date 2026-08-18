@@ -1,0 +1,53 @@
+<script>
+window.TikzJaxOptions = {
+  workerMode: "auto",
+  theme: { attribute: "data-theme", darkValue: "dark", lightValue: "light", followSystemTheme: false },
+  tex: {
+    texPackages: { circuitikz: "", pgfplots: "", amsmath: "", xcolor: "dvipsnames" },
+    tikzLibraries: ["arrows.meta", "positioning", "calc", "circuits.logic.US", "circuits.logic.IEC", "circuits.ee.IEC", "circuits.ee.CIE"]
+  }
+};
+</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@rod2ik/tikzjax@1.5.0/dist/fonts.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@rod2ik/tikzjax@1.5.0/dist/tikzjax.min.js" defer></script>
+<script>
+function rnzEscape(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function rnzTikzToScript(tikzCode) {
+  var safe = String(tikzCode).replace(/<\/script/gi, '<\\/script');
+  return '<script type="text/tikz" data-disable-cache="true">' + safe + '<\/script>';
+}
+function rnzLatexToHTML(src) {
+  var text = String(src || '');
+  var re = /\\begin\{tikzpicture\}[\s\S]*?\\end\{tikzpicture\}/g;
+  var out = '', last = 0, m;
+  while ((m = re.exec(text)) !== null) {
+    out += rnzEscape(text.slice(last, m.index));
+    out += rnzTikzToScript(m[0]);
+    last = m.index + m[0].length;
+  }
+  out += rnzEscape(text.slice(last));
+  return out;
+}
+function rnzRender(el) {
+  if (!el) return;
+  var nodes = [];
+  if (el.classList && el.classList.contains('rnz-render')) nodes.push(el);
+  el.querySelectorAll('.rnz-render').forEach(function (n) { nodes.push(n); });
+  nodes.forEach(function (node) {
+    var src = node.getAttribute('data-tex') || node.textContent;
+    node.innerHTML = rnzLatexToHTML(src);
+  });
+  if (window.mathRender) mathRender(el);
+}
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.rnz-render').forEach(function (node) {
+    node.setAttribute('data-tex', node.getAttribute('data-tex') || node.textContent);
+    node.innerHTML = rnzLatexToHTML(node.getAttribute('data-tex'));
+  });
+  if (window.mathRender) mathRender(document.body);
+});
+</script>

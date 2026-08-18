@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <%- include('partials/tikzjax') %>
+    <style>
+        .shell { padding: 2rem 1.5rem 110px; }
+        @media (min-width: 1024px) { .shell { padding-left: 1.5rem !important; } }
+        .score-card { background: linear-gradient(135deg, #7c3aed, #2563eb); border-radius: 24px; padding: 1.6rem; color: white; text-align: center; margin-bottom: 1.2rem; }
+        .score-card .big { font-size: 2.6rem; font-weight: 800; }
+        .score-card .label { font-size: 0.8rem; opacity: 0.9; font-weight: 700; margin-top: 4px; }
+        .score-row { display: flex; justify-content: center; gap: 18px; margin-top: 14px; flex-wrap: wrap; }
+        .score-row .s { background: rgba(255,255,255,0.14); padding: 8px 16px; border-radius: 12px; font-weight: 800; font-size: 0.8rem; }
+        .pending-card { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 2rem 1.4rem; text-align: center; }
+        .pending-card h3 { font-weight: 800; }
+        .pending-card p { font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; margin-top: 8px; }
+        .review-card { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 1.3rem; margin-bottom: 14px; }
+        .review-card .course { font-size: 0.68rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; }
+        .review-card .q { font-size: 0.9rem; font-weight: 600; line-height: 1.7; margin: 8px 0 12px; }
+        .verdict { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 10px; font-size: 0.72rem; font-weight: 800; }
+        .v-correct { background: var(--success-soft); color: var(--success); }
+        .v-wrong { background: var(--danger-soft); color: var(--danger); }
+        .ans-line { font-size: 0.82rem; font-weight: 600; margin-top: 10px; }
+        .ans-line b { color: var(--text-secondary); }
+        .ans-correct { color: var(--success); font-weight: 800; }
+        .ans-user-wrong { color: var(--danger); font-weight: 800; }
+        .explain { background: var(--surface-solid); border: 1px solid var(--border-solid); border-radius: 14px; padding: 12px 14px; margin-top: 12px; font-size: 0.82rem; font-weight: 600; line-height: 1.6; }
+        .explain b { color: var(--brand); }
+        .btn-row { display: flex; gap: 10px; margin-top: 1.4rem; }
+        .btn { flex: 1; border: none; padding: 14px; border-radius: 14px; font-family: inherit; font-weight: 800; font-size: 0.9rem; cursor: pointer; text-align: center; text-decoration: none; }
+        .btn-retry { background: var(--brand); color: white; }
+        .btn-back { background: var(--surface-solid); color: var(--text); border: 1px solid var(--border-solid); }
+    </style>
+    <%- include('partials/theme-toggle') %>
+</head>
+<body>
+    <div class="shell">
+        <% if (!canView) { %>
+            <div class="pending-card">
+                <div style="font-size:2.4rem;">⏳</div>
+                <h3>Results Not Released Yet</h3>
+                <p>You submitted "<%= exam.title %>". Your results will appear here once the admin releases them.</p>
+                <div class="btn-row">
+                    <a class="btn btn-back" href="/renaissance"><i class="fas fa-arrow-left"></i> Back to Renaissance</a>
+                </div>
+            </div>
+        <% } else { %>
+            <div class="score-card">
+                <div class="label">Your Score — <%= exam.title %></div>
+                <div class="big"><%= attempt.percentage %>%</div>
+                <div class="score-row">
+                    <span class="s"><i class="fas fa-check-circle"></i> <%= attempt.score %> / <%= attempt.total %></span>
+                    <span class="s"><i class="fas fa-clock"></i> <%= Math.floor(attempt.time_taken / 60) %>m <%= attempt.time_taken % 60 %>s</span>
+                </div>
+            </div>
+
+            <% questions.forEach(function(q, i) { %>
+                <div class="review-card">
+                    <div class="course"><%= q.course_name %> · Q<%= i + 1 %></div>
+                    <div class="q">
+                        <div class="rnz-render" data-tex="<%- q.question_text.replace(/"/g, '&quot;') %>"></div>
+                    </div>
+                    <span class="verdict <%= q.is_correct ? 'v-correct' : 'v-wrong' %>">
+                        <i class="fas <%= q.is_correct ? 'fa-check' : 'fa-times' %>"></i> <%= q.is_correct ? 'Correct' : 'Incorrect' %>
+                    </span>
+                    <div class="ans-line">
+                        <b>Your answer:</b> <span class="<%= q.is_correct ? 'ans-correct' : 'ans-user-wrong' %>"><%= q.user_answer || '(no answer)' %></span>
+                    </div>
+                    <% if (!q.is_correct && q.correct_answer) { %>
+                        <div class="ans-line"><b>Correct answer:</b> <span class="ans-correct"><%= q.correct_answer %></span></div>
+                    <% } %>
+                    <% if (q.question_type === 'mcq' && q.options.length) { %>
+                        <div class="ans-line" style="font-size:0.75rem;color:var(--text-muted);">A. <%= q.options[0] || '' %> &nbsp; B. <%= q.options[1] || '' %> &nbsp; C. <%= q.options[2] || '' %> &nbsp; D. <%= q.options[3] || '' %></div>
+                    <% } %>
+                    <% if (q.explanation) { %>
+                        <div class="explain"><b>Explanation:</b> <%= q.explanation %></div>
+                    <% } %>
+                </div>
+            <% }) %>
+
+            <div class="btn-row">
+                <a class="btn btn-back" href="/renaissance"><i class="fas fa-arrow-left"></i> Back to Renaissance</a>
+                <a class="btn btn-retry" href="/renaissance/exam/<%= exam.id %>"><i class="fas fa-redo"></i> Retake Exam</a>
+            </div>
+        <% } %>
+    </div>
+    <%- include('partials/bottom-nav', { activeNav: 'renaissance' }) %>
+    <script src="/js/animations.js"></script>
+</body>
+</html>
