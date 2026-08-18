@@ -4179,10 +4179,22 @@ function parseRenaissanceLatex(latex) {
   src = src.replace(/\\maketitle/gi, '');
   src = src.replace(/\\begin\{document\}/gi, '');
   src = src.replace(/\\end\{document\}/gi, '');
-  src = src.replace(/\\begin\{enumerate\}/gi, '');
+  // Convert option-list enumerate blocks like \begin{enumerate}[label=\Alph*.] ... \item A ... \end{enumerate}
+  // into plain lettered option lines (A. B. C. ...). Must run BEFORE stripping enumerate tags.
+  src = src.replace(/\\begin\{enumerate\}\s*\[[^\]]*(?:\\[Aa]lph)[^\]]*\]\s*([\s\S]*?)\s*\\end\{enumerate\}/gi, function (m, body) {
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    let i = 0;
+    const converted = body.replace(/\\item\b/g, function () {
+      return letters[Math.min(i++, 25)] + '.';
+    });
+    return '\n' + converted + '\n';
+  });
+  src = src.replace(/\\begin\{enumerate\}(?:\s*\[[^\]]*\])?/gi, '');
   src = src.replace(/\\end\{enumerate\}/gi, '');
-  src = src.replace(/\\begin\{itemize\}/gi, '');
+  src = src.replace(/\\begin\{itemize\}(?:\s*\[[^\]]*\])?/gi, '');
   src = src.replace(/\\end\{itemize\}/gi, '');
+  src = src.replace(/\\begin\{center\}/gi, '');
+  src = src.replace(/\\end\{center\}/gi, '');
   src = src.replace(/\\hfill/gi, '');
   // Convert option-style \item (e.g. \item A. text, \item (B) text, \item[C] text) into plain option lines
   src = src.replace(/\\item\s+(?:[\(]?[A-Ea-e][\.\)]|\[[A-Ea-e]\])\s+/g, function (m) {
