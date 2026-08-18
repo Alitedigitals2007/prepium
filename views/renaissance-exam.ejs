@@ -68,6 +68,8 @@
         <div class="hint" style="text-align:center;">All answers are submitted automatically when the timer reaches zero.</div>
     </div>
 
+    <div id="prewarm" style="position:absolute;left:-99999px;top:0;width:1px;height:1px;overflow:hidden;pointer-events:none;" aria-hidden="true"></div>
+
 <script>
 var QUESTIONS = <%- JSON.stringify(questions.map(function(q){ return { id: q.id, question_type: q.question_type, question_text: q.question_text, options: q.options || [] }; })) %>;
 var EXAM_ID = <%= exam.id %>;
@@ -170,6 +172,22 @@ var REMAINING = <%= remainingSeconds %>;
         render();
     }
 
+    function prewarm() {
+        if (!window.rnzRender) return;
+        var box = document.getElementById('prewarm');
+        if (!box || box.childNodes.length) return;
+        var frag = document.createDocumentFragment();
+        QUESTIONS.forEach(function (q) {
+            if (!q.question_text) return;
+            var d = document.createElement('div');
+            d.className = 'rnz-render';
+            d.setAttribute('data-tex', q.question_text);
+            frag.appendChild(d);
+        });
+        box.appendChild(frag);
+        rnzRender(box);
+    }
+
     function submit() {
         if (timerEnded) return;
         timerEnded = true;
@@ -223,6 +241,7 @@ var REMAINING = <%= remainingSeconds %>;
     buildNav();
     render();
     startTimer();
+    prewarm();
 })();
 </script>
 </body>

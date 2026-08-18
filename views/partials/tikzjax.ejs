@@ -28,7 +28,7 @@ function rnzTikzToScript(tikzCode) {
   var safe = String(tikzCode).replace(/<\/script/gi, '<\\/script');
   var pkgs = rnzTikzPackages(tikzCode);
   var attr = pkgs.length ? ' data-tex-packages="' + pkgs.join(',') + '"' : '';
-  return '<script type="text/tikz" data-disable-cache="true"' + attr + '>' + safe + '<\/script>';
+  return '<script type="text/tikz"' + attr + '>' + safe + '<\/script>';
 }
 function rnzLatexToHTML(src) {
   var text = String(src || '');

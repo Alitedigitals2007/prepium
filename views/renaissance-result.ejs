@@ -14,9 +14,23 @@
         .pending-card { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 2rem 1.4rem; text-align: center; }
         .pending-card h3 { font-weight: 800; }
         .pending-card p { font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; margin-top: 8px; }
-        .review-card { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 1.3rem; margin-bottom: 14px; }
-        .review-card .course { font-size: 0.68rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; }
-        .review-card .q { font-size: 0.9rem; font-weight: 600; line-height: 1.7; margin: 8px 0 12px; }
+        .q-card { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 1.4rem; margin-bottom: 1rem; }
+        .nav-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+        .qnav { width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border-solid); background: var(--surface-solid); font-weight: 800; font-size: 0.78rem; cursor: pointer; color: var(--text); }
+        .qnav.correct { background: var(--success-soft); color: var(--success); border-color: var(--success-soft); }
+        .qnav.wrong { background: var(--danger-soft); color: var(--danger); border-color: var(--danger-soft); }
+        .qnav.current { border-color: var(--brand); background: var(--brand); color: white; }
+        .q-text { font-size: 0.92rem; line-height: 1.8; font-weight: 600; }
+        .opt { display: flex; gap: 12px; align-items: flex-start; background: var(--surface-solid); border: 2px solid var(--border-solid); border-radius: 14px; padding: 13px 15px; margin-bottom: 10px; }
+        .opt .letter { width: 28px; height: 28px; border-radius: 50%; background: var(--card); border: 1px solid var(--border-solid); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; flex-shrink: 0; }
+        .opt .otext { font-weight: 600; font-size: 0.88rem; flex: 1; }
+        .opt .tag { font-size: 0.62rem; font-weight: 800; padding: 2px 8px; border-radius: 8px; white-space: nowrap; align-self: center; }
+        .opt-correct { border-color: var(--success); background: var(--success-soft); }
+        .opt-correct .letter { background: var(--success); color: white; border-color: var(--success); }
+        .opt-correct .tag { background: var(--success); color: white; }
+        .opt-wrong { border-color: var(--danger); background: var(--danger-soft); }
+        .opt-wrong .letter { background: var(--danger); color: white; border-color: var(--danger); }
+        .opt-wrong .tag { background: var(--danger); color: white; }
         .verdict { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 10px; font-size: 0.72rem; font-weight: 800; }
         .v-correct { background: var(--success-soft); color: var(--success); }
         .v-wrong { background: var(--danger-soft); color: var(--danger); }
@@ -24,12 +38,22 @@
         .ans-line b { color: var(--text-secondary); }
         .ans-correct { color: var(--success); font-weight: 800; }
         .ans-user-wrong { color: var(--danger); font-weight: 800; }
+        .theory-box { background: var(--surface-solid); border: 1px solid var(--border-solid); border-radius: 14px; padding: 13px 15px; margin-top: 12px; }
+        .theory-box .tlabel { font-size: 0.68rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+        .theory-box .tval { font-size: 0.88rem; font-weight: 600; line-height: 1.7; margin-top: 6px; white-space: pre-wrap; }
         .explain { background: var(--surface-solid); border: 1px solid var(--border-solid); border-radius: 14px; padding: 12px 14px; margin-top: 12px; font-size: 0.82rem; font-weight: 600; line-height: 1.6; }
         .explain b { color: var(--brand); }
-        .btn-row { display: flex; gap: 10px; margin-top: 1.4rem; }
+        .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.72rem; font-weight: 800; color: var(--text-secondary); margin-bottom: 14px; }
+        .legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+        .legend .d-correct { background: var(--success); }
+        .legend .d-wrong { background: var(--danger); }
+        .ctrl-row { display: flex; gap: 10px; margin-top: 1rem; }
         .btn { flex: 1; border: none; padding: 14px; border-radius: 14px; font-family: inherit; font-weight: 800; font-size: 0.9rem; cursor: pointer; text-align: center; text-decoration: none; }
-        .btn-retry { background: var(--brand); color: white; }
+        .btn-prev { background: var(--surface-solid); color: var(--text); border: 1px solid var(--border-solid); }
+        .btn-next { background: var(--brand); color: white; }
+        .btn-retry { background: linear-gradient(135deg, #16a34a, #15803d); color: white; }
         .btn-back { background: var(--surface-solid); color: var(--text); border: 1px solid var(--border-solid); }
+        .btn:disabled { opacity: 0.45; cursor: not-allowed; }
     </style>
     <%- include('partials/theme-toggle') %>
 </head>
@@ -54,41 +78,183 @@
                 </div>
             </div>
 
-            <% questions.forEach(function(q, i) { %>
-                <div class="review-card">
-                    <div class="course">Q<%= i + 1 %></div>
-                    <div class="q">
-                        <div class="rnz-render" data-tex="<%- q.question_text.replace(/"/g, '&quot;') %>"></div>
-                    </div>
-                    <span class="verdict <%= q.is_correct ? 'v-correct' : 'v-wrong' %>">
-                        <i class="fas <%= q.is_correct ? 'fa-check' : 'fa-times' %>"></i> <%= q.is_correct ? 'Correct' : 'Incorrect' %>
-                    </span>
-                    <div class="ans-line">
-                        <b>Your answer:</b> <span class="rnz-render <%= q.is_correct ? 'ans-correct' : 'ans-user-wrong' %>" data-tex="<%= (q.user_answer || '(no answer)').replace(/"/g, '&quot;') %>"><%= q.user_answer || '(no answer)' %></span>
-                    </div>
-                    <% if (!q.is_correct && q.correct_answer) { %>
-                        <div class="ans-line"><b>Correct answer:</b> <span class="rnz-render ans-correct" data-tex="<%= q.correct_answer.replace(/"/g, '&quot;') %>"><%= q.correct_answer %></span></div>
-                    <% } %>
-                    <% if (q.question_type === 'mcq' && q.options.length) { %>
-                        <div class="ans-line" style="font-size:0.75rem;color:var(--text-muted);">
-                            <% q.options.forEach(function(o, oi){ %>
-                                <span class="rnz-render" data-tex="<%= (o || '').replace(/"/g, '&quot;') %>"><%= o %></span><%= oi < q.options.length - 1 ? ' &nbsp; ' : '' %>
-                            <% }); %>
-                        </div>
-                    <% } %>
-                    <% if (q.explanation) { %>
-                        <div class="explain"><b>Explanation:</b> <span class="rnz-render" data-tex="<%= q.explanation.replace(/"/g, '&quot;') %>"><%= q.explanation %></span></div>
-                    <% } %>
+            <div class="q-card">
+                <div class="nav-grid" id="navGrid"></div>
+                <div class="legend" style="margin-top:14px;margin-bottom:0;">
+                    <span><span class="dot d-correct"></span>Correct</span>
+                    <span><span class="dot d-wrong"></span>Wrong / Your pick</span>
+                    <span><span class="dot" style="background:var(--border-solid);"></span>Not answered</span>
                 </div>
-            <% }) %>
+            </div>
 
-            <div class="btn-row">
+            <div class="q-card">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <span class="verdict" id="verdict" style="margin-bottom:0;"></span>
+                    <span style="font-size:0.7rem;font-weight:800;color:var(--brand);" id="qCount"></span>
+                </div>
+                <div class="q-text">
+                    <div id="qText" class="rnz-render" data-tex=""></div>
+                </div>
+                <div id="qBody" style="margin-top:16px;"></div>
+            </div>
+
+            <div class="ctrl-row">
+                <button class="btn btn-prev" id="prevBtn"><i class="fas fa-arrow-left"></i> Prev</button>
+                <button class="btn btn-next" id="nextBtn">Next <i class="fas fa-arrow-right"></i></button>
+            </div>
+
+            <div class="btn-row" style="display:flex;gap:10px;margin-top:1.4rem;">
                 <a class="btn btn-back" href="/renaissance"><i class="fas fa-arrow-left"></i> Back to Renaissance</a>
                 <a class="btn btn-retry" href="/renaissance/exam/<%= exam.id %>"><i class="fas fa-redo"></i> Retake Exam</a>
             </div>
         <% } %>
     </div>
+
+    <div id="prewarm" style="position:absolute;left:-99999px;top:0;width:1px;height:1px;overflow:hidden;pointer-events:none;" aria-hidden="true"></div>
     <%- include('partials/bottom-nav', { activeNav: 'renaissance' }) %>
-    <script src="/js/animations.js"></script>
+
+<script>
+var QUESTIONS = <%- JSON.stringify(questions) %>;
+</script>
+<script src="/js/animations.js"></script>
+<script>
+(function () {
+    var idx = 0;
+    var navGrid = document.getElementById('navGrid');
+    var qText = document.getElementById('qText');
+    var qBody = document.getElementById('qBody');
+    var verdict = document.getElementById('verdict');
+    var qCount = document.getElementById('qCount');
+    var prevBtn = document.getElementById('prevBtn');
+    var nextBtn = document.getElementById('nextBtn');
+    var prewarm = document.getElementById('prewarm');
+
+    function renderTex(el, src) {
+        el.setAttribute('data-tex', src || '');
+        if (window.rnzRender) rnzRender(el); else if (window.mathRender) mathRender(el);
+    }
+
+    function render() {
+        var q = QUESTIONS[idx];
+        var userAns = (q.user_answer || '').trim().toUpperCase();
+        var correctAns = (q.correct_answer || '').trim().toUpperCase();
+
+        verdict.className = 'verdict ' + (q.is_correct ? 'v-correct' : 'v-wrong');
+        verdict.innerHTML = '<i class="fas ' + (q.is_correct ? 'fa-check' : 'fa-times') + '"></i> ' + (q.is_correct ? 'Correct' : 'Incorrect');
+        qCount.textContent = 'Question ' + (idx + 1) + ' of ' + QUESTIONS.length;
+
+        renderTex(qText, q.question_text);
+
+        qBody.innerHTML = '';
+        if (q.question_type === 'mcq' && q.options && q.options.length) {
+            q.options.forEach(function (opt, oi) {
+                var letter = String.fromCharCode(65 + oi);
+                var cls = 'opt';
+                var tag = '';
+                var isPicked = userAns === letter;
+                var isRight = correctAns === letter && correctAns !== '';
+                if (isPicked && q.is_correct) { cls += ' opt-correct'; tag = 'Correct'; }
+                else if (isPicked && !q.is_correct) { cls += ' opt-wrong'; tag = 'Your answer'; }
+                else if (isRight && !q.is_correct) { cls += ' opt-correct'; tag = 'Correct answer'; }
+                else if (isPicked) { tag = 'Your answer'; }
+
+                var d = document.createElement('div');
+                d.className = cls;
+                d.innerHTML = '<span class="letter">' + letter + '</span><span class="otext rnz-render"></span>' +
+                    (tag ? '<span class="tag">' + tag + '</span>' : '');
+                var otext = d.querySelector('.otext');
+                otext.setAttribute('data-tex', opt || '');
+                otext.textContent = opt || '';
+                qBody.appendChild(d);
+            });
+        } else {
+            var t1 = document.createElement('div');
+            t1.className = 'theory-box';
+            t1.innerHTML = '<div class="tlabel">Your answer</div>';
+            var tv1 = document.createElement('div');
+            tv1.className = 'tval';
+            if (userAns) {
+                tv1.className += ' rnz-render';
+                tv1.setAttribute('data-tex', userAns.replace(/"/g, '&quot;'));
+                tv1.textContent = userAns;
+            } else {
+                tv1.innerHTML = '<i style="color:var(--text-muted);">No answer</i>';
+            }
+            t1.appendChild(tv1);
+            qBody.appendChild(t1);
+            if (!q.is_correct && correctAns) {
+                var t2 = document.createElement('div');
+                t2.className = 'theory-box';
+                t2.innerHTML = '<div class="tlabel">Correct answer</div><div class="tval rnz-render"></div>';
+                var tv2 = t2.querySelector('.tval');
+                tv2.setAttribute('data-tex', correctAns.replace(/"/g, '&quot;'));
+                tv2.textContent = correctAns;
+                qBody.appendChild(t2);
+            }
+        }
+
+        if (q.explanation) {
+            var ex = document.createElement('div');
+            ex.className = 'explain';
+            ex.innerHTML = '<b>Explanation:</b> <span class="rnz-render"></span>';
+            renderTex(ex.querySelector('.rnz-render'), q.explanation);
+            qBody.appendChild(ex);
+        }
+
+        if (window.rnzRender) rnzRender(qBody);
+        prevBtn.disabled = idx === 0;
+        nextBtn.disabled = idx === QUESTIONS.length - 1;
+        refreshNav();
+    }
+
+    function buildNav() {
+        navGrid.innerHTML = '';
+        QUESTIONS.forEach(function (q, i) {
+            var b = document.createElement('button');
+            b.className = 'qnav';
+            b.textContent = i + 1;
+            b.addEventListener('click', function () { go(i); });
+            navGrid.appendChild(b);
+        });
+        refreshNav();
+    }
+
+    function refreshNav() {
+        Array.prototype.forEach.call(navGrid.children, function (b, i) {
+            b.className = 'qnav';
+            var q = QUESTIONS[i];
+            if (q.user_answer !== undefined && q.user_answer !== '') b.classList.add(q.is_correct ? 'correct' : 'wrong');
+            if (i === idx) b.classList.add('current');
+        });
+    }
+
+    function go(i) {
+        if (i < 0 || i >= QUESTIONS.length) return;
+        idx = i;
+        render();
+    }
+
+    function prewarmAll() {
+        if (!window.rnzRender || !prewarm) return;
+        var frag = document.createDocumentFragment();
+        QUESTIONS.forEach(function (q) {
+            if (!q.question_text) return;
+            var d = document.createElement('div');
+            d.className = 'rnz-render';
+            d.setAttribute('data-tex', q.question_text);
+            frag.appendChild(d);
+        });
+        prewarm.appendChild(frag);
+        rnzRender(prewarm);
+    }
+
+    prevBtn.addEventListener('click', function () { go(idx - 1); });
+    nextBtn.addEventListener('click', function () { go(idx + 1); });
+
+    buildNav();
+    render();
+    prewarmAll();
+})();
+</script>
 </body>
 </html>
