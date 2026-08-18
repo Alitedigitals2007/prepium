@@ -221,14 +221,35 @@
                     </div>
                     <div v-if="importError" class="code-hint" style="color:var(--danger);margin-top:8px;">{{ importError }}</div>
                     <div v-if="importPreview.length" class="mt-1">
-                        <div style="font-size:0.72rem;font-weight:800;color:var(--sub);text-transform:uppercase;margin-bottom:8px;">Detected Questions</div>
-                        <div v-for="(q, i) in importPreview" :key="i" class="question-row">
-                            <div style="display:flex;gap:8px;align-items:flex-start;">
-                                <span class="chip">{{ i + 1 }}</span>
-                                <span class="chip">{{ q.question_type }}</span>
-                                <span class="chip" v-if="q.options.length">{{ q.options.length }} options</span>
-                                <span class="chip" v-if="q.correct_answer" style="color:var(--success);font-weight:800;">Ans: {{ q.correct_answer }}</span>
-                                <div class="rnz-render" :data-tex="q.question_text" style="font-size:0.78rem;font-weight:600;line-height:1.5;flex:1;word-break:break-word;"></div>
+                        <div style="font-size:0.72rem;font-weight:800;color:var(--sub);text-transform:uppercase;margin-bottom:8px;">Detected Questions — review &amp; edit each one before importing</div>
+                        <div ref="importPreviewBox">
+                            <div v-for="(q, i) in importPreview" :key="i" class="question-row">
+                                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                                    <span class="chip">{{ i + 1 }}</span>
+                                    <select v-model="q.question_type" @change="onImportTypeChange(q)" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface-solid);font-family:inherit;font-weight:700;font-size:0.72rem;color:var(--text);">
+                                        <option value="mcq">MCQ</option>
+                                        <option value="theory">Theory</option>
+                                    </select>
+                                    <input v-model="q.correct_answer" placeholder="Answer (e.g. B)" style="width:130px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface-solid);font-family:inherit;font-weight:700;font-size:0.72rem;color:var(--text);">
+                                    <button class="mini-btn btn-danger" @click="removeImportQuestion(i)" title="Remove question"><i class="fas fa-trash"></i></button>
+                                </div>
+                                <div style="margin-top:8px;">
+                                    <textarea v-model="q.question_text" @input="renderImportPreview" style="width:100%;min-height:90px;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface-solid);font-family:monospace;font-size:0.75rem;color:var(--text);"></textarea>
+                                </div>
+                                <div v-if="q.question_type === 'mcq' && q.options.length" style="margin-top:8px;">
+                                    <div v-for="(o, oi) in q.options" :key="oi" class="option-input">
+                                        <span class="letter">{{ String.fromCharCode(65 + oi) }}</span>
+                                        <input v-model="q.options[oi]" @input="renderImportPreview" :placeholder="'Option ' + String.fromCharCode(65 + oi)">
+                                        <button type="button" class="mini-btn btn-danger" @click="q.options.splice(oi, 1); renderImportPreview()" style="padding:4px 8px;">&times;</button>
+                                    </div>
+                                </div>
+                                <div class="preview-box" style="margin-top:8px;min-height:auto;">
+                                    <span class="label"><i class="fas fa-eye"></i> Preview</span>
+                                    <div class="rnz-render" :data-tex="q.question_text" style="font-size:0.82rem;font-weight:600;line-height:1.6;"></div>
+                                    <div v-if="q.question_type === 'mcq' && q.options.length" style="margin-top:8px;">
+                                        <span v-for="(o, oi) in q.options" :key="oi" class="rnz-render" :data-tex="o" style="display:inline-block;margin-right:14px;font-size:0.78rem;font-weight:600;"></span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -598,7 +619,21 @@ var app = new Vue({
             const d = await r.json();
             if (d.error) { this.importError = d.error; this.importPreview = []; return; }
             this.importPreview = d.questions;
+            this.renderImportPreview();
+        },
+        onImportTypeChange(q) {
+            if (q.question_type === 'theory') q.options = [];
+            this.renderImportPreview();
+        },
+        removeImportQuestion(i) {
+            this.importPreview.splice(i, 1);
             this.$nextTick(function () { rnzRender(document.getElementById('app')); });
+        },
+        renderImportPreview() {
+            this.$nextTick(function () {
+                var el = app.$refs.importPreviewBox;
+                if (el && window.rnzRender) rnzRender(el);
+            });
         },
         async doImport() {
             if (!this.exam || !this.importPreview.length) return;

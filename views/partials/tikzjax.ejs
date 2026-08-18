@@ -1,10 +1,12 @@
 <script>
 window.TikzJaxOptions = {
   workerMode: "auto",
+  renderTimeout: 30000,
+  maxRetries: 1,
   theme: { attribute: "data-theme", darkValue: "dark", lightValue: "light", followSystemTheme: false },
   tex: {
-    texPackages: { circuitikz: "", pgfplots: "", amsmath: "", xcolor: "dvipsnames" },
-    tikzLibraries: ["arrows.meta", "positioning", "calc", "circuits.logic.US", "circuits.logic.IEC", "circuits.ee.IEC", "circuits.ee.CIE"]
+    texPackages: { amsmath: "", xcolor: "dvipsnames" },
+    tikzLibraries: ["arrows.meta", "positioning", "calc"]
   }
 };
 </script>
@@ -16,13 +18,21 @@ function rnzEscape(s) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
+function rnzTikzPackages(tikzCode) {
+  var pkgs = [];
+  if (/\\begin\{circuitikz\}/i.test(tikzCode)) pkgs.push('circuitikz');
+  if (/\\begin\{axis\}/i.test(tikzCode)) pkgs.push('pgfplots');
+  return pkgs;
+}
 function rnzTikzToScript(tikzCode) {
   var safe = String(tikzCode).replace(/<\/script/gi, '<\\/script');
-  return '<script type="text/tikz" data-disable-cache="true">' + safe + '<\/script>';
+  var pkgs = rnzTikzPackages(tikzCode);
+  var attr = pkgs.length ? ' data-tex-packages="' + pkgs.join(',') + '"' : '';
+  return '<script type="text/tikz" data-disable-cache="true"' + attr + '>' + safe + '<\/script>';
 }
 function rnzLatexToHTML(src) {
   var text = String(src || '');
-  var re = /\\begin\{tikzpicture\}[\s\S]*?\\end\{tikzpicture\}/g;
+  var re = /\\begin\{(?:tikzpicture|circuitikz)\}[\s\S]*?\\end\{(?:tikzpicture|circuitikz)\}/g;
   var out = '', last = 0, m;
   while ((m = re.exec(text)) !== null) {
     out += rnzEscape(text.slice(last, m.index));
