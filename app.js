@@ -4129,6 +4129,156 @@ app.post('/api/admin/renaissance/questions/:id/ai', isAdmin, async (req, res) =>
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Parse a full LaTeX question paper into individual questions
+function rnzSplitChunk(work) {
+  const parts = [];
+  if (!work || !work.trim()) return parts;
+  const hasSec = /\\section\*?\{[^}]*\}/.test(work);
+  const hasItem = /\\item\b/.test(work);
+  const hasQuestion = /(?:^|\n)\s*Question\s+\d+\s*[:.)]\s+/i.test(work);
+  const hasNum = /(?:^|\n)\s*\d+\s*[.)]\s+/.test(work);
+
+  if (hasItem) {
+    const chunks = work.split(/\\item\b/);
+    chunks.shift();
+    for (const c of chunks) { parts.push.apply(parts, rnzSplitChunk(c.trim())); }
+  } else if (hasSec) {
+    const arr = work.split(/(\\section\*?\{[^}]*\})/);
+    const pre = String(arr[0] || '').trim();
+    if (pre) parts.push.apply(parts, rnzSplitChunk(pre));
+    for (let i = 2; i < arr.length; i += 2) {
+      const body = String(arr[i] || '').trim();
+      if (body) parts.push.apply(parts, rnzSplitChunk(body));
+    }
+  } else if (hasQuestion || hasNum) {
+    const reQ = /(?:^|\n)\s*Question\s+\d+\s*[:.)]\s+/gi;
+    const reN = /(?:^|\n)\s*\d+\s*[.)]\s+/g;
+    const matches = Array.from(work.matchAll(reQ)).concat(Array.from(work.matchAll(reN))).sort(function (a, b) { return a.index - b.index; });
+    let last = 0;
+    for (const mm of matches) {
+      const seg = work.slice(last, mm.index).trim();
+      if (seg) parts.push.apply(parts, rnzSplitChunk(seg));
+      last = mm.index + mm[0].length;
+    }
+    const tail = work.slice(last).trim();
+    if (tail) parts.push.apply(parts, rnzSplitChunk(tail));
+  } else {
+    parts.push(work.trim());
+  }
+  return parts;
+}
+
+function parseRenaissanceLatex(latex) {
+  let src = String(latex || '');
+  src = src.replace(/^\s*%.*$/gm, '');
+  src = src.replace(/\\documentclass(\[[^\]]*\])?\{[^}]*\}/gi, '');
+  src = src.replace(/\\usepackage(\[[^\]]*\])?\{[^}]*\}/gi, '');
+  src = src.replace(/\\title\{[^}]*\}/gi, '');
+  src = src.replace(/\\author\{[^}]*\}/gi, '');
+  src = src.replace(/\\date\{[^}]*\}/gi, '');
+  src = src.replace(/\\maketitle/gi, '');
+  src = src.replace(/\\begin\{document\}/gi, '');
+  src = src.replace(/\\end\{document\}/gi, '');
+  src = src.replace(/\\begin\{enumerate\}/gi, '');
+  src = src.replace(/\\end\{enumerate\}/gi, '');
+  src = src.replace(/\\begin\{itemize\}/gi, '');
+  src = src.replace(/\\end\{itemize\}/gi, '');
+  src = src.replace(/\\hfill/gi, '');
+  // Convert option-style \item (e.g. \item A. text, \item (B) text, \item[C] text) into plain option lines
+  src = src.replace(/\\item\s+(?:[\(]?[A-Ea-e][\.\)]|\[[A-Ea-e]\])\s+/g, function (m) {
+    return m.replace(/\\item\s+/i, '');
+  });
+
+  const chunks = rnzSplitChunk(src);
+  const out = [];
+  for (const raw of chunks) {
+    let q = String(raw || '').trim();
+    if (!q) continue;
+    q = q.replace(/^\\section\*?\{[^}]*\}\s*/gi, '').trim();
+    const parsed = parseRenaissanceOptions(q);
+    if (!parsed.text) continue;
+    out.push({
+      question_text: parsed.text,
+      options: parsed.options,
+      question_type: parsed.options.length >= 2 ? 'mcq' : 'theory'
+    });
+  }
+  return out;
+}
+
+function parseRenaissanceOptions(q) {
+  const markers = [];
+  const re1 = /(?:^|\n)\s*[\(]?([A-Ea-e])[\.\)]\s+/g;
+  let m;
+  while ((m = re1.exec(q)) !== null) markers.push({ pos: m.index, letter: m[1].toUpperCase(), raw: m[0] });
+  const re2 = /\\([A-Ea-e])\b/g;
+  while ((m = re2.exec(q)) !== null) markers.push({ pos: m.index, letter: m[1].toUpperCase(), raw: m[0] });
+  const re3 = /(?:^|[^A-Za-z0-9])\(([A-Ea-e])\)\s+/g;
+  while ((m = re3.exec(q)) !== null) {
+    const start = m[0][0] === '(' ? m.index : m.index + 1;
+    markers.push({ pos: start, letter: m[1].toUpperCase(), raw: m[0].slice(start - m.index) });
+  }
+  markers.sort(function (a, b) { return a.pos - b.pos; });
+  if (markers.length < 2) return { text: q, options: [] };
+  const first = markers[0];
+  const text = q.slice(0, first.pos).trim();
+  const options = [];
+  for (let i = 0; i < markers.length; i++) {
+    const start = markers[i].pos + markers[i].raw.length;
+    const end = i + 1 < markers.length ? markers[i + 1].pos : q.length;
+    const opt = q.slice(start, end).trim();
+    if (opt) options.push(opt);
+  }
+  return { text, options };
+}
+
+// Bulk import: parse the pasted paper (preview)
+app.post('/api/admin/renaissance/import/parse', isAdmin, async (req, res) => {
+  try {
+    const latex = String(req.body.latex || '');
+    if (!latex.trim()) return res.status(400).json({ error: 'Paste the LaTeX code first' });
+    const questions = parseRenaissanceLatex(latex);
+    if (!questions.length) return res.json({ error: 'No questions detected. Use \\item, numbered questions, or \\section headings.' });
+    res.json({ success: true, questions });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Bulk import: save the parsed questions (optionally AI-fill answers)
+app.post('/api/admin/renaissance/import/save', isAdmin, async (req, res) => {
+  try {
+    const { course_id, questions, ai_fill } = req.body;
+    if (!course_id) return res.status(400).json({ error: 'Select a course first' });
+    if (!Array.isArray(questions) || !questions.length) return res.status(400).json({ error: 'Nothing to import' });
+    let saved = 0;
+    let aiFilled = 0;
+    const ids = [];
+    for (const q of questions) {
+      const text = String(q.question_text || '').trim();
+      if (!text) continue;
+      const r = await pool.query(
+        `INSERT INTO renaissance_questions (course_id, question_type, question_text, options, correct_answer, explanation, ai_generated)
+         VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+        [course_id, q.question_type === 'theory' ? 'theory' : 'mcq', text, JSON.stringify(Array.isArray(q.options) ? q.options : []), q.correct_answer || '', q.explanation || '', false]
+      );
+      ids.push({ id: r.rows[0].id, text, options: q.options || [] });
+      saved++;
+    }
+    if (ai_fill && saved) {
+      for (const item of ids) {
+        try {
+          const ai = await renaissanceAIAnswer(item.text, item.options);
+          if (ai.answer || ai.explanation) {
+            await pool.query('UPDATE renaissance_questions SET correct_answer = $1, explanation = $2, ai_generated = true WHERE id = $3',
+              [ai.answer || '', ai.explanation || '', item.id]);
+            aiFilled++;
+          }
+        } catch (_) {}
+      }
+    }
+    res.json({ success: true, count: saved, aiFilled });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Settings (group link)
 app.post('/api/admin/renaissance/settings', isAdmin, async (req, res) => {
     try {

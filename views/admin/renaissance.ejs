@@ -225,6 +225,45 @@
                     </table>
                 </div>
 
+                <!-- Bulk import: paste full paper -->
+                <div class="card" v-if="exam">
+                    <h2><i class="fas fa-file-import"></i> Bulk Import — Paste Full Paper</h2>
+                    <div class="row">
+                        <div class="form-group">
+                            <label>Target Course</label>
+                            <select v-model="importCourseId">
+                                <option value="" disabled>-- Select course --</option>
+                                <option v-for="c in courses" :value="c.id" :key="c.id">{{ c.course_name }} ({{ c.course_code }})</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top:12px;">
+                        <label>Full LaTeX (all questions in one code)</label>
+                        <textarea v-model="importLatex" style="min-height:200px;font-family:monospace;font-size:0.78rem;" placeholder="Paste the whole paper here. Questions separated with \item, numbered lines like '1.', or \section headings. Options like 'A.', '(B)' or \item C. are auto-detected."></textarea>
+                        <div class="code-hint">Splits automatically on \item, numbered questions, or \section headings. Lines like A. / (B) become MCQ choices; no options detected = theory question.</div>
+                    </div>
+                    <div class="checkbox-row" style="margin-top:12px;">
+                        <input type="checkbox" id="aiFill" v-model="importAI">
+                        <label for="aiFill" style="margin:0;text-transform:none;font-size:0.8rem;">AI-fill correct answer + explanation for every question after import</label>
+                    </div>
+                    <div class="row" style="margin-top:12px;">
+                        <button class="btn btn-primary" @click="previewImport" :disabled="!importLatex.trim()"><i class="fas fa-search"></i> Preview Split</button>
+                        <button class="btn btn-green" @click="doImport" :disabled="!importPreview.length"><i class="fas fa-file-import"></i> Import {{ importPreview.length }} Question{{ importPreview.length === 1 ? '' : 's' }}</button>
+                    </div>
+                    <div v-if="importError" class="code-hint" style="color:var(--danger);margin-top:8px;">{{ importError }}</div>
+                    <div v-if="importPreview.length" class="mt-1">
+                        <div style="font-size:0.72rem;font-weight:800;color:var(--sub);text-transform:uppercase;margin-bottom:8px;">Detected Questions</div>
+                        <div v-for="(q, i) in importPreview" :key="i" class="question-row">
+                            <div style="display:flex;gap:8px;align-items:flex-start;">
+                                <span class="chip">{{ i + 1 }}</span>
+                                <span class="chip">{{ q.question_type }}</span>
+                                <span class="chip" v-if="q.options.length">{{ q.options.length }} options</span>
+                                <div style="font-size:0.78rem;font-weight:600;line-height:1.5;flex:1;word-break:break-word;">{{ q.question_text }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Question editor -->
                 <div class="card" v-if="selectedCourse">
                     <h2><i class="fas fa-pen-square"></i> {{ editing ? 'Edit Question' : 'Add Question' }} — {{ selectedCourse.course_name }}</h2>
@@ -356,7 +395,12 @@ var app = new Vue({
         courseForm: { course_name: '', course_code: '' },
         groupLink: '',
         aiStatus: '',
-        previewTimer: null
+        previewTimer: null,
+        importCourseId: '',
+        importLatex: '',
+        importPreview: [],
+        importError: '',
+        importAI: true
     },
     computed: {
         questions: function () {
@@ -549,6 +593,29 @@ var app = new Vue({
             const r = await fetch('/api/admin/renaissance/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ group_link: this.groupLink }) });
             await r.json();
             Swal.fire({ icon: 'success', title: 'Saved', timer: 900, showConfirmButton: false });
+        },
+        async previewImport() {
+            this.importError = '';
+            if (!this.importCourseId) return Swal.fire({ icon: 'warning', text: 'Select a target course first' });
+            if (!this.importLatex.trim()) return Swal.fire({ icon: 'warning', text: 'Paste the LaTeX code first' });
+            const r = await fetch('/api/admin/renaissance/import/parse', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ latex: this.importLatex }) });
+            const d = await r.json();
+            if (d.error) { this.importError = d.error; this.importPreview = []; return; }
+            this.importPreview = d.questions;
+        },
+        async doImport() {
+            if (!this.importPreview.length || !this.importCourseId) return;
+            const cf = await Swal.fire({ title: 'Import ' + this.importPreview.length + ' question' + (this.importPreview.length === 1 ? '' : 's') + '?', icon: 'question', showCancelButton: true, confirmButtonText: 'Import' });
+            if (!cf.isConfirmed) return;
+            Swal.fire({ title: 'Importing...', html: this.importAI ? 'AI-filling answers (this can take a minute)...' : 'Please wait...', allowOutsideClick: false, didOpen: function () { Swal.showLoading(); } });
+            const r = await fetch('/api/admin/renaissance/import/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ course_id: this.importCourseId, questions: this.importPreview, ai_fill: this.importAI }) });
+            const d = await r.json();
+            Swal.close();
+            if (d.error) return Swal.fire({ icon: 'error', text: d.error });
+            this.importLatex = '';
+            this.importPreview = [];
+            await this.loadExam(this.exam.id);
+            Swal.fire({ icon: 'success', title: d.count + ' questions imported' + (d.aiFilled ? ' · ' + d.aiFilled + ' AI-filled' : ''), timer: 1600, showConfirmButton: false });
         }
     },
     mounted: function () {
