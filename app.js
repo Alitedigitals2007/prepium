@@ -478,6 +478,17 @@ app.use(session({
     }
 }));
 
+// Page-view tracking for analytics (fire-and-forget, skips admin/API/static)
+app.use((req, res, next) => {
+    if (req.method !== 'GET' || !req.session || !req.session.user) return next();
+    if (req.path.startsWith('/api/') || req.path.startsWith('/admin') || req.path === '/favicon.ico') return next();
+    pool.query(
+        'INSERT INTO page_views (user_id, page_path, visit_time) VALUES ($1, $2, NOW())',
+        [req.session.user.id, req.path.split('?')[0]]
+    ).catch(() => {});
+    next();
+});
+
 // Middleware to check if user is logged in
 const isAuth = (req, res, next) => {
     if (req.session.user) return next();
@@ -746,6 +757,9 @@ app.post('/auth/login', rateLimit(10, 60000), async (req, res) => {
                     } catch (streakErr) {
                         console.error('Streak update error:', streakErr.message);
                     }
+
+                    // 6b. Record login for analytics (fire-and-forget)
+                    pool.query('INSERT INTO login_history (user_id, login_at) VALUES ($1, NOW())', [user.id]).catch(() => {});
 
                     // 7. Return JSON success with the redirect URL
                     const redirectUrl = req.session.user.is_admin ? '/admin/dashboard' : '/dashboard';
@@ -3627,50 +3641,164 @@ app.post('/api/submit-arena', isAuth, async (req, res) => {
 
 app.get('/admin/analytics', isAdmin, async (req, res) => {
     try {
-        const [totals, signupTrend, popularPages, couponStats] = await Promise.all([
-            pool.query(`SELECT 
-                (SELECT COUNT(*) FROM users) as total_users,
-                (SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL '24 hours') as daily_signups,
-                (SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL '7 days') as weekly_signups,
-                (SELECT COUNT(*) FROM users WHERE has_paid = true) as premium_users,
-                (SELECT COUNT(*) FROM users WHERE has_paid = true AND created_at > NOW() - INTERVAL '7 days') as weekly_premium,
-                (SELECT (SELECT COUNT(*) FROM results) + (SELECT COUNT(*) FROM quiz_results)) as total_quizzes,
-                (SELECT COUNT(*) FROM study_quiz_attempts) as study_quiz_count,
-                (SELECT COUNT(*) FROM daily_leaderboard) as active_battlers,
-                (SELECT COUNT(*) FROM users WHERE used_coupon IS NOT NULL) as coupon_redemptions`),
+        const r = parseInt(req.query.range, 10);
+        const rangeDays = [7, 30, 90].includes(r) ? r : 30;
+        const interval = rangeDays > 0 ? `NOW() - INTERVAL '${rangeDays} days'` : null;
+        const rangeFilter = interval ? ` > ${interval}` : ' IS NOT NULL';
+        const rangeOn = (col) => interval ? ` ${col} > ${interval}` : ` COALESCE(${col}, NOW()) IS NOT NULL`;
 
-            pool.query(`SELECT TO_CHAR(created_at, 'DD Mon') as date, COUNT(*) as count 
-                        FROM users 
-                        WHERE created_at > NOW() - INTERVAL '14 days'
+        const [totals, signupTrend, activeUsers, examStats, hardest, subjectWeak, pages, coupons, revenue, today, streakLeaders, arenaToday, uniSignups] = await Promise.all([
+            pool.query(`SELECT
+                (SELECT COUNT(*) FROM users) as total_users,
+                (SELECT COUNT(*) FROM users WHERE created_at ${rangeFilter}) as new_users,
+                (SELECT COUNT(*) FROM users WHERE has_paid = true) as premium_users,
+                (SELECT COUNT(*) FROM users WHERE has_paid = true AND created_at ${rangeFilter}) as new_premium,
+                (SELECT
+                    (SELECT COUNT(*) FROM quiz_results WHERE created_at ${rangeFilter})
+                  + (SELECT COUNT(*) FROM study_quiz_attempts WHERE created_at ${rangeFilter})
+                  + (SELECT COUNT(*) FROM daily_challenge_attempts WHERE created_at ${rangeFilter})
+                  + (SELECT COUNT(*) FROM renaissance_attempts WHERE status = 'submitted' AND submitted_at ${rangeFilter})) as assessments,
+                (SELECT COALESCE(AVG(pct), 0) FROM (
+                    SELECT percentage::numeric as pct FROM quiz_results WHERE created_at ${rangeFilter}
+                    UNION ALL
+                    SELECT (score::numeric / NULLIF(total, 0)) * 100 FROM study_quiz_attempts WHERE created_at ${rangeFilter}
+                    UNION ALL
+                    SELECT (score::numeric / NULLIF(total, 0)) * 100 FROM daily_challenge_attempts WHERE created_at ${rangeFilter}
+                    UNION ALL
+                    SELECT percentage::numeric FROM renaissance_attempts WHERE status = 'submitted' AND submitted_at ${rangeFilter}
+                ) x) as avg_score,
+                (SELECT COUNT(*) FROM (
+                    SELECT 1 FROM quiz_results WHERE created_at ${rangeFilter} AND percentage >= 50
+                    UNION ALL SELECT 1 FROM study_quiz_attempts WHERE created_at ${rangeFilter} AND score::numeric / NULLIF(total, 0) >= 0.5
+                    UNION ALL SELECT 1 FROM daily_challenge_attempts WHERE created_at ${rangeFilter} AND score::numeric / NULLIF(total, 0) >= 0.5
+                    UNION ALL SELECT 1 FROM renaissance_attempts WHERE status = 'submitted' AND submitted_at ${rangeFilter} AND percentage >= 50
+                ) p) as passed,
+                (SELECT COALESCE(SUM(elapsed_seconds), 0) / 60 FROM study_sessions WHERE status = 'completed' AND created_at ${rangeFilter}) as study_minutes`),
+
+            pool.query(`SELECT TO_CHAR(created_at, 'DD Mon') as date, COUNT(*) as count
+                        FROM users WHERE created_at ${rangeFilter}
                         GROUP BY date ORDER BY MIN(created_at) ASC`),
 
-            pool.query(`SELECT page_path, COUNT(*) as views 
-                        FROM page_views 
-                        GROUP BY page_path ORDER BY views DESC LIMIT 6`).catch(() => ({ rows: [] })),
+            pool.query(`SELECT u.fullname, u.email, un.name as university,
+                       SUM(a.actions) as actions,
+                       COALESCE(SUM(a.actions) FILTER (WHERE a.src = 'quiz'), 0) as quizzes,
+                       COALESCE(SUM(a.actions) FILTER (WHERE a.src = 'exam'), 0) as exams,
+                       COALESCE(SUM(a.actions) FILTER (WHERE a.src = 'study'), 0) as study_sessions
+                       FROM users u
+                       LEFT JOIN universities un ON un.id = u.university_id
+                       INNER JOIN (
+                           SELECT user_id, 'quiz' src, COUNT(*) actions FROM quiz_results WHERE created_at ${rangeFilter} GROUP BY user_id
+                           UNION ALL SELECT user_id, 'exam', COUNT(*) FROM renaissance_attempts WHERE status = 'submitted' AND submitted_at ${rangeFilter} GROUP BY user_id
+                           UNION ALL SELECT user_id, 'study', COUNT(*) FROM study_sessions WHERE status = 'completed' AND created_at ${rangeFilter} GROUP BY user_id
+                           UNION ALL SELECT user_id, 'task', COUNT(*) FROM daily_task_items WHERE is_done = true AND created_at ${rangeFilter} GROUP BY user_id
+                           UNION ALL SELECT user_id, 'daily', COUNT(*) FROM daily_challenge_attempts WHERE created_at ${rangeFilter} GROUP BY user_id
+                       ) a ON a.user_id = u.id
+                       GROUP BY u.id, un.name
+                       ORDER BY actions DESC LIMIT 10`),
 
-            pool.query(`SELECT code, discount_type, discount_value, times_used, max_uses, is_active 
-                        FROM coupons ORDER BY times_used DESC LIMIT 10`)
+            pool.query(`SELECT e.id, e.title,
+                       COUNT(a.id) as attempts,
+                       ROUND(COALESCE(AVG(a.percentage), 0)) as avg_pct,
+                       MAX(a.percentage) as best
+                       FROM renaissance_exams e
+                       INNER JOIN renaissance_attempts a ON a.exam_id = e.id AND a.status = 'submitted'
+                       WHERE a.submitted_at ${rangeFilter}
+                       GROUP BY e.id, e.title
+                       ORDER BY attempts DESC LIMIT 10`),
+
+            pool.query(`SELECT e.title as exam_title, q.id, LEFT(q.question_text, 120) as question_text,
+                       q.correct_answer, COUNT(a.id) as answered,
+                       COUNT(*) FILTER (WHERE UPPER(TRIM(a.answers->>CAST(q.id AS text))) = UPPER(TRIM(q.correct_answer))) as correct
+                       FROM renaissance_questions q
+                       INNER JOIN renaissance_exams e ON e.id = q.exam_id
+                       INNER JOIN renaissance_attempts a ON a.exam_id = q.exam_id AND a.status = 'submitted'
+                       WHERE a.submitted_at ${rangeFilter} AND q.question_type = 'mcq'
+                       GROUP BY q.id, e.title
+                       HAVING COUNT(a.id) >= 3
+                       ORDER BY (COUNT(*) FILTER (WHERE UPPER(TRIM(a.answers->>CAST(q.id AS text))) = UPPER(TRIM(q.correct_answer))))::float / COUNT(a.id) ASC, COUNT(a.id) DESC
+                       LIMIT 8`),
+
+            pool.query(`SELECT s.name as subject, COUNT(*) as attempts, ROUND(AVG(qr.percentage)) as avg_pct
+                       FROM quiz_results qr
+                       INNER JOIN subjects s ON s.id = qr.subject_id
+                       WHERE qr.created_at ${rangeFilter}
+                       GROUP BY s.name
+                       ORDER BY avg_pct ASC LIMIT 8`),
+
+            pool.query(`SELECT page_path, COUNT(*) as views FROM page_views
+                       WHERE visit_time ${rangeFilter}
+                       GROUP BY page_path ORDER BY views DESC LIMIT 8`).catch(() => ({ rows: [] })),
+
+            pool.query(`SELECT code, discount_type, discount_value, times_used, max_uses, is_active
+                       FROM coupons ORDER BY times_used DESC LIMIT 10`),
+
+            pool.query(`SELECT COUNT(*) as payments, COALESCE(SUM(amount), 0) as revenue,
+                       COUNT(*) FILTER (WHERE coupon_code IS NOT NULL) as coupon_paid
+                       FROM payments WHERE status = 'success' AND ${rangeOn('verified_at')}`),
+
+            pool.query(`SELECT
+                       (SELECT COUNT(*) FROM (
+                           SELECT user_id FROM login_history WHERE login_at > NOW() - INTERVAL '24 hours'
+                           UNION SELECT user_id FROM quiz_results WHERE created_at > NOW() - INTERVAL '24 hours'
+                           UNION SELECT user_id FROM study_sessions WHERE created_at > NOW() - INTERVAL '24 hours'
+                           UNION SELECT user_id FROM renaissance_attempts WHERE status = 'submitted' AND submitted_at > NOW() - INTERVAL '24 hours'
+                           UNION SELECT user_id FROM daily_challenge_attempts WHERE created_at > NOW() - INTERVAL '24 hours'
+                       ) t) as active_today,
+                       (SELECT COUNT(*) FROM login_history WHERE login_at > NOW() - INTERVAL '24 hours') as logins_today,
+                       (SELECT COUNT(*) FROM daily_task_items WHERE task_date = CURRENT_DATE AND is_done = true) as tasks_done,
+                       (SELECT COUNT(*) FROM daily_task_items WHERE task_date = CURRENT_DATE) as tasks_total`),
+
+            pool.query(`SELECT u.fullname, MAX(ls.current_streak) as current_streak, MAX(ls.longest_streak) as longest_streak
+                       FROM login_streaks ls
+                       INNER JOIN users u ON u.id = ls.user_id
+                       WHERE ls.current_streak > 0
+                       GROUP BY u.id, u.fullname
+                       ORDER BY current_streak DESC, longest_streak DESC LIMIT 6`),
+
+            pool.query(`SELECT username, current_daily_score, monthly_score, streak
+                       FROM daily_leaderboard
+                       ORDER BY current_daily_score DESC, monthly_score DESC LIMIT 5`),
+
+            pool.query(`SELECT un.name as university, COUNT(u.id) as signups
+                       FROM users u
+                       LEFT JOIN universities un ON un.id = u.university_id
+                       WHERE u.created_at ${rangeFilter}
+                       GROUP BY un.name ORDER BY signups DESC LIMIT 6`)
         ]);
 
         const s = totals.rows[0];
-        const estimatedRevenue = (s.premium_users || 0) * 2000;
 
         res.render('admin/analytics', {
-            signups: { daily: s.daily_signups || 0, weekly: s.weekly_signups || 0 },
+            rangeDays,
+            signups: { daily: s.daily_signups, weekly: s.weekly_signups },
             stats: {
                 total_users: s.total_users || 0,
+                new_users: s.new_users || 0,
                 premium_users: s.premium_users || 0,
-                weekly_premium: s.weekly_premium || 0,
-                total_quizzes: (s.total_quizzes || 0) + (s.study_quiz_count || 0),
-                active_battlers: s.active_battlers || 0
+                new_premium: s.new_premium || 0,
+                assessments: s.assessments || 0,
+                avg_score: Math.min(100, Math.round((s.avg_score || 0) * 10) / 10),
+                passed: s.passed || 0,
+                pass_rate: s.assessments ? Math.round(((s.passed || 0) / s.assessments) * 100) : 0,
+                study_minutes: s.study_minutes || 0
             },
-            revenue: { estimated: estimatedRevenue, coupon_redemptions: s.coupon_redemptions || 0 },
-            coupons: couponStats.rows,
+            today: today.rows[0] || { active_today: 0, logins_today: 0, tasks_done: 0, tasks_total: 0 },
+            streakLeaders: streakLeaders.rows,
+            arenaToday: arenaToday.rows,
+            revenue: { real: revenue.rows[0] || { payments: 0, revenue: 0, coupon_paid: 0 } },
+            coupons: coupons.rows,
+            activeUsers: activeUsers.rows,
+            examStats: examStats.rows,
+            hardest: hardest.rows,
+            subjectWeak: subjectWeak.rows,
+            uniSignups: uniSignups.rows,
             chartData: {
                 labels: signupTrend.rows.map(r => r.date),
-                values: signupTrend.rows.map(r => r.count)
+                values: signupTrend.rows.map(r => r.count),
+                examLabels: examStats.rows.map(r => (r.title || 'Exam').slice(0, 18)),
+                examValues: examStats.rows.map(r => r.attempts)
             },
-            pages: popularPages.rows,
+            pages: pages.rows,
             user: req.session.user
         });
     } catch (err) {
