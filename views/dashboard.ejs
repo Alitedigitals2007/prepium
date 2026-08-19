@@ -375,6 +375,19 @@
             <div class="fc-desc">How to use every feature</div>
         </a>
 
+        <a href="/battle" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
+            <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
+            <div class="fc-icon" style="background:linear-gradient(135deg,#8b5cf6,#d946ef);color:white;"><i class="fas fa-bolt"></i></div>
+            <div class="fc-label">Live Battle Mode</div>
+            <div class="fc-desc">Head-to-head quiz duels</div>
+        </a>
+
+        <a href="/squads" class="feature-card">
+            <div class="fc-icon" style="background:var(--warning-soft);color:var(--warning);"><i class="fas fa-users"></i></div>
+            <div class="fc-label">Squad Streaks</div>
+            <div class="fc-desc">Study with friends, win together</div>
+        </a>
+
         <a href="/renaissance" class="feature-card featured" style="background:linear-gradient(135deg,#7c3aed,#2563eb);">
             <div class="fc-icon" style="background:rgba(255,255,255,0.2);color:#fff;"><i class="fas fa-landmark"></i></div>
             <div class="fc-label" style="color:#fff;">Alite Mocks</div>

@@ -3496,6 +3496,404 @@ app.post('/refer/withdraw', isAuth, async (req, res) => {
     }
 });
 
+// ==========================================
+// SQUAD STREAKS — group accountability
+// ==========================================
+async function computeSquadStreak(squadId, memberCount) {
+    try {
+        if (!memberCount || memberCount <= 0) return 0;
+        const r = await pool.query(
+            `SELECT checkin_date, COUNT(DISTINCT user_id) AS cnt
+             FROM squad_checkins
+             WHERE squad_id = $1 AND checkin_date >= CURRENT_DATE - INTERVAL '90 days'
+             GROUP BY checkin_date
+             ORDER BY checkin_date DESC`, [squadId]
+        );
+        const complete = new Set();
+        r.rows.forEach(row => { if (parseInt(row.cnt) >= memberCount) complete.add(row.checkin_date.toISOString().slice(0, 10)); });
+        const today = new Date();
+        const fmt = d => d.toISOString().slice(0, 10);
+        const d = new Date(today);
+        if (!complete.has(fmt(d))) d.setDate(d.getDate() - 1); // today still in progress
+        let streak = 0;
+        while (complete.has(fmt(d))) { streak++; d.setDate(d.getDate() - 1); }
+        return streak;
+    } catch (_) { return 0; }
+}
+
+async function getUserSquad(userId) {
+    try {
+        const r = await pool.query(
+            `SELECT sq.id, sq.name, sq.owner_id, sq.invite_code,
+                    (SELECT COUNT(*) FROM squad_members sm WHERE sm.squad_id = sq.id) AS member_count
+             FROM squads sq
+             JOIN squad_members sm ON sm.squad_id = sq.id
+             WHERE sm.user_id = $1
+             LIMIT 1`, [userId]
+        );
+        return r.rows[0] || null;
+    } catch (_) { return null; }
+}
+
+function genInviteCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    return code;
+}
+
+app.get('/squads', isAuth, async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+        const squad = await getUserSquad(userId);
+        let data = null;
+        if (squad) {
+            const members = await pool.query(
+                `SELECT u.id, u.fullname, u.has_paid,
+                        (EXISTS (SELECT 1 FROM squad_checkins sc WHERE sc.squad_id = $1 AND sc.user_id = u.id AND sc.checkin_date = CURRENT_DATE)) AS checked_today
+                 FROM squad_members sm
+                 JOIN users u ON u.id = sm.user_id
+                 WHERE sm.squad_id = $1
+                 ORDER BY sm.joined_at ASC`, [squad.id]
+            );
+            const streak = await computeSquadStreak(squad.id, parseInt(squad.member_count));
+            data = {
+                id: squad.id,
+                name: squad.name,
+                inviteCode: squad.invite_code,
+                ownerId: squad.owner_id,
+                memberCount: parseInt(squad.member_count),
+                streak,
+                isOwner: squad.owner_id === userId,
+                members: members.rows
+            };
+        }
+        res.render('squads', { user: req.session.user, squad: data });
+    } catch (err) {
+        console.error('Squads page error:', err);
+        res.status(500).send('Error loading squads');
+    }
+});
+
+app.post('/squads/create', isAuth, async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+        const existing = await getUserSquad(userId);
+        if (existing) return res.redirect('/squads?msg=' + encodeURIComponent('You already belong to a squad'));
+        const name = (req.body.name || '').trim().slice(0, 120);
+        if (!name) return res.redirect('/squads?msg=' + encodeURIComponent('Enter a squad name'));
+        let code = genInviteCode();
+        let dup = await pool.query('SELECT id FROM squads WHERE invite_code = $1', [code]);
+        while (dup.rows.length) { code = genInviteCode(); dup = await pool.query('SELECT id FROM squads WHERE invite_code = $1', [code]); }
+        const sq = await pool.query('INSERT INTO squads (name, owner_id, invite_code) VALUES ($1, $2, $3) RETURNING id', [name, userId, code]);
+        await pool.query('INSERT INTO squad_members (squad_id, user_id) VALUES ($1, $2)', [sq.rows[0].id, userId]);
+        await pool.query(`INSERT INTO squad_checkins (squad_id, user_id, checkin_date) VALUES ($1, $2, CURRENT_DATE)
+            ON CONFLICT DO NOTHING`, [sq.rows[0].id, userId]);
+        res.redirect('/squads?msg=' + encodeURIComponent('Squad created! Streak starts today.'));
+    } catch (err) { console.error('Create squad error:', err); res.redirect('/squads?msg=' + encodeURIComponent('Failed to create squad')); }
+});
+
+app.post('/squads/join', isAuth, async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+        const existing = await getUserSquad(userId);
+        if (existing) return res.redirect('/squads?msg=' + encodeURIComponent('You already belong to a squad'));
+        const code = (req.body.code || '').trim().toUpperCase();
+        if (!code) return res.redirect('/squads?msg=' + encodeURIComponent('Enter the invite code'));
+        const sq = await pool.query('SELECT id, name FROM squads WHERE invite_code = $1', [code]);
+        if (!sq.rows.length) return res.redirect('/squads?msg=' + encodeURIComponent('Invalid invite code'));
+        const inSquad = await pool.query('SELECT id FROM squad_members WHERE squad_id = $1 AND user_id = $2', [sq.rows[0].id, userId]);
+        if (!inSquad.rows.length) {
+            await pool.query('INSERT INTO squad_members (squad_id, user_id) VALUES ($1, $2)', [sq.rows[0].id, userId]);
+        }
+        res.redirect('/squads?msg=' + encodeURIComponent('Joined ' + sq.rows[0].name + '!'));
+    } catch (err) { console.error('Join squad error:', err); res.redirect('/squads?msg=' + encodeURIComponent('Failed to join squad')); }
+});
+
+app.post('/squads/checkin', isAuth, async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+        const squad = await getUserSquad(userId);
+        if (!squad) return res.status(400).json({ success: false, error: 'Join or create a squad first' });
+        await pool.query(`INSERT INTO squad_checkins (squad_id, user_id, checkin_date) VALUES ($1, $2, CURRENT_DATE)
+            ON CONFLICT DO NOTHING`, [squad.id, userId]);
+        const streak = await computeSquadStreak(squad.id, parseInt(squad.member_count));
+        res.json({ success: true, streak });
+    } catch (err) { res.status(500).json({ success: false, error: 'Check-in failed' }); }
+});
+
+app.post('/squads/leave', isAuth, async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+        const squad = await getUserSquad(userId);
+        if (!squad) return res.redirect('/squads');
+        if (squad.owner_id === userId) {
+            // Owner leaving dissolves the squad
+            await pool.query('DELETE FROM squad_checkins WHERE squad_id = $1', [squad.id]);
+            await pool.query('DELETE FROM squad_members WHERE squad_id = $1', [squad.id]);
+            await pool.query('DELETE FROM squads WHERE id = $1', [squad.id]);
+            return res.redirect('/squads?msg=' + encodeURIComponent('Squad dissolved'));
+        }
+        await pool.query('DELETE FROM squad_checkins WHERE squad_id = $1 AND user_id = $2', [squad.id, userId]);
+        await pool.query('DELETE FROM squad_members WHERE squad_id = $1 AND user_id = $2', [squad.id, userId]);
+        res.redirect('/squads?msg=' + encodeURIComponent('You left the squad'));
+    } catch (err) { console.error('Leave squad error:', err); res.redirect('/squads'); }
+});
+
+// ==========================================
+// LIVE BATTLE MODE — real-time duels
+// ==========================================
+app.get('/battle', isAuth, requirePaid, async (req, res) => {
+    try {
+        const subjects = await pool.query('SELECT id, name FROM subjects ORDER BY name ASC');
+        res.render('battle', { user: req.session.user, subjects: subjects.rows });
+    } catch (err) {
+        console.error('Battle page error:', err);
+        res.status(500).send('Error loading battle');
+    }
+});
+
+function sanitizeBattleQuestion(q) {
+    if (!q) return null;
+    return { question: q.question, options: [q.option_a, q.option_b, q.option_c, q.option_d] };
+}
+
+function battleCurrentIndex(battle) {
+    if (!battle.started_at || battle.status !== 'active') return 0;
+    const elapsed = Math.floor((Date.now() - new Date(battle.started_at).getTime()) / 1000);
+    return Math.min(Math.max(Math.floor(elapsed / battle.question_secs), 0), battle.q_count - 1);
+}
+
+app.post('/api/battle/start', isAuth, async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+        const subjectId = parseInt(req.body.subject_id);
+        const qCount = Math.min(Math.max(parseInt(req.body.q_count) || 5, 3), 10);
+        if (!subjectId) return res.status(400).json({ success: false, error: 'Pick a subject' });
+
+        // Matchmake: try to join an open battle for this subject
+        const open = await pool.query(
+            `SELECT * FROM battles WHERE status = 'open' AND p2_id IS NULL AND p1_id != $1 AND subject = $2
+             ORDER BY created_at ASC LIMIT 1`, [userId, String(subjectId)]
+        );
+        if (open.rows.length) {
+            const b = open.rows[0];
+            const qs = await pool.query(
+                `SELECT q.* FROM questions q WHERE q.subject_id = $1 ORDER BY RANDOM() LIMIT $2`,
+                [subjectId, qCount]
+            );
+            if (!qs.rows.length) return res.status(400).json({ success: false, error: 'No questions for this subject yet' });
+            const cleaned = qs.rows.map(q => ({
+                question: q.question, option_a: q.option_a, option_b: q.option_b,
+                option_c: q.option_c, option_d: q.option_d, correct_option: q.correct_option
+            }));
+            await pool.query(
+                `UPDATE battles SET p2_id = $1, status = 'active', question_ids = $2::jsonb, q_count = $3, started_at = NOW()
+                 WHERE id = $4`, [userId, JSON.stringify(cleaned), qCount, b.id]
+            );
+            return res.json({ success: true, battle_id: b.id, role: 'player', opponent_joined: true });
+        }
+
+        // No opponent waiting: create an open battle
+        const code = Math.random().toString(36).slice(2, 8).toUpperCase();
+        const b = await pool.query(
+            `INSERT INTO battles (p1_id, subject, status, invite_code, q_count, question_secs)
+             VALUES ($1, $2, 'open', $3, $4, 20) RETURNING id`, [userId, String(subjectId), code, qCount]
+        );
+        res.json({ success: true, battle_id: b.rows[0].id, role: 'player', waiting: true, invite_code: code });
+    } catch (err) {
+        console.error('Battle start error:', err);
+        res.status(500).json({ success: false, error: 'Failed to start battle' });
+    }
+});
+
+app.post('/api/battle/join', isAuth, async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+        const code = (req.body.code || '').trim().toUpperCase();
+        const b = await pool.query(`SELECT * FROM battles WHERE invite_code = $1 AND status = 'open'`, [code]);
+        if (!b.rows.length) return res.status(404).json({ success: false, error: 'No open battle with that code' });
+        const battle = b.rows[0];
+        const subjectId = parseInt(battle.subject);
+        const qs = await pool.query(
+            `SELECT q.* FROM questions q WHERE q.subject_id = $1 ORDER BY RANDOM() LIMIT $2`,
+            [subjectId, battle.q_count]
+        );
+        if (!qs.rows.length) return res.status(400).json({ success: false, error: 'No questions for this subject yet' });
+        const cleaned = qs.rows.map(q => ({
+            question: q.question, option_a: q.option_a, option_b: q.option_b,
+            option_c: q.option_c, option_d: q.option_d, correct_option: q.correct_option
+        }));
+        await pool.query(
+            `UPDATE battles SET p2_id = $1, status = 'active', question_ids = $2::jsonb, started_at = NOW()
+             WHERE id = $3`, [userId, JSON.stringify(cleaned), battle.id]
+        );
+        res.json({ success: true, battle_id: battle.id, role: 'player', opponent_joined: true });
+    } catch (err) {
+        console.error('Battle join error:', err);
+        res.status(500).json({ success: false, error: 'Failed to join battle' });
+    }
+});
+
+app.get('/api/battle/state/:id', isAuth, async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+        const b = await pool.query('SELECT * FROM battles WHERE id = $1', [req.params.id]);
+        if (!b.rows.length) return res.status(404).json({ success: false, error: 'Battle not found' });
+        const battle = b.rows[0];
+        if (battle.p1_id !== userId && battle.p2_id !== userId) {
+            return res.status(403).json({ success: false, error: 'Not your battle' });
+        }
+        const isP1 = battle.p1_id === userId;
+        const questions = battle.question_ids || [];
+
+        // Mark abandoned if opponent left via leave endpoint (status updated there)
+        const otherId = isP1 ? battle.p2_id : battle.p1_id;
+        const p1r = await pool.query('SELECT fullname FROM users WHERE id = $1', [battle.p1_id]);
+        const p2r = otherId ? await pool.query('SELECT fullname FROM users WHERE id = $1', [otherId]) : null;
+        const playerNames = { p1: p1r.rows[0] ? p1r.rows[0].fullname : 'Opponent', p2: p2r && p2r.rows[0] ? p2r.rows[0].fullname : 'Opponent' };
+
+        const base = {
+            success: true, battle_id: battle.id,
+            status: battle.status, isP1,
+            me: isP1 ? playerNames.p1 : (battle.p2_id ? playerNames.p2 : 'You'),
+            opponent: isP1 ? (battle.p2_id ? playerNames.p2 : 'Waiting…') : playerNames.p1,
+            opponentJoined: !!battle.p2_id,
+            subject: battle.subject,
+            qCount: battle.q_count,
+            invite_code: battle.invite_code,
+            winner_id: battle.winner_id
+        };
+
+        if (battle.status === 'open' || !battle.p2_id) return res.json({ ...base, phase: 'lobby' });
+
+        if (battle.status === 'active') {
+            const idx = battleCurrentIndex(battle);
+            const q = questions[idx] || null;
+            const totalSecs = battle.q_count * battle.question_secs;
+            const elapsed = Math.floor((Date.now() - new Date(battle.started_at).getTime()) / 1000);
+            const timeLeft = battle.question_secs - (elapsed % battle.question_secs);
+            const ansR = await pool.query(
+                'SELECT question_index, answer, is_correct FROM battle_answers WHERE battle_id = $1 AND user_id = $2',
+                [battle.id, userId]
+            );
+            const answers = {};
+            ansR.rows.forEach(a => { answers[a.question_index] = a.is_correct; });
+            const myCorrect = ansR.rows.filter(a => a.is_correct).length;
+            const oppCorrect = otherId ? await pool.query(
+                'SELECT COUNT(*)::int AS c FROM battle_answers WHERE battle_id = $1 AND user_id = $2 AND is_correct = true',
+                [battle.id, otherId]
+            ) : { rows: [{ c: 0 }] };
+            const finished = elapsed >= totalSecs;
+
+            // Auto-finish when time is up
+            if (finished) {
+                await pool.query(`UPDATE battles SET status = 'finished', finished_at = NOW() WHERE id = $1 AND status = 'active'`, [battle.id]);
+            }
+
+            return res.json({
+                ...base,
+                phase: finished ? 'result' : 'playing',
+                questionIndex: idx,
+                question: sanitizeBattleQuestion(q),
+                timeLeft: Math.max(timeLeft, 0),
+                answers,
+                myCorrect,
+                oppCorrect: otherId ? oppCorrect.rows[0].c : 0
+            });
+        }
+
+        // finished
+        const myCorrect = await pool.query(
+            'SELECT COUNT(*)::int AS c FROM battle_answers WHERE battle_id = $1 AND user_id = $2 AND is_correct = true',
+            [battle.id, userId]
+        );
+        const otherCorrect = otherId ? await pool.query(
+            'SELECT COUNT(*)::int AS c FROM battle_answers WHERE battle_id = $1 AND user_id = $2 AND is_correct = true',
+            [battle.id, otherId]
+        ) : { rows: [{ c: 0 }] };
+        const draw = battle.winner_id == null;
+        const won = battle.winner_id === userId;
+        res.json({ ...base, phase: 'result', myScore: myCorrect.rows[0].c, oppScore: otherCorrect.rows[0].c, won, draw });
+    } catch (err) {
+        console.error('Battle state error:', err);
+        res.status(500).json({ success: false, error: 'Failed to load battle state' });
+    }
+});
+
+app.post('/api/battle/answer', isAuth, async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+        const { battle_id, question_index, answer } = req.body;
+        const b = await pool.query('SELECT * FROM battles WHERE id = $1', [battle_id]);
+        if (!b.rows.length) return res.status(404).json({ success: false, error: 'Battle not found' });
+        const battle = b.rows[0];
+        if (battle.status !== 'active') return res.status(400).json({ success: false, error: 'Battle not active' });
+        const questions = battle.question_ids || [];
+        const q = questions[parseInt(question_index)];
+        if (!q) return res.status(400).json({ success: false, error: 'Bad question index' });
+        const isCorrect = String(answer || '').trim().toUpperCase() === String(q.correct_option || '').trim().toUpperCase();
+        await pool.query(
+            `INSERT INTO battle_answers (battle_id, user_id, question_index, answer, is_correct)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (battle_id, user_id, question_index) DO NOTHING`,
+            [battle_id, userId, parseInt(question_index), answer, isCorrect]
+        );
+        res.json({ success: true, is_correct: isCorrect });
+    } catch (err) {
+        console.error('Battle answer error:', err);
+        res.status(500).json({ success: false, error: 'Failed to save answer' });
+    }
+});
+
+app.post('/api/battle/finish/:id', isAuth, async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+        const b = await pool.query('SELECT * FROM battles WHERE id = $1', [req.params.id]);
+        if (!b.rows.length) return res.status(404).json({ success: false, error: 'Battle not found' });
+        const battle = b.rows[0];
+        if (battle.status !== 'active') return res.json({ success: true });
+        const questions = battle.question_ids || [];
+
+        // Determine winner from recorded answers (unanswered = wrong)
+        let p1score = 0, p2score = 0;
+        for (let i = 0; i < (battle.q_count || 0); i++) {
+            const a1 = await pool.query(`SELECT is_correct FROM battle_answers WHERE battle_id=$1 AND user_id=$2 AND question_index=$3`, [battle.id, battle.p1_id, i]);
+            const a2 = battle.p2_id ? await pool.query(`SELECT is_correct FROM battle_answers WHERE battle_id=$1 AND user_id=$2 AND question_index=$3`, [battle.id, battle.p2_id, i]) : { rows: [] };
+            if (a1.rows.length && a1.rows[0].is_correct) p1score++;
+            if (a2.rows.length && a2.rows[0].is_correct) p2score++;
+        }
+        let winner = null;
+        if (battle.p2_id) winner = p1score === p2score ? null : (p1score > p2score ? battle.p1_id : battle.p2_id);
+        await pool.query(`UPDATE battles SET status='finished', finished_at = NOW(), winner_id = $1 WHERE id = $2`, [winner, battle.id]);
+
+        // Winner reward: award coins if a coins system exists
+        if (winner) {
+            const c = await pool.query(`SELECT column_name FROM information_schema.columns WHERE table_name='users' AND column_name='coins'`);
+            if (c.rows.length) await pool.query('UPDATE users SET coins = COALESCE(coins,0) + 10 WHERE id = $1', [winner]);
+        }
+        res.json({ success: true, winner_id: winner });
+    } catch (err) {
+        console.error('Battle finish error:', err);
+        res.status(500).json({ success: false, error: 'Failed to finish battle' });
+    }
+});
+
+app.post('/api/battle/leave/:id', isAuth, async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+        const b = await pool.query('SELECT * FROM battles WHERE id = $1', [req.params.id]);
+        if (b.rows.length) {
+            const battle = b.rows[0];
+            if (battle.status === 'active' || battle.status === 'open') {
+                const winner = battle.p1_id === userId ? battle.p2_id : battle.p1_id;
+                await pool.query(`UPDATE battles SET status='finished', finished_at=NOW(), winner_id=$1 WHERE id=$2`, [winner, battle.id]);
+            }
+        }
+        res.json({ success: true });
+    } catch (_) { res.json({ success: true }); }
+});
+
 app.post('/ambassador/register', async (req, res) => {
     return res.status(403).json({ success: false, error: 'Refer & Earn is currently disabled' });
     try {
@@ -7214,6 +7612,67 @@ async function ensureMigrationColumns() {
 (async function initPremiumMigration() {
   try { await ensureMigrationColumns(); console.log('[Premium Migration] Table ready'); }
   catch(e) { console.error('[Premium Migration] Init:', e.message); }
+})();
+
+// Squad Streaks tables
+(async function initSquads() {
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS squads (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(120) NOT NULL,
+      owner_id INTEGER NOT NULL,
+      invite_code VARCHAR(10) UNIQUE NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS squad_members (
+      id SERIAL PRIMARY KEY,
+      squad_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      joined_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE (squad_id, user_id)
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS squad_checkins (
+      id SERIAL PRIMARY KEY,
+      squad_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      checkin_date DATE NOT NULL DEFAULT CURRENT_DATE,
+      created_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE (squad_id, user_id, checkin_date)
+    )`);
+    console.log('[Squads] Tables ready');
+  } catch(e) { console.error('[Squads] Init:', e.message); }
+})();
+
+// Battle Mode tables
+(async function initBattles() {
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS battles (
+      id SERIAL PRIMARY KEY,
+      p1_id INTEGER NOT NULL,
+      p2_id INTEGER,
+      subject VARCHAR(200) DEFAULT '',
+      status VARCHAR(20) DEFAULT 'open',
+      invite_code VARCHAR(8) UNIQUE,
+      question_ids JSONB DEFAULT '[]',
+      q_count INTEGER DEFAULT 5,
+      question_secs INTEGER DEFAULT 20,
+      started_at TIMESTAMP,
+      finished_at TIMESTAMP,
+      winner_id INTEGER,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS battle_answers (
+      id SERIAL PRIMARY KEY,
+      battle_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      question_index INTEGER NOT NULL,
+      answer VARCHAR(10),
+      is_correct BOOLEAN DEFAULT false,
+      answered_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE (battle_id, user_id, question_index)
+    )`);
+    console.log('[Battle] Tables ready');
+  } catch(e) { console.error('[Battle] Init:', e.message); }
 })();
 
 // Payments log table
