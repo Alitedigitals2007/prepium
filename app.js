@@ -3568,7 +3568,7 @@ app.get('/squads', isAuth, async (req, res) => {
                 members: members.rows
             };
         }
-        res.render('squads', { user: req.session.user, squad: data });
+        res.render('squads', { user: req.session.user, squad: data, introTag: 'Together, we never miss' });
     } catch (err) {
         console.error('Squads page error:', err);
         res.status(500).send('Error loading squads');
@@ -3646,7 +3646,7 @@ app.post('/squads/leave', isAuth, async (req, res) => {
 app.get('/battle', isAuth, requirePaid, async (req, res) => {
     try {
         const subjects = await pool.query('SELECT id, name FROM subjects ORDER BY name ASC');
-        res.render('battle', { user: req.session.user, subjects: subjects.rows });
+        res.render('battle', { user: req.session.user, subjects: subjects.rows, introTag: 'Ready for the duel' });
     } catch (err) {
         console.error('Battle page error:', err);
         res.status(500).send('Error loading battle');
