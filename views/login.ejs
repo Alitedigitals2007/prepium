@@ -46,6 +46,47 @@
         @keyframes fadeInUpText { to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeOutScreen { to { opacity: 0; visibility: hidden; } }
         @keyframes displayForm { to { opacity: 1; transform: translateY(0); } }
+
+        .notice-banner {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: linear-gradient(135deg, var(--brand), var(--accent));
+            color: white;
+            border-radius: 14px;
+            padding: 14px 16px;
+            margin-bottom: 18px;
+            box-shadow: 0 6px 20px var(--brand-light);
+            font-size: 0.82rem;
+            font-weight: 600;
+            line-height: 1.45;
+        }
+        .notice-banner i { font-size: 1.05rem; flex-shrink: 0; }
+        .notice-banner .nb-text { flex: 1; }
+        .notice-banner .nb-btn {
+            background: rgba(255,255,255,0.18);
+            color: white;
+            text-decoration: none;
+            font-weight: 800;
+            font-size: 0.72rem;
+            padding: 8px 14px;
+            border-radius: 9px;
+            white-space: nowrap;
+            transition: background 0.2s;
+        }
+        .notice-banner .nb-btn:hover { background: rgba(255,255,255,0.3); }
+        .notice-banner .nb-close {
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.75);
+            font-size: 0.9rem;
+            cursor: pointer;
+            padding: 4px;
+        }
+        .notice-banner .nb-close:hover { color: white; }
+        @media (max-width: 380px) {
+            .notice-banner { flex-wrap: wrap; }
+        }
     </style>
 </head>
 <body>
@@ -56,6 +97,15 @@
 
     <div class="auth-shell">
         <a href="/" class="auth-logo">PREPIUM<span>.</span></a>
+
+        <% if (locals.notice && notice.message) { %>
+        <div class="notice-banner" id="loginNotice">
+            <i class="fas fa-bullhorn"></i>
+            <span class="nb-text"><%= notice.message %></span>
+            <% if (notice.link) { %><a class="nb-btn" href="<%= notice.link %>" target="_blank" rel="noopener"><%= notice.label || 'Read More' %></a><% } %>
+            <button type="button" class="nb-close" onclick="this.parentElement.style.display='none'"><i class="fas fa-xmark"></i></button>
+        </div>
+        <% } %>
         
         <div class="auth-header">
             <h1>Welcome back!</h1>

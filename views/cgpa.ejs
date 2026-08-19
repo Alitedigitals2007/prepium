@@ -327,14 +327,19 @@
 /* â•â• RESPONSIVE â•â• */
 @media (min-width: 1024px) {
     .overlay .ov-inner { padding-left: 220px; }
-    .app-shell { max-width: 580px; margin: 0 auto; background: transparent; backdrop-filter: none; border: none; }
-    .wizard-wrap { max-width: 580px; margin: 0 auto; }
-    .hero { max-width: 580px; margin-left: auto; margin-right: auto; }
-    .tiles { max-width: 580px; margin-left: auto; margin-right: auto; }
-    .analytics { max-width: 580px; margin-left: auto; margin-right: auto; }
-    .filters { max-width: 580px; margin-left: auto; margin-right: auto; }
-    .course-card { max-width: 580px; margin-left: auto; margin-right: auto; }
-    .reset-section { max-width: 580px; margin-left: auto; margin-right: auto; }
+    .app-shell { max-width: 900px; margin: 0 auto; background: transparent; backdrop-filter: none; border: none; padding: 24px; }
+    .wizard-wrap { max-width: 640px; margin: 0 auto; }
+    .hero { max-width: none; margin-left: 0; margin-right: 0; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 16px; padding: 34px 40px; }
+    .hero-bottom { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; }
+    .tiles { max-width: none; margin-left: 0; margin-right: 0; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .analytics { max-width: none; margin-left: 0; margin-right: 0; }
+    .filters { max-width: none; margin-left: 0; margin-right: 0; }
+    .grade-chips { grid-template-columns: repeat(6, 1fr); }
+    .crow { padding: 16px 20px; border-radius: 14px; }
+    .ccode { font-size: 0.9rem; }
+    .cmeta { font-size: 0.78rem; }
+    .course-card { max-width: none; margin-left: 0; margin-right: 0; }
+    .reset-section { max-width: none; margin-left: 0; margin-right: 0; }
 }
 @media (max-width: 380px) {
     .hero-cgpa { font-size: 4rem; }
@@ -693,7 +698,7 @@
                 <div class="cmeta">
                     <span><%= c.credit_units %> units</span>
                     <% if (c.title) { %><span>· <%= c.title %></span><% } %>
-                    <span>· L<%= c.level_scope %> S<%= c.semester %></span>
+                    <span>· L<%= c.level_scope %> <%= String(c.semester) === '1' ? '1st' : '2nd' %> Sem</span>
                 </div>
             </div>
             <div class="crow-right">
@@ -1222,23 +1227,16 @@ function advisorWhatif() {
 
 /* â”€â”€ Transcript Download â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function downloadTranscript() {
-    Swal.fire({ title: 'Generating Transcript...', html: 'Preparing your document', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
+    Swal.fire({ title: 'Generating Transcript...', html: 'Preparing your PDF', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
     fetch('/api/cgpa/transcript')
     .then(function(r) { return r.json(); })
     .then(function(d) {
         Swal.close();
         if (d.error) { Swal.fire({ icon: 'error', text: d.error }); return; }
         if (!d.semesters || d.semesters.length === 0) { Swal.fire({ icon: 'info', text: 'No courses logged yet.' }); return; }
-        var html = buildTranscriptHtml(d);
-        var blob = new Blob([html], { type: 'text/html' });
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement('a');
-        a.href = url;
-        a.download = 'Transcript_' + (d.student.name || 'Student').replace(/\s+/g, '_') + '.html';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+        Swal.fire({ title: 'Downloading...', html: 'Opening your official transcript PDF', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
+        window.location.href = '/api/cgpa/transcript/pdf';
+        setTimeout(function() { Swal.close(); }, 1500);
     })
     .catch(function(err) { Swal.close(); Swal.fire({ icon: 'error', text: 'Failed: ' + (err.message || 'network error') }); });
 }

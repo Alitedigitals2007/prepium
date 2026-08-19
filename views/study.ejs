@@ -110,7 +110,7 @@
     var todaySessions = typeof todayStats !== 'undefined' && todayStats ? todayStats.sessions : 0;
     %>
 
-    <div class="stats-row">
+    <div class="stats-row reveal">
         <div class="stat-chip">
             <i class="fas fa-book-open"></i>
             <div class="num"><%= totalCourses %></div>
@@ -130,12 +130,12 @@
 
 
 
-    <div class="tab-bar">
+    <div class="tab-bar reveal">
         <button class="tab-pill active" onclick="switchTab('courses', this)"><i class="fas fa-book"></i> My Courses</button>
         <button class="tab-pill" onclick="switchTab('recent', this)"><i class="fas fa-history"></i> Recent</button>
     </div>
 
-    <div id="tab-courses">
+    <div id="tab-courses" class="reveal">
         <div class="section-label">
             <span>Study Courses</span>
             <span class="count"><%= totalCourses %></span>
@@ -279,5 +279,6 @@ function importTimetable() {
 
 
 </script>
+<script src="/js/animations.js"></script>
 </body>
 </html>

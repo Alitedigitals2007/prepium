@@ -1,6 +1,6 @@
-# Prepium — Your AI-Powered Study Companion
+# Prepium — AI-Powered Study Companion for Nigerian Students
 
-Stop juggling WhatsApp groups, USB drives, and photocopy shops. Prepium puts everything you need in one app on your phone.
+Prepium is an all-in-one learning platform built for Nigerian university students: CBT practice, AI-generated quizzes from your own lecture notes, a study hub with an AI tutor, CGPA tracking with an AI advisor, timetables, daily challenges, live competition arena, and timed mock exams with LaTeX/TikZ diagrams.
 
 **Live App**: https://theprepium.vercel.app
 
@@ -8,63 +8,37 @@ Stop juggling WhatsApp groups, USB drives, and photocopy shops. Prepium puts eve
 
 ## Features
 
-| Feature | Free |
-|---------|------|
-| Practice Quizzes (CBT) | ✅ Unlimited |
-| AI Quiz Generator (from PDF) | ✅ |
-| Study Hub (AI tutor, flashcards, quizzes, Pomodoro) | ✅ |
-| CGPA Tracker & AI Advisor (what-if, predict, chat) | ✅ |
-| School Timetable (with AI image extraction) | ✅ |
-| AI Reading Schedule | ✅ |
-| Deadline Tracker (email reminders) | ✅ |
-| Daily Task Dashboard | ✅ |
-| History & Analytics | ✅ |
-| Daily Challenge (Leaderboard) | ✅ |
-| Competition Arena | ✅ |
-| Feedback / Suggestions | ✅ |
+### Learning & Practice
+- **Practice Quizzes (CBT)** — pick subjects, difficulty, and question count. Instant grading with explanations.
+- **AI Quiz Generator** — upload any PDF lecture note; AI creates multiple-choice, theory, and fill-in-the-blank questions from that exact material.
+- **Daily Challenge** — free daily 10-question challenge with a weekly leaderboard.
+- **Competition Arena** — real-time rankings across students.
 
-### All Features Free
-
-Every account that registers **automatically gets full access to all features** — unlimited quizzes, AI tutor, AI quiz generator, CGPA tracker, study library, timetables, live arena, and competition mode. **No payment required. No paywall. No subscriptions.**
-
----
-
-## What You Can Do
-
-### AI Quiz Generator
-Upload any PDF lecture note → AI creates custom multiple-choice, theory, and fill-in-the-blank questions from that exact material.
+### Alite Mocks (Renaissance)
+- Timed mock exams with a question editor that supports **LaTeX and TikZ (circuitikz)** diagrams, imported from images/PDFs.
+- One-by-one review screen after each attempt: every option highlighted correct/wrong, verdicts, and theory explanations.
+- Per-attempt results history from your dashboard.
 
 ### Study Hub
-Create courses, chat with an AI tutor, generate flashcards, take topic-specific quizzes, track study time with a Pomodoro timer.
+- Courses, topics, and subtopics with an **AI tutor chat**, flashcards, topic quizzes, Pomodoro study timer, YouTube search, and CGPA sync.
 
 ### CGPA Tracker
-Set up your profile (4 or 5-point scale), add courses, see real-time CGPA. Use the **What-If Builder** to add multiple hypothetical courses and see their combined impact. AI predicts your next semester GPA.
+- 4- or 5-point scale, per-course logging by level and semester.
+- **What-If Builder** (add hypothetical courses to see combined CGPA impact) and **AI next-semester prediction**.
+- **Transcript export as PDF** (official-style document with semester tables, SGPA, classification, and reference number).
 
-### Practice Quizzes
-Pick subjects, difficulty, and number of questions. Instant grading with explanations.
+### Productivity
+- **Timetable** with AI extraction from images/PDFs; **AI Reading Schedule**; **Deadline tracker** with email reminders; **Daily Task dashboard**.
 
-### Daily Challenge
-Free daily 10-question challenge with leaderboard (resets weekly).
+### School-Based Premium Model
+- Admin marks each university as a **free school** (students get premium automatically) or a **paid school** (students must pay the school's price to unlock premium).
+- Per-school **price** and **locked features** are fully configurable by the admin.
+- **Refer & Earn** is available to students from paid schools — refer friends and earn real money (withdrawal via admin-approved payouts).
 
-### Timetable & Reading Schedule
-AI generates weekly schedules from your courses and available hours. Timetable supports AI extraction from images/PDFs.
-
-### Deadlines
-Track assignments/exams with email reminders 1 hour before.
-
-### Daily Task Dashboard
-Tasks, goals, deadlines, and weekly reports in one place.
-
-### Admin Panel
-Full admin suite: student management, university management, coupon system, email blasts, user groups, withdrawal processing, analytics dashboard, AI quiz generator for exams, and database manager.
-
----
-
-## Getting Started
-
-1. **Sign up** at https://theprepium.vercel.app/signup
-2. **All features are unlocked automatically** — no payment needed
-3. **Explore** — use the [User Guide](https://theprepium.vercel.app/guide) inside the app for a full walkthrough of every feature
+### Admin Panel (`/admin`)
+- Dashboard with live KPI analytics: revenue, most active users, hardest questions, per-exam stats, weakest subjects, page traffic, and more.
+- **University management** with AI-assisted school-name entry (type a hint, AI completes the official name + slug).
+- Coupon system, free-migration management, email blasts, user groups, student management, DB manager, and a customizable **login notice** shown to every user (message + clickable link).
 
 ---
 
@@ -73,12 +47,22 @@ Full admin suite: student management, university management, coupon system, emai
 | Layer | Technology |
 |-------|-----------|
 | Backend | Node.js + Express |
-| Frontend | EJS + CSS3 (glassmorphism, canvas animations) |
+| Frontend | EJS + CSS3 (glassmorphism, motion-design intro animations) |
 | Database | PostgreSQL (Neon Serverless) |
-| Auth | bcryptjs + express-session |
-| AI | Google Gemini API |
+| Auth | bcryptjs + express-session (Postgres sessions) |
+| AI | Google Gemini API (2.5-flash / 2.0-flash) |
+| Payments | Paystack (with coupon discounts) |
 | Email | Nodemailer |
-| Animations | Custom Canvas API (Framer-like flowing lines, particles, cursor glow) |
+| PDFs | pdfkit (official transcript generation) |
+| Diagrams | TikZJax (LaTeX/circuitikz in mock exams) |
+
+---
+
+## Getting Started
+
+1. **Sign up** at https://theprepium.vercel.app/signup
+2. Pick your university — if it's a free school, every feature unlocks automatically. Paid schools require a one-time premium payment (price set by your school).
+3. **Explore** — use the in-app **User Guide** (/guide) for a full walkthrough.
 
 ---
 
@@ -98,6 +82,8 @@ GEMINI_API_KEY_PRIMARY=...
 GEMINI_API_KEY_SECONDARY=...
 EMAIL_USER=your@email.com
 EMAIL_PASS=your-app-password
+PAYSTACK_PUBLIC_KEY=...
+PAYSTACK_SECRET_KEY=...
 APP_URL=http://localhost:3000
 ```
 
@@ -105,6 +91,14 @@ APP_URL=http://localhost:3000
 node app.js
 # → http://localhost:3000
 ```
+
+---
+
+## Admin Access
+
+- Login at `/admin-login`, then manage everything from `/admin/dashboard`.
+- **Universities** → set each school to paid/free, its premium price, and locked features (with AI-assisted name entry).
+- **Login Notice** → publish a global message + link that all users see on the login page and dashboard.
 
 ---
 

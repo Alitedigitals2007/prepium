@@ -670,8 +670,11 @@ app.post('/auth/signup', rateLimit(5, 60000), async (req, res) => {
         const cleanReferralCode = referred_by ? referred_by.trim().toLowerCase() : null;
         const uniId = university_id ? parseInt(university_id, 10) || null : null;
 
-        // Ensure the array [fullname, email, ..., university_id, ...]
-        // matches the $1, $2, $3, $4 order
+        // School-based premium: free schools → auto premium, paid schools → must pay
+        const school = uniId ? await getSchoolById(uniId) : null;
+        const paidSchool = !!school && school.is_paid;
+        const hasPaid = !paidSchool;
+
         await pool.query(
             'INSERT INTO users (fullname, email, password, university_id, unique_code, has_paid) VALUES ($1, $2, $3, $4, $5, $6)',
             [
@@ -680,11 +683,13 @@ app.post('/auth/signup', rateLimit(5, 60000), async (req, res) => {
                 hashedPassword,
                 uniId,
                 cleanReferralCode,
-                true
+                hasPaid
             ]
         );
 
-        res.redirect('/login?msg=Account created! You now have full Premium access.');
+        res.redirect(paidSchool
+            ? '/login?msg=Account created! Your school requires premium access.'
+            : '/login?msg=Account created! You now have full Premium access.');
 
     } catch (err) {
         console.error("Signup Error:", err);
@@ -696,8 +701,19 @@ app.post('/auth/signup', rateLimit(5, 60000), async (req, res) => {
 // Payment verification handled via GET /verify-payment (Paystack callback)
 
 // --- GET Login Page ---
-app.get('/login', (req, res) => {
-    res.render('login', { error: null });
+async function getLoginNotice() {
+    try {
+        const r = await pool.query(`SELECT value FROM app_config WHERE key = 'login_notice'`);
+        if (!r.rows.length) return null;
+        const parsed = JSON.parse(r.rows[0].value);
+        if (!parsed || !parsed.message) return null;
+        return { message: parsed.message, link: parsed.link || '', label: parsed.label || 'Read More' };
+    } catch (e) { return null; }
+}
+
+app.get('/login', async (req, res) => {
+    const notice = await getLoginNotice();
+    res.render('login', { error: null, notice });
 });
 
 // --- POST Login Handler (Updated for AJAX) ---
@@ -880,6 +896,41 @@ async function savePremiumSettings(patch) {
     await pool.query(`INSERT INTO premium_settings (key, value, updated_at) VALUES ($1, $2, NOW())
       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`, [k, v]);
   }
+}
+
+async function getSchoolById(id) {
+  if (!id) return null;
+  try {
+    const r = await pool.query('SELECT id, name, slug, is_paid, price, locked_features FROM universities WHERE id = $1', [id]);
+    if (!r.rows.length) return null;
+    const s = r.rows[0];
+    return { ...s, is_paid: !!s.is_paid, price: parseInt(s.price) || 0, locked_features: Array.isArray(s.locked_features) ? s.locked_features : [] };
+  } catch (_) { return null; }
+}
+
+async function getSchoolForUser(userId) {
+  try {
+    const r = await pool.query('SELECT university_id FROM users WHERE id = $1', [userId]);
+    return r.rows[0] && r.rows[0].university_id ? getSchoolById(r.rows[0].university_id) : null;
+  } catch (_) { return null; }
+}
+
+// Feature-level lock middleware (school + global locked features)
+function featureLock(key) {
+  return async (req, res, next) => {
+    try {
+      if (!req.session.user) return res.redirect('/login');
+      const school = await getSchoolForUser(req.session.user.id);
+      const settings = await getPremiumSettings();
+      const locked = [...(settings.locked_features || []), ...(school?.locked_features || [])];
+      if (key && locked.includes(key)) {
+        const isAPI = req.xhr || (req.headers.accept && req.headers.accept.includes('json')) || req.path.startsWith('/api/');
+        if (isAPI) return res.status(403).json({ success: false, message: 'This feature is locked for your school' });
+        return res.redirect('/dashboard?msg=' + encodeURIComponent('This feature is locked for your school by the administrator'));
+      }
+      next();
+    } catch (_) { next(); }
+  };
 }
 
 app.get('/admin/migrations', isAdmin, async (req, res) => {
@@ -1215,12 +1266,33 @@ app.get('/admin/dashboard', isAdmin, async (req, res) => {
         res.render('admin/dashboard', {
             user: req.session.user,
             stats: statsResult.rows[0],
-            recentUsers: recentUsers.rows
+            recentUsers: recentUsers.rows,
+            notice: await getLoginNotice()
         });
 
     } catch (err) {
         console.error("Admin Dashboard Error:", err);
         res.status(500).send("Database Error: Verify your table structures (users, universities, subjects, questions).");
+    }
+});
+
+// --- Save/Clear Login Notice (admin customizable, shown to all users) ---
+app.post('/admin/notice', isAdmin, async (req, res) => {
+    try {
+        const message = (req.body.message || '').trim();
+        const link = (req.body.link || '').trim();
+        const label = (req.body.label || 'Read More').trim();
+        if (!message) {
+            await pool.query(`DELETE FROM app_config WHERE key = 'login_notice'`);
+            return res.json({ success: true, cleared: true });
+        }
+        const payload = JSON.stringify({ message, link, label });
+        await pool.query(`INSERT INTO app_config (key, value) VALUES ('login_notice', $1)
+            ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, [payload]);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Save login notice error:', err);
+        res.json({ success: false, message: 'Failed to save notice' });
     }
 });
 
@@ -1231,21 +1303,61 @@ app.get('/admin/dashboard', isAdmin, async (req, res) => {
 // View all universities
 app.get('/admin/universities', isAdmin, async (req, res) => {
     try {
+        await ensureMigrationColumns();
         const result = await pool.query('SELECT * FROM universities ORDER BY name ASC');
-        res.render('admin/universities', { universities: result.rows });
+        res.render('admin/universities', { universities: result.rows, features: PREMIUM_FEATURES });
     } catch (err) {
         res.status(500).send("Error loading universities");
     }
 });
 
-// Add a university
+// Add a university (with school premium defaults)
 app.post('/admin/universities/add', isAdmin, async (req, res) => {
-    const { name, slug } = req.body;
+    const { name, slug, is_paid, price } = req.body;
     try {
-        await pool.query('INSERT INTO universities (name, slug) VALUES ($1, $2)', [name, slug.toLowerCase()]);
+        await pool.query('INSERT INTO universities (name, slug, is_paid, price) VALUES ($1, $2, $3, $4)',
+            [name, slug.toLowerCase(), is_paid === 'on' || is_paid === 'true', parseInt(price) || 2000]);
         res.redirect('/admin/universities');
     } catch (err) {
         res.status(500).send("Error adding university");
+    }
+});
+
+// AI-assisted university name suggestion
+app.post('/admin/universities/ai-suggest', isAdmin, async (req, res) => {
+    const input = (req.body.input || '').trim();
+    if (!input) return res.json({ success: false, message: 'Type a hint first' });
+    try {
+        const prompt = 'You are a Nigerian university database. The user typed a partial university name: "' + input +
+            '". Return the FULL official name of the most likely Nigerian university and a short lowercase slug (abbreviation). ' +
+            'Respond with STRICT JSON only, no markdown: {"name":"...","slug":"..."}. If unsure, keep the name close to their input and make a slug from it.';
+        const result = await callGeminiWithText(prompt, '');
+        const text = (result.text || result.response || '').trim();
+        const m = text.match(/\{[\s\S]*\}/);
+        const parsed = JSON.parse(m ? m[0] : text);
+        res.json({ success: true, name: parsed.name || input, slug: (parsed.slug || '').toLowerCase() || input.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8) });
+    } catch (err) {
+        console.error('AI suggest error:', err);
+        res.json({ success: false, message: 'AI suggestion failed. Check Gemini API keys.' });
+    }
+});
+
+// Save per-school premium config (paid/free, price, locked features)
+app.post('/admin/universities/config/:id', isAdmin, async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (!id) return res.redirect('/admin/universities?msg=Invalid+school');
+    const is_paid = req.body.is_paid === 'on' || req.body.is_paid === 'true' || req.body.is_paid === '1';
+    const price = parseInt(req.body.price) || 0;
+    const lockedFeatures = Array.isArray(req.body.locked_features)
+        ? req.body.locked_features
+        : (req.body.locked_features ? [req.body.locked_features] : []);
+    try {
+        await pool.query('UPDATE universities SET is_paid = $1, price = $2, locked_features = $3 WHERE id = $4',
+            [is_paid, price, JSON.stringify(lockedFeatures), id]);
+        res.redirect('/admin/universities?msg=Saved+settings+for+school');
+    } catch (err) {
+        console.error('Config save error:', err);
+        res.redirect('/admin/universities?error=' + encodeURIComponent(err.message));
     }
 });
 
@@ -1420,8 +1532,17 @@ app.get('/dashboard', isStudent, async (req, res) => {
             ORDER BY date_taken DESC
             LIMIT 1`, [userId]);
 
+        const recentQuiz = recentQuizRes.rows[0] || null;
+
+        // 8. School-based access: pricing + refer eligibility
+        const school = await getSchoolForUser(userId);
+        const premiumSettings = await getPremiumSettings();
+        const isPaidSchool = !!school && school.is_paid;
+        const schoolPrice = isPaidSchool && school.price ? school.price : premiumSettings.recharge_price;
+
         res.render('dashboard', { 
             user: { ...req.session.user, ...userData }, 
+            notice: await getLoginNotice(),
             competition: compRes.rows[0],
             subjects: subjectsRes.rows,
             history: historyRes.rows,
@@ -1432,10 +1553,12 @@ app.get('/dashboard', isStudent, async (req, res) => {
             quizCount,
             avgScore,
             aiQuizCount,
-            recentQuiz: recentQuizRes.rows[0] || null,
+            recentQuiz,
             paystack_key: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_your_key',
-            premiumPrice: PREMIUM_PRICE,
-            rechargePrice: (await getPremiumSettings()).recharge_price,
+            premiumPrice: isPaidSchool ? schoolPrice : PREMIUM_PRICE,
+            rechargePrice: schoolPrice,
+            isPaidSchool,
+            referEnabled: isPaidSchool,
             migratedLocked: !!(userData && userData.migrated_free && userData.migrated_locked && !userData.has_paid),
             currentTime: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })
         });
@@ -1848,7 +1971,7 @@ app.post('/submit-exam', isStudent, async (req, res) => {
     }
 });
 
-app.get('/history', isAuth, requirePaid, async (req, res) => {
+app.get('/history', isAuth, requirePaid, featureLock('history'), async (req, res) => {
     const uid = req.session.user.id;
     let quizRows = [], oldRows = [], studyRows = [];
 
@@ -2283,7 +2406,7 @@ app.get('/competition', (req, res) => {
 });
 
 // GET: View student deadlines
-app.get('/deadlines', isAuth, async (req, res) => {
+app.get('/deadlines', isAuth, featureLock('deadlines'), async (req, res) => {
     try {
         const query = `
             SELECT id, title,
@@ -2431,7 +2554,7 @@ app.post('/api/user-courses/bulk', isAuth, async (req, res) => {
 });
 
 // GET: Render the Timetable page with stored data
-app.get('/timetable', isAuth, requirePaid, async (req, res) => {
+app.get('/timetable', isAuth, requirePaid, featureLock('timetable'), async (req, res) => {
     try {
         // Fetch saved timetable slots for this specific user from your PostgreSQL database
         const result = await pool.query(
@@ -2637,7 +2760,7 @@ app.post('/timetable/save-extracted', isAuth, requirePaid, async (req, res) => {
 // ==========================================
 
 // GET: Show reading timetable page with settings
-app.get('/reading-timetable', isAuth, requirePaid, async (req, res) => {
+app.get('/reading-timetable', isAuth, requirePaid, featureLock('reading'), async (req, res) => {
     if (!req.session.user.has_paid) {
         return res.redirect('/dashboard?msg=Upgrade to access Reading Timetable');
     }
@@ -3255,12 +3378,23 @@ app.post('/admin/suggestions/status', isAdmin, async (req, res) => {
 // =========================================================
 
 // Referral / "Refer & Earn" system is locked (disabled) — everyone is now auto-premium
-app.get('/refer', (req, res) => {
-    return res.redirect('/dashboard?msg=Referrals+are+currently+disabled');
+// Refer & Earn is only available to users whose school is marked "paid"
+async function referAllowed(req) {
+    if (!req.session.user) return false;
+    try {
+        const school = await getSchoolForUser(req.session.user.id);
+        return !!(school && school.is_paid);
+    } catch (_) { return false; }
+}
+
+app.get('/refer', async (req, res) => {
+    if (!req.session.user) return res.redirect('/login');
+    if (!(await referAllowed(req))) return res.redirect('/dashboard?msg=' + encodeURIComponent('Refer & Earn is available for students from paid schools only'));
+    res.render('refer', { user: req.session.user || null });
 });
 
 app.get('/refer/dashboard', isAuth, async (req, res) => {
-    return res.redirect('/dashboard?msg=Referrals+are+currently+disabled');
+    if (!(await referAllowed(req))) return res.redirect('/dashboard?msg=' + encodeURIComponent('Refer & Earn is available for students from paid schools only'));
     try {
         const uid = req.session.user.id;
         const userData = await pool.query('SELECT id, fullname, email, unique_code, has_paid FROM users WHERE id = $1', [uid]);
@@ -3322,7 +3456,7 @@ app.get('/refer/dashboard', isAuth, async (req, res) => {
 });
 
 app.post('/refer/withdraw', isAuth, async (req, res) => {
-    return res.status(403).json({ success: false, error: 'Refer & Earn is currently disabled' });
+    if (!(await referAllowed(req))) return res.status(403).json({ success: false, error: 'Refer & Earn is available for students from paid schools only' });
     try {
         const uid = req.session.user.id;
         const userData = await pool.query('SELECT unique_code FROM users WHERE id = $1', [uid]);
@@ -3960,7 +4094,7 @@ END:VCARD`;
 
     res.send(vcardContent);
 });
-app.get('/ai-quiz', isAuth, (req, res) => {
+app.get('/ai-quiz', isAuth, featureLock('ai_quiz'), (req, res) => {
     res.render('ai-quiz', { 
         user: req.session.user, 
         paystack_key: process.env.PAYSTACK_PUBLIC_KEY 
@@ -5277,7 +5411,7 @@ function buildCGPA(profile, courses) {
 }
 
 // A. GET: DASHBOARD LOADER
-app.get('/cgpa', isAuth, requirePaid, async (req, res) => {
+app.get('/cgpa', isAuth, requirePaid, featureLock('cgpa'), async (req, res) => {
     try {
         if (!req.session || !req.session.user || !req.session.user.id) {
             return res.redirect('/login');
@@ -6019,7 +6153,7 @@ app.post('/admin/db-manager/query', isAdmin, async (req, res) => {
 });
 
 // ==================== STUDY DASHBOARD ====================
-app.get('/study', isAuth, requirePaid, async (req, res) => {
+app.get('/study', isAuth, requirePaid, featureLock('study'), async (req, res) => {
   try {
     const uid = req.session.user.id;
     const [coursesRes, progressRes, sessionsRes, activeRes, streakRes, todayRes] = await Promise.all([
@@ -6875,7 +7009,124 @@ app.get('/api/cgpa/transcript', isAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// API: Study stats
+// PDF Transcript download
+app.get('/api/cgpa/transcript/pdf', isAuth, requirePaid, async (req, res) => {
+  try {
+    const uid = req.session.user.id;
+    const user = await pool.query('SELECT fullname, email FROM users WHERE id = $1', [uid]);
+    const profile = await pool.query('SELECT * FROM public.cgpa_profiles WHERE user_id = $1', [uid]);
+    const courses = await pool.query('SELECT * FROM public.cgpa_courses WHERE user_id = $1 AND deleted = false ORDER BY level_scope ASC, semester ASC', [uid]);
+    const scale = profile.rows[0] ? (profile.rows[0].grading_scale || 5) : 5;
+    const gpMap = scale === 5 ? { A:5, B:4, C:3, D:2, E:1, F:0 } : { A:4, B:3, C:2, D:1, F:0 };
+    let totalUnits = parseInt(profile.rows[0]?.prev_units) || 0;
+    let totalPoints = parseFloat(profile.rows[0]?.prev_gp) || 0;
+    const semesterData = {};
+    courses.rows.forEach(c => {
+      const key = `L${c.level_scope} S${c.semester}`;
+      if (!semesterData[key]) semesterData[key] = { level: c.level_scope, semester: c.semester, courses: [], units: 0, points: 0 };
+      const u = parseInt(c.credit_units)||0;
+      const pts = (gpMap[c.grade]||0) * u;
+      if (!c.is_hidden) { semesterData[key].units += u; semesterData[key].points += pts; totalUnits += u; totalPoints += pts; }
+      semesterData[key].courses.push({ code: c.course_code, title: c.title, units: c.credit_units, grade: c.grade, excluded: c.is_hidden });
+    });
+    const cgpa = totalUnits > 0 ? (totalPoints / totalUnits) : 0;
+    let degreeClass = '';
+    if (scale === 5) { if (cgpa >= 4.5) degreeClass = 'First Class Honours'; else if (cgpa >= 3.5) degreeClass = 'Second Class (Upper)'; else if (cgpa >= 2.4) degreeClass = 'Second Class (Lower)'; else if (cgpa >= 1.5) degreeClass = 'Third Class'; else degreeClass = 'Pass'; }
+    else { if (cgpa >= 3.5) degreeClass = 'First Class Honours'; else if (cgpa >= 3.0) degreeClass = 'Second Class (Upper)'; else if (cgpa >= 2.0) degreeClass = 'Second Class (Lower)'; else if (cgpa >= 1.5) degreeClass = 'Third Class'; else degreeClass = 'Pass'; }
+    const semesters = Object.values(semesterData).sort((a,b) => a.level - b.level || a.semester - b.semester);
+    const refNum = 'PPT/' + new Date().getFullYear() + '/' + String(uid).slice(-4) + '/' + String(Date.now()).slice(-6);
+    const studentName = user.rows[0]?.fullname || 'Student';
+    const dept = profile.rows[0]?.department || '';
+    const currentLevel = profile.rows[0]?.current_level || '';
+    const semesterLabel = s => 'Level ' + s.level + ' — ' + (String(s.semester) === '1' ? 'First' : 'Second') + ' Semester';
+
+    const PDFDocument = require('pdfkit');
+    const doc = new PDFDocument({ size: 'A4', margin: 48 });
+    const fileName = 'Transcript_' + studentName.replace(/[^\w]+/g, '_') + '.pdf';
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="' + fileName + '"');
+    doc.pipe(res);
+
+    const brand = [37, 99, 235];
+    const gray = '#64748b';
+
+    // Header band
+    doc.rect(0, 0, doc.page.width, 96).fill('#0b1437');
+    doc.fill('#ffffff').font('Helvetica-Bold').fontSize(20).text('PREPIUM', 48, 22);
+    doc.fill('#93c5fd').font('Helvetica').fontSize(10).text('Official Transcript of Academic Record', 48, 48);
+    doc.fontSize(8).fill('#64748b').text('Reference: ' + refNum + '   |   Issued: ' + new Date().toLocaleString('en-GB'), 48, 66);
+
+    doc.y = 122;
+    doc.fill('#0f172a').font('Helvetica-Bold').fontSize(13).text('Student Record');
+    doc.moveDown(0.3);
+    doc.font('Helvetica').fontSize(10).fill('#1e293b');
+    doc.text('Name: ' + studentName);
+    doc.text('Email: ' + (user.rows[0]?.email || ''));
+    doc.text('Department: ' + (dept || 'Not specified'));
+    doc.text('Current Level: ' + (currentLevel || 'Not specified') + '    |    Grading Scale: ' + scale + '-Point');
+    doc.moveDown(0.6);
+
+    if (!semesters.length) {
+      doc.fill('#0f172a').font('Helvetica-Bold').fontSize(11).text('No courses logged yet.');
+    }
+
+    semesters.forEach(s => {
+      if (doc.y > doc.page.height - 130) { doc.addPage(); }
+      const semCgpa = s.units > 0 ? (s.points / s.units).toFixed(2) : '0.00';
+      doc.rect(48, doc.y, 20, 20).fill('#2563eb');
+      doc.fill('#ffffff').font('Helvetica-Bold').fontSize(10).text(String(s.level).slice(-3), 54, doc.y + 5);
+      doc.x = 74;
+      doc.fill('#0f172a').font('Helvetica-Bold').fontSize(11).text(semesterLabel(s) + '   (SGPA: ' + semCgpa + ')', 74, doc.y + 4);
+      doc.moveDown(0.6);
+
+      const startY = doc.y;
+      doc.font('Helvetica-Bold').fontSize(8.5).fill('#334155');
+      doc.rect(48, doc.y, doc.page.width - 96, 18).fill('#f1f5f9');
+      doc.text('COURSE CODE', 54, doc.y + 5, { width: 110 });
+      doc.text('COURSE TITLE', 164, doc.y + 5, { width: 200 });
+      doc.text('UNITS', 388, doc.y + 5, { width: 50 });
+      doc.text('GRADE', 452, doc.y + 5, { width: 50 });
+      doc.moveDown(0.5);
+
+      s.courses.forEach(c => {
+        if (doc.y > doc.page.height - 60) { doc.addPage(); }
+        doc.font('Helvetica').fontSize(9).fill('#1e293b');
+        doc.text(c.code || '-', 54, doc.y, { width: 110 });
+        doc.text(c.title || '', 164, doc.y, { width: 200 });
+        doc.text(String(c.units), 388, doc.y, { width: 50 });
+        doc.font('Helvetica-Bold').fill(c.grade === 'F' ? '#dc2626' : '#0f172a').text(c.grade, 452, doc.y, { width: 50 });
+        doc.fill('#1e293b').font('Helvetica');
+        if (c.excluded) { doc.font('Helvetica-Oblique').fontSize(7.5).fill('#94a3b8').text('(excluded)', 164, doc.y - 9, { width: 200 }); }
+        doc.moveDown(0.35);
+      });
+
+      doc.moveDown(0.2);
+    });
+
+    doc.moveDown(0.8);
+    doc.moveTo(48, doc.y).lineTo(doc.page.width - 48, doc.y).strokeColor('#e2e8f0').lineWidth(1).stroke();
+    doc.moveDown(0.6);
+    doc.fill('#0f172a').font('Helvetica-Bold').fontSize(12).text('Cumulative Results');
+    doc.moveDown(0.3);
+    doc.font('Helvetica').fontSize(10).fill('#1e293b');
+    doc.text('Total Units Earned: ' + totalUnits);
+    doc.text('Cumulative GPA (CGPA): ' + cgpa.toFixed(2) + ' / ' + scale + '.00');
+    doc.text('Classification: ' + degreeClass);
+    doc.text('Reference Number: ' + refNum);
+    doc.moveDown(0.7);
+
+    doc.font('Helvetica-Oblique').fontSize(8).fill(gray)
+      .text('NOTICE: This transcript is generated from student-provided academic records via the Prepium CGPA Tracker. It is not an official university document.', { width: doc.page.width - 96 });
+    doc.moveDown(0.3);
+    doc.text('Generated: ' + new Date().toLocaleString('en-GB') + '  |  Prepium  |  theprepium.vercel.app', { width: doc.page.width - 96 });
+
+    doc.end();
+  } catch (err) {
+    console.error('PDF transcript error:', err);
+    if (!res.headersSent) res.status(500).json({ error: err.message });
+    else res.end();
+  }
+});
 // ======================== END STUDY HUB ROUTES ========================
 
 // Global error handler - catches multer and other errors, returns JSON
@@ -6952,6 +7203,9 @@ async function ensureMigrationColumns() {
         value TEXT,
         updated_at TIMESTAMP DEFAULT NOW()
       )`);
+      await pool.query("ALTER TABLE universities ADD COLUMN IF NOT EXISTS is_paid BOOLEAN DEFAULT false");
+      await pool.query("ALTER TABLE universities ADD COLUMN IF NOT EXISTS price INTEGER DEFAULT 2000");
+      await pool.query("ALTER TABLE universities ADD COLUMN IF NOT EXISTS locked_features JSONB DEFAULT '[]'");
     })().catch(err => { migrationColumnsReady = null; throw err; });
   }
   return migrationColumnsReady;

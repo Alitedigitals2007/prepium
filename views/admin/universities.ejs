@@ -435,6 +435,64 @@
             letter-spacing: 0.3px;
         }
 
+        /* ── School premium badges + config ── */
+        .uni-badges { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+        .sch-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 4px 10px; border-radius: 8px;
+            font-size: 0.68rem; font-weight: 800; letter-spacing: 0.2px;
+        }
+        .sch-badge.paid { background: rgba(245,158,11,0.12); color: #d97706; }
+        .sch-badge.free { background: rgba(34,197,94,0.12); color: #16a34a; }
+        .sch-badge.price { background: var(--brand-light); color: var(--brand); }
+        .uni-right { display: flex; align-items: center; gap: 10px; }
+        .cfg-btn {
+            background: transparent; border: 1.5px solid var(--border-solid);
+            color: var(--text-main); padding: 8px 14px; border-radius: 10px;
+            font-weight: 700; font-size: 0.74rem; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 6px;
+            transition: 0.2s;
+        }
+        .cfg-btn:hover { border-color: var(--brand); color: var(--brand); }
+        .uni-config {
+            display: none; padding: 18px 24px;
+            border-top: 1px dashed var(--border-solid);
+            background: var(--bg);
+        }
+        .uni-config.open { display: block; }
+        .cfg-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 14px; }
+        .cfg-field label {
+            display: block; font-size: 0.68rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.5px;
+            color: var(--text-sub); margin-bottom: 6px;
+        }
+        .cfg-field input[type="number"] {
+            width: 100%; padding: 10px 12px;
+            background: var(--surface); border: 1.5px solid var(--border-solid);
+            border-radius: 10px; font-size: 0.85rem; font-weight: 600;
+            color: var(--text-main); font-family: inherit; outline: none;
+        }
+        .cfg-field input[type="number"]:focus { border-color: var(--brand); }
+        .cfg-locks { display: flex; flex-wrap: wrap; gap: 8px; }
+        .lock-chip {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 8px 12px; border-radius: 9px;
+            background: var(--surface); border: 1.5px solid var(--border-solid);
+            font-size: 0.74rem; font-weight: 700; cursor: pointer;
+            transition: 0.15s; color: var(--text-main); user-select: none;
+        }
+        .lock-chip.checked { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
+        .cfg-save {
+            background: var(--brand); color: #fff; border: none;
+            padding: 11px 22px; border-radius: 10px; font-weight: 800; font-size: 0.8rem;
+            cursor: pointer; transition: opacity 0.2s;
+        }
+        .cfg-save:hover { opacity: 0.9; }
+        @media (max-width: 640px) {
+            .uni-item { flex-wrap: wrap; gap: 10px; }
+            .uni-right { width: 100%; justify-content: space-between; }
+        }
+
         /* ===================== EMPTY STATE ===================== */
         .empty-state {
             padding: 60px 20px;
@@ -606,12 +664,26 @@
                 </div>
                 <form action="/admin/universities/add" method="POST" class="form-grid">
                     <div class="form-group">
-                        <label>University Name</label>
-                        <input type="text" name="name" placeholder="e.g. University of Ibadan" required>
+                        <label>University Name <span style="font-weight:500;text-transform:none;letter-spacing:0;color:var(--text-sub);font-size:0.68rem;">(or use AI)</span></label>
+                        <div style="display:flex;gap:8px;">
+                            <input type="text" name="name" id="uniName" placeholder="e.g. University of Ibadan" required style="flex:1;">
+                            <button type="button" class="btn" id="aiSuggestBtn" style="background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;border:none;flex-shrink:0;display:inline-flex;align-items:center;gap:6px;">
+                                <i class="fas fa-wand-magic-sparkles"></i> <span id="aiSuggestLabel">AI</span>
+                            </button>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Slug (Shortcode)</label>
-                        <input type="text" name="slug" placeholder="e.g. ui" required>
+                        <input type="text" name="slug" id="uniSlug" placeholder="e.g. ui" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:0.8rem;font-weight:700;">
+                            <input type="checkbox" name="is_paid" value="on"> Paid school (students must pay for premium)
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>School Price (₦)</label>
+                        <input type="number" name="price" value="2000" min="0" step="100">
                     </div>
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-plus"></i> Add Institution
@@ -642,9 +714,58 @@
                                         <span class="dot"></span>
                                         <span><i class="fas fa-fingerprint"></i> ID: <%= uni.id %></span>
                                     </div>
+                                    <div class="uni-badges">
+                                        <span class="sch-badge <%= uni.is_paid ? 'paid' : 'free' %>">
+                                            <i class="fas <%= uni.is_paid ? 'fa-lock' : 'fa-unlock' %>"></i>
+                                            <%= uni.is_paid ? 'Paid School' : 'Free School' %>
+                                        </span>
+                                        <% if (uni.is_paid) { %>
+                                        <span class="sch-badge price"><i class="fas fa-naira-sign"></i> <%= Number(uni.price || 2000).toLocaleString() %></span>
+                                        <% } %>
+                                        <% if (uni.locked_features && uni.locked_features.length) { %>
+                                        <span class="sch-badge" style="background:var(--danger-soft);color:var(--danger);">
+                                            <i class="fas fa-lock"></i> <%= uni.locked_features.length %> locked
+                                        </span>
+                                        <% } %>
+                                    </div>
                                 </div>
                             </div>
-                            <span class="uni-id-badge">ID: <%= uni.id %></span>
+                            <div class="uni-right">
+                                <span class="uni-id-badge">ID: <%= uni.id %></span>
+                                <button type="button" class="cfg-btn" onclick="document.getElementById('cfg-<%= uni.id %>').classList.toggle('open')">
+                                    <i class="fas fa-sliders"></i> Configure
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="uni-config" id="cfg-<%= uni.id %>">
+                            <form action="/admin/universities/config/<%= uni.id %>" method="POST">
+                                <div class="cfg-grid">
+                                    <div class="cfg-field">
+                                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:0.8rem;">
+                                            <input type="checkbox" name="is_paid" <%= uni.is_paid ? 'checked' : '' %>> Paid school (students pay)
+                                        </label>
+                                    </div>
+                                    <div class="cfg-field">
+                                        <label>School Price (₦)</label>
+                                        <input type="number" name="price" value="<%= uni.price || 2000 %>" min="0" step="100">
+                                    </div>
+                                </div>
+                                <div class="cfg-field" style="margin-bottom:14px;">
+                                    <label>Locked Features for this school</label>
+                                    <div class="cfg-locks">
+                                        <% (features || []).forEach(f => {
+                                            const locked = Array.isArray(uni.locked_features) && uni.locked_features.indexOf(f.key) !== -1; %>
+                                            <label class="lock-chip <%= locked ? 'checked' : '' %>">
+                                                <input type="checkbox" name="locked_features" value="<%= f.key %>" <%= locked ? 'checked' : '' %>
+                                                       onchange="this.parentElement.classList.toggle('checked', this.checked)" style="display:none;">
+                                                <i class="fas <%= f.icon %>"></i> <%= f.label %>
+                                            </label>
+                                        <% }) %>
+                                    </div>
+                                </div>
+                                <button type="submit" class="cfg-save"><i class="fas fa-check"></i> Save School Settings</button>
+                            </form>
                         </div>
                     <% }) %>
                 <% } else { %>
@@ -665,6 +786,35 @@
             document.querySelector('.sidebar').classList.toggle('open');
             document.querySelector('.sidebar-overlay').classList.toggle('active');
         }
+
+        (function() {
+            const btn = document.getElementById('aiSuggestBtn');
+            const label = document.getElementById('aiSuggestLabel');
+            const nameInput = document.getElementById('uniName');
+            const slugInput = document.getElementById('uniSlug');
+            if (!btn) return;
+            btn.addEventListener('click', function() {
+                const hint = nameInput.value.trim();
+                if (!hint) { nameInput.focus(); alert('Type a hint first (e.g. "unilag" or "fed poly auchi")'); return; }
+                btn.disabled = true;
+                label.textContent = '...';
+                fetch('/admin/universities/ai-suggest', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'input=' + encodeURIComponent(hint)
+                }).then(function(r) { return r.json(); }).then(function(d) {
+                    if (d.success) {
+                        nameInput.value = d.name;
+                        if (!slugInput.value) slugInput.value = d.slug;
+                        label.textContent = 'AI';
+                    } else {
+                        alert(d.message || 'AI suggestion failed');
+                        label.textContent = 'AI';
+                    }
+                }).catch(function() { alert('Network error'); label.textContent = 'AI'; })
+                  .finally(function() { btn.disabled = false; });
+            });
+        })();
     </script>
 
 <script src="/js/animations.js"></script>

@@ -343,6 +343,119 @@
             color: var(--border-solid);
         }
 
+        /* ── Login Notice Card ── */
+        .notice-card {
+            background: var(--card);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 26px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            margin-top: 22px;
+        }
+        .notice-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 18px;
+        }
+        .notice-header h3 { font-size: 1.05rem; font-weight: 800; color: var(--text-primary); }
+        .notice-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 5px 12px;
+            border-radius: 20px;
+        }
+        .notice-status.on { background: var(--green-bg); color: var(--green); }
+        .notice-status.off { background: var(--surface); color: var(--text-muted); }
+        .notice-preview {
+            background: linear-gradient(135deg, var(--brand), var(--accent));
+            color: white;
+            border-radius: 14px;
+            padding: 16px 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+        .notice-preview i { font-size: 1.1rem; opacity: 0.9; }
+        .notice-preview .np-text { flex: 1; font-size: 0.85rem; font-weight: 600; line-height: 1.45; }
+        .notice-preview .np-btn {
+            background: rgba(255,255,255,0.18);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 10px;
+            font-weight: 800;
+            font-size: 0.75rem;
+            cursor: pointer;
+            text-decoration: none;
+            white-space: nowrap;
+            transition: background 0.2s;
+        }
+        .notice-preview .np-btn:hover { background: rgba(255,255,255,0.3); }
+        .notice-form { display: flex; flex-direction: column; gap: 14px; }
+        .notice-form .nf-row { display: flex; gap: 12px; }
+        .notice-form .nf-field { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+        .notice-form label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+        .notice-form input, .notice-form textarea {
+            background: var(--surface);
+            border: 1px solid var(--border-solid);
+            border-radius: 10px;
+            padding: 11px 14px;
+            font-size: 0.88rem;
+            color: var(--text-primary);
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            resize: vertical;
+        }
+        .notice-form input:focus, .notice-form textarea:focus {
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3px var(--brand-light);
+        }
+        .notice-actions { display: flex; gap: 10px; margin-top: 4px; }
+        .nf-save {
+            background: var(--brand);
+            color: white;
+            border: none;
+            padding: 11px 22px;
+            border-radius: 10px;
+            font-weight: 800;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+        .nf-save:hover { opacity: 0.9; }
+        .nf-save:active { transform: scale(0.97); }
+        .nf-clear {
+            background: transparent;
+            color: var(--danger);
+            border: 1px solid var(--danger);
+            padding: 11px 22px;
+            border-radius: 10px;
+            font-weight: 800;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+        .nf-clear:hover { opacity: 0.85; }
+        .nf-clear:active { transform: scale(0.97); }
+        @media (max-width: 640px) {
+            .notice-form .nf-row { flex-direction: column; }
+            .notice-preview { flex-direction: column; align-items: flex-start; }
+        }
+
         /* ── Responsive ── */
         @media (max-width: 1200px) {
             .stats-grid { grid-template-columns: repeat(2, 1fr); }
@@ -547,8 +660,112 @@
                 </table>
             </div>
         </div>
+
+    <div class="notice-card" id="noticeCard">
+        <div class="notice-header">
+        <h3><i class="fas fa-bullhorn" style="color:var(--brand);margin-right:8px;"></i>Login Notice</h3>
+        <span id="noticeStatus"></span>
+    </div>
+
+    <div class="notice-preview">
+        <i class="fas fa-bullhorn"></i>
+        <span class="np-text" id="pMsg"></span>
+        <a class="np-btn" id="pBtn" target="_blank" rel="noopener"></a>
+    </div>
+
+    <form class="notice-form" id="noticeForm">
+        <div class="nf-field">
+            <label>Message</label>
+            <textarea id="noticeMsg" name="message" rows="3" placeholder="e.g., Exams start next week — get 50% off premium!" required></textarea>
+        </div>
+        <div class="nf-row">
+            <div class="nf-field">
+                <label>Link URL (optional)</label>
+                <input type="url" id="noticeLink" name="link" placeholder="https://prepium.com/premium">
+            </div>
+            <div class="nf-field">
+                <label>Button Label</label>
+                <input type="text" id="noticeLabel" name="label" placeholder="Get Premium">
+            </div>
+        </div>
+        <div class="notice-actions">
+            <button type="submit" class="nf-save">Save Notice</button>
+            <button type="button" class="nf-clear" id="noticeClear">Clear Notice</button>
+        </div>
+    </form>
+    </div>
     </main>
 
 <script src="/js/animations.js"></script>
+<script>
+(function() {
+    const hasNotice = <%= notice && notice.message ? 'true' : 'false' %>;
+    const current = <%= JSON.stringify(notice || null) %>;
+    const status = document.getElementById('noticeStatus');
+    if (status) {
+        if (hasNotice) {
+            status.innerHTML = '<span class="notice-status on"><i class="fas fa-circle-check"></i> Active</span>';
+        } else {
+            status.innerHTML = '<span class="notice-status off"><i class="fas fa-circle"></i> Inactive</span>';
+        }
+    }
+    const preview = document.getElementById('noticePreview');
+    if (preview) {
+        const pmsg = document.getElementById('pMsg');
+        const pbtn = document.getElementById('pBtn');
+        if (hasNotice && current) {
+            pmsg.textContent = current.message;
+            pbtn.textContent = current.label || 'Read More';
+            pbtn.href = current.link || '#';
+        } else {
+            preview.style.opacity = '0.45';
+            pmsg.textContent = 'No notice set. Users will see nothing.';
+            pbtn.style.display = 'none';
+        }
+    }
+    const form = document.getElementById('noticeForm');
+    if (form) {
+        if (hasNotice && current) {
+            document.getElementById('noticeMsg').value = current.message;
+            document.getElementById('noticeLink').value = current.link || '';
+            document.getElementById('noticeLabel').value = current.label || '';
+        }
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btn = form.querySelector('.nf-save');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+            fetch('/admin/notice', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams(new FormData(form)).toString()
+            }).then(function(r) { return r.json(); }).then(function(d) {
+                btn.textContent = 'Saved ✓';
+                setTimeout(function() { btn.textContent = 'Save Notice'; btn.disabled = false; }, 1500);
+                if (d.success) { window.location.reload(); }
+                else { alert(d.message || 'Failed to save'); }
+            }).catch(function() {
+                btn.textContent = 'Save Notice'; btn.disabled = false;
+                alert('Network error');
+            });
+        });
+    }
+    const clearBtn = document.getElementById('noticeClear');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function() {
+            if (!confirm('Clear the login notice for all users?')) return;
+            clearBtn.disabled = true;
+            fetch('/admin/notice', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'message='
+            }).then(function(r) { return r.json(); }).then(function(d) {
+                if (d.success) { window.location.reload(); }
+                else alert(d.message || 'Failed to clear');
+            }).catch(function() { clearBtn.disabled = false; alert('Network error'); });
+        });
+    }
+})();
+</script>
 </body>
 </html>
