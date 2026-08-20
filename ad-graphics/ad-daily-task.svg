@@ -1,0 +1,65 @@
+<svg width="1080" height="1080" viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#042f2e"/>
+      <stop offset="55%" stop-color="#134e4a"/>
+      <stop offset="100%" stop-color="#164e63"/>
+    </linearGradient>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d9488"/>
+      <stop offset="100%" stop-color="#0891b2"/>
+    </linearGradient>
+    <radialGradient id="orb1" cx="0.2" cy="0.15" r="0.6">
+      <stop offset="0%" stop-color="#14b8a6" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#14b8a6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orb2" cx="0.85" cy="0.9" r="0.6">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="18" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1080" height="1080" fill="url(#bg)"/>
+  <rect width="1080" height="1080" fill="url(#orb1)"/>
+  <rect width="1080" height="1080" fill="url(#orb2)"/>
+
+  <g stroke="#ffffff" stroke-opacity="0.05" stroke-width="2">
+    <path d="M0 120H1080"/><path d="M0 300H1080"/><path d="M0 480H1080"/>
+    <path d="M0 660H1080"/><path d="M0 840H1080"/><path d="M0 1020H1080"/>
+    <path d="M120 0V1080"/><path d="M300 0V1080"/><path d="M480 0V1080"/>
+    <path d="M660 0V1080"/><path d="M840 0V1080"/><path d="M1020 0V1080"/>
+  </g>
+
+  <g transform="translate(70,70)">
+    <rect width="86" height="86" rx="26" fill="url(#brand)"/>
+    <text x="43" y="64" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" font-weight="800" fill="#ffffff">P</text>
+    <text x="106" y="58" font-family="Arial, sans-serif" font-size="34" font-weight="800" letter-spacing="6" fill="#ffffff">PREPIUM</text>
+  </g>
+
+  <g transform="translate(350,250)">
+    <rect width="380" height="380" rx="90" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.16)" stroke-width="3"/>
+    <g transform="translate(190,190)">
+      <g transform="translate(-105,-95)">
+        <rect x="0" y="0" width="52" height="52" rx="12" fill="#0d9488"/>
+        <path d="M14 26h24M14 34h16" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/>
+        <rect x="70" y="12" width="52" height="52" rx="12" fill="#0891b2"/>
+        <path d="M84 38h24M84 46h16" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/>
+        <rect x="140" y="24" width="52" height="52" rx="12" fill="#06b6d4"/>
+        <path d="M154 50h24M154 58h16" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/>
+        <path d="M70 78h56l10 18H60z" fill="#facc15"/>
+      </g>
+    </g>
+  </g>
+
+  <text x="540" y="760" text-anchor="middle" font-family="Arial, sans-serif" font-size="92" font-weight="800" fill="#ffffff" filter="url(#glow)">Your Daily Task</text>
+  <text x="540" y="830" text-anchor="middle" font-family="Arial, sans-serif" font-size="36" font-weight="600" fill="rgba(255,255,255,0.72)">Timetable, goals, deadlines &amp; weekly reports</text>
+
+  <g transform="translate(380,900)">
+    <rect width="320" height="76" rx="38" fill="url(#brand)"/>
+    <text x="160" y="48" text-anchor="middle" font-family="Arial, sans-serif" font-size="30" font-weight="800" fill="#ffffff">Plan My Day</text>
+  </g>
+</svg>
