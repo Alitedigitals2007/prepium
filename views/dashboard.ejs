@@ -108,15 +108,6 @@
         </div>
     </div>
 
-    <% if (locals.notice && notice.message) { %>
-    <div class="notice-banner" id="loginNotice" style="margin: 0 1.25rem 1rem; background: linear-gradient(135deg, var(--brand), var(--accent)); color: white; border-radius: 16px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; box-shadow: 0 6px 20px var(--brand-light);">
-        <i class="fas fa-bullhorn" style="font-size: 1.05rem; flex-shrink: 0;"></i>
-        <span style="flex: 1; font-size: 0.8rem; font-weight: 600; line-height: 1.4;"><%= notice.message %></span>
-        <% if (notice.link) { %><a class="nb-btn" href="<%= notice.link %>" target="_blank" rel="noopener" style="background: rgba(255,255,255,0.18); color: white; text-decoration: none; font-weight: 800; font-size: 0.72rem; padding: 8px 14px; border-radius: 9px; white-space: nowrap;"><%= notice.label || 'Read More' %></a><% } %>
-        <button type="button" class="nb-close" onclick="this.parentElement.style.display='none'" style="background: none; border: none; color: rgba(255,255,255,0.75); font-size: 0.9rem; cursor: pointer;"><i class="fas fa-xmark"></i></button>
-    </div>
-    <% } %>
-
     <div class="hero-strip">
         <div class="hero-stat">
             <div class="stat-icon" style="background:var(--brand-soft);color:var(--brand);"><i class="fas fa-check-circle"></i></div>
@@ -178,7 +169,16 @@
 
     <div class="feature-grid">
 
-        <!-- ═══ STUDY TOOLS ═══ -->
+        <!-- ═══ TOP PRIORITY ═══ -->
+        <a href="/daily-task" class="feature-card featured" style="background:linear-gradient(135deg,#0d9488,#0891b2);margin-bottom:10px;">
+            <div class="fc-icon"><i class="fas fa-tasks"></i></div>
+            <div class="fc-body">
+                <div class="fc-label">Daily Task</div>
+                <div class="fc-desc">Timetable, goals, deadlines & weekly report</div>
+            </div>
+            <div class="fc-arrow"><i class="fas fa-arrow-right"></i></div>
+        </a>
+
         <a href="/study" class="feature-card featured">
             <div class="fc-icon"><i class="fas fa-graduation-cap"></i></div>
             <div class="fc-body">
@@ -188,6 +188,33 @@
             <div class="fc-arrow"><i class="fas fa-arrow-right"></i></div>
         </a>
 
+        <a href="/renaissance" class="feature-card featured" style="background:linear-gradient(135deg,#7c3aed,#2563eb);">
+            <div class="fc-icon" style="background:rgba(255,255,255,0.2);color:#fff;"><i class="fas fa-landmark"></i></div>
+            <div class="fc-label" style="color:#fff;">Alite Mocks</div>
+            <div class="fc-desc" style="color:rgba(255,255,255,0.85);">Timed mock exams with LaTeX</div>
+        </a>
+
+        <!-- ═══ DAILY & SOCIAL ═══ -->
+        <a href="/daily-challenge" class="feature-card">
+            <div class="fc-icon" style="background:var(--success-soft);color:var(--success);"><i class="fas fa-calendar-check"></i></div>
+            <div class="fc-label">Daily Challenge</div>
+            <div class="fc-desc">Free daily competition</div>
+        </a>
+
+        <a href="/competition" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
+            <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
+            <div class="fc-icon" style="background:var(--brand-light);color:var(--accent);"><i class="fas fa-trophy"></i></div>
+            <div class="fc-label">Live Arena</div>
+            <div class="fc-desc">Real-time rankings</div>
+        </a>
+
+        <a href="/squads" class="feature-card">
+            <div class="fc-icon" style="background:var(--warning-soft);color:var(--warning);"><i class="fas fa-users"></i></div>
+            <div class="fc-label">Squad Streaks</div>
+            <div class="fc-desc">Study with friends, win together</div>
+        </a>
+
+        <!-- ═══ ACADEMIC TOOLS ═══ -->
         <a href="/cgpa" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
             <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
             <div class="fc-icon" style="background:var(--brand-soft);color:var(--accent);"><i class="fas fa-chart-line"></i></div>
@@ -200,16 +227,6 @@
             <div class="fc-icon" style="background:var(--success-soft);color:var(--success);"><i class="fas fa-wand-magic-sparkles"></i></div>
             <div class="fc-label">AI Quiz Generator</div>
             <div class="fc-desc">Generate quizzes from PDF</div>
-        </a>
-
-        <!-- ═══ DAILY & TASK TOOLS ═══ -->
-        <a href="/daily-task" class="feature-card featured" style="background:linear-gradient(135deg,#0d9488,#0891b2);margin-bottom:10px;">
-            <div class="fc-icon"><i class="fas fa-tasks"></i></div>
-            <div class="fc-body">
-                <div class="fc-label">Daily Task</div>
-                <div class="fc-desc">Timetable, goals, deadlines & weekly report</div>
-            </div>
-            <div class="fc-arrow"><i class="fas fa-arrow-right"></i></div>
         </a>
 
         <a href="/timetable" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
@@ -226,25 +243,18 @@
             <div class="fc-desc">Smart study plan</div>
         </a>
 
-<a href="/deadlines" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
+        <a href="/deadlines" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
             <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
             <div class="fc-icon" style="background:var(--danger-soft);color:var(--danger);"><i class="fas fa-hourglass-half"></i></div>
             <div class="fc-label">Deadlines</div>
             <div class="fc-desc">Track milestones</div>
         </a>
 
-        <!-- ═══ EXTRAS ═══ -->
         <a href="/history" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
             <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
             <div class="fc-icon" style="background:var(--warning-soft);color:var(--warning);"><i class="fas fa-chart-bar"></i></div>
             <div class="fc-label">History</div>
             <div class="fc-desc">Quiz performance</div>
-        </a>
-
-        <a href="/daily-challenge" class="feature-card">
-            <div class="fc-icon" style="background:var(--success-soft);color:var(--success);"><i class="fas fa-calendar-check"></i></div>
-            <div class="fc-label">Daily Challenge</div>
-            <div class="fc-desc">Free daily competition</div>
         </a>
 
         <% if (typeof isPaidSchool !== 'undefined' && isPaidSchool) { %>
@@ -258,36 +268,11 @@
         </a>
         <% } %>
 
-        <a href="/competition" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
-            <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-            <div class="fc-icon" style="background:var(--brand-light);color:var(--accent);"><i class="fas fa-trophy"></i></div>
-            <div class="fc-label">Live Arena</div>
-            <div class="fc-desc">Real-time rankings</div>
-        </a>
-
+        <!-- ═══ EXTRAS ═══ -->
         <a href="/guide" class="feature-card">
             <div class="fc-icon" style="background:var(--brand-soft);color:var(--text-primary);"><i class="fas fa-book"></i></div>
             <div class="fc-label">User Guide</div>
             <div class="fc-desc">How to use every feature</div>
-        </a>
-
-        <a href="/battle" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
-            <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-            <div class="fc-icon" style="background:linear-gradient(135deg,#8b5cf6,#d946ef);color:white;"><i class="fas fa-bolt"></i></div>
-            <div class="fc-label">Live Battle Mode</div>
-            <div class="fc-desc">Head-to-head quiz duels</div>
-        </a>
-
-        <a href="/squads" class="feature-card">
-            <div class="fc-icon" style="background:var(--warning-soft);color:var(--warning);"><i class="fas fa-users"></i></div>
-            <div class="fc-label">Squad Streaks</div>
-            <div class="fc-desc">Study with friends, win together</div>
-        </a>
-
-        <a href="/renaissance" class="feature-card featured" style="background:linear-gradient(135deg,#7c3aed,#2563eb);">
-            <div class="fc-icon" style="background:rgba(255,255,255,0.2);color:#fff;"><i class="fas fa-landmark"></i></div>
-            <div class="fc-label" style="color:#fff;">Alite Mocks</div>
-            <div class="fc-desc" style="color:rgba(255,255,255,0.85);">Timed mock exams with LaTeX</div>
         </a>
 
         <a href="/suggestions" class="feature-card">
