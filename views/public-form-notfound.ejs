@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif; background: #0b1437; color: #e2e8f0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; text-align: center; -webkit-font-smoothing: antialiased; }
+        .box { max-width: 380px; padding: 40px 30px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 22px; }
+        .icon { font-size: 3rem; margin-bottom: 14px; }
+        h1 { font-size: 1.3rem; font-weight: 800; color: #fff; margin-bottom: 8px; }
+        p { font-size: 0.84rem; color: rgba(226,232,240,0.7); line-height: 1.5; margin-bottom: 18px; }
+        a { display: inline-block; padding: 12px 22px; border-radius: 12px; background: linear-gradient(135deg,#6366f1,#22d3ee); color: #0b1437; font-weight: 800; font-size: 0.85rem; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <div class="icon">😕</div>
+        <h1>Form not found</h1>
+        <p>This form doesn't exist or may have been deleted by the administrator.</p>
+        <a href="/">Go to Prepium</a>
+    </div>
+</body>
+</html>

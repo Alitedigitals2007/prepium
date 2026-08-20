@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head') %>
+    <style>
+        :root { --sidebar: #0b1437; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif; display: flex; background: var(--bg); color: var(--text-primary); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+        .sidebar { width: 264px; background: var(--sidebar); height: 100vh; color: white; padding: 28px 16px; position: fixed; left: 0; top: 0; display: flex; flex-direction: column; overflow-y: auto; z-index: 100; }
+        .sidebar .logo { font-size: 1.4rem; font-weight: 800; color: white; text-decoration: none; letter-spacing: 2px; padding: 0 10px 22px; }
+        .sidebar .logo .dot { color: #22d3ee; }
+        .sidebar-section { font-size: 0.62rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,0.4); padding: 16px 10px 6px; }
+        .nav-item { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.75); text-decoration: none; padding: 11px 12px; border-radius: 10px; font-size: 0.82rem; font-weight: 600; margin-bottom: 2px; transition: background 0.15s; }
+        .nav-item i { width: 18px; text-align: center; }
+        .nav-item:hover { background: rgba(255,255,255,0.06); color: white; }
+        .nav-item.active { background: rgba(0,98,255,0.18); color: white; }
+        .nav-item.logout { margin-top: auto; color: #f87171; }
+
+        .main { flex: 1; margin-left: 264px; padding: 30px; max-width: 1100px; }
+
+        .head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
+        .head h1 { font-size: 1.4rem; font-weight: 800; }
+        .head p { font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px; }
+
+        .btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; border: none; border-radius: 12px; background: var(--brand-gradient); color: white; font-family: inherit; font-size: 0.84rem; font-weight: 800; cursor: pointer; text-decoration: none; }
+        .btn.ghost { background: transparent; border: 1.5px solid var(--border-solid); color: var(--text-primary); }
+        .btn.danger { background: transparent; border: 1.5px solid rgba(239,68,68,0.4); color: #ef4444; }
+        .btn.sm { padding: 7px 12px; font-size: 0.74rem; border-radius: 9px; }
+
+        .flash { margin-bottom: 18px; padding: 12px 16px; border-radius: 12px; font-size: 0.82rem; font-weight: 700; background: var(--success-soft); color: var(--success); }
+
+        .card { background: var(--surface-solid); border: 1px solid var(--border); border-radius: 16px; padding: 20px; box-shadow: var(--shadow-sm); margin-bottom: 20px; }
+        .card h2 { font-size: 1rem; font-weight: 800; margin-bottom: 14px; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+        th { text-align: left; padding: 10px 12px; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); border-bottom: 1px solid var(--border); }
+        td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        .badge { display: inline-flex; padding: 3px 10px; border-radius: 99px; font-size: 0.68rem; font-weight: 800; background: var(--brand-soft); color: var(--brand); }
+        .row-actions { display: flex; gap: 8px; }
+        .code-text { font-family: monospace; font-size: 0.8rem; background: var(--bg); padding: 3px 8px; border-radius: 6px; }
+
+        @media (max-width: 900px) { .sidebar { transform: translateX(-100%); } .main { margin-left: 0; padding: 18px; } table { display: block; overflow-x: auto; } }
+    </style>
+    <%- include('../partials/theme-toggle') %>
+</head>
+<body>
+    <nav class="sidebar">
+        <a href="/admin/dashboard" class="logo">PREPIUM<span class="dot">.</span></a>
+        <span class="sidebar-section">Main</span>
+        <a href="/admin/dashboard" class="nav-item"><i class="fas fa-th-large"></i> Dashboard</a>
+        <a href="/admin/analytics" class="nav-item"><i class="fas fa-chart-line"></i> Analytics</a>
+        <span class="sidebar-section">Manage</span>
+        <a href="/admin/universities" class="nav-item"><i class="fas fa-building-columns"></i> Universities</a>
+        <a href="/admin/forms" class="nav-item active"><i class="fas fa-wpforms"></i> Public Forms</a>
+        <a href="/admin/notifications" class="nav-item"><i class="fas fa-bell"></i> Notifications</a>
+        <a href="/logout" class="nav-item logout"><i class="fas fa-right-from-bracket"></i> Logout</a>
+    </nav>
+
+    <main class="main">
+        <div class="head">
+            <div>
+                <h1>Public Forms</h1>
+                <p>Standalone score collectors (no login needed). Responses are separate from Prepium.</p>
+            </div>
+            <button class="btn" onclick="toggleNew()"><i class="fas fa-plus"></i> New Form</button>
+        </div>
+
+        <% if (locals.msg && msg) { %><div class="flash"><i class="fas fa-circle-check"></i> <%= msg %></div><% } %>
+
+        <div class="card" id="newCard" style="display:none;">
+            <h2><i class="fas fa-magic"></i> Create a new form</h2>
+            <form method="POST" action="/admin/forms" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+                <div style="flex:1;min-width:220px;">
+                    <label style="display:block;font-size:0.72rem;font-weight:700;color:var(--text-secondary);margin-bottom:6px;">Form title</label>
+                    <input name="title" value="200L Closed Analysis Score (NAPS)" style="width:100%;padding:11px 13px;border:1.5px solid var(--border-solid);border-radius:10px;background:var(--bg);font-family:inherit;font-weight:600;font-size:0.85rem;">
+                </div>
+                <div style="flex:1;min-width:220px;">
+                    <label style="display:block;font-size:0.72rem;font-weight:700;color:var(--text-secondary);margin-bottom:6px;">Description (optional)</label>
+                    <input name="description" placeholder="e.g. Enter your 200L first semester scores" style="width:100%;padding:11px 13px;border:1.5px solid var(--border-solid);border-radius:10px;background:var(--bg);font-family:inherit;font-weight:600;font-size:0.85rem;">
+                </div>
+                <button type="submit" class="btn"><i class="fas fa-check"></i> Create</button>
+            </form>
+            <p style="margin-top:12px;font-size:0.74rem;color:var(--text-secondary);">New forms start with the NAPS template: <b>Matric Number + GST 212, PHY 201, PHY 205, ENT 211, MTH 202</b> (scores 0–100). You can edit fields after creation.</p>
+        </div>
+
+        <div class="card">
+            <table>
+                <thead>
+                    <tr><th>Title</th><th>Fields</th><th>Responses</th><th>Public Link</th><th>Created</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                    <% if (forms.length === 0) { %>
+                    <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:28px;">No forms yet. Click "New Form" to create your first one.</td></tr>
+                    <% } %>
+                    <% forms.forEach(function(f) { %>
+                    <tr>
+                        <td style="font-weight:800;"><%= f.title %></td>
+                        <td><span class="badge"><%= f.field_count %> fields</span></td>
+                        <td><span class="badge" style="background:var(--success-soft);color:var(--success);"><%= f.response_count %></span></td>
+                        <td><span class="code-text">/form/<%= f.slug %></span></td>
+                        <td style="color:var(--text-secondary);"><%= new Date(f.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short' }) %></td>
+                        <td>
+                            <div class="row-actions">
+                                <a href="/admin/forms/<%= f.id %>" class="btn sm"><i class="fas fa-pen"></i> Edit</a>
+                                <a href="/admin/forms/<%= f.id %>/export" class="btn sm ghost"><i class="fas fa-file-excel"></i> Excel</a>
+                            </div>
+                        </td>
+                    </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script>
+        function toggleNew() { var c = document.getElementById('newCard'); c.style.display = c.style.display === 'none' ? 'block' : 'none'; }
+    </script>
+</body>
+</html>

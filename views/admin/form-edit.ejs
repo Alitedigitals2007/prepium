@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head') %>
+    <style>
+        :root { --sidebar: #0b1437; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif; display: flex; background: var(--bg); color: var(--text-primary); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+        .sidebar { width: 264px; background: var(--sidebar); height: 100vh; color: white; padding: 28px 16px; position: fixed; left: 0; top: 0; display: flex; flex-direction: column; overflow-y: auto; z-index: 100; }
+        .sidebar .logo { font-size: 1.4rem; font-weight: 800; color: white; text-decoration: none; letter-spacing: 2px; padding: 0 10px 22px; }
+        .sidebar .logo .dot { color: #22d3ee; }
+        .sidebar-section { font-size: 0.62rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,0.4); padding: 16px 10px 6px; }
+        .nav-item { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.75); text-decoration: none; padding: 11px 12px; border-radius: 10px; font-size: 0.82rem; font-weight: 600; margin-bottom: 2px; }
+        .nav-item i { width: 18px; text-align: center; }
+        .nav-item:hover { background: rgba(255,255,255,0.06); color: white; }
+        .nav-item.active { background: rgba(0,98,255,0.18); color: white; }
+        .nav-item.logout { margin-top: auto; color: #f87171; }
+
+        .main { flex: 1; margin-left: 264px; padding: 30px; max-width: 1100px; }
+
+        .head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
+        .head h1 { font-size: 1.3rem; font-weight: 800; }
+        .head .crumbs { font-size: 0.76rem; color: var(--text-secondary); margin-top: 4px; }
+        .head .crumbs a { color: var(--brand); text-decoration: none; }
+
+        .btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; border: none; border-radius: 12px; background: var(--brand-gradient); color: white; font-family: inherit; font-size: 0.84rem; font-weight: 800; cursor: pointer; text-decoration: none; }
+        .btn.ghost { background: transparent; border: 1.5px solid var(--border-solid); color: var(--text-primary); }
+        .btn.danger { background: transparent; border: 1.5px solid rgba(239,68,68,0.4); color: #ef4444; }
+        .btn.sm { padding: 7px 12px; font-size: 0.74rem; border-radius: 9px; }
+        .btn.green { background: linear-gradient(135deg,#16a34a,#059669); }
+
+        .flash { margin-bottom: 18px; padding: 12px 16px; border-radius: 12px; font-size: 0.82rem; font-weight: 700; background: var(--success-soft); color: var(--success); }
+
+        .card { background: var(--surface-solid); border: 1px solid var(--border); border-radius: 16px; padding: 20px; box-shadow: var(--shadow-sm); margin-bottom: 20px; }
+        .card h2 { font-size: 1rem; font-weight: 800; margin-bottom: 14px; }
+
+        .form-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+        .form-row label { display: block; font-size: 0.72rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; }
+        .form-row input[type=text], .form-row textarea { width: 100%; padding: 11px 13px; border: 1.5px solid var(--border-solid); border-radius: 10px; background: var(--bg); font-family: inherit; font-weight: 600; font-size: 0.85rem; }
+        .form-row .grow { flex: 1; min-width: 220px; }
+
+        .link-box { display: flex; align-items: center; gap: 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+        .link-box input { flex: 1; border: none; background: transparent; font-family: monospace; font-size: 0.85rem; font-weight: 700; color: var(--brand); outline: none; }
+
+        .field-row { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; background: var(--bg); }
+        .field-row .grip { color: var(--text-muted); cursor: grab; }
+        .field-row input[type=text] { flex: 2; min-width: 140px; padding: 10px 12px; border: 1.5px solid var(--border-solid); border-radius: 10px; background: var(--surface-solid); font-family: inherit; font-weight: 600; font-size: 0.84rem; }
+        .field-row select { padding: 10px; border: 1.5px solid var(--border-solid); border-radius: 10px; background: var(--surface-solid); font-family: inherit; font-weight: 700; font-size: 0.8rem; }
+        .field-row .req-label { display: flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 700; color: var(--text-secondary); white-space: nowrap; }
+        .field-row .rm { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1rem; }
+        .add-field { display: inline-flex; align-items: center; gap: 8px; margin-top: 8px; padding: 10px 16px; border: 1.5px dashed var(--brand); background: transparent; color: var(--brand); border-radius: 12px; font-family: inherit; font-size: 0.8rem; font-weight: 800; cursor: pointer; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+        th { text-align: left; padding: 10px 12px; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); border-bottom: 1px solid var(--border); }
+        td { padding: 11px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        .empty { text-align: center; color: var(--text-muted); padding: 28px !important; }
+        .resp-delete { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 0.9rem; }
+
+        .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+        @media (max-width: 900px) { .sidebar { transform: translateX(-100%); } .main { margin-left: 0; padding: 18px; } table { display: block; overflow-x: auto; } }
+    </style>
+    <%- include('../partials/theme-toggle') %>
+</head>
+<body>
+    <nav class="sidebar">
+        <a href="/admin/dashboard" class="logo">PREPIUM<span class="dot">.</span></a>
+        <span class="sidebar-section">Main</span>
+        <a href="/admin/dashboard" class="nav-item"><i class="fas fa-th-large"></i> Dashboard</a>
+        <a href="/admin/analytics" class="nav-item"><i class="fas fa-chart-line"></i> Analytics</a>
+        <span class="sidebar-section">Manage</span>
+        <a href="/admin/universities" class="nav-item"><i class="fas fa-building-columns"></i> Universities</a>
+        <a href="/admin/forms" class="nav-item active"><i class="fas fa-wpforms"></i> Public Forms</a>
+        <a href="/admin/notifications" class="nav-item"><i class="fas fa-bell"></i> Notifications</a>
+        <a href="/logout" class="nav-item logout"><i class="fas fa-right-from-bracket"></i> Logout</a>
+    </nav>
+
+    <main class="main">
+        <div class="head">
+            <div>
+                <h1><%= form.title %></h1>
+                <div class="crumbs"><a href="/admin/forms">Public Forms</a> / <%= form.slug %></div>
+            </div>
+            <div class="toolbar">
+                <a href="/admin/forms/<%= form.id %>/export" class="btn green"><i class="fas fa-file-excel"></i> Download Excel</a>
+                <form method="POST" action="/admin/forms/<%= form.id %>/delete" onsubmit="return confirm('Delete this form and ALL its responses? This cannot be undone.');">
+                    <button class="btn danger"><i class="fas fa-trash"></i> Delete Form</button>
+                </form>
+            </div>
+        </div>
+
+        <% if (locals.msg && msg) { %><div class="flash"><i class="fas fa-circle-check"></i> <%= msg %></div><% } %>
+
+        <div class="card">
+            <h2><i class="fas fa-share-nodes"></i> Public link</h2>
+            <div class="link-box">
+                <input type="text" id="pubLink" value="<%= link %>" readonly>
+                <button class="btn sm" onclick="copyLink()"><i class="fas fa-copy"></i> Copy</button>
+                <a class="btn sm ghost" href="<%= link %>" target="_blank"><i class="fas fa-external-link-alt"></i> Open</a>
+            </div>
+            <p style="margin-top:10px;font-size:0.74rem;color:var(--text-secondary);">Anyone with this link can submit <b>without logging in</b>. Responses are stored separately from Prepium.</p>
+        </div>
+
+        <form method="POST" action="/admin/forms/<%= form.id %>">
+            <div class="card">
+                <h2><i class="fas fa-pen"></i> Edit form</h2>
+                <div class="form-row">
+                    <div class="grow">
+                        <label>Form title</label>
+                        <input type="text" name="title" value="<%= form.title %>" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="grow">
+                        <label>Description (optional)</label>
+                        <textarea name="description" rows="2"><%= form.description %></textarea>
+                    </div>
+                </div>
+
+                <h2 style="margin:6px 0 12px;"><i class="fas fa-list-check"></i> Fields</h2>
+                <div id="fieldList">
+                    <% (form.fields || []).forEach(function(fld, i) { %>
+                    <div class="field-row">
+                        <span class="grip"><i class="fas fa-grip-vertical"></i></span>
+                        <input type="hidden" name="fid[]" value="<%= fld.id %>">
+                        <input type="text" name="label[]" value="<%= fld.label %>" placeholder="Field label">
+                        <select name="type[]">
+                            <option value="text" <%= fld.type === 'number' ? '' : 'selected' %>>Text</option>
+                            <option value="number" <%= fld.type === 'number' ? 'selected' : '' %>>Score (0–100)</option>
+                        </select>
+                        <label class="req-label"><input type="checkbox" name="required" value="<%= i %>" <%= fld.required ? 'checked' : '' %>> Required</label>
+                        <button type="button" class="rm" onclick="removeField(this)"><i class="fas fa-trash"></i></button>
+                    </div>
+                    <% }); %>
+                </div>
+                <button type="button" class="add-field" onclick="addField()"><i class="fas fa-plus"></i> Add field</button>
+
+                <div style="margin-top:18px;">
+                    <button class="btn"><i class="fas fa-save"></i> Save Form</button>
+                </div>
+            </div>
+        </form>
+
+        <div class="card">
+            <h2><i class="fas fa-inbox"></i> Responses (<%= responses.length %>)</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>S/N</th><th>Submitted</th>
+                        <% (form.fields || []).forEach(function(fld) { %><th><%= fld.label %></th><% }); %>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (responses.length === 0) { %>
+                    <tr><td colspan="<%= (form.fields || []).length + 3 %>" class="empty">No responses yet. Share the public link to start collecting scores.</td></tr>
+                    <% } %>
+                    <% responses.forEach(function(r, i) { %>
+                    <tr>
+                        <td><%= i + 1 %></td>
+                        <td style="color:var(--text-secondary);"><%= new Date(r.created_at).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) %></td>
+                        <% (form.fields || []).forEach(function(fld) { %><td><%= r.data && r.data[fld.id] !== undefined ? r.data[fld.id] : '—' %></td><% }); %>
+                        <td>
+                            <form method="POST" action="/admin/forms/<%= form.id %>/response/<%= r.id %>/delete" onsubmit="return confirm('Delete this response?');">
+                                <button class="resp-delete" title="Delete response"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script>
+        function copyLink() {
+            var el = document.getElementById('pubLink');
+            if (navigator.clipboard) navigator.clipboard.writeText(el.value).then(function(){ alert('Link copied!'); });
+            else { el.select(); document.execCommand('copy'); alert('Link copied!'); }
+        }
+        function removeField(btn) { btn.closest('.field-row').remove(); }
+        function addField() {
+            var list = document.getElementById('fieldList');
+            var row = document.createElement('div');
+            row.className = 'field-row';
+            var fid = 'f' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+            row.innerHTML =
+                '<span class="grip"><i class="fas fa-grip-vertical"></i></span>' +
+                '<input type="hidden" name="fid[]" value="' + fid + '">' +
+                '<input type="text" name="label[]" placeholder="Field label">' +
+                '<select name="type[]"><option value="text">Text</option><option value="number">Score (0–100)</option></select>' +
+                '<label class="req-label"><input type="checkbox" name="required" value="__i__"> Required</label>' +
+                '<button type="button" class="rm" onclick="removeField(this)"><i class="fas fa-trash"></i></button>';
+            list.appendChild(row);
+            // Fix the required index value (row count is dynamic)
+            fixReqIndices();
+        }
+        function fixReqIndices() {
+            var rows = document.querySelectorAll('#fieldList .field-row');
+            rows.forEach(function(r, i) {
+                var cb = r.querySelector('input[name="required"]');
+                if (cb) cb.value = i;
+            });
+        }
+        fixReqIndices();
+    </script>
+</body>
+</html>

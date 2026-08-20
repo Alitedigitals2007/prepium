@@ -3666,6 +3666,189 @@ app.post('/squads/leave', isAuth, async (req, res) => {
     } catch (err) { console.error('Leave squad error:', err); res.redirect('/squads'); }
 });
 
+// ==========================================
+// PUBLIC FORMS — standalone score collectors (NAPS style, no login)
+// ==========================================
+function genFormSlug() {
+    const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+    let s = '';
+    for (let i = 0; i < 8; i++) s += chars[Math.floor(Math.random() * chars.length)];
+    return s;
+}
+
+function napFields() {
+    const now = Date.now();
+    return [
+        { id: 'f' + now + '_matric', label: 'Matric Number', type: 'text', required: true },
+        { id: 'f' + now + '_gst212', label: 'GST 212', type: 'number', required: true },
+        { id: 'f' + now + '_phy201', label: 'PHY 201', type: 'number', required: true },
+        { id: 'f' + now + '_phy205', label: 'PHY 205', type: 'number', required: true },
+        { id: 'f' + now + '_ent211', label: 'ENT 211', type: 'number', required: true },
+        { id: 'f' + now + '_mth202', label: 'MTH 202', type: 'number', required: true }
+    ];
+}
+
+app.get('/form/:slug', async (req, res) => {
+    try {
+        const f = await pool.query('SELECT * FROM pub_forms WHERE slug = $1', [req.params.slug]);
+        if (!f.rows.length) return res.status(404).render('public-form-notfound', { seo: {} });
+        res.render('public-form', { form: f.rows[0], seo: {}, error: null });
+    } catch (err) { console.error('Public form error:', err); res.status(500).send('Error loading form'); }
+});
+
+app.post('/form/:slug', async (req, res) => {
+    try {
+        const f = await pool.query('SELECT * FROM pub_forms WHERE slug = $1', [req.params.slug]);
+        if (!f.rows.length) return res.status(404).send('Form not found');
+        const form = f.rows[0];
+        const fields = form.fields || [];
+        const data = {};
+        for (const fld of fields) {
+            let v = req.body['f_' + fld.id];
+            if (fld.type === 'number') {
+                v = v === '' || v === null || v === undefined ? NaN : parseFloat(v);
+                if (isNaN(v) || v < 0 || v > 100) {
+                    return res.status(400).render('public-form', { form, seo: {}, error: 'Invalid score for "' + fld.label + '". Scores must be between 0 and 100.' });
+                }
+            } else {
+                v = (v || '').toString().trim();
+            }
+            if (fld.required && (v === '' || v === null || v === undefined || (fld.type === 'number' && isNaN(v)))) {
+                return res.status(400).render('public-form', { form, seo: {}, error: 'Please fill the required field: "' + fld.label + '"' });
+            }
+            data[fld.id] = v;
+        }
+        await pool.query('INSERT INTO pub_responses (form_id, data) VALUES ($1, $2)', [form.id, JSON.stringify(data)]);
+        res.render('public-form-thanks', { form, seo: {} });
+    } catch (err) { console.error('Public form submit error:', err); res.status(500).send('Error saving response'); }
+});
+
+app.get('/admin/forms', isAdmin, async (req, res) => {
+    try {
+        const forms = await pool.query(`
+            SELECT f.id, f.slug, f.title, f.description, f.fields, f.created_at,
+                   (SELECT COUNT(*) FROM pub_responses r WHERE r.form_id = f.id) AS response_count
+            FROM pub_forms f
+            ORDER BY f.created_at DESC`);
+        const list = forms.rows.map(f => ({
+            id: f.id, slug: f.slug, title: f.title,
+            description: f.description, created_at: f.created_at,
+            response_count: parseInt(f.response_count),
+            field_count: Array.isArray(f.fields) ? f.fields.length : 0
+        }));
+        res.render('admin/forms', { forms: list, msg: req.query.msg || null });
+    } catch (err) { console.error('Admin forms error:', err); res.status(500).send('Error'); }
+});
+
+app.post('/admin/forms', isAdmin, async (req, res) => {
+    try {
+        const title = (req.body.title || '').trim() || 'Untitled Form';
+        const description = (req.body.description || '').trim();
+        const fields = req.body.fields === 'empty' ? [] : napFields();
+        let slug = genFormSlug();
+        let dup = await pool.query('SELECT id FROM pub_forms WHERE slug = $1', [slug]);
+        while (dup.rows.length) { slug = genFormSlug(); dup = await pool.query('SELECT id FROM pub_forms WHERE slug = $1', [slug]); }
+        const f = await pool.query(
+            'INSERT INTO pub_forms (slug, title, description, fields) VALUES ($1, $2, $3, $4::jsonb) RETURNING id',
+            [slug, title, description, JSON.stringify(fields)]
+        );
+        res.redirect('/admin/forms/' + f.rows[0].id);
+    } catch (err) { console.error('Create form error:', err); res.redirect('/admin/forms?msg=error'); }
+});
+
+app.get('/admin/forms/:id', isAdmin, async (req, res) => {
+    try {
+        const f = await pool.query('SELECT * FROM pub_forms WHERE id = $1', [req.params.id]);
+        if (!f.rows.length) return res.redirect('/admin/forms');
+        const responses = await pool.query(
+            'SELECT * FROM pub_responses WHERE form_id = $1 ORDER BY created_at DESC', [f.rows[0].id]
+        );
+        const link = `${req.protocol}://${req.get('host')}/form/${f.rows[0].slug}`;
+        res.render('admin/form-edit', {
+            form: f.rows[0], responses: responses.rows, link, msg: req.query.msg || null
+        });
+    } catch (err) { console.error('Form edit error:', err); res.status(500).send('Error'); }
+});
+
+app.post('/admin/forms/:id', isAdmin, async (req, res) => {
+    try {
+        const id = req.params.id;
+        const title = (req.body.title || '').trim();
+        if (!title) return res.redirect('/admin/forms/' + id + '?msg=' + encodeURIComponent('Title is required'));
+        const description = (req.body.description || '').trim();
+        const labels = Array.isArray(req.body.label) ? req.body.label : [req.body.label];
+        const types = Array.isArray(req.body.type) ? req.body.type : [req.body.type];
+        const ids = Array.isArray(req.body.fid) ? req.body.fid : [req.body.fid];
+        const reqVals = Array.isArray(req.body.required)
+            ? req.body.required.map(String)
+            : (req.body.required !== undefined ? [String(req.body.required)] : []);
+        const fields = [];
+        for (let i = 0; i < labels.length; i++) {
+            const label = (labels[i] || '').trim();
+            if (!label) continue;
+            fields.push({
+                id: ids[i] || ('field_' + Date.now() + '_' + i),
+                label,
+                type: types[i] === 'number' ? 'number' : 'text',
+                required: reqVals.includes(String(i)) ? true : false
+            });
+        }
+        await pool.query(
+            'UPDATE pub_forms SET title = $1, description = $2, fields = $3::jsonb, updated_at = NOW() WHERE id = $4',
+            [title, description, JSON.stringify(fields), id]
+        );
+        res.redirect('/admin/forms/' + id + '?msg=' + encodeURIComponent('Form saved'));
+    } catch (err) { console.error('Save form error:', err); res.redirect('/admin/forms/' + req.params.id + '?msg=error'); }
+});
+
+app.post('/admin/forms/:id/delete', isAdmin, async (req, res) => {
+    try {
+        const id = req.params.id;
+        await pool.query('DELETE FROM pub_responses WHERE form_id = $1', [id]);
+        await pool.query('DELETE FROM pub_forms WHERE id = $1', [id]);
+        res.redirect('/admin/forms');
+    } catch (err) { console.error('Delete form error:', err); res.redirect('/admin/forms'); }
+});
+
+app.post('/admin/forms/:id/response/:rid/delete', isAdmin, async (req, res) => {
+    try {
+        await pool.query('DELETE FROM pub_responses WHERE id = $1 AND form_id = $2', [req.params.rid, req.params.id]);
+        res.redirect('/admin/forms/' + req.params.id);
+    } catch (err) { console.error('Delete response error:', err); res.redirect('/admin/forms/' + req.params.id); }
+});
+
+app.get('/admin/forms/:id/export', isAdmin, async (req, res) => {
+    try {
+        const id = req.params.id;
+        const f = await pool.query('SELECT * FROM pub_forms WHERE id = $1', [id]);
+        if (!f.rows.length) return res.status(404).send('Form not found');
+        const form = f.rows[0];
+        const responses = await pool.query(
+            'SELECT * FROM pub_responses WHERE form_id = $1 ORDER BY created_at ASC', [id]
+        );
+        const ExcelJS = require('exceljs');
+        const wb = new ExcelJS.Workbook();
+        const ws = wb.addWorksheet((form.title || 'Responses').slice(0, 31));
+        const fields = form.fields || [];
+        const headers = ['S/N', 'Submitted'].concat(fields.map(fld => fld.label));
+        ws.getRow(1).values = headers;
+        const headRow = ws.getRow(1);
+        headRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        headRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6366F1' } };
+        headRow.alignment = { vertical: 'middle' };
+        ws.columns.forEach(col => { col.width = 20; });
+        ws.getColumn(1).width = 6;
+        responses.rows.forEach((r, i) => {
+            const data = r.data || {};
+            ws.addRow([i + 1, new Date(r.created_at).toLocaleString('en-GB')].concat(fields.map(fld => data[fld.id] !== undefined ? data[fld.id] : '')));
+        });
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename="' + form.slug + '-responses.xlsx"');
+        await wb.xlsx.write(res);
+        res.end();
+    } catch (err) { console.error('Export error:', err); res.status(500).send('Export failed'); }
+});
+
 app.post('/ambassador/register', async (req, res) => {
     return res.status(403).json({ success: false, error: 'Refer & Earn is currently disabled' });
     try {
@@ -7413,6 +7596,28 @@ async function ensureMigrationColumns() {
     )`);
     console.log('[Squads] Tables ready');
   } catch(e) { console.error('[Squads] Init:', e.message); }
+})();
+
+// Public forms (NAPS style score collectors — standalone, no login)
+(async function initPublicForms() {
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS pub_forms (
+      id SERIAL PRIMARY KEY,
+      slug VARCHAR(64) UNIQUE NOT NULL,
+      title VARCHAR(200) NOT NULL,
+      description TEXT DEFAULT '',
+      fields JSONB NOT NULL DEFAULT '[]',
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS pub_responses (
+      id SERIAL PRIMARY KEY,
+      form_id INTEGER NOT NULL,
+      data JSONB NOT NULL DEFAULT '{}',
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    console.log('[PubForms] Tables ready');
+  } catch(e) { console.error('[PubForms] Init:', e.message); }
 })();
 
 // Payments log table

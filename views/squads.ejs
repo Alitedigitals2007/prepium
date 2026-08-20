@@ -8,10 +8,14 @@
 
         .sq-header { padding: 1.25rem 1.25rem 0.75rem; display: flex; align-items: center; justify-content: space-between; }
         .sq-header-left { display: flex; align-items: center; gap: 12px; }
-        .sq-avatar { width: 46px; height: 46px; border-radius: 16px; background: linear-gradient(135deg,#f97316,#ef4444); color: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; box-shadow: 0 4px 14px rgba(239,68,68,0.25); }
+        .sq-avatar { width: 46px; height: 46px; border-radius: 15px; background: linear-gradient(135deg, #6366f1, #2563eb); color: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.3rem; box-shadow: 0 6px 18px rgba(37, 99, 235, 0.3); flex-shrink: 0; }
         .sq-title { font-size: 1.15rem; font-weight: 800; line-height: 1.2; }
-        .sq-subtitle { font-size: 0.62rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
-        .sq-count-badge { min-width: 26px; height: 26px; padding: 0 8px; border-radius: 99px; background: var(--brand-soft); color: var(--brand); font-size: 0.72rem; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+        .sq-subtitle { font-size: 0.68rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+        .sq-count-badge { min-width: 26px; height: 26px; padding: 0 8px; border-radius: 99px; background: var(--brand-soft); color: var(--brand); font-size: 0.72rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        @media (max-width: 380px) {
+            .sq-header { padding: 1.1rem 1rem 0.75rem; }
+            .sq-subtitle { display: none; }
+        }
 
         .flash-msg { margin: 0 1.25rem 1rem; padding: 12px 16px; background: var(--success-soft); color: var(--success); border: 1px solid rgba(22,163,74,0.25); border-radius: 14px; font-size: 0.8rem; font-weight: 700; }
 
@@ -25,16 +29,22 @@
 
         /* Squad card */
         .sq-card { margin: 0 1.25rem 1rem; background: var(--surface-solid); border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow-sm); overflow: hidden; }
-        .sq-card-top { padding: 16px 16px 14px; cursor: pointer; user-select: none; }
-        .sq-row { display: flex; align-items: center; gap: 12px; }
-        .sq-ring { width: 46px; height: 46px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.05rem; flex-shrink: 0; background: var(--brand-soft); color: var(--brand); }
+        .sq-card-top { padding: 14px 16px; cursor: pointer; user-select: none; display: flex; align-items: center; gap: 12px; }
+        .sq-row { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+        .sq-ring { width: 44px; height: 44px; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem; flex-shrink: 0; background: var(--brand-soft); color: var(--brand); }
         .sq-ring.on { background: var(--success-soft); color: var(--success); }
-        .sq-name { font-size: 0.95rem; font-weight: 800; line-height: 1.2; }
-        .sq-meta { font-size: 0.66rem; color: var(--text-secondary); font-weight: 600; margin-top: 2px; }
-        .sq-streak { margin-left: auto; text-align: right; }
-        .sq-flame { font-size: 1.15rem; font-weight: 800; color: var(--warning); line-height: 1; }
-        .sq-flame span { font-size: 0.62rem; color: var(--text-secondary); font-weight: 700; }
-        .sq-progress { margin-top: 12px; }
+        .sq-name { font-size: 0.92rem; font-weight: 800; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .sq-meta { font-size: 0.64rem; color: var(--text-secondary); font-weight: 600; margin-top: 2px; }
+        .sq-flame { font-size: 1.05rem; font-weight: 800; color: var(--warning); line-height: 1; white-space: nowrap; }
+        .sq-flame span { font-size: 0.6rem; color: var(--text-secondary); font-weight: 700; }
+        .sq-chev { color: var(--text-muted); font-size: 0.85rem; flex-shrink: 0; transition: transform 0.3s; }
+        .sq-card.open .sq-chev { transform: rotate(180deg); }
+
+        .sq-body { display: none; padding: 0 16px 14px; }
+        .sq-card.open .sq-body { display: block; animation: sqBodyIn 0.3s ease both; }
+        @keyframes sqBodyIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+
+        .sq-progress { margin-top: 4px; }
         .sq-progress .sp-head { display: flex; justify-content: space-between; font-size: 0.66rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; }
         .sp-bar { height: 7px; border-radius: 99px; background: var(--surface); overflow: hidden; }
         .sp-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg,#f97316,#ef4444); transition: width 0.4s ease; }
@@ -46,14 +56,12 @@
         .av-stack .av.done { background: var(--success-soft); color: var(--success); }
         .av-stack .av.pending { background: var(--surface); color: var(--text-muted); }
 
-        .sq-actions { display: flex; gap: 10px; padding: 0 16px 14px; }
+        .sq-actions { display: flex; gap: 10px; margin-top: 14px; }
         .sq-actions .btn-act { flex: 1; padding: 11px; border: none; border-radius: 12px; font-weight: 800; font-size: 0.8rem; cursor: pointer; font-family: inherit; }
         .btn-checkin { background: linear-gradient(135deg,#f97316,#ef4444); color: white; box-shadow: 0 4px 14px rgba(239,68,68,0.2); }
         .btn-checkin.done { background: var(--success); box-shadow: 0 4px 14px rgba(22,163,74,0.2); }
-        .btn-expand { background: transparent; border: 1.5px solid var(--border-solid); color: var(--text-secondary); }
 
-        .sq-members { border-top: 1px solid var(--border); padding: 6px 16px 12px; display: none; }
-        .sq-card.open .sq-members { display: block; }
+        .sq-members { border-top: 1px solid var(--border); padding: 4px 0 0; margin-top: 12px; }
         .member-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); }
         .member-row:last-child { border-bottom: none; }
         .member-av { width: 34px; height: 34px; border-radius: 12px; background: var(--brand-soft); color: var(--brand); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; flex-shrink: 0; }
@@ -99,7 +107,7 @@
 
     <div class="sq-header">
         <div class="sq-header-left">
-            <div class="sq-avatar"><i class="fas fa-users"></i></div>
+            <div class="sq-avatar">P</div>
             <div>
                 <div class="sq-title">Squad Streaks</div>
                 <div class="sq-subtitle">Study together, win together</div>
@@ -141,7 +149,7 @@
     <% var allChecked = squads.every(function(s) { return s.meChecked; }); %>
     <div class="bulk-bar">
         <div class="bulk-info">
-            <div class="bulk-title"><%= allChecked ? 'All checked in today ✓' : 'Today’s squad check-in' %></div>
+            <div class="bulk-title"><%= allChecked ? 'All checked in today' : "Today's squad check-in" %></div>
             <div class="bulk-sub"><%= squads.filter(function(s) { return s.meChecked; }).length %>/<%= squads.length %> squads done</div>
         </div>
         <button class="btn-bulk <%= allChecked ? 'all-done' : '' %>" id="bulkBtn" onclick="checkInAll(this)" <%= allChecked ? 'disabled' : '' %>>
@@ -154,14 +162,15 @@
         <div class="sq-card-top" onclick="toggleCard(<%= s.id %>)">
             <div class="sq-row">
                 <div class="sq-ring <%= s.meChecked ? 'on' : '' %>"><i class="fas <%= s.meChecked ? 'fa-check' : 'fa-users' %>"></i></div>
-                <div>
+                <div style="flex:1;min-width:0;">
                     <div class="sq-name"><%= s.name %><%= s.isOwner ? ' <span style="color:var(--warning);font-size:0.6rem;">OWNER</span>' : '' %></div>
                     <div class="sq-meta"><%= s.memberCount %> members · <%= s.checkedToday %>/<%= s.memberCount %> checked in</div>
                 </div>
-                <div class="sq-streak">
-                    <div class="sq-flame"><i class="fas fa-fire"></i> <%= s.streak %> <span>day<%= s.streak === 1 ? '' : 's' %></span></div>
-                </div>
+                <div class="sq-flame"><i class="fas fa-fire"></i> <%= s.streak %> <span>day<%= s.streak === 1 ? '' : 's' %></span></div>
+                <i class="fas fa-chevron-down sq-chev"></i>
             </div>
+        </div>
+        <div class="sq-body">
             <div class="sq-progress">
                 <div class="sp-head"><span>Today</span><span><%= s.checkedToday %>/<%= s.memberCount %></span></div>
                 <div class="sp-bar"><div class="sp-fill <%= s.checkedToday >= s.memberCount ? 'full' : '' %>" style="width:<%= Math.round(s.checkedToday / s.memberCount * 100) %>%"></div></div>
@@ -171,29 +180,26 @@
                 <div class="av <%= m.checked_today ? 'done' : 'pending' %>" title="<%= m.fullname %>"><%= m.fullname ? m.fullname.charAt(0).toUpperCase() : 'U' %></div>
                 <% }); %>
             </div>
-        </div>
-        <div class="sq-actions">
-            <button class="btn-act btn-checkin <%= s.meChecked ? 'done' : '' %>" id="checkin-<%= s.id %>" onclick="event.stopPropagation();checkIn(<%= s.id %>, this)" <%= s.meChecked ? 'disabled' : '' %>>
-                <i class="fas <%= s.meChecked ? 'fa-check' : 'fa-check-double' %>"></i> <%= s.meChecked ? 'Checked in ✓' : 'I’m in today' %>
-            </button>
-            <button class="btn-act btn-expand" onclick="event.stopPropagation();toggleCard(<%= s.id %>)">
-                <i class="fas fa-chevron-down"></i> Members
-            </button>
-        </div>
-        <div class="sq-members">
-            <% s.members.forEach(function(m) { %>
-            <div class="member-row">
-                <div class="member-av"><%= m.fullname ? m.fullname.charAt(0).toUpperCase() : 'U' %></div>
-                <div class="member-info">
-                    <div class="member-name"><%= m.fullname %></div>
-                    <div class="member-status"><%= m.checked_today ? 'Checked in today' : 'Pending check-in' %></div>
-                </div>
-                <div class="checkin-dot <%= m.checked_today ? 'done' : 'pending' %>"><i class="fas <%= m.checked_today ? 'fa-check' : 'fa-clock' %>"></i></div>
+            <div class="sq-actions">
+                <button class="btn-act btn-checkin <%= s.meChecked ? 'done' : '' %>" id="checkin-<%= s.id %>" onclick="event.stopPropagation();checkIn(<%= s.id %>, this)" <%= s.meChecked ? 'disabled' : '' %>>
+                    <i class="fas <%= s.meChecked ? 'fa-check' : 'fa-check-double' %>"></i> <%= s.meChecked ? 'Checked in' : 'I\'m in today' %>
+                </button>
             </div>
-            <% }); %>
-            <div class="sq-footer-row">
-                <div class="sq-code" onclick="copyCode('<%= s.inviteCode %>')" title="Copy invite code"><i class="fas fa-copy"></i> <%= s.inviteCode %></div>
-                <button class="sq-leave" onclick="leaveSquad(<%= s.id %>)"><i class="fas fa-sign-out-alt"></i> <%= s.isOwner ? 'Dissolve' : 'Leave' %></button>
+            <div class="sq-members">
+                <% s.members.forEach(function(m) { %>
+                <div class="member-row">
+                    <div class="member-av"><%= m.fullname ? m.fullname.charAt(0).toUpperCase() : 'U' %></div>
+                    <div class="member-info">
+                        <div class="member-name"><%= m.fullname %></div>
+                        <div class="member-status"><%= m.checked_today ? 'Checked in today' : 'Pending check-in' %></div>
+                    </div>
+                    <div class="checkin-dot <%= m.checked_today ? 'done' : 'pending' %>"><i class="fas <%= m.checked_today ? 'fa-check' : 'fa-clock' %>"></i></div>
+                </div>
+                <% }); %>
+                <div class="sq-footer-row">
+                    <div class="sq-code" onclick="copyCode('<%= s.inviteCode %>')" title="Copy invite code"><i class="fas fa-copy"></i> <%= s.inviteCode %></div>
+                    <button class="sq-leave" onclick="leaveSquad(<%= s.id %>)"><i class="fas fa-sign-out-alt"></i> <%= s.isOwner ? 'Dissolve' : 'Leave' %></button>
+                </div>
             </div>
         </div>
     </div>
@@ -201,7 +207,7 @@
 
     <div class="sq-new">
         <div class="sq-new-head" onclick="toggleNew()">
-            <div class="sq-new-title"><i class="fas fa-plus"></i> Create or join another squad</div>
+            <div class="sq-new-title"><i class="fas fa-plus"></i> Add another squad</div>
             <i class="fas fa-chevron-down" id="newChev" style="color:var(--text-secondary);"></i>
         </div>
         <div class="sq-form" id="newForm" style="display:none;">
