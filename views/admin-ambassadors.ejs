@@ -101,13 +101,13 @@
                                     <span class="amb-code"><%= amb.unique_code %></span>
                                 </td>
                                 <td style="font-weight: 700; text-align: center;"><%= amb.total_referrals %></td>
-                                <td><span class="val-earned">â‚¦<%= amb.total_earned %></span></td>
-                                <td><span class="val-withdrawn">â‚¦<%= amb.total_withdrawn %></span></td>
+                                <td><span class="val-earned">₦<%= amb.total_earned %></span></td>
+                                <td><span class="val-withdrawn">₦<%= amb.total_withdrawn %></span></td>
                                 <td>
                                     <% if (amb.outstanding > 0) { %>
-                                        <span class="val-outstanding">â‚¦<%= amb.outstanding %></span>
+                                        <span class="val-outstanding">₦<%= amb.outstanding %></span>
                                     <% } else { %>
-                                        <span class="val-settled">â‚¦0 (SETTLED)</span>
+                                        <span class="val-settled">₦0 (SETTLED)</span>
                                     <% } %>
                                 </td>
                                 <td>
@@ -116,7 +116,7 @@
                                 <td>
                                     <% if (amb.outstanding > 0) { %>
                                         <form action="/admin/payout-complete/<%= amb.id %>" method="POST" style="margin:0;">
-                                            <button type="submit" class="btn-payout" onclick="return confirm('Mark this â‚¦<%= amb.outstanding %> payout as paid?')">Record Payout</button>
+                                            <button type="submit" class="btn-payout" onclick="return confirm('Mark this ₦<%= amb.outstanding %> payout as paid?')">Record Payout</button>
                                         </form>
                                     <% } else { %>
                                         <span class="disabled-btn">Paid Up</span>

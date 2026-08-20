@@ -101,27 +101,27 @@
         </div>
         <div class="stat-card">
             <div class="stat-label">Available Balance</div>
-            <div class="stat-value amber">â‚¦<%= availableBal %></div>
+            <div class="stat-value amber">₦<%= availableBal %></div>
         </div>
         <div class="stat-card">
             <div class="stat-label">Total Earned</div>
-            <div class="stat-value brand">â‚¦<%= referral ? referral.total_earned : 0 %></div>
+            <div class="stat-value brand">₦<%= referral ? referral.total_earned : 0 %></div>
         </div>
     </div>
 
     <% if (availableBal >= 100) { %>
     <div class="withdraw-card">
         <h3>Withdraw Earnings</h3>
-        <div class="sub">10% service fee applies. Min withdrawal: â‚¦100</div>
+        <div class="sub">10% service fee applies. Min withdrawal: ₦100</div>
         <form id="withdrawForm">
             <div class="form-row">
-                <input type="number" class="form-input" id="withdrawAmount" placeholder="Amount (â‚¦)" min="100" max="<%= availableBal %>" required>
+                <input type="number" class="form-input" id="withdrawAmount" placeholder="Amount (₦)" min="100" max="<%= availableBal %>" required>
             </div>
             <div class="form-row">
                 <input type="text" class="form-input" id="bankDetails" placeholder="Bank | Account No | Name" value="<%= referral ? referral.bank_details : '' %>" required>
             </div>
             <p style="font-size:0.68rem;color:var(--text-secondary);font-weight:600;margin:8px 0;">
-                Fee: 10% | Net: â‚¦<span id="netAmount">0</span>
+                Fee: 10% | Net: ₦<span id="netAmount">0</span>
             </p>
             <button type="submit" class="btn-primary" id="withdrawBtn">Withdraw Now</button>
         </form>
@@ -156,8 +156,8 @@
                 <% if (withdrawals && withdrawals.length > 0) { %>
                     <% withdrawals.forEach(function(w) { %>
                     <tr>
-                        <td>â‚¦<%= w.amount_requested %></td>
-                        <td>â‚¦<%= w.net_payout %></td>
+                        <td>₦<%= w.amount_requested %></td>
+                        <td>₦<%= w.net_payout %></td>
                         <td><span class="badge <%= w.status === 'completed' ? 'active' : w.status === 'rejected' ? 'inactive' : 'pending' %>"><%= w.status %></span></td>
                         <td style="font-size:0.7rem;"><%= new Date(w.created_at).toLocaleDateString('en-GB', {day:'numeric',month:'short'}) %></td>
                     </tr>

@@ -17,34 +17,39 @@
 
         .gd-section { margin: 0 1.25rem 1rem; background: var(--surface-solid); border: 1px solid var(--border-solid); border-radius: 16px; overflow: hidden; }
         .gd-section-head { padding: 16px 18px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
-        .gd-section-head h3 { font-size: 0.85rem; font-weight: 800; display: flex; align-items: center; gap: 8px; margin: 0; }
+        .gd-section-head h3 { font-size: 0.88rem; font-weight: 800; display: flex; align-items: center; gap: 8px; margin: 0; }
         .gd-section-head h3 i { width: 20px; text-align: center; }
         .gd-section-head .gd-toggle { color: var(--text-muted); font-size: 0.75rem; transition: transform .2s; }
         .gd-section-head .gd-toggle.open { transform: rotate(180deg); }
 
-        .gd-body { padding: 0 18px 16px; display: none; }
-        .gd-body.open { display: block; animation: fadeIn .2s ease; }
+        .gd-body { padding: 0 18px 16px; display: block; }
+        .gd-body.closed { display: none; }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
-        .gd-body p { font-size: 0.78rem; color: var(--text-secondary); line-height: 1.65; margin: 0 0 10px; font-weight: 500; }
-        .gd-body ul { margin: 0 0 10px; padding-left: 18px; }
-        .gd-body li { font-size: 0.76rem; color: var(--text-secondary); line-height: 1.6; font-weight: 500; margin-bottom: 4px; }
+        .gd-body p { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.65; margin: 0 0 10px; font-weight: 500; }
+        .gd-body ul { margin: 0 0 10px; padding-left: 0; list-style: none; }
+        .gd-body li { font-size: 0.78rem; color: var(--text-secondary); line-height: 1.6; font-weight: 500; margin-bottom: 10px; padding-left: 22px; position: relative; }
+        .gd-body li::before { content: ''; position: absolute; left: 2px; top: 7px; width: 7px; height: 7px; border-radius: 50%; background: var(--brand); }
         .gd-body li strong { color: var(--text-primary); }
+        .gd-steps { margin: 0 0 10px; padding-left: 0; list-style: none; counter-reset: step; }
+        .gd-steps li { counter-increment: step; padding-left: 34px; position: relative; margin-bottom: 12px; }
+        .gd-steps li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 22px; height: 22px; border-radius: 50%; background: var(--brand-soft); color: var(--brand); font-size: 0.68rem; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+        .gd-steps li::after { content: ''; position: absolute; left: 10px; top: 24px; width: 1px; height: 10px; background: var(--border-solid); }
+        .gd-steps li:last-child::after { display: none; }
         .gd-tip { background: var(--success-soft); border: 1px solid var(--success); border-radius: 10px; padding: 12px; font-size: 0.74rem; color: var(--success); font-weight: 600; margin: 8px 0; display: flex; gap: 8px; align-items: flex-start; }
         .gd-tip i { color: var(--success); font-size: 0.85rem; margin-top: 2px; }
-        .gd-tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
+        .gd-tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; vertical-align: middle; }
         .gd-tag.free { background: var(--success-soft); color: var(--success); }
         .gd-tag.premium { background: var(--warning-soft); color: var(--warning); }
-        .gd-tag.admin { background: var(--brand-soft); color: var(--brand); }
 
-        .gd-quick-links { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 1.25rem 1rem; }
-        .gd-quick-link { background: var(--surface-solid); border: 1px solid var(--border-solid); border-radius: 12px; padding: 14px; text-decoration: none; color: inherit; text-align: center; }
-        .gd-quick-link i { font-size: 1.2rem; display: block; margin-bottom: 4px; }
-        .gd-quick-link span { font-size: 0.7rem; font-weight: 700; display: block; }
+        .gd-quick-links { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 1.25rem 1rem; }
+        .gd-quick-link { background: var(--surface-solid); border: 1px solid var(--border-solid); border-radius: 12px; padding: 12px 6px; text-decoration: none; color: inherit; text-align: center; }
+        .gd-quick-link i { font-size: 1.1rem; display: block; margin-bottom: 4px; color: var(--brand); }
+        .gd-quick-link span { font-size: 0.66rem; font-weight: 700; display: block; }
 
         @media (min-width: 1024px) {
-            .app-shell { max-width: 600px; margin: 0 auto; }
+            .app-shell { max-width: 640px; margin: 0 auto; }
         }
     </style>
 </head>
@@ -59,17 +64,19 @@
 
     <div class="gd-search">
         <i class="fas fa-search"></i>
-        <input type="text" id="gdFilter" placeholder="Search features..." oninput="filterGuide(this.value)">
+        <input type="text" id="gdFilter" placeholder="Search the guide..." oninput="filterGuide(this.value)">
     </div>
 
     <div class="gd-quick-links">
         <a href="#gs" class="gd-quick-link"><i class="fas fa-rocket"></i><span>Getting Started</span></a>
         <a href="#study" class="gd-quick-link"><i class="fas fa-graduation-cap"></i><span>Study Hub</span></a>
-        <a href="#quiz" class="gd-quick-link"><i class="fas fa-bolt"></i><span>Quizzes</span></a>
+        <a href="#tests" class="gd-quick-link"><i class="fas fa-bolt"></i><span>Practice Tests</span></a>
+        <a href="#squads" class="gd-quick-link"><i class="fas fa-users"></i><span>Squad Streaks</span></a>
         <a href="#cgpa" class="gd-quick-link"><i class="fas fa-chart-line"></i><span>CGPA</span></a>
-        <a href="#timetable" class="gd-quick-link"><i class="fas fa-table"></i><span>Timetable</span></a>
+        <a href="#timetable" class="gd-quick-link"><i class="fas fa-calendar"></i><span>Timetable</span></a>
+        <a href="#challenge" class="gd-quick-link"><i class="fas fa-trophy"></i><span>Challenge</span></a>
         <a href="#daily" class="gd-quick-link"><i class="fas fa-tasks"></i><span>Daily Task</span></a>
-        <a href="#challenge" class="gd-quick-link"><i class="fas fa-trophy"></i><span>Challenges</span></a>
+        <a href="#refer" class="gd-quick-link"><i class="fas fa-gift"></i><span>Refer & Earn</span></a>
     </div>
 
     <!-- Getting Started -->
@@ -78,86 +85,147 @@
             <h3><i class="fas fa-rocket" style="color:var(--brand);"></i> Getting Started</h3>
             <i class="fas fa-chevron-down gd-toggle open"></i>
         </div>
-        <div class="gd-body open">
-            <p>Your complete academic companion. This guide covers every feature to help you study smarter, track performance, and earn rewards.</p>
+        <div class="gd-body">
+            <p>Prepium is your all-in-one study companion. Everything you need to practice, track grades, and stay motivated lives here. Here's how to start:</p>
+            <ol class="gd-steps">
+                <li><strong>Create an account</strong> on the Sign Up page with your email and university.</li>
+                <li><strong>Explore the Dashboard</strong> — every feature is one tap away on the home screen.</li>
+                <li><strong>Set up your courses</strong> in Study Hub or import them from your CGPA tracker.</li>
+            </ol>
+            <div class="gd-tip"><i class="fas fa-lightbulb"></i> On mobile, use the bottom navigation bar to jump between Dashboard, Study, Squads, and the Guide.</div>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="gd-section" id="dash">
+        <div class="gd-section-head" onclick="toggleSec(this)">
+            <h3><i class="fas fa-house" style="color:var(--brand);"></i> Dashboard</h3>
+            <i class="fas fa-chevron-down gd-toggle open"></i>
+        </div>
+        <div class="gd-body">
+            <p>Your command centre. See your daily streak, notifications, and every tool at a glance.</p>
             <ul>
-                <li><strong>Sign Up</strong> — Create an account with your email and university details.</li>
-                <li><strong>Dashboard</strong> — Your central hub. View your stats, quick actions, and recent activity.</li>
-                <li><strong>Subscription</strong> — Premium unlocks all features (₦2,000). Tap any locked card to upgrade.</li>
+                <li><strong>Feature cards</strong> — tap any card to open that tool. Locked cards show a padlock and open the upgrade page.</li>
+                <li><strong>Streak & bell</strong> — top-right shows your daily streak and unread notifications.</li>
             </ul>
-            <div class="gd-tip"><i class="fas fa-lightbulb"></i> Complete your profile to unlock personalized recommendations.</div>
         </div>
     </div>
 
     <!-- Study Hub -->
     <div class="gd-section" id="study">
         <div class="gd-section-head" onclick="toggleSec(this)">
-            <h3><i class="fas fa-graduation-cap" style="color:var(--brand);"></i> Study Hub <span class="gd-tag premium">Premium</span></h3>
-            <i class="fas fa-chevron-down gd-toggle"></i>
+            <h3><i class="fas fa-graduation-cap" style="color:var(--brand);"></i> Study with AI <span class="gd-tag premium">Premium</span></h3>
+            <i class="fas fa-chevron-down gd-toggle open"></i>
         </div>
         <div class="gd-body">
-            <p>Your personal learning space for courses, AI tutoring, and progress tracking.</p>
+            <p>Your personal learning space with AI-powered tools for every course.</p>
             <ul>
-                <li><strong>Courses</strong> — Add courses manually or import from your CGPA tracker. Each course has topics and subtopics.</li>
-                <li><strong>AI Tutor</strong> — Chat with an AI tutor about any topic. Ask questions, get explanations, or request practice problems.</li>
-                <li><strong>Flashcards</strong> — AI generates flashcards from your course material. Review and master key concepts.</li>
-                <li><strong>Study Quizzes</strong> — Take AI-generated quizzes on any topic. Get instant feedback and explanations.</li>
-                <li><strong>Study Timer</strong> — Track your study sessions with the built-in timer. View weekly analytics.</li>
+                <li><strong>Courses</strong> — Add courses or import from your CGPA tracker. Each course has topics and subtopics to work through.</li>
+                <li><strong>AI Tutor</strong> — Ask anything about any topic. Get explanations, examples, or practice problems.</li>
+                <li><strong>Flashcards</strong> — AI generates flashcards from your course material. Flip, review, and master concepts.</li>
+                <li><strong>Study Quizzes</strong> — Generate quizzes on any topic and get instant feedback with explanations.</li>
+                <li><strong>Study Timer</strong> — Track focused sessions and review your weekly study time.</li>
             </ul>
-            <div class="gd-tip"><i class="fas fa-lightbulb"></i> Use the AI chat to break down difficult topics — it adapts to your level.</div>
+            <div class="gd-tip"><i class="fas fa-lightbulb"></i> Not sure where to start? Ask the AI Tutor to break down your hardest topic first.</div>
         </div>
     </div>
 
-    <!-- Quizzes -->
-    <div class="gd-section" id="quiz">
+    <!-- Practice Tests -->
+    <div class="gd-section" id="tests">
         <div class="gd-section-head" onclick="toggleSec(this)">
-            <h3><i class="fas fa-bolt" style="color:var(--warning);"></i> Practice Tests</h3>
-            <i class="fas fa-chevron-down gd-toggle"></i>
+            <h3><i class="fas fa-bolt" style="color:var(--warning);"></i> Practice Tests & AI Quiz</h3>
+            <i class="fas fa-chevron-down gd-toggle open"></i>
         </div>
         <div class="gd-body">
-            <p>Test your knowledge with MCQs across subjects and difficulty levels.</p>
+            <p>Test yourself on real exam-style questions and track your progress.</p>
             <ul>
-                <li><strong>Setup Test</strong> — Choose a subject, difficulty, and number of questions. Get instant results with explanations.</li>
-                <li><strong>AI Quiz Generator</strong> <span class="gd-tag premium">Premium</span> — Upload a PDF document. The AI reads it and generates a custom quiz based on the content.</li>
-                <li><strong>History</strong> <span class="gd-tag premium">Premium</span> — View your past quiz attempts, scores, and performance trends.</li>
+                <li><strong>Setup Test</strong> — Pick a subject, difficulty, and number of questions. Get scored instantly with explanations.</li>
+                <li><strong>AI Quiz Generator</strong> <span class="gd-tag premium">Premium</span> — Upload a PDF; the AI reads it and builds a custom quiz from the content.</li>
+                <li><strong>History</strong> <span class="gd-tag premium">Premium</span> — Review past attempts, scores, and trends to spot weak areas.</li>
             </ul>
-            <div class="gd-tip"><i class="fas fa-lightbulb"></i> Review incorrect answers in History to identify weak areas.</div>
+            <div class="gd-tip"><i class="fas fa-lightbulb"></i> Always review the questions you missed in History — that's where the biggest gains are.</div>
         </div>
     </div>
 
-    <!-- CGPA Tracker -->
+    <!-- Daily Challenge & Live Arena -->
+    <div class="gd-section" id="challenge">
+        <div class="gd-section-head" onclick="toggleSec(this)">
+            <h3><i class="fas fa-trophy" style="color:var(--warning);"></i> Daily Challenge & Live Arena</h3>
+            <i class="fas fa-chevron-down gd-toggle open"></i>
+        </div>
+        <div class="gd-body">
+            <p>Compete and keep your streak alive.</p>
+            <ul>
+                <li><strong>Daily Challenge</strong> <span class="gd-tag free">Free</span> — A free daily quiz. Answer and climb the leaderboard.</li>
+                <li><strong>Live Arena</strong> <span class="gd-tag premium">Premium</span> — Real-time ranked quizzes against other students. Finish in the top spots to earn your rank.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Squad Streaks -->
+    <div class="gd-section" id="squads">
+        <div class="gd-section-head" onclick="toggleSec(this)">
+            <h3><i class="fas fa-users" style="color:var(--brand);"></i> Squad Streaks</h3>
+            <i class="fas fa-chevron-down gd-toggle open"></i>
+        </div>
+        <div class="gd-body">
+            <p>Study together and keep each other accountable. If anyone in the squad misses a day, the whole squad's streak resets.</p>
+            <ol class="gd-steps">
+                <li><strong>Create a squad</strong> or join one with a friend's invite code.</li>
+                <li><strong>Tap "I'm in today"</strong> to check in each day.</li>
+                <li><strong>Use "Check in all"</strong> to check in for every squad you're in at once.</li>
+            </ol>
+            <div class="gd-tip"><i class="fas fa-lightbulb"></i> Tap a squad card to expand it and see who has and hasn't checked in.</div>
+        </div>
+    </div>
+
+    <!-- CGPA -->
     <div class="gd-section" id="cgpa">
         <div class="gd-section-head" onclick="toggleSec(this)">
             <h3><i class="fas fa-chart-line" style="color:var(--brand);"></i> CGPA Tracker <span class="gd-tag premium">Premium</span></h3>
-            <i class="fas fa-chevron-down gd-toggle"></i>
+            <i class="fas fa-chevron-down gd-toggle open"></i>
         </div>
         <div class="gd-body">
-            <p>Track performance semester by semester. Supports 4-point and 5-point grading scales.</p>
+            <p>Track your grades semester by semester on 4-point or 5-point scales.</p>
             <ul>
-                <li><strong>Setup</strong> — Enter your department, level, and grading scale. Import previous CGPA or start fresh.</li>
-                <li><strong>Add Courses</strong> — Log each course with its code, title, credit units, and grade. Filter by level and semester.</li>
-                <li><strong>Forecast</strong> — See what-if scenarios: how your CGPA changes if you improve weak grades.</li>
-                <li><strong>AI Advisor</strong> — Predict your next semester GPA or use the What-If Builder to add multiple hypothetical courses and see their combined impact.</li>
+                <li><strong>Setup</strong> — Enter your department, level, and grading scale.</li>
+                <li><strong>Add courses</strong> — Log each course's code, title, credit units, and grade.</li>
+                <li><strong>Forecast</strong> — See how improving weak grades changes your CGPA.</li>
+                <li><strong>AI Advisor</strong> — Predict next semester's GPA or use the What-If Builder to plan retakes.</li>
                 <li><strong>Transcript</strong> — Generate a formatted academic transcript PDF.</li>
-                <li><strong>Import from Study Hub</strong> — Automatically sync courses from your Study Hub into the tracker.</li>
             </ul>
-            <div class="gd-tip"><i class="fas fa-lightbulb"></i> Use the What-If Builder in AI Advisor to plan which courses to retake.</div>
+            <div class="gd-tip"><i class="fas fa-lightbulb"></i> Use the What-If Builder to decide which courses are worth retaking.</div>
         </div>
     </div>
 
-    <!-- Timetable -->
+    <!-- Timetable & Reading -->
     <div class="gd-section" id="timetable">
         <div class="gd-section-head" onclick="toggleSec(this)">
-            <h3><i class="fas fa-table" style="color:var(--brand);"></i> Timetable <span class="gd-tag premium">Premium</span></h3>
-            <i class="fas fa-chevron-down gd-toggle"></i>
+            <h3><i class="fas fa-calendar" style="color:var(--brand);"></i> Timetable & Reading Schedule <span class="gd-tag premium">Premium</span></h3>
+            <i class="fas fa-chevron-down gd-toggle open"></i>
         </div>
         <div class="gd-body">
-            <p>Generate an AI study schedule based on your courses and available time.</p>
+            <p>Let the AI plan your study time around your courses.</p>
             <ul>
-                <li><strong>AI Schedule</strong> — Tell the AI your available hours and courses, and it creates a balanced timetable.</li>
-                <li><strong>Reading Schedule</strong> <span class="gd-tag premium">Premium</span> — A smart study plan that spreads your reading across weeks, optimized for retention.</li>
+                <li><strong>AI Timetable</strong> — Tell it your available hours and courses, and get a balanced weekly schedule.</li>
+                <li><strong>Reading Schedule</strong> — A smart plan that spreads reading across weeks for better retention.</li>
             </ul>
-            <div class="gd-tip"><i class="fas fa-lightbulb"></i> Timetables auto-adjust when you mark topics as completed.</div>
+            <div class="gd-tip"><i class="fas fa-lightbulb"></i> Mark topics complete and the timetable adjusts automatically.</div>
+        </div>
+    </div>
+
+    <!-- Deadlines -->
+    <div class="gd-section" id="deadlines">
+        <div class="gd-section-head" onclick="toggleSec(this)">
+            <h3><i class="fas fa-hourglass-half" style="color:var(--warning);"></i> Deadlines</h3>
+            <i class="fas fa-chevron-down gd-toggle open"></i>
+        </div>
+        <div class="gd-body">
+            <p>Never miss an assignment or exam date again.</p>
+            <ul>
+                <li><strong>Add deadlines</strong> — Name the task, set the date, and get a live countdown.</li>
+                <li><strong>Alerts</strong> — Receive reminders as the due date approaches.</li>
+            </ul>
         </div>
     </div>
 
@@ -165,30 +233,14 @@
     <div class="gd-section" id="daily">
         <div class="gd-section-head" onclick="toggleSec(this)">
             <h3><i class="fas fa-tasks" style="color:var(--accent);"></i> Daily Task</h3>
-            <i class="fas fa-chevron-down gd-toggle"></i>
+            <i class="fas fa-chevron-down gd-toggle open"></i>
         </div>
         <div class="gd-body">
-            <p>Manage tasks, set goals, track deadlines, and view weekly reports.</p>
+            <p>Plan your day, hit your goals, and see your weekly report.</p>
             <ul>
-                <li><strong>Tasks</strong> — Add, complete, and organize daily study tasks.</li>
-                <li><strong>Goals</strong> — Set weekly academic goals and track your progress.</li>
-                <li><strong>Deadlines</strong> <span class="gd-tag premium">Premium</span> — Track assignment and exam deadlines with countdowns.</li>
-                <li><strong>Weekly Report</strong> — View a summary of your completed tasks, study time, and goal achievement.</li>
-            </ul>
-        </div>
-    </div>
-
-    <!-- Daily Challenge & Live Arena -->
-    <div class="gd-section" id="challenge">
-        <div class="gd-section-head" onclick="toggleSec(this)">
-            <h3><i class="fas fa-trophy" style="color:var(--warning);"></i> Challenges & Arena</h3>
-            <i class="fas fa-chevron-down gd-toggle"></i>
-        </div>
-        <div class="gd-body">
-            <p>Compete with peers in real-time.</p>
-            <ul>
-                <li><strong>Daily Challenge</strong> — Free daily quiz with 10 questions. Compete on the leaderboard for bragging rights.</li>
-                <li><strong>Live Arena</strong> <span class="gd-tag premium">Premium</span> — Real-time ranked quizzes against other students. Climb the leaderboard and earn your rank.</li>
+                <li><strong>Tasks</strong> — Add and tick off your daily study tasks.</li>
+                <li><strong>Goals</strong> — Set weekly goals and watch your progress.</li>
+                <li><strong>Weekly Report</strong> — See tasks completed, study time, and goal achievement.</li>
             </ul>
         </div>
     </div>
@@ -197,16 +249,33 @@
     <div class="gd-section" id="notifications">
         <div class="gd-section-head" onclick="toggleSec(this)">
             <h3><i class="fas fa-bell" style="color:var(--warning);"></i> Notifications</h3>
-            <i class="fas fa-chevron-down gd-toggle"></i>
+            <i class="fas fa-chevron-down gd-toggle open"></i>
         </div>
         <div class="gd-body">
-            <p>Stay updated with alerts and announcements.</p>
+            <p>Stay in the loop on everything important.</p>
             <ul>
-                <li><strong>System Alerts</strong> — Receive updates about new features, maintenance, and promotions.</li>
-                <li><strong>Challenge Reminders</strong> — Get notified when daily challenges and arena events start.</li>
-                <li><strong>Deadline Alerts</strong> <span class="gd-tag premium">Premium</span> — Reminders for upcoming assignment and exam deadlines.</li>
+                <li><strong>Alerts</strong> — New features, maintenance, and promotions.</li>
+                <li><strong>Challenge reminders</strong> — When daily challenges and arena events start.</li>
+                <li><strong>Deadline alerts</strong> <span class="gd-tag premium">Premium</span> — Reminders for upcoming due dates.</li>
             </ul>
-            <div class="gd-tip"><i class="fas fa-lightbulb"></i> Check the bell icon on your dashboard for unread notifications.</div>
+            <div class="gd-tip"><i class="fas fa-lightbulb"></i> The bell icon on your dashboard shows unread notifications.</div>
+        </div>
+    </div>
+
+    <!-- Refer & Earn -->
+    <div class="gd-section" id="refer">
+        <div class="gd-section-head" onclick="toggleSec(this)">
+            <h3><i class="fas fa-gift" style="color:var(--brand);"></i> Refer & Earn</h3>
+            <i class="fas fa-chevron-down gd-toggle open"></i>
+        </div>
+        <div class="gd-body">
+            <p>Invite friends and earn rewards when they activate premium.</p>
+            <ol class="gd-steps">
+                <li><strong>Share your invite code</strong> or link with friends.</li>
+                <li><strong>They sign up</strong> and activate premium.</li>
+                <li><strong>You earn</strong> commission on every referral, with instant withdrawal.</li>
+            </ol>
+            <div class="gd-tip"><i class="fas fa-lightbulb"></i> Referrals are unlimited — the more friends, the more you earn.</div>
         </div>
     </div>
 
@@ -214,15 +283,14 @@
     <div class="gd-section" id="account">
         <div class="gd-section-head" onclick="toggleSec(this)">
             <h3><i class="fas fa-user-circle" style="color:var(--brand);"></i> Account & Profile</h3>
-            <i class="fas fa-chevron-down gd-toggle"></i>
+            <i class="fas fa-chevron-down gd-toggle open"></i>
         </div>
         <div class="gd-body">
-            <p>Manage your account and personal info.</p>
+            <p>Manage your account details and plan.</p>
             <ul>
-                <li><strong>Profile</strong> — View and edit your name, email, university, and profile picture.</li>
-                <li><strong>Subscription</strong> — View your plan status and upgrade to premium.</li>
-                <li><strong>Password</strong> — Change your password or reset it if forgotten.</li>
-                <li><strong>Logout</strong> — Sign out from your account securely.</li>
+                <li><strong>Profile</strong> — Edit your name, email, university, and picture.</li>
+                <li><strong>Subscription</strong> — View your plan and upgrade to premium.</li>
+                <li><strong>Password</strong> — Change it or reset it if you forget it.</li>
             </ul>
         </div>
     </div>
@@ -231,20 +299,19 @@
     <div class="gd-section" id="help">
         <div class="gd-section-head" onclick="toggleSec(this)">
             <h3><i class="fas fa-circle-question" style="color:var(--text-muted);"></i> Need Help?</h3>
-            <i class="fas fa-chevron-down gd-toggle"></i>
+            <i class="fas fa-chevron-down gd-toggle open"></i>
         </div>
         <div class="gd-body">
-            <p>Questions or feedback? We're here to help.</p>
+            <p>We're one message away.</p>
             <ul>
-                <li><strong>Feedback</strong> — Use the Feedback page to send us your thoughts and suggestions.</li>
-                <li><strong>Report Issues</strong> — Found a bug? Let us know through the Feedback form and we'll fix it.</li>
-                <li><strong>Feature Requests</strong> — Suggest new features you'd like to see on Prepium.</li>
+                <li><strong>Feedback</strong> — Share suggestions and report bugs on the Feedback page.</li>
+                <li><strong>Feature requests</strong> — Tell us what you want to see next.</li>
             </ul>
             <div class="gd-tip"><i class="fas fa-lightbulb"></i> Your feedback directly shapes what we build next!</div>
         </div>
     </div>
 
-        <div style="text-align:center;padding:0.5rem 1.25rem 6rem;font-size:0.7rem;color:var(--text-muted);font-weight:600;">
+    <div style="text-align:center;padding:0.5rem 1.25rem 6rem;font-size:0.7rem;color:var(--text-muted);font-weight:600;">
         Prepium v2.0 &middot; Built for students &middot; <a href="/suggestions" style="color:var(--brand);text-decoration:none;">Send Feedback</a>
     </div>
 
@@ -256,7 +323,7 @@ function toggleSec(el) {
     var head = el.classList.contains('gd-section-head') ? el : el.closest('.gd-section-head');
     var body = head.nextElementSibling;
     var toggle = head.querySelector('.gd-toggle');
-    body.classList.toggle('open');
+    body.classList.toggle('closed');
     toggle.classList.toggle('open');
 }
 
@@ -279,13 +346,11 @@ document.addEventListener('DOMContentLoaded', function() {
         var target = document.querySelector(hash);
         if (target) {
             var head = target.querySelector('.gd-section-head');
-            if (head) {
-                var body = head.nextElementSibling;
-                var toggle = head.querySelector('.gd-toggle');
-                body.classList.add('open');
-                toggle.classList.add('open');
-                setTimeout(function() { target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
-            }
+            var body = head.nextElementSibling;
+            var toggle = head.querySelector('.gd-toggle');
+            body.classList.remove('closed');
+            toggle.classList.add('open');
+            setTimeout(function() { target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
         }
     }
 });

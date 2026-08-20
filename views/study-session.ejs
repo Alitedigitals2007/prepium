@@ -315,7 +315,7 @@ function sendChat() {
     if (!msg) return;
     input.value = '';
     chatAppend('user', chatEscape(msg));
-    var pending = chatAppend('ai', '<i class="fas fa-spinner fa-spin"></i> Thinkingâ€¦');
+    var pending = chatAppend('ai', '<i class="fas fa-spinner fa-spin"></i> Thinking…');
     if (chatAbort) try { chatAbort.abort(); } catch(e){}
     chatAbort = ('AbortController' in window) ? new AbortController() : null;
     var fetchOpts = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg, courseId: courseId, courseName: courseName }) };
@@ -565,13 +565,13 @@ function endSession() {
             if (notes && notes.length > 20) {
                 var box = document.getElementById('aiExtracted');
                 box.style.display = 'block';
-                box.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Extracting key points from your notesâ€¦';
+                box.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Extracting key points from your notes…';
             }
             document.getElementById('aiSummarize').onclick = function() {
                 if (!notes || !notes.trim()) return Swal.fire({ icon: 'warning', text: 'No notes to extract from yet.' });
                 var box = document.getElementById('aiExtracted');
                 box.style.display = 'block';
-                box.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Asking AI to summarize your notesâ€¦';
+                box.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Asking AI to summarize your notes…';
                 fetch('/api/study/session/summarize', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -591,7 +591,7 @@ function endSession() {
             };
             document.getElementById('aiTipsClose').onclick = function() {
                 var ta = document.getElementById('summaryPoints');
-                ta.value = (ta.value ? ta.value + '\n' : '') + '- Keep up the momentum â€” 25 mins tomorrow too.\n- Review key formulas once today.';
+                ta.value = (ta.value ? ta.value + '\n' : '') + '- Keep up the momentum — 25 mins tomorrow too.\n- Review key formulas once today.';
                 Swal.fire({ icon: 'success', text: 'Added a quick motivation note.', timer: 1200, showConfirmButton: false });
             };
         },

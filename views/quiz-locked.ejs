@@ -105,7 +105,7 @@
                 if (!result || !result.isConfirmed || !result.value) return;
                 var info = result.value;
                 if (info.discountLabel) {
-                    Swal.fire({ icon: 'info', title: info.discountLabel + ' applied!', text: 'You pay â‚¦' + info.amount.toLocaleString(), timer: 2000, showConfirmButton: false });
+                    Swal.fire({ icon: 'info', title: info.discountLabel + ' applied!', text: 'You pay ₦' + info.amount.toLocaleString(), timer: 2000, showConfirmButton: false });
                 }
                 var handler = PaystackPop.setup({
                     key: '<%= paystack_key %>',

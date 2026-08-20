@@ -426,7 +426,7 @@
                 <div class="path-dot a"><i class="fas fa-star-of-life"></i></div>
                 <strong>Start Fresh</strong>
             </div>
-            <p>Log everything from scratch â€” semester by semester, clean slate.</p>
+            <p>Log everything from scratch — semester by semester, clean slate.</p>
         </button>
 
         <button type="button" class="path-card" onclick="pickPath('balance')">
@@ -797,18 +797,18 @@
                 </label>
                 <select id="add-grade" required style="width:100%;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-weight:600;outline:none;box-sizing:border-box">
                     <% if (hasProfile && profile.grading_scale == 5) { %>
-                        <option value="A">A â€” 5 pts</option>
-                        <option value="B">B â€” 4 pts</option>
-                        <option value="C">C â€” 3 pts</option>
-                        <option value="D">D â€” 2 pts</option>
-                        <option value="E">E â€” 1 pt</option>
-                        <option value="F">F â€” 0 pts</option>
+                        <option value="A">A — 5 pts</option>
+                        <option value="B">B — 4 pts</option>
+                        <option value="C">C — 3 pts</option>
+                        <option value="D">D — 2 pts</option>
+                        <option value="E">E — 1 pt</option>
+                        <option value="F">F — 0 pts</option>
                     <% } else { %>
-                        <option value="A">A â€” 4 pts</option>
-                        <option value="B">B â€” 3 pts</option>
-                        <option value="C">C â€” 2 pts</option>
-                        <option value="D">D â€” 1 pt</option>
-                        <option value="F">F â€” 0 pts</option>
+                        <option value="A">A — 4 pts</option>
+                        <option value="B">B — 3 pts</option>
+                        <option value="C">C — 2 pts</option>
+                        <option value="D">D — 1 pt</option>
+                        <option value="F">F — 0 pts</option>
                     <% } %>
                 </select>
             </div>
@@ -941,18 +941,18 @@ function showAddSuccess(msg) {
                 <label>Grade</label>
                 <select name="grade" id="e-grade" required>
                     <% if (hasProfile && profile.grading_scale == 5) { %>
-                        <option value="A">A â€” 5 pts</option>
-                        <option value="B">B â€” 4 pts</option>
-                        <option value="C">C â€” 3 pts</option>
-                        <option value="D">D â€” 2 pts</option>
-                        <option value="E">E â€” 1 pt</option>
-                        <option value="F">F â€” 0 pts</option>
+                        <option value="A">A — 5 pts</option>
+                        <option value="B">B — 4 pts</option>
+                        <option value="C">C — 3 pts</option>
+                        <option value="D">D — 2 pts</option>
+                        <option value="E">E — 1 pt</option>
+                        <option value="F">F — 0 pts</option>
                     <% } else { %>
-                        <option value="A">A â€” 4 pts</option>
-                        <option value="B">B â€” 3 pts</option>
-                        <option value="C">C â€” 2 pts</option>
-                        <option value="D">D â€” 1 pt</option>
-                        <option value="F">F â€” 0 pts</option>
+                        <option value="A">A — 4 pts</option>
+                        <option value="B">B — 3 pts</option>
+                        <option value="C">C — 2 pts</option>
+                        <option value="D">D — 1 pt</option>
+                        <option value="F">F — 0 pts</option>
                     <% } %>
                 </select>
             </div>
@@ -1067,7 +1067,7 @@ function render() {
     // include prev balance in GPA only when showing all
     const tu = (curLvl==='all'&&curSem==='all') ? u+PREV_UNITS : u;
     const tp = (curLvl==='all'&&curSem==='all') ? pts+PREV_GP  : pts;
-    const gpa = tu>0 ? (tp/tu).toFixed(2) : 'â€”';
+    const gpa = tu>0 ? (tp/tu).toFixed(2) : '—';
     document.getElementById('termGPA').textContent = `GPA: ${gpa}`;
     document.getElementById('matCount').textContent = `${shown} shown`;
 
@@ -1386,7 +1386,7 @@ function openCGPAChat() {
         didOpen: function() {
             var box = document.getElementById(containerId);
             var pending = document.getElementById('cgpa-chat-pending');
-            box.innerHTML = '<div style="display:flex;gap:10px;margin-bottom:8px"><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#1d4ed8);display:flex;align-items:center;justify-content:center;color:white;font-size:0.7rem"><i class="fas fa-robot"></i></div><div style="flex:1;background:var(--surface);border-radius:10px;padding:10px;line-height:1.5">Hi! I\'m your CGPA advisor. Ask me anything â€” what-if a grade, how to raise your GPA, which semesters to focus on, etc.</div></div>';
+            box.innerHTML = '<div style="display:flex;gap:10px;margin-bottom:8px"><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#1d4ed8);display:flex;align-items:center;justify-content:center;color:white;font-size:0.7rem"><i class="fas fa-robot"></i></div><div style="flex:1;background:var(--surface);border-radius:10px;padding:10px;line-height:1.5">Hi! I\'m your CGPA advisor. Ask me anything — what-if a grade, how to raise your GPA, which semesters to focus on, etc.</div></div>';
 
             function appnd(role, text, color) {
                 var div = document.createElement('div');
