@@ -14,7 +14,7 @@ Prepium is an all-in-one learning platform built for Nigerian university student
 - **Daily Challenge** — free daily 10-question challenge with a weekly leaderboard.
 - **Competition Arena** — real-time rankings across students.
 
-### Alite Mocks (Renaissance)
+### Mock Exams (Renaissance)
 - Timed mock exams with a question editor that supports **LaTeX and TikZ (circuitikz)** diagrams, imported from images/PDFs.
 - One-by-one review screen after each attempt: every option highlighted correct/wrong, verdicts, and theory explanations.
 - Per-attempt results history from your dashboard.
