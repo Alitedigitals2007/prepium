@@ -432,6 +432,131 @@
     transform: rotate(90deg);
 }
 
+/* â•â• ENHANCED GLASSMORPHISM & MODERN EFFECTS â•â• */
+.glass {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+.glass-solid {
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+/* Enhanced hover effects */
+.hover-lift {
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+.hover-lift:active {
+    transform: translateY(-2px);
+}
+/* Enhanced gradients */
+.gradient-primary {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+.gradient-secondary {
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+}
+.gradient-accent {
+    background: linear-gradient(135deg, #ec4899, #db2777);
+}
+/* Enhanced typography */
+.text-premium {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    background: linear-gradient(to right, #60a5fa, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+/* Enhanced cards */
+.card-enhanced {
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    border: none;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+}
+.card-enhanced:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    transform: translateY(-2px);
+}
+/* Enhanced buttons */
+.btn-enhanced {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+.btn-enhanced::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: all 0.6s ease;
+}
+.btn-enhanced:hover::before {
+    left: 100%;
+}
+/* Enhanced input fields */
+.input-enhanced {
+    transition: all 0.3s ease;
+    border: 1.5px solid var(--border-solid);
+}
+.input-enhanced:focus {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    background: var(--surface-solid);
+}
+/* Enhanced animations */
+@keyframes float-slow {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-12px); }
+    100% { transform: translateY(0px); }
+}
+@keyframes shine {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+@keyframes pulse-slow {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.03); }
+    100% { transform: scale(1); }
+}
+.float-slow { animation: float-slow 6s ease-in-out infinite; }
+.btn-shine { position: overflow: hidden; }
+.btn-shine::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+        45deg,
+        transparent,
+        rgba(255, 255, 255, 0.1),
+        transparent
+    );
+    transform: rotate(30deg);
+    transition: all 0.6s ease;
+}
+.btn-shine:hover::after {
+    left: 100%;
+    top: 100%;
+}
+
 /* â•â• RESPONSIVE â•â• */
 @media (min-width: 1024px) {
     .overlay .ov-inner { padding-left: 220px; }
@@ -454,6 +579,18 @@
     .tiles { grid-template-columns: 1fr 1fr; }
     .grade-chips { grid-template-columns: repeat(3,1fr); }
     .grid2 { grid-template-columns: 1fr; }
+}
+
+/* â•â• DARK MODE ENHANCEMENTS â•â• */
+.dark-mode .glass {
+    background: rgba(30, 41, 59, 0.3);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(71, 85, 105, 0.2);
+}
+.dark-mode .glass-solid {
+    background: rgba(30, 41, 59, 0.4);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(71, 85, 105, 0.3);
 }
 </style>
 <%- include('partials/theme-toggle') %>
@@ -518,9 +655,9 @@
                 </select>
             </div>
         </div>
-        <button type="button" class="btn btn-primary" onclick="goStep(2)">
-            Continue <i class="fas fa-arrow-right"></i>
-        </button>
+<button type="button" class="btn btn-primary btn-enhanced hover-lift" onclick="goStep(2)">
+    Continue <i class="fas fa-arrow-right"></i>
+</button>
     </div>
 
     <!-- STEP 2: Track type -->
@@ -529,7 +666,7 @@
         <div class="wiz-title">How do you want to track?</div>
         <div class="wiz-sub">Choose whether you're starting fresh or importing existing grades.</div>
 
-        <button type="button" class="path-card" onclick="pickPath('fresh')">
+        <button type="button" class="path-card btn-enhanced hover-lift" onclick="pickPath('fresh')">
             <div class="path-card-head">
                 <div class="path-dot a"><i class="fas fa-star-of-life"></i></div>
                 <strong>Start Fresh</strong>
@@ -537,7 +674,7 @@
             <p>Log everything from scratch — semester by semester, clean slate.</p>
         </button>
 
-        <button type="button" class="path-card" onclick="pickPath('balance')">
+        <button type="button" class="path-card btn-enhanced hover-lift" onclick="pickPath('balance')">
             <div class="path-card-head">
                 <div class="path-dot b"><i class="fas fa-clock-rotate-left"></i></div>
                 <strong>Import Previous CGPA</strong>
@@ -545,9 +682,9 @@
             <p>Carry forward your existing CGPA and total unit load as a balance.</p>
         </button>
 
-        <button type="button" class="btn btn-ghost" onclick="goStep(1)">
-            <i class="fas fa-arrow-left"></i> Back
-        </button>
+<button type="button" class="btn btn-ghost btn-enhanced hover-lift" onclick="goStep(1)">
+    <i class="fas fa-arrow-left"></i> Back
+</button>
     </div>
 
     <!-- STEP 3: Balance -->
@@ -572,12 +709,12 @@
             <strong>5-point scale:</strong> max CGPA 5.00 &nbsp;·&nbsp; <strong>4-point scale:</strong> max CGPA 4.00
         </div>
 
-        <button type="submit" class="btn btn-primary">
-            <i class="fas fa-chart-line"></i> Build My Tracker
-        </button>
-        <button type="button" class="btn btn-ghost" onclick="goStep(2)">
-            <i class="fas fa-arrow-left"></i> Back
-        </button>
+<button type="submit" class="btn btn-primary btn-enhanced hover-lift">
+    <i class="fas fa-chart-line"></i> Build My Tracker
+</button>
+<button type="button" class="btn btn-ghost btn-enhanced hover-lift" onclick="goStep(2)">
+    <i class="fas fa-arrow-left"></i> Back
+</button>
     </div>
 </form>
 </div>
@@ -630,7 +767,7 @@
 %>
 
 <!-- Hero -->
-<div class="hero reveal-scale">
+<div class="hero reveal-scale glass-solid hover-lift">
     <svg width="0" height="0"><defs>
         <linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stop-color="#60a5fa"/>
@@ -664,25 +801,25 @@
 
 <!-- Tiles -->
 <div class="tiles reveal">
-    <div class="tile t-blue">
-        <div class="tile-icon"><i class="fas fa-layer-group"></i></div>
-        <div class="tile-num"><%= totalUnits %></div>
-        <div class="tile-label">Units</div>
+    <div class="tile t-blue glass hover-lift">
+    <div class="tile-icon"><i class="fas fa-layer-group"></i></div>
+    <div class="tile-num"><%= totalUnits %></div>
+    <div class="tile-label">Units</div>
     </div>
-    <div class="tile t-teal">
-        <div class="tile-icon"><i class="fas fa-star"></i></div>
-        <div class="tile-num"><%= totalPoints.toFixed(1) %></div>
-        <div class="tile-label">Quality Pts</div>
+    <div class="tile t-teal glass hover-lift">
+    <div class="tile-icon"><i class="fas fa-star"></i></div>
+    <div class="tile-num"><%= totalPoints.toFixed(1) %></div>
+    <div class="tile-label">Quality Pts</div>
     </div>
-    <div class="tile t-amber">
-        <div class="tile-icon"><i class="fas fa-book-open"></i></div>
-        <div class="tile-num"><%= courses.length %></div>
-        <div class="tile-label">Courses</div>
+    <div class="tile t-amber glass hover-lift">
+    <div class="tile-icon"><i class="fas fa-book-open"></i></div>
+    <div class="tile-num"><%= courses.length %></div>
+    <div class="tile-label">Courses</div>
     </div>
 </div>
 
 <!-- Analytics -->
-<div class="analytics reveal">
+<div class="analytics reveal glass hover-lift">
     <div class="section-head">
         <div class="section-label"><i class="fas fa-chart-bar"></i> Grade Breakdown</div>
     </div>
@@ -701,7 +838,7 @@
 
 <!-- Import from Study -->
 <div class="analytics reveal" style="margin-top:10px;">
-    <div class="section-head" style="cursor:pointer;" onclick="importFromStudy()">
+    <div class="section-head" style="cursor:pointer;" onclick="importFromStudy()" class="btn-enhanced hover-lift">
         <div class="section-label"><i class="fas fa-graduation-cap"></i> Import from Study Hub</div>
         <span style="font-size:0.7rem;color:var(--brand);font-weight:700;">Sync <i class="fas fa-arrow-right" style="font-size:0.6rem;"></i></span>
     </div>
@@ -710,14 +847,14 @@
 
 <!-- AI Course Advisor with multi-course What-If -->
 <div class="analytics reveal" style="margin-top:10px;">
-    <div class="section-head" onclick="toggleAdvisor()" style="cursor:pointer;">
+    <div class="section-head" onclick="toggleAdvisor()" style="cursor:pointer;" class="btn-enhanced hover-lift">
         <div class="section-label"><i class="fas fa-robot"></i> AI Course Advisor</div>
         <span style="font-size:0.7rem;color:var(--brand);font-weight:700;" id="advisorToggle"><i class="fas fa-chevron-down"></i></span>
     </div>
     <div id="advisorBody" style="display:none;">
         <div style="display:flex;gap:6px;margin-bottom:12px;">
-            <button type="button" onclick="aiPredictGpa()" style="flex:1;padding:11px;border:none;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;border-radius:10px;font-weight:700;font-size:0.78rem;cursor:pointer"><i class="fas fa-magic"></i> Predict next semester</button>
-            <button type="button" onclick="advisorWhatif()" style="flex:1;padding:11px;border:none;background:#0f172a;color:white;border-radius:10px;font-weight:700;font-size:0.78rem;cursor:pointer"><i class="fas fa-calculator"></i> What-If Builder</button>
+            <button type="button" onclick="aiPredictGpa()" style="flex:1;padding:11px;border:none;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;border-radius:10px;font-weight:700;font-size:0.78rem;cursor:pointer" class="btn-enhanced btn-shine hover-lift"><i class="fas fa-magic"></i> Predict next semester</button>
+            <button type="button" onclick="advisorWhatif()" style="flex:1;padding:11px;border:none;background:#0f172a;color:white;border-radius:10px;font-weight:700;font-size:0.78rem;cursor:pointer" class="btn-enhanced hover-lift"><i class="fas fa-calculator"></i> What-If Builder</button>
         </div>
 
         <div id="aiPredictResult" style="display:none;background:var(--surface);border-radius:10px;padding:12px;font-size:0.85rem;color:var(--text-primary);line-height:1.55;white-space:pre-wrap;margin-bottom:10px;"></div>
@@ -733,7 +870,7 @@
                 <select id="wiCourseGrade" style="flex:1;min-width:50px;padding:9px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-weight:600;font-size:0.75rem;background:var(--surface-solid);">
                     <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option><option value="E">E</option><option value="F">F</option>
                 </select>
-                <button onclick="addAdvisorCourse()" style="padding:9px 14px;border:none;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;font-weight:700;font-size:0.7rem;cursor:pointer;color:var(--text-dark);"><i class="fas fa-plus"></i> Add</button>
+                <button onclick="addAdvisorCourse()" style="padding:9px 14px;border:none;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;font-weight:700;font-size:0.7rem;cursor:pointer;color:var(--text-dark);" class="btn-enhanced hover-lift"><i class="fas fa-plus"></i> Add</button>
             </div>
             <div id="whatifImpact" style="margin-top:8px;"></div>
             <button id="calcImpactBtn" onclick="calcAdvisorImpact()" style="display:none;width:100%;margin-top:8px;padding:12px;border:none;background:var(--brand-gradient);color:white;border-radius:10px;font-weight:700;font-size:0.82rem;cursor:pointer;"><i class="fas fa-calculator"></i> Calculate Impact</button>
@@ -757,29 +894,29 @@
 <!-- Filters -->
 <div class="filters">
     <div class="pill-row" id="lvl-pills">
-        <button class="pill on" onclick="fLvl('all',this)">All</button>
-        <button class="pill"    onclick="fLvl('100',this)">100L</button>
-        <button class="pill"    onclick="fLvl('200',this)">200L</button>
-        <button class="pill"    onclick="fLvl('300',this)">300L</button>
-        <button class="pill"    onclick="fLvl('400',this)">400L</button>
-        <button class="pill"    onclick="fLvl('500',this)">500L</button>
+        <button class="pill on btn-enhanced hover-lift" onclick="fLvl('all',this)">All</button>
+<button class="pill" onclick="fLvl('100',this)" class="btn-enhanced hover-lift">100L</button>
+<button class="pill" onclick="fLvl('200',this)" class="btn-enhanced hover-lift">200L</button>
+<button class="pill" onclick="fLvl('300',this)" class="btn-enhanced hover-lift">300L</button>
+<button class="pill" onclick="fLvl('400',this)" class="btn-enhanced hover-lift">400L</button>
+<button class="pill" onclick="fLvl('500',this)" class="btn-enhanced hover-lift">500L</button>
     </div>
 </div>
 <div class="filter-row2">
     <div class="pill-row" id="sem-pills" style="padding:0;">
-        <button class="pill on" onclick="fSem('all',this)">Both Sems</button>
-        <button class="pill"    onclick="fSem('1',this)">1st Sem</button>
-        <button class="pill"    onclick="fSem('2',this)">2nd Sem</button>
+        <button class="pill on" onclick="fSem('all',this)" class="btn-enhanced hover-lift">Both Sems</button>
+<button class="pill" onclick="fSem('1',this)" class="btn-enhanced hover-lift">1st Sem</button>
+<button class="pill" onclick="fSem('2',this)" class="btn-enhanced hover-lift">2nd Sem</button>
     </div>
-    <div class="gpa-live" id="termGPA">GPA: <%= cgpa %></div>
+    <div class="gpa-live btn-enhanced hover-lift" id="termGPA">GPA: <%= cgpa %></div>
 </div>
 
 <!-- Course list -->
-<div class="course-card reveal">
+<div class="course-card reveal glass hover-lift">
     <div class="course-card-head">
         <div class="course-card-title" id="matLabel">All Courses</div>
         <div class="course-card-meta"  id="matCount"><%= courses.length %> total</div>
-        <button class="act" style="background:var(--brand-gradient);color:white;padding:6px 12px;border-radius:10px;width:auto;font-weight:700;font-size:0.74rem;display:inline-flex;align-items:center;gap:6px" onclick="openOv('ov-add')" title="Add a course"><i class="fas fa-plus"></i> Add Course</button>
+        <button class="act btn-enhanced btn-shine hover-lift" style="background:var(--brand-gradient);color:white;padding:6px 12px;border-radius:10px;width:auto;font-weight:700;font-size:0.74rem;display:inline-flex;align-items:center;gap:6px" onclick="openOv('ov-add')" title="Add a course"><i class="fas fa-plus"></i> Add Course</button>
     </div>
 
     <div id="matrix">
@@ -835,7 +972,7 @@
 </div>
 
 <!-- Reset section -->
-<div class="reset-section">
+<div class="reset-section glass hover-lift">
     <h4><i class="fas fa-triangle-exclamation"></i> Danger Zone</h4>
     <p>Reset your profile and all courses. This cannot be undone.</p>
     <form action="/cgpa/reset" method="POST" onsubmit="return confirm('Delete everything and start over?')">
@@ -849,17 +986,17 @@
 </div><!-- /app-shell -->
 
 <!-- Floating: Add Course button (always visible) -->
-<button id="fab-add-course" type="button" onclick="openOv('ov-add')" title="Add a course" aria-label="Add a course" style="position:fixed;right:18px;bottom:90px;z-index:9000;width:56px;height:56px;border-radius:50%;border:none;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;font-size:1.4rem;box-shadow:0 10px 24px rgba(37,99,235,0.35);cursor:pointer;display:flex;align-items:center;justify-content:center"><i class="fas fa-plus"></i></button>
+<button id="fab-add-course" type="button" onclick="openOv('ov-add')" title="Add a course" aria-label="Add a course" style="position:fixed;right:18px;bottom:90px;z-index:9000;width:56px;height:56px;border-radius:50%;border:none;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;font-size:1.4rem;box-shadow:0 10px 24px rgba(37,99,235,0.35);cursor:pointer;display:flex;align-items:center;justify-content:center" class="btn-enhanced btn-shine hover-lift"><i class="fas fa-plus"></i></button>
 
 <!-- Floating: AI Chat button -->
-<button id="fab-ai-chat" type="button" onclick="openCGPAChat()" title="AI Academic Advisor" aria-label="AI Chat" style="position:fixed;right:18px;bottom:155px;z-index:9000;height:48px;padding:0 18px;border-radius:24px;border:none;background:#0f172a;color:white;font-weight:700;font-size:0.78rem;box-shadow:0 10px 24px rgba(15,23,42,0.25);cursor:pointer;display:flex;align-items:center;gap:8px"><i class="fas fa-robot"></i> AI Advisor</button>
+<button id="fab-ai-chat" type="button" onclick="openCGPAChat()" title="AI Academic Advisor" aria-label="AI Chat" style="position:fixed;right:18px;bottom:155px;z-index:9000;height:48px;padding:0 18px;border-radius:24px;border:none;background:#0f172a;color:white;font-weight:700;font-size:0.78rem;box-shadow:0 10px 24px rgba(15,23,42,0.25);cursor:pointer;display:flex;align-items:center;gap:8px" class="btn-enhanced btn-shine hover-lift"><i class="fas fa-robot"></i> AI Advisor</button>
 
 <!-- â•â•â•â• ADD COURSE OVERLAY â•â•â•â• -->
 <div class="overlay" id="ov-add">
 <div class="ov-inner">
     <div class="ov-head">
         <div class="ov-title">Log a Course</div>
-        <button class="ov-close" onclick="closeOv('ov-add')"><i class="fas fa-times"></i></button>
+        <button class="ov-close btn-enhanced hover-lift" onclick="closeOv('ov-add')"><i class="fas fa-times"></i></button>
     </div>
     <div style="padding:20px">
         <div class="grid2">
@@ -921,11 +1058,30 @@
                 </select>
             </div>
         </div>
+        
+        <!-- CSV Import Section -->
+        <div style="margin: 20px 0; padding: 15px; border: 1px dashed var(--border); border-radius: var(--radius); background: var(--bg);">
+            <div class="fg">
+                <label>Add Multiple Courses (CSV)</label>
+                <small style="color: var(--text-sub); display: block; margin-bottom: 8px;">
+                    Format: Course Code,Course Title,Units,Grade,Level,Semester (one per line)<br/>
+                    Example: CSC101,Intro to CS,3,A,300,1
+                </small>
+                <textarea id="csv-import-data" rows="4" style="width:100%;padding:10px;border:1.5px solid var(--border-solid);border-radius:var(--radius);font-family:monospace;font-size:0.75rem;resize:vertical;" placeholder="CSC101,Intro to CS,3,A,300,1&#10;MTH101,Calculus,4,B,300,2"></textarea>
+            </div>
+            <div style="margin-top: 12px;">
+                <button id="csv-import-btn" onclick="importCoursesCSV()" style="width:100%;padding:12px;border:none;background:linear-gradient(135deg,#10b981,#059669);color:white;border-radius:10px;font-weight:700;font-size:0.82rem;cursor:pointer" class="btn-enhanced btn-shine hover-lift">
+                    <i class="fas fa-file-csv"></i> Import Courses from CSV
+                </button>
+            </div>
+        </div>
+        
         <div id="add-loading" style="display:none;text-align:center;padding:8px;color:#475569;font-weight:600"><i class="fas fa-spinner fa-spin"></i> Saving...</div>
         <div id="add-error" style="display:none;font-size:0.75rem;color:var(--danger);font-weight:600;margin:4px 0 8px;padding:8px 10px;background:var(--danger-soft);border-radius:8px"></div>
+        <div id="add-success" style="display:none;font-size:0.75rem;color:var(--success);font-weight:600;margin:4px 0 8px;padding:8px 10px;background:var(--success-soft);border-radius:8px"></div>
         <div style="display:flex;gap:8px;margin-top:10px">
-            <button id="add-save-btn" onclick="addCourseAjax()" style="flex:1;padding:12px;border:none;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;border-radius:10px;font-weight:700;font-size:0.82rem;cursor:pointer"><i class="fas fa-plus"></i> Save Course</button>
-            <button id="add-save-another" onclick="addCourseAjax(true)" style="padding:12px 16px;border:1.5px solid var(--border);background:var(--surface-solid);border-radius:10px;font-weight:700;font-size:0.78rem;cursor:pointer;color:var(--text-dark)"><i class="fas fa-plus-circle"></i> Add Another</button>
+            <button id="add-save-btn" onclick="addCourseAjax()" style="flex:1;padding:12px;border:none;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;border-radius:10px;font-weight:700;font-size:0.82rem;cursor:pointer" class="btn-enhanced btn-shine hover-lift"><i class="fas fa-plus"></i> Save Course</button>
+            <button id="add-save-another" onclick="addCourseAjax(true)" style="padding:12px 16px;border:1.5px solid var(--border);background:var(--surface-solid);border-radius:10px;font-weight:700;font-size:0.78rem;cursor:pointer;color:var(--text-dark)" class="btn-enhanced hover-lift"><i class="fas fa-plus-circle"></i> Add Another</button>
         </div>
     </div>
 </div>
@@ -1019,6 +1175,50 @@ function showAddSuccess(msg) {
     box.style.background = 'var(--success-soft)';
     box.innerHTML = '<i class="fas fa-check-circle"></i> ' + msg;
 }
+
+function importCoursesCSV() {
+    var csvData = document.getElementById('csv-import-data').value.trim();
+    if (!csvData) {
+        showAddError('Please enter CSV data to import.');
+        return;
+    }
+    
+    document.getElementById('add-loading').style.display = 'block';
+    document.getElementById('add-error').style.display = 'none';
+    document.getElementById('csv-import-btn').disabled = true;
+    
+    fetch('/api/cgpa/course/import-csv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ csv: csvData })
+    }).then(function(r){ return r.json(); }).then(function(d) {
+        document.getElementById('add-loading').style.display = 'none';
+        document.getElementById('csv-import-btn').disabled = false;
+        
+        if (d && d.success) {
+            var imported = d.imported || 0;
+            var skipped = d.skipped || 0;
+            var message = 'Successfully imported ' + imported + ' course(s)';
+            if (skipped > 0) {
+                message += ' (' + skipped + ' skipped - may be duplicates or invalid)';
+            }
+            
+            // Clear the textarea
+            document.getElementById('csv-import-data').value = '';
+            
+            showAddSuccess(message);
+            
+            // Reload the page to show the newly added courses
+            setTimeout(function(){ location.reload(); }, 1500);
+        } else {
+            showAddError((d && d.error) ? d.error : 'Could not import courses.');
+        }
+    }).catch(function(err) {
+        document.getElementById('add-loading').style.display = 'none';
+        document.getElementById('csv-import-btn').disabled = false;
+        showAddError('Network error: ' + (err.message || ''));
+    });
+}
 </script>
 
 <!-- â•â•â•â• EDIT COURSE OVERLAY â•â•â•â• -->
@@ -1026,7 +1226,7 @@ function showAddSuccess(msg) {
 <div class="ov-inner">
     <div class="ov-head">
         <div class="ov-title">Edit Course</div>
-        <button class="ov-close" onclick="closeOv('ov-edit')"><i class="fas fa-times"></i></button>
+        <button class="ov-close btn-enhanced hover-lift" onclick="closeOv('ov-edit')"><i class="fas fa-times"></i></button>
     </div>
     <form action="/cgpa/course/edit" method="POST">
         <input type="hidden" name="id" id="e-id">
@@ -1065,9 +1265,9 @@ function showAddSuccess(msg) {
                 </select>
             </div>
         </div>
-        <button type="submit" class="btn btn-primary" style="margin-top:8px">
-            <i class="fas fa-floppy-disk"></i> Save Changes
-        </button>
+<button type="submit" class="btn btn-primary btn-enhanced hover-lift" style="margin-top:8px">
+    <i class="fas fa-floppy-disk"></i> Save Changes
+</button>
     </form>
 </div>
 </div>
