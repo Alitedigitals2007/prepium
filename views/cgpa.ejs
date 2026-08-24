@@ -1434,7 +1434,7 @@ function initTrendChart() {
     if (!ctx) return;
     
     // Check if we're in the profile state (has data to show)
-    if (typeof hasProfile === 'undefined' || !hasProfile) {
+    if (<%= !hasProfile ? 'true' : 'false' %> ) {
         ctx.parentNode.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-sub);">Set up your profile to see CGPA trends</div>';
         return;
     }
@@ -1901,3 +1901,4 @@ function openCGPAChat() {
 </script>
 </body>
 </html>
+
