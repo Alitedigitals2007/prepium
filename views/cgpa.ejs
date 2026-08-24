@@ -222,9 +222,9 @@
     font-size: 1.55rem; font-weight: 800; line-height: 1; margin-bottom: 3px;
     letter-spacing: -1px;
 }
-.tile.t-blue .tile-num  { color: var(--brand); }
-.tile.t-teal .tile-num  { color: var(--success); }
-.tile.t-amber .tile-num { color: var(--warning); }
+.tile.t-blue .tile-num  { color: #fff; }
+.tile.t-teal .tile-num  { color: #fff; }
+.tile.t-amber .tile-num { color: #fff; }
 .tile-label { font-size: .57rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--text-sub); }
 
 /* â•â• ANALYTICS â•â• */
@@ -880,9 +880,19 @@
     </div>
 </div>
 
+<!-- CGPA Trend Chart -->
+<div class="analytics reveal glass hover-lift">
+    <div class="section-head">
+        <div class="section-label"><i class="fas fa-chart-line"></i> CGPA Trend</div>
+    </div>
+    <div class="chart-box" style="height:200px;">
+        <canvas id="trendChart"></canvas>
+    </div>
+</div>
+
 <!-- Transcript -->
-<div class="analytics reveal" style="margin-top:10px;">
-    <button onclick="downloadTranscript()" style="width:100%;background:none;border:none;cursor:pointer;padding:0;text-align:left;font-family:inherit;">
+<div class="analytics reveal glass hover-lift">
+    <button onclick="downloadTranscript()" style="width:100%;background:none;border:none;cursor:pointer;padding:0;text-align:left;font-family:inherit;" class="btn-enhanced btn-shine hover-lift">
         <div class="section-head">
             <div class="section-label"><i class="fas fa-file-alt"></i> Transcript</div>
             <span style="font-size:0.7rem;color:var(--brand);font-weight:700;">View <i class="fas fa-arrow-right" style="font-size:0.6rem;"></i></span>
@@ -1415,7 +1425,150 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     initGradeChart();
+    initTrendChart();
 });
+
+/* â”€â”€ Trend Chart â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+function initTrendChart() {
+    var ctx = document.getElementById('trendChart');
+    if (!ctx) return;
+    
+    // Check if we're in the profile state (has data to show)
+    if (typeof hasProfile === 'undefined' || !hasProfile) {
+        ctx.parentNode.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-sub);">Set up your profile to see CGPA trends</div>';
+        return;
+    }
+    
+    // Extract semester data from existing course elements
+    var semesterData = {};
+    
+    // Process all course rows to calculate GPA per semester
+    var rows = document.querySelectorAll('.data-row');
+    rows.forEach(function(row) {
+        // Skip hidden rows
+        if (row.classList.contains('hidden-row')) return;
+        
+        var level = row.dataset.level;
+        var semester = row.dataset.semester;
+        var units = parseInt(row.dataset.units) || 0;
+        var grade = row.dataset.grade || 'F';
+        
+        // Create semester key
+        var semKey = 'L' + level + 'S' + semester;
+        
+        // Initialize semester data if not exists
+        if (!semesterData[semKey]) {
+            semesterData[semKey] = {
+                level: parseInt(level),
+                semester: parseInt(semester),
+                totalUnits: 0,
+                totalPoints: 0,
+                gpa: 0.0
+            };
+        }
+        
+        // Add course data to semester
+        if (units > 0) {
+            var scale = parseInt(<%= hasProfile ? profile.grading_scale : '5' %>) || 5;
+            var gpMap = scale === 5 ? {A:5, B:4, C:3, D:2, E:1, F:0} : {A:4, B:3, C:2, D:1, E:0, F:0};
+            var gradePoints = gpMap[grade] || 0;
+            
+            semesterData[semKey].totalUnits += units;
+            semesterData[semKey].totalPoints += (gradePoints * units);
+        }
+    });
+    
+    // Calculate GPA for each semester and sort by level/semester
+    var semesters = Object.keys(semesterData).map(function(key) {
+        var sem = semesterData[key];
+        if (sem.totalUnits > 0) {
+            sem.gpa = (sem.totalPoints / sem.totalUnits).toFixed(2);
+        } else {
+            sem.gpa = 0.00;
+        }
+        return sem;
+    }).filter(function(sem) {
+        return sem.totalUnits > 0; // Only include semesters with courses
+    }).sort(function(a, b) {
+        if (a.level !== b.level) return a.level - b.level;
+        return a.semester - b.semester;
+    });
+    
+    // If no semester data available, show message
+    if (semesters.length === 0) {
+        ctx.parentNode.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-sub);">No semester data available yet</div>';
+        return;
+    }
+    
+    // Prepare data for the chart
+    var labels = semesters.map(function(sem) {
+        return 'L' + sem.level + ' S' + sem.semester;
+    });
+    var gpaValues = semesters.map(function(sem) {
+        return parseFloat(sem.gpa);
+    });
+    
+    // Determine scale for Y-axis
+    var scale = parseInt(<%= hasProfile ? profile.grading_scale : '5' %>) || 5;
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'CGPA Trend',
+                data: gpaValues,
+                fill: false,
+                borderColor: 'var(--brand)',
+                backgroundColor: 'var(--brand-soft)',
+                tension: 0.3,
+                pointBackgroundColor: 'var(--brand)',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: 'var(--brand)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: scale,
+                    ticks: {
+                        stepSize: 0.5,
+                        callback: function(value) {
+                            return value.toFixed(2);
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(0,0,0,.04)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        font: {
+                            family: 'Plus Jakarta Sans',
+                            weight: '600'
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
 
 /* â”€â”€ Import from Study â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function importFromStudy() {
@@ -1561,35 +1714,35 @@ function buildTranscriptHtml(d) {
         '<style>' +
         '@page { size: A4; margin: 20mm; }' +
         'body { font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: #1e293b; font-size: 10pt; line-height: 1.6; margin: 0; padding: 0; background-color: #f8fafc; }' +
-        '.header { text-align: center; padding: 30px 0 20px; border-bottom: 2px solid #3b82f6; margin-bottom: 30px; background: linear-gradient(to bottom, #f8fafc, #e0e7ff); }' +
-        '.header .inst { font-size: 22pt; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; margin: 0; color: #1e40af; }' +
-        '.header .title { font-size: 16pt; font-weight: 800; margin: 10px 0 5px; letter-spacing: 1px; text-transform: uppercase; color: #1e40af; }' +
-        '.header .divider { width: 100px; height: 3px; background: linear-gradient(90deg, #3b82f6, #8b5cf6); margin: 10px auto; }' +
-        '.header .sub { font-size: 10pt; color: #64748b; font-weight: 600; }' +
-        '.header .ref { font-size: 9pt; color: #94a3b8; font-weight: 500; margin-top: 5px; }' +
-        '.info-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 9pt; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }' +
-        '.info-table td { padding: 12px 15px; vertical-align: top; border-bottom: 1px solid #f1f5f9; }' +
+        '.header { text-align: center; padding: 40px 0 30px; border-bottom: 1px solid #e2e8f0; margin-bottom: 40px; background: linear-gradient(to bottom, #f8fafc, #f1f5f9); }' +
+        '.header .inst { font-size: 24pt; font-weight: 900; letter-spacing: -0.5px; text-transform: uppercase; margin: 0; color: #1e293b; }' +
+        '.header .title { font-size: 20pt; font-weight: 800; margin: 20px 0 10px; letter-spacing: -0.5px; text-transform: uppercase; color: #1e293b; }' +
+        '.header .divider { width: 80px; height: 4px; background: linear-gradient(90deg, #3b82f6, #8b5cf6); margin: 0 auto; }' +
+        '.header .sub { font-size: 12pt; color: #64748b; font-weight: 600; margin-top: 10px; }' +
+        '.header .ref { font-size: 10pt; color: #94a3b8; font-weight: 500; margin-top: 5px; }' +
+        '.info-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 30px; font-size: 9pt; background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); }' +
+        '.info-table td { padding: 16px 20px; vertical-align: top; border-bottom: 1px solid #f1f5f9; }' +
         '.info-table tr:last-child td { border-bottom: none; }' +
-        '.info-table .lbl { font-weight: 700; color: #374151; width: 140px; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.3px; }' +
+        '.info-table .lbl { font-weight: 700; color: #374151; width: 160px; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.3px; }' +
         '.info-table .sep { width: 12px; text-align: center; color: #e5e7eb; font-weight: 600; }' +
         '.info-table .val { font-weight: 600; color: #1f2937; }' +
-        '.sem-block { margin-bottom: 30px; background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; }' +
-        '.sem-header { font-size: 11pt; font-weight: 800; color: white; background: linear-gradient(135deg, #3b82f6, #8b5cf6); text-transform: uppercase; letter-spacing: 0.5px; padding: 15px 20px; margin: 0; }' +
-        'table.grades { width: 100%; border-collapse: collapse; font-size: 9pt; }' +
-        'table.grades th { background: #f8fafc; padding: 12px 15px; text-align: left; font-weight: 600; font-size: 8.5pt; color: #374151; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e5e7eb; }' +
-        'table.grades td { padding: 12px 15px; border-bottom: 1px solid #f3f4f6; }' +
+        '.sem-block { margin-bottom: 30px; background-color: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }' +
+        '.sem-header { font-size: 13pt; font-weight: 800; color: white; background: linear-gradient(135deg, #3b82f6, #8b5cf6); text-transform: uppercase; letter-spacing: -0.5px; padding: 20px 25px; margin: 0; }' +
+        'table.grades { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 9pt; }' +
+        'table.grades th { background: #f8fafc; padding: 16px 20px; text-align: left; font-weight: 600; font-size: 8.5pt; color: #374151; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; }' +
+        'table.grades td { padding: 16px 20px; border-bottom: 1px solid #f1f5f9; }' +
         'table.grades tr:last-child td { border-bottom: none; }' +
-        '.sem-gpa td { background: #f0f9ff; font-weight: 700; border-top: 2px solid #e5e7eb; border-bottom: none !important; font-size: 9pt; }' +
-        '.summary-box { margin-top: 30px; padding: 25px; background: linear-gradient(135deg, #f8fafc, #e0e7ff); border-radius: 16px; border: 1px solid #e5e7eb; }' +
-        '.summary-box .row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }' +
-        '.summary-box .item { text-align: center; flex: 1; min-width: 120px; }' +
-        '.summary-box .item .lbl { font-size: 8.5pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.7; }' +
-        '.summary-box .item .num { font-size: 18pt; font-weight: 800; margin-top: 5px; color: #1e40af; }' +
-        '.summary-box .item .cls { font-size: 10pt; font-weight: 700; margin-top: 5px; color: #059669; }' +
-        '.footer-note { text-align: center; font-size: 8pt; color: #6b7280; margin-top: 30px; padding: 20px; border-top: 1px solid #e5e7eb; line-height: 1.6; font-style: italic; }' +
+        '.sem-gpa td { background: #f0f9ff; font-weight: 700; border-top: 2px solid #e2e8f0; border-bottom: none !important; font-size: 9pt; }' +
+        '.summary-box { margin-top: 40px; padding: 30px; background: linear-gradient(135deg, #f8fafc, #f1f5f9); border-radius: 20px; border: 1px solid #e2e8f0; }' +
+        '.summary-box .row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 30px; }' +
+        '.summary-box .item { text-align: center; flex: 1; min-width: 140px; }' +
+        '.summary-box .item .lbl { font-size: 9pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; }' +
+        '.summary-box .item .num { font-size: 22pt; font-weight: 800; margin-top: 10px; color: #1e40af; }' +
+        '.summary-box .item .cls { font-size: 12pt; font-weight: 700; margin-top: 10px; color: #059669; }' +
+        '.footer-note { text-align: center; font-size: 9pt; color: #64748b; margin-top: 40px; padding: 30px; border-top: 1px solid #e2e8f0; line-height: 1.6; font-style: italic; }' +
         '.footer-note strong { color: #374151; font-weight: 600; }' +
-        '.watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%) rotate(-30deg); font-size: 80pt; font-weight: 800; color: rgba(59,130,246,0.03); pointer-events: none; z-index: -1; letter-spacing: 10px; white-space: nowrap; }' +
-        '@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: white; } .watermark { opacity: 0.02; } }' +
+        '.watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%) rotate(-30deg); font-size: 100pt; font-weight: 800; color: rgba(59,130,246,0.02); pointer-events: none; z-index: -1; letter-spacing: 15px; white-space: nowrap; }' +
+        '@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: white; } .watermark { opacity: 0.01; } }' +
         '</style></head><body>' +
         '<div class="watermark">PREPIUM</div>' +
         '<div class="header">' +
@@ -1600,7 +1753,7 @@ function buildTranscriptHtml(d) {
         '<div class="ref">Reference: ' + (d.refNumber || 'N/A') + ' &nbsp;|&nbsp; Issued: ' + dateStr + ' at ' + timeStr + '</div></div>' +
         '<table class="info-table"><tr>' +
         '<td class="lbl">Student Name</td><td class="sep">:</td><td class="val">' + (d.student.name || 'N/A') + '</td>' +
-        '<td class="lbl" style="width:100px">Department</td><td class="sep">:</td><td class="val">' + (d.department || 'N/A') + '</td></tr>' +
+        '<td class="lbl" style="width:130px">Department</td><td class="sep">:</td><td class="val">' + (d.department || 'N/A') + '</td></tr>' +
         '<tr><td class="lbl">Current Level</td><td class="sep">:</td><td class="val">' + (d.currentLevel || 'N/A') + ' Level</td>' +
         '<td class="lbl">Grading Scale</td><td class="sep">:</td><td class="val">' + d.gradingScale + '-Point System</td></tr></table>';
 
@@ -1609,12 +1762,12 @@ function buildTranscriptHtml(d) {
         html += '<div class="sem-block">' +
             '<div class="sem-header">' + semesterName + '</div>' +
             '<table class="grades"><thead><tr>' +
-            '<th style="width:16%">Code</th><th style="width:42%">Course Title</th>' +
+            '<th style="width:18%">Code</th><th style="width:42%">Course Title</th>' +
             '<th style="width:10%;text-align:center">Unit</th><th style="width:10%;text-align:center">Grade</th><th style="width:10%;text-align:center">GP</th>' +
-            '<th style="width:12%;text-align:center">Status</th></tr></thead><tbody>';
+            '<th style="width:10%;text-align:center">Status</th></tr></thead><tbody>';
         sem.courses.forEach(function(c) {
             var gp = gpMap[c.grade] || 0;
-            var excl = c.excluded ? ' style="opacity:0.4;text-decoration:line-through"' : '';
+            var excl = c.excluded ? ' style="opacity:0.5;text-decoration:line-through"' : '';
             var status = c.excluded ? 'Excluded' : (c.grade === 'F' ? 'Fail' : 'Pass');
             html += '<tr' + excl + '><td style="font-weight:600">' + (c.code || '') + '</td>' +
                 '<td>' + (c.title || '') + '</td>' +
