@@ -222,9 +222,9 @@
     font-size: 1.55rem; font-weight: 800; line-height: 1; margin-bottom: 3px;
     letter-spacing: -1px;
 }
-.tile.t-blue .tile-num  { color: #fff; }
-.tile.t-teal .tile-num  { color: #fff; }
-.tile.t-amber .tile-num { color: #fff; }
+.tile.t-blue .tile-num  { color: var(--brand); }
+.tile.t-teal .tile-num  { color: var(--success); }
+.tile.t-amber .tile-num { color: var(--warning); }
 .tile-label { font-size: .57rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--text-sub); }
 
 /* â•â• ANALYTICS â•â• */
@@ -801,21 +801,21 @@
 
 <!-- Tiles -->
 <div class="tiles reveal">
-    <div class="tile t-blue glass hover-lift">
+<div class="tile t-blue hover-lift">
     <div class="tile-icon"><i class="fas fa-layer-group"></i></div>
     <div class="tile-num"><%= totalUnits %></div>
     <div class="tile-label">Units</div>
-    </div>
-    <div class="tile t-teal glass hover-lift">
+</div>
+<div class="tile t-teal hover-lift">
     <div class="tile-icon"><i class="fas fa-star"></i></div>
     <div class="tile-num"><%= totalPoints.toFixed(1) %></div>
     <div class="tile-label">Quality Pts</div>
-    </div>
-    <div class="tile t-amber glass hover-lift">
+</div>
+<div class="tile t-amber hover-lift">
     <div class="tile-icon"><i class="fas fa-book-open"></i></div>
     <div class="tile-num"><%= courses.length %></div>
     <div class="tile-label">Courses</div>
-    </div>
+</div>
 </div>
 
 <!-- Analytics -->
