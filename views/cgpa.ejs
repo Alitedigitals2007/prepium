@@ -1137,18 +1137,9 @@ function addCourseAjax(keepOpen) {
     document.getElementById('add-code-warn').style.display = 'none';
     fetch('/api/cgpa/course/add-ajax', {
         method: 'POST',
-        credentials: 'include',
-        headers: { 
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: code, title: title, level_scope: level, semester: sem, credit_units: units, grade: grade })
-    }).then(function(r){ 
-        if (!r.ok) {
-            throw new Error('Server responded with status ' + r.status);
-        }
-        return r.json(); 
-    }).then(function(d) {
+    }).then(function(r){ return r.json(); }).then(function(d) {
         document.getElementById('add-loading').style.display = 'none';
         document.getElementById('add-save-btn').disabled = false;
         document.getElementById('add-save-another').disabled = false;
@@ -1167,7 +1158,7 @@ function addCourseAjax(keepOpen) {
                 } else {
                     closeOv('ov-add');
                     Swal.fire({ icon: 'success', title: 'Course Added', text: code + ' was added successfully.', timer: 1500, showConfirmButton: false });
-                    setTimeout(function(){ window.location.href = '/cgpa'; }, 1500);
+                    setTimeout(function(){ location.reload(); }, 1500);
                 }
             }
         } else {
@@ -1206,7 +1197,7 @@ function importCoursesCSV() {
     document.getElementById('add-error').style.display = 'none';
     document.getElementById('csv-import-btn').disabled = true;
     
-    fetch('/api/cgpa/import-csv', {
+    fetch('/api/cgpa/course/import-csv', {
         method: 'POST',
         credentials: 'include',
         headers: { 
@@ -1216,21 +1207,7 @@ function importCoursesCSV() {
         body: JSON.stringify({ csv: csvData })
     }).then(function(r){ 
         if (!r.ok) {
-            // Try alternative endpoint
-            return fetch('/api/cgpa/course/import-csv', {
-                method: 'POST',
-                credentials: 'include',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({ csv: csvData })
-            }).then(function(r2){
-                if (!r2.ok) {
-                    throw new Error('Server responded with status ' + r.status + ' (and fallback ' + r2.status + ')');
-                }
-                return r2.json();
-            });
+            throw new Error('Server responded with status ' + r.status);
         }
         return r.json(); 
     }).then(function(d) {
