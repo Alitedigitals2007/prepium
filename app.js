@@ -7493,22 +7493,37 @@ app.get('/api/cgpa/courses/export', isAuth, requirePaid, async (req, res) => {
       return res.status(404).json({ error: 'No courses found' });
     }
 
-    // Generate CSV
+    // Generate CSV with proper escaping for Excel
+    const escapeCsvValue = (value) => {
+      if (value === null || value === undefined) return '';
+      const str = String(value);
+      // Escape quotes by doubling them
+      const escaped = str.replace(/"/g, '""');
+      // Wrap in quotes if contains comma, quote, or newline
+      if (/[",\n]/.test(escaped)) {
+        return `"${escaped}"`;
+      }
+      return escaped;
+    };
+
     const csvHeaders = ['Course Code', 'Title', 'Units', 'Grade', 'Level', 'Semester'];
     const csvRows = courses.rows.map(course => [
-      `"${course.course_code || ''}"`,
-      `"${course.title || ''}"`,
-      course.credit_units || '',
-      course.grade || '',
-      course.level_scope || '',
-      course.semester || ''
+      escapeCsvValue(course.course_code),
+      escapeCsvValue(course.title),
+      escapeCsvValue(course.credit_units),
+      escapeCsvValue(course.grade),
+      escapeCsvValue(course.level_scope),
+      escapeCsvValue(course.semester)
     ].join(','));
 
-    const csvContent = [csvHeaders.join(','), ...csvRows].join('\n');
+    // Add UTF-8 BOM for Excel compatibility
+    const bom = Buffer.from([0xEF, 0xBB, 0xBF]);
+    const csvContent = Buffer.from([csvHeaders.join(','), ...csvRows].join('\r\n'), 'utf8');
+    const finalBuffer = Buffer.concat([bom, csvContent]);
 
-    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="courses.csv"');
-    res.send(csvContent);
+    res.send(finalBuffer);
   } catch (err) {
     console.error('Course export error:', err);
     res.status(500).json({ error: err.message });
