@@ -7480,6 +7480,41 @@ app.get('/api/cgpa/transcript/pdf', isAuth, requirePaid, async (req, res) => {
     else res.end();
   }
 });
+// Export courses as CSV
+app.get('/api/cgpa/courses/export', isAuth, requirePaid, async (req, res) => {
+  try {
+    const uid = req.session.user.id;
+    const courses = await pool.query(
+      'SELECT course_code, title, credit_units, grade, level_scope, semester FROM public.cgpa_courses WHERE user_id = $1 AND deleted = false AND is_hidden = false ORDER BY level_scope ASC, semester ASC',
+      [uid]
+    );
+
+    if (courses.rows.length === 0) {
+      return res.status(404).json({ error: 'No courses found' });
+    }
+
+    // Generate CSV
+    const csvHeaders = ['Course Code', 'Title', 'Units', 'Grade', 'Level', 'Semester'];
+    const csvRows = courses.rows.map(course => [
+      `"${course.course_code || ''}"`,
+      `"${course.title || ''}"`,
+      course.credit_units || '',
+      course.grade || '',
+      course.level_scope || '',
+      course.semester || ''
+    ].join(','));
+
+    const csvContent = [csvHeaders.join(','), ...csvRows].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="courses.csv"');
+    res.send(csvContent);
+  } catch (err) {
+    console.error('Course export error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ======================== END STUDY HUB ROUTES ========================
 
 // Global error handler - catches multer and other errors, returns JSON

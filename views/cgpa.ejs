@@ -603,11 +603,12 @@
 <div class="header-nav">
     <a href="/dashboard" class="back-circle"><i class="fas fa-arrow-left"></i></a>
     <div class="header-title">CGPA Tracker</div>
-    <div class="top-action-cluster">
-        <% if (hasProfile) { %>
-        <button class="btn btn-sm btn-outline" id="pdfBtn"><i class="fas fa-file-pdf"></i> Export</button>
-        <% } %>
-    </div>
+<div class="top-action-cluster">
+          <% if (hasProfile) { %>
+          <button class="btn btn-sm btn-outline" id="pdfBtn"><i class="fas fa-file-pdf"></i> Export</button>
+          <button class="btn btn-sm btn-outline" id="csvExportBtn"><i class="fas fa-file-csv"></i> Export CSV</button>
+          <% } %>
+      </div>
 </div>
 
 <!-- â•â• FLASH â•â• -->
@@ -1711,7 +1712,47 @@ function downloadTranscript() {
     .catch(function(err) { Swal.close(); Swal.fire({ icon: 'error', text: 'Failed: ' + (err.message || 'network error') }); });
 }
 
-function buildTranscriptHtml(d) {
+  function exportCoursesCSV() {
+      Swal.fire({ title: 'Exporting Courses...', html: 'Preparing CSV file...', allowOutsideClick: false, didOpen: 
+function() { Swal.showLoading(); } });
+      fetch('/api/cgpa/courses/export')
+      .then(function(r) { 
+          if (!r.ok) {
+              return r.json().then(err => { throw new Error(err.error || 'Export failed'); });
+          }
+          return r.blob(); 
+      })
+      .then(function(blob) {
+          Swal.close();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'courses.csv';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(url);
+          
+          Swal.fire({
+              icon: 'success',
+              title: 'Export Complete',
+              text: 'Courses exported successfully as CSV',
+              timer: 1500,
+              showConfirmButton: false
+          });
+      })
+      .catch(function(err) {
+          Swal.close();
+          Swal.fire({
+              icon: 'error',
+              title: 'Export Failed',
+              text: err.message || 'Failed to export courses',
+              timer: 2000
+          });
+      });
+  }
+
+  function buildTranscriptHtml(d) {
     var today = new Date();
     var dateStr = today.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
     var timeStr = today.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
@@ -1787,6 +1828,8 @@ function buildTranscriptHtml(d) {
 /* â”€â”€ Export button â†’ Transcript â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 var pdfBtn = document.getElementById('pdfBtn');
 if (pdfBtn) pdfBtn.addEventListener('click', downloadTranscript);
+var csvExportBtn = document.getElementById('csvExportBtn');
+if (csvExportBtn) csvExportBtn.addEventListener('click', exportCoursesCSV);
 
 /* â”€â”€ CGPA AI Functions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function aiEscape(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
