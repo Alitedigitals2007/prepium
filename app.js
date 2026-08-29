@@ -5809,7 +5809,8 @@ app.get('/cgpa', isAuth, requirePaid, featureLock('cgpa'), async (req, res) => {
         });
     } catch (err) {
         console.error("Dashboard engine failure:", err);
-        res.status(500).send('Error loading dashboard workflow.');
+        console.error(err.stack);
+         res.status(500).send('Error loading dashboard workflow.');
     }
 });
 
