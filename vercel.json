@@ -11,16 +11,5 @@
       "src": "/(.*)",
       "dest": "app.js"
     }
-  ],
-  "headers": [
-    {
-      "source": "/favicon.ico",
-      "headers": [
-        {
-          "key": "cross-origin-resource-policy",
-          "value": "cross-origin"
-        }
-      ]
-    }
   ]
 }
