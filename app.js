@@ -5982,6 +5982,7 @@ app.post('/cgpa/course/delete/:id', isAuth, requirePaid, async (req, res) => {
         res.redirect('/cgpa?msg=Course removed.');
     } catch (err) {
         console.error('Delete Course Error:', err);
+
         res.redirect('/cgpa');
     }
 });
