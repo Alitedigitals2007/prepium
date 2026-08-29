@@ -592,6 +592,38 @@
     border: 1px solid rgba(71, 85, 105, 0.3);
 }
 </style>
+<script>
+function bulkAction(action) {
+  const selected = document.querySelectorAll('.row-check:checked');
+  const bulkBar = document.getElementById('bulkBar');
+  if (!bulkBar) return;
+  if (action === 'hide') {
+    selected.forEach(cb => cb.closest('.crow').classList.add('hidden-row'));
+  } else if (action === 'delete') {
+    selected.forEach(cb => {
+      const row = cb.closest('.crow');
+      row.remove();
+    });
+  }
+  updateBulkBar();
+}
+
+function updateBulkBar() {
+  const checked = document.querySelectorAll('.row-check:checked');
+  const count = checked.length;
+  const bulkCount = document.getElementById('bulkCount');
+  const bulkBar = document.getElementById('bulkBar');
+  if (!bulkBar) return;
+  bulkCount.textContent = `${count} selected`;
+  bulkBar.style.display = count ? 'flex' : 'none';
+}
+
+function clearSelection() {
+  const checked = document.querySelectorAll('.row-check:checked');
+  checked.forEach(cb => cb.checked = false);
+  updateBulkBar();
+}
+</script>
 <%- include('partials/theme-toggle') %>
 </head>
 <body>
