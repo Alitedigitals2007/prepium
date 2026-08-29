@@ -17,7 +17,7 @@
       "source": "/favicon.ico",
       "headers": [
         {
-          "key": "Cross-Origin-Resource-Policy",
+          "key": "cross-origin-resource-policy",
           "value": "cross-origin"
         }
       ]
