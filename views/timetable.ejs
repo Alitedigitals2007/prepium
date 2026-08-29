@@ -229,8 +229,7 @@
         <div class="timetable-content" id="pdf-preview">
             <div class="pdf-brand-head" id="pdf-header">
                 <h2>Prepium<span>.</span></h2>
-                <p>Personalized Study & Lecture Timetable</p><button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button>
-                                <button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button>
+                <p>Personalized Study & Lecture Timetable</p><button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button></button>
             </div>
 
             <% 
@@ -251,8 +250,7 @@
                                     <%= slot.unit %> Credits
                                     &middot; <i class="fas fa-location-dot" style="font-size:0.6rem;"></i> <%= slot.venue %>
                                     &middot; <%= slot.start_time %>-<%= slot.end_time %>
-                                </p><button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button>
-                                <button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button>
+                                </p><button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button></button>
                             </div>
                             <form action="/timetable/delete/<%= slot.id %>" method="POST" style="margin:0;" onsubmit="return confirm('Delete this slot?')">
                                 <button type="submit" style="background:none; border:none; color:var(--danger); font-size:1rem; cursor:pointer; padding:4px;"><i class="fas fa-trash"></i></button>
@@ -263,8 +261,7 @@
             <% }}); %>
             
             <% if (slots.length === 0) { %>
-                <p style="text-align: center; color: var(--sub); font-size: 0.85rem; padding: 2rem 0;">Your timetable is empty. Click "+ Add Course" to populate it.</p><button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button>
-                                <button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button>
+                <p style="text-align: center; color: var(--sub); font-size: 0.85rem; padding: 2rem 0;">Your timetable is empty. Click "+ Add Course" to populate it.</p><button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button></button>
             <% } %>
         </div>
 
@@ -335,8 +332,7 @@
                     <h3 style="margin-top:0; margin-bottom:0.5rem; font-size:1.15rem; font-weight:800;">Set Up Your Courses</h3>
                     <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:1rem;">
                         Add the courses you're taking this semester so the AI can match them accurately.
-                    </p><button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button>
-                                <button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button>
+                    </p><button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button></button>
 
                     <div style="display:flex; gap:8px; margin-bottom:12px;">
                         <input type="text" id="wizCourseName" class="form-input" placeholder="Course name (e.g. Physics)" style="flex:2;">
@@ -346,8 +342,7 @@
                     </div>
 
                     <div id="wizardCourseList" style="max-height:180px; overflow-y:auto; margin-bottom:1rem;">
-<p style="font-size:0.8rem; color:var(--text-secondary); text-align:center; padding:1rem;" id="wizEmptyMsg">No courses added yet. Add at least one course above.</p><button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button>
-                                <button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button>
+<p style="font-size:0.8rem; color:var(--text-secondary); text-align:center; padding:1rem;" id="wizEmptyMsg">No courses added yet. Add at least one course above.</p><button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button></button>
                     </div>
 
                     <div class="modal-actions">
@@ -361,19 +356,15 @@
                     <h3 style="margin-top:0; margin-bottom:0.5rem; font-size:1.15rem; font-weight:800;">AI Timetable Extraction</h3>
                     <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.5rem;">
                         Upload your timetable file. The AI will use your <strong id="wizCourseCount">0</strong> courses for accurate matching.
-                    </p><button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button>
-                                <button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button>
+                    </p><button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button></button>
                     <p style="font-size:0.72rem; color:var(--text-muted); margin-bottom:1rem;">
                         <span id="wizCourseTags" style="display:flex; gap:4px; flex-wrap:wrap;"></span>
-                    </p><button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button>
-                                <button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button>
+                    </p><button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button></button>
 
                     <div style="border:2px dashed var(--border-solid); border-radius:16px; padding:2rem; text-align:center; margin-bottom:1rem; background:var(--surface);" id="dropZone">
                         <i class="fas fa-cloud-upload-alt" style="font-size:2rem; color:var(--text-muted); display:block; margin-bottom:0.5rem;"></i>
-                        <p style="font-size:0.85rem; color:var(--text-secondary); margin:0;">Drop your timetable file here</p><button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button>
-                                <button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button>
-                        <p style="font-size:0.72rem; color:var(--text-muted); margin:4px 0 12px;">or click to browse (JPG, PNG, PDF, DOC)</p><button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button>
-                                <button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button>
+                        <p style="font-size:0.85rem; color:var(--text-secondary); margin:0;">Drop your timetable file here</p><button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button></button>
+                        <p style="font-size:0.72rem; color:var(--text-muted); margin:4px 0 12px;">or click to browse (JPG, PNG, PDF, DOC)</p><button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button></button>
                         <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.txt" style="display:none;" onchange="uploadForExtraction(this.files[0])">
                         <button class="btn-action btn-extract" onclick="document.getElementById('fileInput').click()" style="display:inline-flex; width:auto; padding:10px 24px;">
                             <i class="fas fa-folder-open"></i> Browse Files
@@ -384,8 +375,7 @@
                         <span id="extractStatusText">Processing with AI...</span>
                     </div>
                     <div id="extractedCourses" style="display:none; margin-bottom:1rem;">
-                        <p style="font-size:0.85rem; font-weight:700; margin-bottom:0.5rem;">Extracted Courses (<span id="extractedCount">0</span>)</p><button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button>
-                                <button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button>
+                        <p style="font-size:0.85rem; font-weight:700; margin-bottom:0.5rem;">Extracted Courses (<span id="extractedCount">0</span>)</p><button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button></button>
                         <div id="extractedList" style="max-height:300px; overflow-y:auto;"></div>
                         <div class="modal-actions" style="margin-top:1rem; flex-direction:column; gap:8px;">
                             <button class="btn-action btn-add" onclick="saveExtractedCourses()" style="width:100%;"><i class="fas fa-check"></i> Save All to Timetable</button>
@@ -485,8 +475,7 @@
             const empty = document.getElementById('wizEmptyMsg');
             const nextBtn = document.getElementById('wizNextBtn');
             if (wizardCourses.length === 0) {
-                list.innerHTML = '<p style="font-size:0.8rem; color:#94a3b8; text-align:center; padding:1rem;" id="wizEmptyMsg">No courses added yet. Add at least one course above.</p><button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button>
-                                <button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button>';
+                list.innerHTML = '<p style="font-size:0.8rem; color:#94a3b8; text-align:center; padding:1rem;" id="wizEmptyMsg">No courses added yet. Add at least one course above.</p><button class="btn-action edit-slot" onclick="toggleEdit(event)">Edit</button></button>';
                 nextBtn.disabled = true;
             } else {
                 list.innerHTML = wizardCourses.map((c, i) => `
