@@ -481,7 +481,7 @@ app.use(session({
 // Page-view tracking for analytics (fire-and-forget, skips admin/API/static)
 app.use((req, res, next) => {
     if (req.method !== 'GET' || !req.session || !req.session.user) return next();
-    if (req.path.startsWith('/api/') || req.path.startsWith('/admin') || req.path === '/favicon.ico') return next();
+    if (req.path.startsWith('/api/') || req.path.startsWith('/admin') ) return next();
     pool.query(
         'INSERT INTO page_views (user_id, page_path, visit_time) VALUES ($1, $2, NOW())',
         [req.session.user.id, req.path.split('?')[0]]
