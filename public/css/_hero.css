@@ -1,0 +1,128 @@
+/* Hero-specific theming */
+
+/* Define hero background gradients and colors */
+:root {
+  /* subtle hero background overlays */
+  --hero-bg-overlay-1: rgba(37, 99, 235, 0.35);
+  --hero-bg-overlay-2: rgba(79, 70, 229, 0.25);
+
+  /* Color palette for hero text and badges */
+  --hero-text-primary: #fff;
+  --hero-text-secondary: rgba(255, 255, 255, 0.6);
+  --hero-badge-primary: #fff;
+  --hero-badge-secondary: rgba(255, 255, 255, 0.6);
+
+  /* Animation durations for better performance */
+  --hero-animation-duration: 0.6s;
+  --hero-stroke-transition: 0.6s cubic-bezier(.4, 0, .2, 1);
+}
+
+/* Enhance .hero component */
+.hero {
+  background: #0f172a; /* fallback */
+  background: var(--hero-bg-overlay, #0f172a);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(9, 9, 11, 0.18);
+}
+
+/* Add decorative overlay using CSS variables */
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 110% -10%, var(--hero-bg-overlay-1) 0%, transparent 60%),
+    radial-gradient(ellipse at -10% 110%, var(--hero-bg-overlay-2) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* Center and layout the hero-grid */
+.hero-grid {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px; /* improved spacing */
+}
+
+/* Update hero-cgpa for better typography */
+.hero-cgpa {
+  font-size: 5rem; /* slightly reduced for better scaling */
+  line-height: 1;
+  color: var(--hero-text-primary);
+  letter-spacing: -2px;
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Smaller font size on very small screens */
+@media (max-width: 380px) {
+  .hero-cgpa {
+    font-size: 4rem;
+  }
+}
+
+/* Update hero-scale text */
+.hero-scale {
+  font-size: 0.7rem;
+  color: var(--hero-text-secondary);
+  margin-top: 4px;
+}
+
+/* Update ring wrap styling */
+.ring-wrap {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  flex-shrink: 0;
+}
+
+/* Update ring fill transition */
+.ring-fill {
+  stroke-dasharray: 251.2;
+  stroke-dashoffset: 251.2;
+  transition: stroke-dashoffset var(--hero-stroke-transition);
+}
+
+/* Update ring percentage text */
+.ring-pct {
+  color: var(--hero-text-secondary);
+}
+
+/* Update badge styling for better contrast */
+.div-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px; /* reduced gap */
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 3px 10px; /* reduced padding */
+  border-radius: 50px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Focus-visible improvements for interactive elements */
+.hero a:focus-visible,
+.hero button:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .hero, .ring-fill {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Hero title styling */
+.hero__title {
+  font-size: .58rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--hero-text-secondary);
+  margin-bottom: 6px;
+}
