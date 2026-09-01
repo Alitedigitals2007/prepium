@@ -579,6 +579,14 @@
     .tiles { grid-template-columns: 1fr 1fr; }
     .grade-chips { grid-template-columns: repeat(3,1fr); }
     .grid2 { grid-template-columns: 1fr; }
+    .overlay .ov-inner {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+    .ov-close {
+        font-size: 1.5rem;
+        padding: 6px 10px;
+    }
 }
 
 /* â•â• DARK MODE ENHANCEMENTS â•â• */
@@ -1011,19 +1019,19 @@
     <div style="padding:20px">
         <div class="grid2">
             <div class="fg">
-                <label>Course Code</label>
+                <label for="add-code">Course Code</label>
                 <input type="text" id="add-code" placeholder="e.g. PHY301" required style="text-transform:uppercase;width:100%;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-weight:600;outline:none;box-sizing:border-box">
-                <div id="add-code-warn" style="font-size:0.68rem;font-weight:600;margin-top:4px;display:none"></div>
+                <div id="add-code-warn" role="alert" aria-live="assertive" style="font-size:0.68rem;font-weight:600;margin-top:4px;display:none"></div>
             </div>
             <div class="fg">
-                <label>Course Title</label>
-                <input type="text" id="add-title" placeholder="e.g. Thermodynamics" style="width:100%;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-weight:600;outline:none;box-sizing:border-box">
+                <label for="add-title">Course Title</label>
+                <input type="text" id="add-title" aria-describedby="add-error" placeholder="e.g. Thermodynamics" style="width:100%;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-weight:600;outline:none;box-sizing:border-box">
             </div>
         </div>
         <div class="grid2">
             <div class="fg">
-                <label>Level</label>
-                <select id="add-level" style="width:100%;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-weight:600;outline:none;box-sizing:border-box">
+                <label for="add-level">Level</label>
+                <select id="add-level" aria-describedby="add-error" style="width:100%;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-weight:600;outline:none;box-sizing:border-box">
                     <option value="100">100 Level</option>
                     <option value="200">200 Level</option>
                     <option value="300" selected>300 Level</option>
@@ -1032,8 +1040,8 @@
                 </select>
             </div>
             <div class="fg">
-                <label>Semester</label>
-                <select id="add-sem" style="width:100%;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-weight:600;outline:none;box-sizing:border-box">
+                <label for="add-sem">Semester</label>
+                <select id="add-sem" aria-describedby="add-error" style="width:100%;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-weight:600;outline:none;box-sizing:border-box">
                     <option value="1" selected>1st Semester</option>
                     <option value="2">2nd Semester</option>
                 </select>
@@ -1041,8 +1049,8 @@
         </div>
         <div class="grid2">
             <div class="fg">
-                <label>Credit Units</label>
-                <input type="number" id="add-units" min="1" max="8" value="3" required style="width:100%;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-weight:600;outline:none;box-sizing:border-box">
+                <label for="add-units">Credit Units</label>
+                <input type="number" id="add-units" aria-describedby="add-error" min="1" max="8" value="3" required style="width:100%;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-weight:600;outline:none;box-sizing:border-box">
             </div>
             <div class="fg">
                 <label>Grade
@@ -1050,7 +1058,7 @@
                     <small style="text-transform:none;letter-spacing:0;color:var(--blue);">(<%= profile.grading_scale %>-pt)</small>
                     <% } %>
                 </label>
-                <select id="add-grade" required style="width:100%;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-weight:600;outline:none;box-sizing:border-box">
+                <select id="add-grade" aria-describedby="add-error" required style="width:100%;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-weight:600;outline:none;box-sizing:border-box">
                     <% if (hasProfile && profile.grading_scale == 5) { %>
                         <option value="A">A — 5 pts</option>
                         <option value="B">B — 4 pts</option>
@@ -1251,21 +1259,21 @@ function importCoursesCSV() {
         <input type="hidden" name="id" id="e-id">
         <div class="grid2">
             <div class="fg">
-                <label>Course Code</label>
+                <label for="add-code">Course Code</label>
                 <input type="text" name="code" id="e-code" required style="text-transform:uppercase">
             </div>
             <div class="fg">
-                <label>Course Title</label>
+                <label for="add-title">Course Title</label>
                 <input type="text" name="title" id="e-title">
             </div>
         </div>
         <div class="grid2">
             <div class="fg">
-                <label>Credit Units</label>
+                <label for="add-units">Credit Units</label>
                 <input type="number" name="units" id="e-units" min="1" max="8" required>
             </div>
             <div class="fg">
-                <label>Grade</label>
+                <label for="add-grade">Grade</label>
                 <select name="grade" id="e-grade" required>
                     <% if (hasProfile && profile.grading_scale == 5) { %>
                         <option value="A">A — 5 pts</option>

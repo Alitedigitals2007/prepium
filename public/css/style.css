@@ -496,9 +496,9 @@ body::before {
 .btn-primary {
   background: var(--brand-gradient);
   color: white;
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.2);
+  box-shadow: 0 12px 36px rgba(99, 102, 241, 0.4);
 }
-.btn-primary:hover { box-shadow: 0 12px 32px rgba(99, 102, 241, 0.3); transform: translateY(-1px); }
+.btn-primary:hover { box-shadow: 0 18px 40px rgba(99, 102, 241, 0.5); transform: translateY(-2px) scale(1.02); }
 
 .btn-outline {
   color: var(--brand);
@@ -1167,4 +1167,26 @@ textarea { resize: vertical; min-height: 100px; }
   #ambient-canvas, #ambient-particles, #cursor-glow {
     display: none !important;
   }
+}
+
+/* Overlay responsive enhancements */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+.overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+@keyframes pop {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
