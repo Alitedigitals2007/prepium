@@ -1452,6 +1452,29 @@ app.get('/logout', (req, res) => {
     });
 });
 
+// --- DELETE ACCOUNT ROUTE ---
+app.get('/auth/delete-account', isAuth, async (req, res) => {
+    if (!req.session.user) {
+        return res.redirect('/login');
+    }
+    try {
+        const userId = req.session.user.id;
+        // Delete the user from the database
+        await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+        // Destroy the session
+        req.session.destroy((err) => {
+            if (err) {
+                console.log("Logout error on account deletion:", err);
+            }
+            res.clearCookie('connect.sid');
+            res.redirect('/'); // Redirect to homepage after deletion
+        });
+    } catch (err) {
+        console.error("Error deleting account:", err);
+        res.redirect('/dashboard?msg=Error deleting account');
+    }
+});
+
 const isStudent = (req, res, next) => {
     if (req.session.user && !req.session.user.is_admin) {
         // Prevents browser from caching the dashboard after logout
