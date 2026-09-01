@@ -647,6 +647,14 @@ app.get('/guide', (req, res) => {
     res.render('guide', { user: req.session.user || null });
 });
 
+app.get('/terms', (req, res) => {
+    res.render('terms');
+});
+
+app.get('/privacy', (req, res) => {
+    res.render('privacy');
+});
+
 // Auth Routes
 app.get('/signup', async (req, res) => {
     try {
