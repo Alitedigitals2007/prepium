@@ -578,6 +578,14 @@
     .tiles { grid-template-columns: 1fr 1fr; }
     .grade-chips { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
     .grid2 { grid-template-columns: 1fr; }
+    .overlay .ov-inner {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+    .ov-close {
+        font-size: 1.5rem;
+        padding: 6px 10px;
+    }
 }
 
 /* DARK MODE ENHANCEMENTS */
@@ -956,3 +964,931 @@
             <div class="crow-check">
                 <input type="checkbox" class="row-check" value="<%= c.id %>" onchange="updateBulkBar()">
             </div>
+            <div class="crow-right">
+                <div class="grade-chip <%= c.grade %>"><%= c.grade %></div>
+                <div class="act-row">
+                    <button class="act" title="Edit" onclick="openEdit('<%= c.id %>')">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                    <form action="/cgpa/course/toggle-visible/<%= c.id %>" method="POST" style="display:contents">
+                        <button type="submit" class="act <%= c.is_hidden ? 'eye-on' : '' %>" title="Toggle">
+                            <i class="fas <%= c.is_hidden ? 'fa-eye-slash' : 'fa-eye' %>"></i>
+                        </button>
+                    </form>
+                    <form action="/cgpa/course/delete/<%= c.id %>" method="POST" style="display:contents"
+                          onsubmit="return confirm('Delete <%= c.code %>?')">
+                        <button type="submit" class="act danger" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <% }) %>
+    <% } %>
+    </div>
+</div>
+
+<!-- Reset section -->
+<div class="reset-section glass hover-lift">
+    <h4><i class="fas fa-triangle-exclamation"></i> Danger Zone</h4>
+    <p>Reset your profile and all courses. This cannot be undone.</p>
+    <form action="/cgpa/reset" method="POST" onsubmit="return confirm('Delete everything and start over?')">
+        <button type="submit" class="btn btn-danger">
+            <i class="fas fa-rotate-left"></i> Reset Tracker
+        </button>
+    </form>
+</div>
+
+<% } %> <!-- end hasProfile -->
+</div><!-- /app-shell -->
+
+<!-- Floating: Add Course button (always visible) -->
+<button id="fab-add-course" type="button" onclick="openOv('ov-add')" title="Add a course" aria-label="Add a course" style="position:fixed;right:18px;bottom:90px;z-index:9000;width:56px;height:56px;border-radius:50%;border:none;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;font-size:1.4rem;box-shadow:0 10px 24px rgba(37,99,235,0.35);cursor:pointer;display:flex;align-items:center;justify-content:center" class="btn-enhanced btn-shine hover-lift"><i class="fas fa-plus"></i></button>
+
+<!-- Floating: AI Chat button -->
+<button id="fab-ai-chat" type="button" onclick="openCGPAChat()" title="AI Academic Advisor" aria-label="AI Chat" style="position:fixed;right:18px;bottom:155px;z-index:9000;height:48px;padding:0 18px;border-radius:24px;border:none;background:#0f172a;color:white;font-weight:700;font-size:0.78rem;box-shadow:0 10px 24px rgba(15,23,42,0.25);cursor:pointer;display:flex;align-items:center;gap:8px" class="btn-enhanced btn-shine hover-lift"><i class="fas fa-robot"></i> AI Advisor</button>
+
+<!-- â•â•â•â• ADD COURSE OVERLAY â•â•â•â• -->
+<div class="overlay" id="ov-add">
+<div class="ov-inner">
+    <div class="ov-head">
+        <div class="ov-title">Log a Course</div>
+        <button class="ov-close btn-enhanced hover-lift" onclick="closeOv('ov-add')"><i class="fas fa-times"></i></button>
+    </div>
+    <div style="padding:20px">
+        <div class="grid2">
+            <div class="fg">
+                <label for="add-code">Course Code</label>
+                <input type="text" id="add-code" placeholder="e.g. PHY301" required style="text-transform:uppercase;width:100%;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-weight:600;outline:none;box-sizing:border-box">
+                <div id="add-code-warn" role="alert" aria-live="assertive" style="font-size:0.68rem;font-weight:600;margin-top:4px;display:none"></div>
+            </div>
+            <div class="fg">
+                <label for="add-title">Course Title</label>
+                <input type="text" id="add-title" aria-describedby="add-error" placeholder="e.g. Thermodynamics" style="width:100%;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-weight:600;outline:none;box-sizing:border-box">
+            </div>
+        </div>
+        <div class="grid2">
+            <div class="fg">
+                <label for="add-level">Level</label>
+                <select id="add-level" aria-describedby="add-error" style="width:100%;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-weight:600;outline:none;box-sizing:border-box">
+                    <option value="100">100 Level</option>
+                    <option value="200">200 Level</option>
+                    <option value="300" selected>300 Level</option>
+                    <option value="400">400 Level</option>
+                    <option value="500">500 Level</option>
+                </select>
+            </div>
+            <div class="fg">
+                <label for="add-sem">Semester</label>
+                <select id="add-sem" aria-describedby="add-error" style="width:100%;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-weight:600;outline:none;box-sizing:border-box">
+                    <option value="1" selected>1st Semester</option>
+                    <option value="2">2nd Semester</option>
+                </select>
+            </div>
+        </div>
+        <div class="grid2">
+            <div class="fg">
+                <label for="add-units">Credit Units</label>
+                <input type="number" id="add-units" aria-describedby="add-error" min="1" max="8" value="3" required style="width:100%;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-weight:600;outline:none;box-sizing:border-box">
+            </div>
+            <div class="fg">
+                <label>Grade
+                    <% if (hasProfile) { %>
+                    <small style="text-transform:none;letter-spacing:0;color:var(--blue);">(<%= profile.grading_scale %>-pt)</small>
+                    <% } %>
+                </label>
+                <select id="add-grade" aria-describedby="add-error" required style="width:100%;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-weight:600;outline:none;box-sizing:border-box">
+                    <% if (hasProfile && profile.grading_scale == 5) { %>
+                        <option value="A">A — 5 pts</option>
+                        <option value="B">B — 4 pts</option>
+                        <option value="C">C — 3 pts</option>
+                        <option value="D">D — 2 pts</option>
+                        <option value="E">E — 1 pt</option>
+                        <option value="F">F — 0 pts</option>
+                    <% } else { %>
+                        <option value="A">A — 4 pts</option>
+                        <option value="B">B — 3 pts</option>
+                        <option value="C">C — 2 pts</option>
+                        <option value="D">D — 1 pt</option>
+                        <option value="F">F — 0 pts</option>
+                    <% } %>
+                </select>
+            </div>
+        </div>
+        
+        <!-- CSV Import Section -->
+        <div style="margin: 20px 0; padding: 15px; border: 1px dashed var(--border); border-radius: var(--radius); background: var(--bg);">
+            <div class="fg">
+                <label>Add Multiple Courses (CSV)</label>
+                <small style="color: var(--text-sub); display: block; margin-bottom: 8px;">
+                    Format: Course Code,Course Title,Units,Grade,Level,Semester (one per line)<br/>
+                    Example: CSC101,Intro to CS,3,A,300,1
+                </small>
+                <textarea id="csv-import-data" rows="4" style="width:100%;padding:10px;border:1.5px solid var(--border-solid);border-radius:var(--radius);font-family:monospace;font-size:0.75rem;resize:vertical;" placeholder="CSC101,Intro to CS,3,A,300,1&#10;MTH101,Calculus,4,B,300,2"></textarea>
+            </div>
+            <div style="margin-top: 12px;">
+                <button id="csv-import-btn" onclick="importCoursesCSV()" style="width:100%;padding:12px;border:none;background:linear-gradient(135deg,#10b981,#059669);color:white;border-radius:10px;font-weight:700;font-size:0.82rem;cursor:pointer" class="btn-enhanced btn-shine hover-lift">
+                    <i class="fas fa-file-csv"></i> Import Courses from CSV
+                </button>
+            </div>
+        </div>
+        
+        <div id="add-loading" style="display:none;text-align:center;padding:8px;color:#475569;font-weight:600"><i class="fas fa-spinner fa-spin"></i> Saving...</div>
+        <div id="add-error" style="display:none;font-size:0.75rem;color:var(--danger);font-weight:600;margin:4px 0 8px;padding:8px 10px;background:var(--danger-soft);border-radius:8px"></div>
+        <div id="add-success" style="display:none;font-size:0.75rem;color:var(--success);font-weight:600;margin:4px 0 8px;padding:8px 10px;background:var(--success-soft);border-radius:8px"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+            <button id="add-save-btn" onclick="addCourseAjax()" style="flex:1;padding:12px;border:none;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;border-radius:10px;font-weight:700;font-size:0.82rem;cursor:pointer" class="btn-enhanced btn-shine hover-lift"><i class="fas fa-plus"></i> Save Course</button>
+            <button id="add-save-another" onclick="addCourseAjax(true)" style="padding:12px 16px;border:1.5px solid var(--border);background:var(--surface-solid);border-radius:10px;font-weight:700;font-size:0.78rem;cursor:pointer;color:var(--text-dark)" class="btn-enhanced hover-lift"><i class="fas fa-plus-circle"></i> Add Another</button>
+        </div>
+    </div>
+</div>
+</div>
+
+<script>
+var addCourseCodes = [];
+<% if (typeof courses !== 'undefined' && courses && courses.length > 0) { %>
+<% courses.forEach(function(c) { %>
+addCourseCodes.push('<%= c.code ? c.code.toUpperCase().replace(/'/g, "\\'") : "" %>');
+<% }); } %>
+
+document.addEventListener('DOMContentLoaded', function() {
+    var codeInput = document.getElementById('add-code');
+    if (codeInput) {
+        codeInput.addEventListener('input', function() {
+            var val = this.value.trim().toUpperCase();
+            var warn = document.getElementById('add-code-warn');
+            if (addCourseCodes.indexOf(val) >= 0) {
+                warn.style.display = 'block';
+                warn.style.color = '#d97706';
+                warn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> This course already exists. It will be skipped.';
+            } else {
+                warn.style.display = 'none';
+            }
+        });
+    }
+});
+
+function addCourseAjax(keepOpen) {
+    var code = document.getElementById('add-code').value.trim().toUpperCase();
+    var title = document.getElementById('add-title').value.trim() || code;
+    var level = document.getElementById('add-level').value;
+    var sem = document.getElementById('add-sem').value;
+    var units = parseInt(document.getElementById('add-units').value) || 3;
+    var grade = document.getElementById('add-grade').value;
+    if (!code) { return showAddError('Enter a course code.'); }
+    if (units < 1 || units > 8) { return showAddError('Units must be 1-8.'); }
+    document.getElementById('add-loading').style.display = 'block';
+    document.getElementById('add-error').style.display = 'none';
+    document.getElementById('add-save-btn').disabled = true;
+    document.getElementById('add-save-another').disabled = true;
+    document.getElementById('add-code-warn').style.display = 'none';
+    fetch('/api/cgpa/course/add-ajax', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code, title: title, level_scope: level, semester: sem, credit_units: units, grade: grade })
+    }).then(function(r){ return r.json(); }).then(function(d) {
+        document.getElementById('add-loading').style.display = 'none';
+        document.getElementById('add-save-btn').disabled = false;
+        document.getElementById('add-save-another').disabled = false;
+        if (d && d.success) {
+            if (d.duplicate) {
+                showAddError('Course already exists (skipped).');
+            } else {
+                if (keepOpen) {
+                    document.getElementById('add-code').value = '';
+                    document.getElementById('add-title').value = '';
+                    document.getElementById('add-grade').selectedIndex = 0;
+                    document.getElementById('add-code').focus();
+                    showAddError('');
+                    document.getElementById('add-error').style.display = 'none';
+                    showAddSuccess('Course added! Add another.');
+                } else {
+                    closeOv('ov-add');
+                    Swal.fire({ icon: 'success', title: 'Course Added', text: code + ' was added successfully.', timer: 1500, showConfirmButton: false });
+                    setTimeout(function(){ location.reload(); }, 1500);
+                }
+            }
+        } else {
+            showAddError((d && d.error) ? d.error : 'Could not add course.');
+        }
+    }).catch(function(err) {
+        document.getElementById('add-loading').style.display = 'none';
+        document.getElementById('add-save-btn').disabled = false;
+        document.getElementById('add-save-another').disabled = false;
+        showAddError('Network error: ' + (err.message || ''));
+    });
+}
+
+function showAddError(msg) {
+    var box = document.getElementById('add-error');
+    if (msg) { box.style.display = 'block'; box.innerHTML = '<i class="fas fa-times-circle"></i> ' + msg; }
+    else box.style.display = 'none';
+}
+
+function showAddSuccess(msg) {
+    var box = document.getElementById('add-error');
+    box.style.display = 'block';
+    box.style.color = '#16a34a';
+    box.style.background = 'var(--success-soft)';
+    box.innerHTML = '<i class="fas fa-check-circle"></i> ' + msg;
+}
+
+function importCoursesCSV() {
+    var csvData = document.getElementById('csv-import-data').value.trim();
+    if (!csvData) {
+        showAddError('Please enter CSV data to import.');
+        return;
+    }
+    
+    document.getElementById('add-loading').style.display = 'block';
+    document.getElementById('add-error').style.display = 'none';
+    document.getElementById('csv-import-btn').disabled = true;
+    
+    fetch('/api/cgpa/course/import-csv', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({ csv: csvData })
+    }).then(function(r){ 
+        if (!r.ok) {
+            throw new Error('Server responded with status ' + r.status);
+        }
+        return r.json(); 
+    }).then(function(d) {
+        document.getElementById('add-loading').style.display = 'none';
+        document.getElementById('csv-import-btn').disabled = false;
+        
+        if (d && d.success) {
+            var imported = d.imported || 0;
+            var skipped = d.skipped || 0;
+            var message = 'Successfully imported ' + imported + ' course(s)';
+            if (skipped > 0) {
+                message += ' (' + skipped + ' skipped - may be duplicates or invalid)';
+            }
+            
+            // Clear the textarea
+            document.getElementById('csv-import-data').value = '';
+            
+            showAddSuccess(message);
+            
+            // Reload the page to show the newly added courses
+            setTimeout(function(){ location.reload(); }, 1500);
+        } else {
+            showAddError((d && d.error) ? d.error : 'Could not import courses.');
+        }
+    }).catch(function(err) {
+        document.getElementById('add-loading').style.display = 'none';
+        document.getElementById('csv-import-btn').disabled = false;
+        showAddError('Network error: ' + (err.message || ''));
+    });
+}
+</script>
+
+<!-- â•â•â•â• EDIT COURSE OVERLAY â•â•â•â• -->
+<div class="overlay" id="ov-edit">
+<div class="ov-inner">
+    <div class="ov-head">
+        <div class="ov-title">Edit Course</div>
+        <button class="ov-close btn-enhanced hover-lift" onclick="closeOv('ov-edit')"><i class="fas fa-times"></i></button>
+    </div>
+    <form action="/cgpa/course/edit" method="POST">
+        <input type="hidden" name="id" id="e-id">
+        <div class="grid2">
+            <div class="fg">
+                <label for="add-code">Course Code</label>
+                <input type="text" name="code" id="e-code" required style="text-transform:uppercase">
+            </div>
+            <div class="fg">
+                <label for="add-title">Course Title</label>
+                <input type="text" name="title" id="e-title">
+            </div>
+        </div>
+        <div class="grid2">
+            <div class="fg">
+                <label for="add-units">Credit Units</label>
+                <input type="number" name="units" id="e-units" min="1" max="8" required>
+            </div>
+            <div class="fg">
+                <label for="add-grade">Grade</label>
+                <select name="grade" id="e-grade" required>
+                    <% if (hasProfile && profile.grading_scale == 5) { %>
+                        <option value="A">A — 5 pts</option>
+                        <option value="B">B — 4 pts</option>
+                        <option value="C">C — 3 pts</option>
+                        <option value="D">D — 2 pts</option>
+                        <option value="E">E — 1 pt</option>
+                        <option value="F">F — 0 pts</option>
+                    <% } else { %>
+                        <option value="A">A — 4 pts</option>
+                        <option value="B">B — 3 pts</option>
+                        <option value="C">C — 2 pts</option>
+                        <option value="D">D — 1 pt</option>
+                        <option value="F">F — 0 pts</option>
+                    <% } %>
+                </select>
+            </div>
+        </div>
+<button type="submit" class="btn btn-primary btn-enhanced hover-lift" style="margin-top:8px">
+    <i class="fas fa-floppy-disk"></i> Save Changes
+</button>
+    </form>
+</div>
+</div>
+
+<!-- â•â•â•â• BOTTOM NAV â•â•â•â• -->
+<%- include('partials/bottom-nav', { activeNav: 'profile' }) %>
+
+
+<!-- â•â•â•â• SCRIPTS â•â•â•â• -->
+<script>
+/* â”€â”€ Wizard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+const PROGS = { 1:'33%', 2:'66%', 3:'100%' };
+function goStep(n) {
+    document.querySelectorAll('.wiz-step').forEach(s => s.classList.remove('on'));
+    document.getElementById('s'+n).classList.add('on');
+    document.getElementById('prog').style.width = PROGS[n];
+}
+function pickPath(val) {
+    document.getElementById('stype').value = val;
+    if (val === 'balance') goStep(3);
+    else document.getElementById('wiz-form').submit();
+}
+// sync max attr for CGPA input when scale changes
+const scaleSel = document.getElementById('scale-sel');
+const prevCGPA = document.getElementById('prev_cgpa');
+if (scaleSel && prevCGPA) {
+    scaleSel.addEventListener('change', () => {
+        prevCGPA.max         = scaleSel.value;
+        prevCGPA.placeholder = `e.g. ${scaleSel.value==='5'?'3.75':'3.00'}`;
+    });
+}
+
+/* â”€â”€ Overlays â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+function openOv(id)  { document.getElementById(id).classList.add('show'); document.body.style.overflow='hidden'; }
+function closeOv(id) { document.getElementById(id).classList.remove('show'); document.body.style.overflow=''; }
+document.querySelectorAll('.overlay').forEach(ov => {
+    ov.addEventListener('click', e => { if (e.target===ov) closeOv(ov.id); });
+});
+
+/* â”€â”€ Edit pre-fill â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+function openEdit(id) {
+    const r = document.querySelector(`.data-row[data-id="${id}"]`);
+    if (!r) return;
+    document.getElementById('e-id').value    = id;
+    document.getElementById('e-code').value  = r.dataset.code;
+    document.getElementById('e-title').value = r.dataset.title;
+    document.getElementById('e-units').value = r.dataset.units;
+    const sel = document.getElementById('e-grade');
+    if (sel) sel.value = r.dataset.grade;
+    openOv('ov-edit');
+}
+
+/* â”€â”€ AI Advisor fallback (overridden by real fn if hasProfile) â”€â”€ */
+function openCGPAChat() {
+    Swal.fire({
+        icon: 'info',
+        title: 'Setup Required',
+        text: 'Set up your CGPA profile first to use the AI Advisor.',
+        confirmButtonText: 'OK'
+    });
+}
+
+<% if (hasProfile) { %>
+/* â”€â”€ Filter state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+const SCALE  = <%= parseInt(profile.grading_scale)||5 %>;
+const GP_MAP = SCALE === 5
+    ? { A:5, B:4, C:3, D:2, E:1, F:0 }
+    : { A:4, B:3, C:2, D:1, E:0, F:0 };
+const PREV_UNITS = <%= parseInt(profile.prev_units)||0 %>;
+const PREV_GP    = <%= parseFloat(profile.prev_gp)||0 %>;
+const GRADE_COUNTS = <%- JSON.stringify(gradeCounts) %>;
+
+let curLvl = 'all', curSem = 'all';
+
+function fLvl(v, btn) {
+    curLvl = v;
+    document.querySelectorAll('#lvl-pills .pill').forEach(p => p.classList.remove('on'));
+    btn.classList.add('on');
+    render();
+}
+function fSem(v, btn) {
+    curSem = v;
+    document.querySelectorAll('#sem-pills .pill').forEach(p => p.classList.remove('on'));
+    btn.classList.add('on');
+    render();
+}
+
+function render() {
+    const rows = document.querySelectorAll('.data-row');
+    let shown=0, u=0, pts=0;
+    rows.forEach(r => {
+        const lvl = r.dataset.level, sem = r.dataset.semester;
+        const ok  = (curLvl==='all'||curLvl===lvl) && (curSem==='all'||curSem===sem);
+        r.style.display = ok ? 'flex' : 'none';
+        if (ok) {
+            shown++;
+            if (!r.classList.contains('hidden-row')) {
+                const cu = parseInt(r.dataset.units)||0;
+                const g  = (r.dataset.grade||'F').toUpperCase();
+                u   += cu;
+                pts += (GP_MAP[g]!==undefined?GP_MAP[g]:0)*cu;
+            }
+        }
+    });
+    // include prev balance in GPA only when showing all
+    const tu = (curLvl==='all'&&curSem==='all') ? u+PREV_UNITS : u;
+    const tp = (curLvl==='all'&&curSem==='all') ? pts+PREV_GP  : pts;
+    const gpa = tu>0 ? (tp/tu).toFixed(2) : '—';
+    document.getElementById('termGPA').textContent = `GPA: ${gpa}`;
+    document.getElementById('matCount').textContent = `${shown} shown`;
+
+    const ll = curLvl==='all'?'All Levels':`${curLvl}L`;
+    const sl = curSem==='all'?'Both Sems':`Sem ${curSem}`;
+    document.getElementById('matLabel').textContent = `${ll} · ${sl}`;
+}
+
+/* â”€â”€ Chart.js â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+document.addEventListener('DOMContentLoaded', () => {
+    render();
+    var gradeChartDone = false;
+    function initGradeChart() {
+        var ctx = document.getElementById('gChart');
+        if (!ctx || gradeChartDone) return;
+        if (typeof Chart === 'undefined') { setTimeout(initGradeChart, 300); return; }
+        gradeChartDone = true;
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['A','B','C','D','E','F'],
+                datasets: [{
+                    data: [GRADE_COUNTS.A, GRADE_COUNTS.B, GRADE_COUNTS.C, GRADE_COUNTS.D, GRADE_COUNTS.E, GRADE_COUNTS.F],
+                    backgroundColor: ['rgba(180,83,9,.1)','rgba(37,99,235,.1)','rgba(13,148,136,.1)','rgba(124,58,237,.1)','rgba(82,82,91,.1)','rgba(225,29,72,.1)'],
+                    borderColor:     ['#b45309','#2563eb','#0d9488','#7c3aed','#52525b','#e11d48'],
+                    borderWidth: 1.5, borderRadius: 7, borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend:{ display:false } },
+                scales: {
+                    x: { grid:{ display:false }, ticks:{ autoSkip:false, font:{ family:'Plus Jakarta Sans',weight:'700' } } },
+                    y: { suggestedMax: 10, grid:{ color:'rgba(0,0,0,.04)' }, ticks:{ precision:0 } }
+                }
+            }
+        });
+    }
+    initGradeChart();
+    initTrendChart();
+});
+
+/* â”€â”€ Trend Chart â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+function initTrendChart() {
+    var ctx = document.getElementById('trendChart');
+    if (!ctx) return;
+    
+    // Check if we're in the profile state (has data to show)
+    if (<%= !hasProfile ? 'true' : 'false' %> ) {
+        ctx.parentNode.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-sub);">Set up your profile to see CGPA trends</div>';
+        return;
+    }
+    
+    // Extract semester data from existing course elements
+    var semesterData = {};
+    
+    // Process all course rows to calculate GPA per semester
+    var rows = document.querySelectorAll('.data-row');
+    rows.forEach(function(row) {
+        // Skip hidden rows
+        if (row.classList.contains('hidden-row')) return;
+        
+        var level = row.dataset.level;
+        var semester = row.dataset.semester;
+        var units = parseInt(row.dataset.units) || 0;
+        var grade = row.dataset.grade || 'F';
+        
+        // Create semester key
+        var semKey = 'L' + level + 'S' + semester;
+        
+        // Initialize semester data if not exists
+        if (!semesterData[semKey]) {
+            semesterData[semKey] = {
+                level: parseInt(level),
+                semester: parseInt(semester),
+                totalUnits: 0,
+                totalPoints: 0,
+                gpa: 0.0
+            };
+        }
+        
+        // Add course data to semester
+        if (units > 0) {
+            var scale = parseInt(<%= hasProfile ? profile.grading_scale : '5' %>) || 5;
+            var gpMap = scale === 5 ? {A:5, B:4, C:3, D:2, E:1, F:0} : {A:4, B:3, C:2, D:1, E:0, F:0};
+            var gradePoints = gpMap[grade] || 0;
+            
+            semesterData[semKey].totalUnits += units;
+            semesterData[semKey].totalPoints += (gradePoints * units);
+        }
+    });
+    
+    // Calculate GPA for each semester and sort by level/semester
+    var semesters = Object.keys(semesterData).map(function(key) {
+        var sem = semesterData[key];
+        if (sem.totalUnits > 0) {
+            sem.gpa = (sem.totalPoints / sem.totalUnits).toFixed(2);
+        } else {
+            sem.gpa = 0.00;
+        }
+        return sem;
+    }).filter(function(sem) {
+        return sem.totalUnits > 0; // Only include semesters with courses
+    }).sort(function(a, b) {
+        if (a.level !== b.level) return a.level - b.level;
+        return a.semester - b.semester;
+    });
+    
+    // If no semester data available, show message
+    if (semesters.length === 0) {
+        ctx.parentNode.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-sub);">No semester data available yet</div>';
+        return;
+    }
+    
+    // Prepare data for the chart
+    var labels = semesters.map(function(sem) {
+        return 'L' + sem.level + ' S' + sem.semester;
+    });
+    var gpaValues = semesters.map(function(sem) {
+        return parseFloat(sem.gpa);
+    });
+    
+    // Determine scale for Y-axis
+    var scale = parseInt(<%= hasProfile ? profile.grading_scale : '5' %>) || 5;
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'CGPA Trend',
+                data: gpaValues,
+                fill: false,
+                borderColor: 'var(--brand)',
+                backgroundColor: 'var(--brand-soft)',
+                tension: 0.3,
+                pointBackgroundColor: 'var(--brand)',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: 'var(--brand)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: scale,
+                    ticks: {
+                        stepSize: 0.5,
+                        callback: function(value) {
+                            return value.toFixed(2);
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(0,0,0,.04)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        font: {
+                            family: 'Plus Jakarta Sans',
+                            weight: '600'
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+/* â”€â”€ Import from Study â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+function importFromStudy() {
+    Swal.fire({ title: 'Importing from Study Hub...', html: 'Syncing courses', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    fetch('/api/study/cgpa-sync', { method: 'POST' })
+    .then(r => r.json()).then(d => {
+        if (d.success) {
+            Swal.fire({ icon: 'success', text: d.synced + ' courses imported!', timer: 1500, showConfirmButton: false });
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            Swal.fire({ icon: 'error', text: d.error || 'Sync failed' });
+        }
+    });
+}
+
+/* â”€â”€ AI Course Advisor Toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+var advisorOpen = false;
+function toggleAdvisor() {
+    var body = document.getElementById('advisorBody');
+    var tog = document.getElementById('advisorToggle');
+    advisorOpen = !advisorOpen;
+    body.style.display = advisorOpen ? 'block' : 'none';
+    tog.innerHTML = advisorOpen ? '<i class="fas fa-chevron-up"></i>' : '<i class="fas fa-chevron-down"></i>';
+}
+
+/* â”€â”€ Advisor: Multi-Course What-If â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+var advisorCourses = [];
+
+function addAdvisorCourse() {
+    var name = document.getElementById('wiCourseName').value.trim() || ('Course ' + (advisorCourses.length + 1));
+    var units = parseInt(document.getElementById('wiCourseUnits').value) || 3;
+    var grade = document.getElementById('wiCourseGrade').value;
+    advisorCourses.push({ name: name, units: units, grade: grade });
+    renderAdvisorCourses();
+    document.getElementById('wiCourseName').value = '';
+}
+
+function removeAdvisorCourse(idx) {
+    advisorCourses.splice(idx, 1);
+    renderAdvisorCourses();
+}
+
+function renderAdvisorCourses() {
+    var container = document.getElementById('whatifCourseList');
+    var btn = document.getElementById('calcImpactBtn');
+    if (advisorCourses.length === 0) {
+        container.innerHTML = '<div style="font-size:0.7rem;color:var(--text-muted);font-weight:600;padding:6px 0;">No courses added. Add courses above to see their impact.</div>';
+        if (btn) btn.style.display = 'none';
+        return;
+    }
+    var html = '';
+    for (var i = 0; i < advisorCourses.length; i++) {
+        var c = advisorCourses[i];
+        var gc = c.grade === 'A' ? 'var(--success)' : c.grade === 'F' ? 'var(--danger)' : c.grade === 'B' ? 'var(--brand)' : 'var(--text-dark)';
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--surface-solid);border:1px solid var(--border);border-radius:8px;margin-bottom:4px;font-size:0.75rem;font-weight:600;animation:rowIn .22s ease;">';
+        html += '<span>' + aiEscape(c.name) + ' <span style="color:var(--text-muted);font-weight:600;">' + c.units + ' units</span> <span style="color:' + gc + ';">(' + c.grade + ')</span></span>';
+        html += '<button onclick="removeAdvisorCourse(' + i + ')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.75rem;padding:4px;transition:.15s;" onmouseover="this.style.color=\'var(--danger)\'" onmouseout="this.style.color=\'\'"><i class="fas fa-times-circle"></i></button>';
+        html += '</div>';
+    }
+    container.innerHTML = html;
+    if (btn) btn.style.display = 'block';
+}
+
+function calcAdvisorImpact() {
+    if (advisorCourses.length === 0) return;
+    var btn = document.getElementById('calcImpactBtn');
+    var result = document.getElementById('whatifImpact');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calculating...';
+    result.innerHTML = '';
+    fetch('/api/cgpa/bulk-whatif', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ courses: advisorCourses })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-calculator"></i> Calculate Impact';
+        if (d.success) {
+            var color = parseFloat(d.change) >= 0 ? '#16a34a' : '#dc2626';
+            var sign = parseFloat(d.change) >= 0 ? '+' : '';
+            var bg = parseFloat(d.change) >= 0 ? 'var(--success-soft)' : 'var(--danger-soft)';
+            var bd = parseFloat(d.change) >= 0 ? 'rgba(16,185,129,.15)' : 'rgba(239,68,68,.15)';
+            result.innerHTML =
+                '<div style="background:' + bg + ';border:1px solid ' + bd + ';border-radius:12px;padding:14px;animation:pop .35s cubic-bezier(0.25, 0.8, 0.25, 1);">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
+                '<span style="font-size:0.65rem;font-weight:700;color:var(--text-sub);text-transform:uppercase;">Current CGPA</span>' +
+                '<span style="font-size:0.65rem;font-weight:700;color:var(--text-sub);text-transform:uppercase;">With Additions</span></div>' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+                '<span style="font-size:1.6rem;font-weight:900;color:var(--text-primary);">' + d.currentCGPA + '</span>' +
+                '<span style="font-size:0.7rem;color:var(--text-muted);font-weight:600;"><i class="fas fa-arrow-right"></i></span>' +
+                '<span style="font-size:1.6rem;font-weight:900;color:' + color + ';">' + d.newCGPA + '</span></div>' +
+                '<div style="margin-top:8px;padding-top:8px;border-top:1px solid ' + (parseFloat(d.change) >= 0 ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)') + ';display:flex;justify-content:space-between;align-items:center;">' +
+                '<span style="font-size:0.75rem;font-weight:600;color:var(--text-sub);">' + d.totalUnits + ' units â†’ ' + d.newTotalUnits + ' units</span>' +
+                '<span style="font-size:0.85rem;font-weight:800;color:' + color + ';">' + sign + d.change + '</span></div></div>';
+        } else {
+            result.innerHTML = '<div style="padding:10px;font-size:0.75rem;color:var(--danger);font-weight:600;background:var(--danger-soft);border-radius:8px;">' + aiEscape(d.error || 'Could not calculate.') + '</div>';
+        }
+    })
+    .catch(function(err) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-calculator"></i> Calculate Impact';
+        result.innerHTML = '<div style="padding:10px;font-size:0.75rem;color:var(--danger);font-weight:600;background:var(--danger-soft);border-radius:8px;">Network error: ' + aiEscape(err.message) + '</div>';
+    });
+}
+
+/* â”€â”€ Advisor: What-If button opens builder â”€â”€ */
+function advisorWhatif() {
+    if (!advisorOpen) toggleAdvisor();
+    var builder = document.getElementById('whatifBuilder');
+    var aiRes = document.getElementById('aiWhatifResult');
+    builder.style.display = 'block';
+    aiRes.style.display = 'none';
+    builder.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+/* â”€â”€ Transcript Download â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+function downloadTranscript() {
+    Swal.fire({ title: 'Generating Transcript...', html: 'Preparing your PDF', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
+    fetch('/api/cgpa/transcript')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+        Swal.close();
+        if (d.error) { Swal.fire({ icon: 'error', text: d.error }); return; }
+        if (!d.semesters || d.semesters.length === 0) { Swal.fire({ icon: 'info', text: 'No courses logged yet.' }); return; }
+        Swal.fire({ title: 'Downloading...', html: 'Opening your official transcript PDF', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
+        window.location.href = '/api/cgpa/transcript/pdf';
+        setTimeout(function() { Swal.close(); }, 1500);
+    })
+    .catch(function(err) { Swal.close(); Swal.fire({ icon: 'error', text: 'Failed: ' + (err.message || 'network error') }); });
+}
+
+function buildTranscriptHtml(d) {
+    var today = new Date();
+    var dateStr = today.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+    var timeStr = today.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+    var gpMap = (d.gradingScale === '5') ? {A:5,B:4,C:3,D:2,E:1,F:0} : {A:4,B:3,C:2,D:1,F:0};
+    var totalPassed = 0;
+    d.semesters.forEach(function(s) { s.courses.forEach(function(c) { if (c.grade !== 'F' && !c.excluded) totalPassed++; }); });
+
+    var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Official Transcript - ' + (d.student.name || 'Student') + '</title>' +
+        '<style>@page { margin: 20mm 16mm 16mm; }body { font-family: "Segoe UI", Arial, sans-serif; color: #0f172a; font-size: 9.5pt; line-height: 1.45; margin: 0; padding: 0; }.header { text-align: center; padding-bottom: 16px; border-bottom: 3px double #0f172a; margin-bottom: 20px; }.header .inst { font-size: 18pt; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; margin: 0; }.header .title { font-size: 11pt; font-weight: 700; margin: 4px 0 6px; letter-spacing: 2px; text-transform: uppercase; color: #1e293b; }.header .divider { width: 80px; height: 1.5px; background: #0f172a; margin: 6px auto; }.header .sub { font-size: 7.5pt; color: #475569; font-weight: 600; }.header .ref { font-size: 7pt; color: #94a3b8; font-weight: 600; margin-top: 4px; }.info-table { width: 100%; border-collapse: collapse; margin-bottom: 18px; font-size: 9pt; }.info-table td { padding: 3px 6px; vertical-align: top; }.info-table .lbl { font-weight: 700; color: #475569; width: 130px; font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.3px; }.info-table .sep { width: 12px; text-align: center; color: #cbd5e1; font-weight: 600; }.info-table .val { font-weight: 700; color: #0f172a; }.sem-block { margin-bottom: 16px; }.sem-header { font-size: 8.5pt; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.8px; padding: 6px 8px; background: #f1f5f9; border-bottom: 1.5px solid #cbd5e1; margin-bottom: 4px; }table.grades { width: 100%; border-collapse: collapse; font-size: 8pt; }table.grades th { background: #f8fafc; padding: 5px 6px; text-align: left; font-weight: 700; font-size: 6.5pt; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; }table.grades td { padding: 4px 6px; border-bottom: 1px solid #f1f5f9; }table.grades tr:last-child td { border-bottom: none; }.sem-gpa td { background: #f8fafc; font-weight: 700; border-top: 1.5px solid #cbd5e1; border-bottom: none !important; font-size: 7.5pt; }.summary-box { margin-top: 18px; padding: 14px 16px; background: #0f172a; color: white; border-radius: 4px; }.summary-box .row { display: flex; justify-content: space-between; align-items: center; }.summary-box .item { text-align: center; flex: 1; }.summary-box .item .lbl { font-size: 6pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; opacity: 0.5; }.summary-box .item .num { font-size: 14pt; font-weight: 800; margin-top: 2px; }.summary-box .item .cls { font-size: 8pt; font-weight: 700; margin-top: 2px; }.footer-note { text-align: center; font-size: 6.5pt; color: #94a3b8; margin-top: 16px; padding-top: 10px; border-top: 1px solid #e2e8f0; line-height: 1.6; }.footer-note strong { color: #64748b; }.watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%) rotate(-30deg); font-size: 72pt; font-weight: 800; color: rgba(0,0,0,0.025); pointer-events: none; z-index: -1; letter-spacing: 8px; white-space: nowrap; }@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }</style>' +
+        '</head><body>' +
+        '<div class="watermark">PREPIUM</div>' +
+        '<div class="header">' +
+            '<div class="inst">Prepium</div>' +
+            '<div class="divider"></div>' +
+            '<div class="title">Official Transcript of Academic Record</div>' +
+            '<div class="sub">Student-Owned Academic Record &mdash; For Verification Purposes</div>' +
+            '<div class="ref">Reference: ' + (d.refNumber || 'N/A') + ' &nbsp;|&nbsp; Issued: ' + dateStr + ' at ' + timeStr + '</div>' +
+        '</div>' +
+        '<table class="info-table"><tr>' +
+            '<td class="lbl">Student Name</td><td class="sep">:</td><td class="val">' + (d.student.name || 'N/A') + '</td>' +
+            '<td class="lbl" style="width:100px">Department</td><td class="sep">:</td><td class="val">' + (d.department || 'N/A') + '</td>' +
+        '</tr><tr>' +
+            '<td class="lbl">Current Level</td><td class="sep">:</td><td class="val">' + (d.currentLevel || 'N/A') + ' Level</td>' +
+            '<td class="lbl">Grading Scale</td><td class="sep">:</td><td class="val">' + d.gradingScale + '-Point System</td>' +
+        '</tr></table>';
+
+    d.semesters.forEach(function(sem) {
+        var semesterName = 'Level ' + sem.level + ' &mdash; ' + (sem.semester === '1' ? 'First' : 'Second') + ' Semester';
+        html += '<div class="sem-block">' +
+            '<div class="sem-header">' + semesterName + '</div>' +
+            '<table class="grades"><thead><tr>' +
+                '<th style="width:16%">Code</th><th style="width:42%">Course Title</th>' +
+                '<th style="width:10%;text-align:center">Unit</th><th style="width:10%;text-align:center">Grade</th>' +
+                '<th style="width:10%;text-align:center">GP</th><th style="width:12%;text-align:center">Status</th>' +
+            '</tr></thead><tbody>';
+        sem.courses.forEach(function(c) {
+            var gp = gpMap[c.grade] || 0;
+            var excl = c.excluded ? ' style="opacity:0.5;text-decoration:line-through"' : '';
+            var status = c.excluded ? 'Excluded' : (c.grade === 'F' ? 'Fail' : 'Pass');
+            var statusColor = status === 'Pass' ? '#16a34a' : (status === 'Fail' ? '#ef4444' : '#6b7280');
+            html += '<tr' + excl + '><td style="font-weight:700">' + (c.code || '') + '</td>' +
+                '<td>' + (c.title || '') + '</td>' +
+                '<td style="text-align:center">' + c.units + '</td>' +
+                '<td style="text-align:center;font-weight:700">' + c.grade + '</td>' +
+                '<td style="text-align:center">' + gp.toFixed(1) + '</td>' +
+                '<td style="text-align:center;font-size:6.5pt;font-weight:600;color:' + statusColor + '">' + status + '</td></tr>';
+        });
+        var semGpa = sem.units > 0 ? (sem.points / sem.units).toFixed(2) : '0.00';
+        html += '<tr class="sem-gpa"><td colspan="2" style="font-size:7pt;color:#475569">Semester Grade Point Average (SGPA)</td>' +
+            '<td style="text-align:center">' + sem.units + '</td>' +
+            '<td style="text-align:center;color:#0062ff">' + semGpa + '</td>' +
+            '<td style="text-align:center">' + sem.points.toFixed(1) + '</td>' +
+            '<td style="text-align:center;font-size:6.5pt;color:#475569">' + sem.courses.filter(function(c){ return c.grade !== 'F' && !c.excluded; }).length + '/' + sem.courses.filter(function(c){ return !c.excluded; }).length + ' passed</td></tr>';
+        html += '</tbody></table></div>';
+    });
+
+    html += '<div class="summary-box"><div class="row">' +
+        '<div class="item"><div class="lbl">Cumulative GPA (CGPA)</div><div class="num">' + d.cgpa + '</div></div>' +
+        '<div class="item"><div class="lbl">Total Units Registered</div><div class="num">' + d.totalUnits + '</div></div>' +
+        '<div class="item"><div class="lbl">Courses Passed</div><div class="num">' + totalPassed + '</div></div>' +
+        '<div class="item"><div class="lbl">Degree Classification</div><div class="cls">' + (d.degreeClass || 'N/A') + '</div></div></div></div>' +
+
+        '<div class="footer-note">' +
+        '<strong>NOTICE:</strong> This transcript is generated from student-provided academic records. ' +
+        'It serves as a personal academic summary and is not an official university-issued document. ' +
+        '<br>Reference: ' + (d.refNumber || 'N/A') + ' &nbsp;|&nbsp; Generated: ' + dateStr + ' &nbsp;|&nbsp; Prepium CGPA Tracker' +
+        '</div>' +
+        '</body></html>';
+
+    return html;
+}
+
+/* â”€â”€ Export button â†’ Transcript â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+var pdfBtn = document.getElementById('pdfBtn');
+if (pdfBtn) pdfBtn.addEventListener('click', downloadTranscript);
+
+/* â”€â”€ CGPA AI Functions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+function aiEscape(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* â”€â”€ Advisor: Predict next semester â”€â”€â”€â”€â”€â”€â”€â”€ */
+function aiPredictGpa() {
+    var box = document.getElementById('aiPredictResult');
+    box.style.display = 'block';
+    box.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Asking AI to analyze your grades...';
+    fetch('/api/cgpa/ai-predict', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+        if (d && d.success && d.prediction) {
+            var html = d.prediction.split(/\n/).map(function(l) {
+                return l.trim() ? '<p style="margin:0 0 6px">' + aiEscape(l) + '</p>' : '';
+            }).join('');
+            box.innerHTML = '<div style="border-left:3px solid var(--brand);padding-left:12px">' + html + '</div>';
+        } else {
+            box.innerHTML = '<p style="color:var(--danger);margin:0">' + aiEscape((d && d.error) ? d.error : 'Could not generate prediction.') + '</p>';
+        }
+    })
+    .catch(function(err) {
+        box.innerHTML = '<p style="color:var(--danger);margin:0">Network error: ' + aiEscape(err.message) + '</p>';
+    });
+}
+
+function openCGPAChat() {
+    var history = [];
+    var containerId = 'cgpa-chat-container-' + Date.now();
+    Swal.fire({
+        title: '<span style="font-weight:800;font-size:1rem">AI Academic Advisor</span>',
+        html:
+            '<div id="' + containerId + '" style="text-align:left;max-height:400px;overflow-y:auto;padding:4px;font-size:0.85rem"></div>' +
+            '<div id="cgpa-chat-pending" style="display:none;background:var(--surface);border-radius:10px;padding:10px;margin-bottom:8px;font-size:0.85rem"><i class="fas fa-spinner fa-spin"></i> Thinking...</div>' +
+            '<div style="display:flex;gap:6px;margin-top:8px">' +
+            '<input id="cgpa-chat-inp" type="text" placeholder="Ask about your CGPA..." style="flex:1;padding:11px 13px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-size:0.85rem;font-weight:600;outline:none">' +
+            '<button id="cgpa-chat-send" type="button" style="padding:11px 16px;border:none;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;font-weight:700;border-radius:10px;cursor:pointer"><i class="fas fa-paper-plane"></i></button></div>' +
+            '<div style="font-size:0.68rem;color:#94a3b8;margin-top:6px;font-weight:600">AI can misread data. Verify important decisions.</div>',
+        showConfirmButton: false,
+        showCloseButton: true,
+        width: 500,
+        didOpen: function() {
+            var box = document.getElementById(containerId);
+            var pending = document.getElementById('cgpa-chat-pending');
+            box.innerHTML = '<div style="display:flex;gap:10px;margin-bottom:8px"><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#1d4ed8);display:flex;align-items:center;justify-content:center;color:white;font-size:0.7rem"><i class="fas fa-robot"></i></div><div style="flex:1;background:var(--surface);border-radius:10px;padding:10px;line-height:1.5">Hi! I\'m your CGPA advisor. Ask me anything — what-if a grade, how to raise your GPA, which semesters to focus on, etc.</div></div>';
+
+            function appnd(role, text, color) {
+                var div = document.createElement('div');
+                div.style.cssText = 'display:flex;gap:10px;margin-bottom:8px';
+                if (role === 'user') div.style.flexDirection = 'row-reverse';
+                div.innerHTML = role === 'user'
+                    ? '<div style="flex:1;background:#2563eb;color:white;border-radius:10px;padding:10px;line-height:1.5">' + aiEscape(text) + '</div>'
+                    : '<div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#1d4ed8);display:flex;align-items:center;justify-content:center;color:white;font-size:0.7rem;flex-shrink:0"><i class="fas fa-robot"></i></div><div style="flex:1;background:var(--surface);border-radius:10px;padding:10px;line-height:1.5;white-space:pre-wrap">' + aiEscape(text) + '</div>';
+                box.appendChild(div);
+                box.parentElement.scrollTop = box.parentElement.scrollHeight;
+            }
+
+            var inp = document.getElementById('cgpa-chat-inp');
+            var send = document.getElementById('cgpa-chat-send');
+
+            function ask(q) {
+                q = (q || '').trim();
+                if (!q) return;
+                appnd('user', q);
+                pending.style.display = 'block';
+                inp.value = '';
+                history.push({ role: 'user', text: q });
+                fetch('/api/cgpa/ai-chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: q, history: history })
+                })
+                .then(function(r){ return r.json().catch(function(){ return { success:false, error:'Bad response' }; }); })
+                .then(function(d) {
+                    pending.style.display = 'none';
+                    if (d && d.success && d.reply) {
+                        history.push({ role: 'assistant', text: d.reply });
+                        appnd('ai', d.reply);
+                    } else {
+                        appnd('ai', (d && d.error) ? 'Error: ' + d.error : 'Sorry, I could not process that.');
+                    }
+                })
+                .catch(function(err) {
+                    pending.style.display = 'none';
+                    appnd('ai', 'Network error: ' + (err.message || 'request failed'));
+                });
+            }
+            send.onclick = function(){ ask(inp.value); };
+            inp.onkeydown = function(e){ if (e.key === 'Enter') ask(inp.value); };
+            setTimeout(function(){ try { inp.focus(); } catch(e){} }, 100);
+        }
+    });
+}
+<% } %>
+</script>
+</body>
+</html>
