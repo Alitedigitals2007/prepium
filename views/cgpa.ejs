@@ -650,6 +650,131 @@
     .cmeta { font-size: .62rem; }
     .ccode { font-size: .82rem; }
 }
+
+/* ================================================================
+   PREPIUM CGPA — App-style redesign + device-friendly layout
+   ================================================================ */
+.cgpa-layout { display: block; width: 100%; }
+.cgpa-col-main, .cgpa-col-side { min-width: 0; }
+
+/* App bar: compact, always on top */
+.header-nav {
+    background: color-mix(in srgb, var(--surface) 86%, transparent);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    padding: 14px 18px 12px;
+}
+
+/* Hero: modern financial-app "balance card" */
+.hero {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 55%, #1e1b4b 100%);
+    border-radius: 22px;
+    padding: 28px 24px 22px;
+    overflow: hidden;
+    box-shadow: 0 18px 40px -18px rgba(15,23,42,.55);
+}
+.hero::after {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(circle at 85% 10%, rgba(96,165,250,.28), transparent 45%),
+                radial-gradient(circle at 8% 100%, rgba(167,139,250,.22), transparent 45%);
+    pointer-events: none;
+}
+.hero-cgpa {
+    font-size: 3.6rem; letter-spacing: -3px;
+    background: linear-gradient(120deg, #fff 30%, #bfdbfe 90%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 4px 14px rgba(37,99,235,.35));
+}
+.hero-bottom { margin-top: 20px; }
+
+/* Stat tiles: crisp mini cards */
+.tiles { grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+.tile { border-radius: 18px; padding: 16px 8px 14px; }
+
+/* Unified section cards */
+.analytics, .course-card { border-radius: 20px; background: var(--surface); }
+.analytics { margin-top: 12px; }
+.course-card { margin-top: 10px; }
+.reset-section { border-radius: 18px; }
+
+/* Course rows: app list feel */
+.crow { background: transparent; border-bottom: 1px solid var(--border-solid); }
+.ccode { font-size: .98rem; }
+.crow-right { gap: 8px; }
+
+/* Desktop: two-column app layout */
+@media (min-width: 1180px) {
+    .app-shell { max-width: 1320px; padding: 20px 28px; }
+    .cgpa-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.18fr) minmax(0, 1fr);
+        gap: 18px;
+        align-items: start;
+        margin-top: 14px;
+    }
+    .cgpa-col-main { display: flex; flex-direction: column; gap: 14px; }
+    .cgpa-col-side { display: flex; flex-direction: column; gap: 14px; }
+    .cgpa-layout .filters,
+    .cgpa-layout .filter-row2,
+    .cgpa-layout .course-card,
+    .cgpa-layout .analytics { width: 100%; margin-left: 0; margin-right: 0; box-sizing: border-box; }
+    .cgpa-layout .filters { padding: 0; }
+    .cgpa-layout .filter-row2 { padding: 12px 0 0; }
+    .cgpa-layout .course-card { margin-top: 0; }
+    .cgpa-layout .analytics { margin: 0; }
+    .reset-section { max-width: none; margin-left: 0; margin-right: 0; }
+}
+
+/* Tablet + phone: single app column, tidy gutters */
+@media (max-width: 1179px) and (min-width: 640px) {
+    .app-shell { max-width: 860px; }
+    .course-card, .analytics { margin-left: 14px; margin-right: 14px; }
+}
+@media (max-width: 639px) {
+    .hero { margin-left: 10px; margin-right: 10px; padding: 22px 18px 18px; border-radius: 20px; }
+    .hero-cgpa { font-size: 3rem; }
+    .tiles { margin-left: 10px; margin-right: 10px; gap: 8px; }
+    .tile { padding: 13px 4px 12px; border-radius: 15px; }
+    .analytics { margin: 10px 10px 0; padding: 15px; border-radius: 18px; }
+    .course-card { margin: 10px 10px 0; padding: 14px; border-radius: 18px; }
+    .filters { padding: 12px 10px 0; }
+    .filter-row2 { padding: 10px 10px 0; }
+    .reset-section { margin: 14px 10px 0; }
+    .section-head { margin-bottom: 10px; }
+    .gchip { border-radius: 12px; }
+    .bulk-bar { margin-bottom: 10px; }
+}
+@media (max-width: 379px) {
+    .tiles { gap: 6px; }
+    .tile { padding: 10px 2px 9px; border-radius: 13px; }
+    .tile-num { font-size: 1.1rem; }
+    .tile-icon { font-size: .55rem; }
+    .hero-cgpa { font-size: 2.7rem; }
+    .grade-chips { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* Hero layout — consistent across every device */
+.hero { display: block; }
+.hero-grid { display: flex; align-items: center; }
+.hero-bottom {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 18px; flex-wrap: wrap; gap: 10px;
+}
+@media (max-width: 759px) {
+    .hero-grid { flex-direction: column; }
+    .hero-left { order: 2; text-align: center; margin-top: 14px; width: 100%; }
+    .ring-wrap { order: 1; margin: 0 auto; }
+    .hero-bottom { justify-content: center; text-align: center; }
+    .hero-cgpa { font-size: 3.4rem; }
+}
+@media (min-width: 760px) {
+    .hero-grid { flex-direction: row; justify-content: space-between; gap: 16px; }
+    .hero-cgpa { font-size: 4.2rem; }
+}
+@media (min-width: 1180px) {
+    .hero-cgpa { font-size: 4.6rem; }
+    .div-badge { font-size: .74rem; }
+    .hero-meta { font-size: .78rem; }
+}
 </style>
 <%- include('partials/theme-toggle') %>
 </head>
@@ -874,6 +999,102 @@
 </div>
 </div>
 
+<div class="cgpa-layout">
+  <div class="cgpa-col-main">
+<!-- Filters -->
+<div class="filters">
+    <div class="pill-row" id="lvl-pills">
+        <button class="pill on btn-enhanced hover-lift" onclick="fLvl('all',this)">All</button>
+<button class="pill btn-enhanced hover-lift" onclick="fLvl('100',this)">100L</button>
+<button class="pill btn-enhanced hover-lift" onclick="fLvl('200',this)">200L</button>
+<button class="pill btn-enhanced hover-lift" onclick="fLvl('300',this)">300L</button>
+<button class="pill btn-enhanced hover-lift" onclick="fLvl('400',this)">400L</button>
+<button class="pill btn-enhanced hover-lift" onclick="fLvl('500',this)">500L</button>
+    </div>
+</div>
+<div class="filter-row2">
+    <div class="pill-row" id="sem-pills" style="padding:0;">
+        <button class="pill on btn-enhanced hover-lift" onclick="fSem('all',this)">Both Sems</button>
+<button class="pill btn-enhanced hover-lift" onclick="fSem('1',this)">1st Sem</button>
+<button class="pill btn-enhanced hover-lift" onclick="fSem('2',this)">2nd Sem</button>
+    </div>
+    <div class="gpa-live btn-enhanced hover-lift" id="termGPA">GPA: <%= cgpa %></div>
+</div>
+
+<!-- Course list -->
+<div class="course-card reveal glass hover-lift">
+    <div class="course-card-head">
+        <div class="course-card-title" id="matLabel">All Courses</div>
+        <div class="course-card-meta"  id="matCount"><%= courses.length %> total</div>
+        <button class="act btn-enhanced btn-shine hover-lift" style="background:var(--brand-gradient);color:white;padding:6px 12px;border-radius:10px;width:auto;font-weight:700;font-size:0.74rem;display:inline-flex;align-items:center;gap:6px" onclick="openOv('ov-add')" title="Add a course"><i class="fas fa-plus"></i> Add Course</button>
+    </div>
+
+    <div id="matrix">
+    <% if (!courses.length) { %>
+        <div class="empty-state">
+            <i class="fas fa-folder-open"></i>
+            <p>No courses yet. Tap <strong>+</strong> to log your first course.</p>
+        </div>
+    <% } else { %>
+        <div class="bulk-bar" id="bulkBar" style="display:none;">
+            <span id="bulkCount">0 selected</span>
+            <div class="bulk-actions">
+                <button type="button" class="btn-bulk-act" onclick="bulkAction('hide')" title="Hide selected"><i class="fas fa-eye-slash"></i> Hide</button>
+                <button type="button" class="btn-bulk-act" onclick="bulkAction('show')" title="Unhide selected"><i class="fas fa-eye"></i> Unhide</button>
+                <button type="button" class="btn-bulk-act danger" onclick="bulkAction('delete')" title="Delete selected"><i class="fas fa-trash"></i> Delete</button>
+                <button type="button" class="btn-bulk-act" onclick="clearSelection()">Cancel</button>
+            </div>
+        </div>
+        <% courses.forEach(c => { %>
+        <div class="crow <%= c.is_hidden ? 'hidden-row' : '' %> data-row"
+             data-id="<%= c.id %>"
+             data-code="<%= c.code %>"
+             data-title="<%= c.title || '' %>"
+             data-units="<%= c.credit_units %>"
+             data-grade="<%= c.grade %>"
+             data-level="<%= c.level_scope %>"
+             data-semester="<%= c.semester %>">
+            <div class="crow-check">
+                <input type="checkbox" class="row-check" value="<%= c.id %>" onchange="updateBulkBar()">
+            </div>
+            <div class="crow-left">
+                <div class="ccode">
+                    <%= c.code %>
+                    <% if (c.is_hidden) { %><span class="excl-tag">excluded</span><% } %>
+                </div>
+                <div class="cmeta">
+                    <span><%= c.credit_units %> units</span>
+                    <% if (c.title) { %><span>· <%= c.title %></span><% } %>
+                    <span>· L<%= c.level_scope %> S<%= c.semester %></span>
+                </div>
+            </div>
+            <div class="crow-right">
+                <div class="grade-chip <%= c.grade %>"><%= c.grade %></div>
+                <div class="act-row">
+                    <button class="act" title="Edit" onclick="openEdit('<%= c.id %>')">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                    <form action="/cgpa/course/toggle-visible/<%= c.id %>" method="POST" style="display:contents">
+                        <button type="submit" class="act <%= c.is_hidden ? 'eye-on' : '' %>" title="Toggle">
+                            <i class="fas <%= c.is_hidden ? 'fa-eye-slash' : 'fa-eye' %>"></i>
+                        </button>
+                    </form>
+                    <form action="/cgpa/course/delete/<%= c.id %>" method="POST" style="display:contents"
+                          onsubmit="return confirm('Delete <%= c.code %>?')">
+                        <button type="submit" class="act danger" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <% }) %>
+    <% } %>
+    </div>
+</div>
+
+  </div>
+  <div class="cgpa-col-side">
 <!-- Analytics -->
 <div class="analytics reveal hover-lift">
     <div class="section-head">
@@ -957,97 +1178,8 @@
     </button>
 </div>
 
-<!-- Filters -->
-<div class="filters">
-    <div class="pill-row" id="lvl-pills">
-        <button class="pill on btn-enhanced hover-lift" onclick="fLvl('all',this)">All</button>
-<button class="pill btn-enhanced hover-lift" onclick="fLvl('100',this)">100L</button>
-<button class="pill btn-enhanced hover-lift" onclick="fLvl('200',this)">200L</button>
-<button class="pill btn-enhanced hover-lift" onclick="fLvl('300',this)">300L</button>
-<button class="pill btn-enhanced hover-lift" onclick="fLvl('400',this)">400L</button>
-<button class="pill btn-enhanced hover-lift" onclick="fLvl('500',this)">500L</button>
-    </div>
+  </div>
 </div>
-<div class="filter-row2">
-    <div class="pill-row" id="sem-pills" style="padding:0;">
-        <button class="pill on btn-enhanced hover-lift" onclick="fSem('all',this)">Both Sems</button>
-<button class="pill btn-enhanced hover-lift" onclick="fSem('1',this)">1st Sem</button>
-<button class="pill btn-enhanced hover-lift" onclick="fSem('2',this)">2nd Sem</button>
-    </div>
-    <div class="gpa-live btn-enhanced hover-lift" id="termGPA">GPA: <%= cgpa %></div>
-</div>
-
-<!-- Course list -->
-<div class="course-card reveal glass hover-lift">
-    <div class="course-card-head">
-        <div class="course-card-title" id="matLabel">All Courses</div>
-        <div class="course-card-meta"  id="matCount"><%= courses.length %> total</div>
-        <button class="act btn-enhanced btn-shine hover-lift" style="background:var(--brand-gradient);color:white;padding:6px 12px;border-radius:10px;width:auto;font-weight:700;font-size:0.74rem;display:inline-flex;align-items:center;gap:6px" onclick="openOv('ov-add')" title="Add a course"><i class="fas fa-plus"></i> Add Course</button>
-    </div>
-
-    <div id="matrix">
-    <% if (!courses.length) { %>
-        <div class="empty-state">
-            <i class="fas fa-folder-open"></i>
-            <p>No courses yet. Tap <strong>+</strong> to log your first course.</p>
-        </div>
-    <% } else { %>
-        <div class="bulk-bar" id="bulkBar" style="display:none;">
-            <span id="bulkCount">0 selected</span>
-            <div class="bulk-actions">
-                <button type="button" class="btn-bulk-act" onclick="bulkAction('hide')" title="Hide selected"><i class="fas fa-eye-slash"></i> Hide</button>
-                <button type="button" class="btn-bulk-act danger" onclick="bulkAction('delete')" title="Delete selected"><i class="fas fa-trash"></i> Delete</button>
-                <button type="button" class="btn-bulk-act" onclick="clearSelection()">Cancel</button>
-            </div>
-        </div>
-        <% courses.forEach(c => { %>
-        <div class="crow <%= c.is_hidden ? 'hidden-row' : '' %> data-row"
-             data-id="<%= c.id %>"
-             data-code="<%= c.code %>"
-             data-title="<%= c.title || '' %>"
-             data-units="<%= c.credit_units %>"
-             data-grade="<%= c.grade %>"
-             data-level="<%= c.level_scope %>"
-             data-semester="<%= c.semester %>">
-            <div class="crow-check">
-                <input type="checkbox" class="row-check" value="<%= c.id %>" onchange="updateBulkBar()">
-            </div>
-            <div class="crow-left">
-                <div class="ccode">
-                    <%= c.code %>
-                    <% if (c.is_hidden) { %><span class="excl-tag">excluded</span><% } %>
-                </div>
-                <div class="cmeta">
-                    <span><%= c.credit_units %> units</span>
-                    <% if (c.title) { %><span>· <%= c.title %></span><% } %>
-                    <span>· L<%= c.level_scope %> S<%= c.semester %></span>
-                </div>
-            </div>
-            <div class="crow-right">
-                <div class="grade-chip <%= c.grade %>"><%= c.grade %></div>
-                <div class="act-row">
-                    <button class="act" title="Edit" onclick="openEdit('<%= c.id %>')">
-                        <i class="fas fa-pen"></i>
-                    </button>
-                    <form action="/cgpa/course/toggle-visible/<%= c.id %>" method="POST" style="display:contents">
-                        <button type="submit" class="act <%= c.is_hidden ? 'eye-on' : '' %>" title="Toggle">
-                            <i class="fas <%= c.is_hidden ? 'fa-eye-slash' : 'fa-eye' %>"></i>
-                        </button>
-                    </form>
-                    <form action="/cgpa/course/delete/<%= c.id %>" method="POST" style="display:contents"
-                          onsubmit="return confirm('Delete <%= c.code %>?')">
-                        <button type="submit" class="act danger" title="Delete">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-        <% }) %>
-    <% } %>
-    </div>
-</div>
-
 <!-- Reset section -->
 <div class="reset-section glass hover-lift">
     <h4><i class="fas fa-triangle-exclamation"></i> Danger Zone</h4>
@@ -1502,15 +1634,19 @@ function clearSelection() {
 function bulkAction(action) {
     var ids = selectedIds();
     if (!ids.length) return;
-    if (action === 'hide') {
-        var visible = [];
+    if (action === 'hide' || action === 'show') {
+        var targets = [];
         document.querySelectorAll('.row-check:checked').forEach(function(cb){
             var row = cb.closest('.data-row');
-            if (row && !row.classList.contains('hidden-row')) visible.push(cb.value);
+            if (!row) return;
+            var isHidden = row.classList.contains('hidden-row');
+            if (action === 'hide' && !isHidden) targets.push(cb.value);
+            if (action === 'show' && isHidden) targets.push(cb.value);
         });
-        if (!visible.length) { clearSelection(); return; }
-        if (!confirm('Hide ' + visible.length + ' course(s)? Hidden courses are excluded from your CGPA.')) return;
-        runBulk(visible.map(function(id){ return { url: '/cgpa/course/toggle-visible/' + id }; }));
+        if (!targets.length) { clearSelection(); return; }
+        var verb = action === 'hide' ? 'Hide' : 'Unhide';
+        if (!confirm(verb + ' ' + targets.length + ' course(s)?')) return;
+        runBulk(targets.map(function(id){ return { url: '/cgpa/course/toggle-visible/' + id }; }));
     } else if (action === 'delete') {
         if (!confirm('Delete ' + ids.length + ' course(s)? This cannot be undone.')) return;
         runBulk(ids.map(function(id){ return { url: '/cgpa/course/delete/' + id }; }));
