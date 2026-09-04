@@ -652,72 +652,71 @@
 }
 
 /* ================================================================
-   PREPIUM CGPA — App-style redesign + device-friendly layout
+/* ================================================================
+   CGPA page - device-aware layout (v3)
+   Designed to sit inside the global app shell:
+     phones/tablets (<1024px)  -> centered app column + bottom nav
+     desktop (>=1024px)        -> fixed sidebar + responsive dashboard
    ================================================================ */
-.cgpa-layout { display: block; width: 100%; }
-.cgpa-col-main, .cgpa-col-side { min-width: 0; }
+.cgpa-layout { display: block; container-type: inline-size; padding: 14px 14px 0; }
+.cgpa-layout > .hero,
+.cgpa-layout > .tiles,
+.cgpa-layout > .analytics,
+.cgpa-layout > .course-card,
+.reset-section { margin: 0 0 14px; width: 100%; }
+.reset-section { margin-bottom: 0; }
 
-/* App bar: compact, always on top */
-.header-nav {
-    background: color-mix(in srgb, var(--surface) 86%, transparent);
-    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-    padding: 14px 18px 12px;
-}
-
-/* Hero: modern financial-app "balance card" */
+/* Unified, calm app cards */
 .hero {
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 55%, #1e1b4b 100%);
-    border-radius: 22px;
-    padding: 28px 24px 22px;
-    overflow: hidden;
-    box-shadow: 0 18px 40px -18px rgba(15,23,42,.55);
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 60%, #1e1b4b 100%);
+    border-radius: 20px;
+    padding: 26px 22px 20px;
+    color: #fff;
+    box-shadow: 0 16px 34px -22px rgba(15,23,42,.65);
 }
-.hero::after {
-    content: ''; position: absolute; inset: 0;
-    background: radial-gradient(circle at 85% 10%, rgba(96,165,250,.28), transparent 45%),
-                radial-gradient(circle at 8% 100%, rgba(167,139,250,.22), transparent 45%);
-    pointer-events: none;
+.hero-cgpa { font-size: 3.2rem; letter-spacing: -2px; color: #fff; }
+.hero-scale { margin-top: 6px; }
+.hero-bottom { margin-top: 18px; }
+.tiles { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.tile { border-radius: 16px; padding: 14px 6px 12px; }
+.analytics { border-radius: 18px; padding: 16px; margin: 14px 0 0; width: 100%; }
+.course-card { border-radius: 18px; padding: 16px; margin: 14px 0 0; width: 100%; }
+.reset-section { border-radius: 18px; padding: 16px; margin: 18px 0 0; }
+.filters { padding: 0; margin: 8px 0 0; }
+.filter-row2 { padding: 12px 0 0; }
+
+/* Clear space for the fixed bottom nav on phones */
+@media (max-width: 1023px) {
+    .app-shell { padding-bottom: 120px; }
 }
-.hero-cgpa {
-    font-size: 3.6rem; letter-spacing: -3px;
-    background: linear-gradient(120deg, #fff 30%, #bfdbfe 90%);
-    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 4px 14px rgba(37,99,235,.35));
+
+/* Desktop: content region sits to the right of the sidebar */
+@media (min-width: 1024px) {
+    .app-shell { max-width: none; width: 100%; margin: 0; padding-left: 260px; }
+    .overlay .ov-inner { padding-left: 0; }
+    .header-nav { max-width: 1200px; margin: 0 auto; }
+    .cgpa-layout { max-width: 1200px; margin: 0 auto; padding: 0 0 48px; }
+    .reset-section { max-width: 1200px; margin: 0 auto; }
 }
-.hero-bottom { margin-top: 20px; }
+@media (min-width: 1400px) {
+    .app-shell { padding-left: 280px; }
+}
 
-/* Stat tiles: crisp mini cards */
-.tiles { grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
-.tile { border-radius: 18px; padding: 16px 8px 14px; }
-
-/* Unified section cards */
-.analytics, .course-card { border-radius: 20px; background: var(--surface); }
-.analytics { margin-top: 12px; }
-.course-card { margin-top: 10px; }
-.reset-section { border-radius: 18px; }
-
-/* Course rows: app list feel */
-.crow { background: transparent; border-bottom: 1px solid var(--border-solid); }
-.ccode { font-size: .98rem; }
-.crow-right { gap: 8px; }
-
-/* Desktop: dashboard layout — hero + tools left, course list right */
-@media (min-width: 1180px) {
-    .app-shell { max-width: 1440px; padding: 18px 26px; }
+/* Wide container: two-column dashboard (course list + summary/tools) */
+@container (min-width: 920px) {
     .cgpa-layout {
         display: grid;
-        grid-template-columns: minmax(0, 400px) minmax(0, 1fr);
+        grid-template-columns: 380px minmax(0, 1fr);
         grid-template-areas:
-            "hero   main"
-            "tiles  main"
-            "side   main";
-        column-gap: 22px;
-        row-gap: 16px;
+            "hero  main"
+            "tiles main"
+            "side  main";
+        column-gap: 20px;
+        row-gap: 14px;
         align-items: start;
-        margin-top: 12px;
     }
-    .hero { grid-area: hero; margin: 0; }
-    .tiles { grid-area: tiles; margin: 0; }
+    .cgpa-layout > .hero { grid-area: hero; margin: 0; }
+    .cgpa-layout > .tiles { grid-area: tiles; margin: 0; }
     .cgpa-col-main { grid-area: main; min-width: 0; }
     .cgpa-col-side {
         grid-area: side;
@@ -726,66 +725,12 @@
         flex-direction: column;
         gap: 14px;
     }
-    .cgpa-col-side .analytics { width: 100%; margin: 0; }
     .cgpa-col-main .filters { padding: 0; }
-    .cgpa-col-main .filter-row2 { padding: 12px 0 0; }
-    .cgpa-col-main .course-card { margin-top: 14px; width: 100%; }
-    .reset-section { max-width: none; margin: 16px 0 0; }
+    .cgpa-col-main .filter-row2 { padding: 12px 0 0; margin: 0; }
+    .cgpa-col-main .course-card { margin: 14px 0 0; }
+    .cgpa-col-side .analytics { margin: 0; }
 }
 
-/* Tablet: single app column, tidy gutters */
-@media (max-width: 1179px) and (min-width: 640px) {
-    .app-shell { max-width: 880px; padding: 16px; }
-    .cgpa-layout { display: block; }
-    .hero, .tiles, .course-card, .analytics { margin-left: 0; margin-right: 0; }
-}
-@media (max-width: 639px) {
-    .hero { margin-left: 10px; margin-right: 10px; padding: 22px 18px 18px; border-radius: 20px; }
-    .hero-cgpa { font-size: 3rem; }
-    .tiles { margin-left: 10px; margin-right: 10px; gap: 8px; }
-    .tile { padding: 13px 4px 12px; border-radius: 15px; }
-    .analytics { margin: 10px 10px 0; padding: 15px; border-radius: 18px; }
-    .course-card { margin: 10px 10px 0; padding: 14px; border-radius: 18px; }
-    .filters { padding: 12px 10px 0; }
-    .filter-row2 { padding: 10px 10px 0; }
-    .reset-section { margin: 14px 10px 0; }
-    .section-head { margin-bottom: 10px; }
-    .gchip { border-radius: 12px; }
-    .bulk-bar { margin-bottom: 10px; }
-}
-@media (max-width: 379px) {
-    .tiles { gap: 6px; }
-    .tile { padding: 10px 2px 9px; border-radius: 13px; }
-    .tile-num { font-size: 1.1rem; }
-    .tile-icon { font-size: .55rem; }
-    .hero-cgpa { font-size: 2.7rem; }
-    .grade-chips { grid-template-columns: repeat(3, 1fr); }
-}
-
-/* Hero layout — consistent across every device */
-.hero { display: block; }
-.hero-grid { display: flex; align-items: center; }
-.hero-bottom {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-top: 18px; flex-wrap: wrap; gap: 10px;
-}
-@media (max-width: 759px) {
-    .hero-grid { flex-direction: column; }
-    .hero-left { order: 2; text-align: center; margin-top: 14px; width: 100%; }
-    .ring-wrap { order: 1; margin: 0 auto; }
-    .hero-bottom { justify-content: center; text-align: center; }
-    .hero-cgpa { font-size: 3.4rem; }
-}
-@media (min-width: 760px) {
-    .hero-grid { flex-direction: row; justify-content: space-between; gap: 16px; }
-    .hero-cgpa { font-size: 4.2rem; }
-}
-@media (min-width: 1180px) {
-    .hero-cgpa { font-size: 4.6rem; }
-    .div-badge { font-size: .74rem; }
-    .hero-meta { font-size: .78rem; }
-}
-</style>
 <%- include('partials/theme-toggle') %>
 </head>
 <body>
