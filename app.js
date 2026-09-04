@@ -5886,6 +5886,49 @@ app.post('/cgpa/setup', isAuth, requirePaid, async (req, res) => {
     }
 });
 
+// B2. POST: UPDATE EXISTING PROFILE (edit department / level / scale / balance)
+app.post('/cgpa/profile/update', isAuth, requirePaid, async (req, res) => {
+    if (!req.session || !req.session.user || !req.session.user.id) {
+        return res.redirect('/login');
+    }
+    const userId = req.session.user.id;
+    const { department, current_level, grading_scale, prev_cgpa, prev_units } = req.body;
+
+    const scale = parseInt(grading_scale) === 4 ? 4 : 5;
+    const level = parseInt(current_level) || 300;
+    const dept  = department ? String(department).trim() : 'General';
+
+    try {
+        // Optional: update the carry-forward balance only when balance fields are submitted
+        const wantsBalance = req.body.hasOwnProperty('prev_cgpa') && req.body.hasOwnProperty('prev_units');
+        if (wantsBalance) {
+            const pUnits = Math.max(0, parseInt(prev_units) || 0);
+            const pCGPA  = Math.min(Math.max(parseFloat(prev_cgpa) || 0, 0), scale);
+            const pGP    = parseFloat((pCGPA * pUnits).toFixed(2));
+            await pool.query(
+                `UPDATE public.cgpa_profiles
+                 SET department = $1, current_level = $2, grading_scale = $3,
+                     prev_units = $4, prev_cgpa = $5, prev_gp = $6, updated_at = NOW()
+                 WHERE user_id = $7`,
+                [dept, level, scale, pUnits, pCGPA, pGP, userId]
+            );
+        } else {
+            await pool.query(
+                `UPDATE public.cgpa_profiles
+                 SET department = $1, current_level = $2, grading_scale = $3, updated_at = NOW()
+                 WHERE user_id = $4`,
+                [dept, level, scale, userId]
+            );
+        }
+        await pool.query('UPDATE users SET current_level = $1 WHERE id = $2', [level, userId]);
+
+        res.redirect('/cgpa?msg=Profile updated successfully!');
+    } catch (err) {
+        console.error('CGPA Profile Update Error:', err);
+        res.redirect('/cgpa?msg=Profile update failed. Please try again.');
+    }
+});
+
 // 4. APPEND NEW MATRIX COURSE ROUTE
 app.post('/cgpa/course/add', isAuth, requirePaid, async (req, res) => {
     try {
@@ -5919,7 +5962,7 @@ app.post('/cgpa/course/add', isAuth, requirePaid, async (req, res) => {
 });
 
 // 2B. AJAX ADD COURSE (for polished overlay)
-app.post('/api/cgpa/course/add-ajax', isAuth, async (req, res) => {
+app.post('/api/cgpa/course/add-ajax', isAuth, requirePaid, featureLock('cgpa'), async (req, res) => {
     try {
         if (!req.session || !req.session.user || !req.session.user.id) {
             return res.json({ success: false, error: 'Not authenticated' });
@@ -5955,6 +5998,66 @@ app.post('/api/cgpa/course/add-ajax', isAuth, async (req, res) => {
     } catch (err) {
         console.error('AJAX Add Course Error:', err);
         res.json({ success: false, error: 'Error adding course' });
+    }
+});
+
+// 2C. AJAX IMPORT COURSES FROM CSV (bulk add)
+app.post('/api/cgpa/course/import-csv', isAuth, requirePaid, featureLock('cgpa'), async (req, res) => {
+    try {
+        if (!req.session || !req.session.user || !req.session.user.id) {
+            return res.json({ success: false, error: 'Not authenticated' });
+        }
+        const userId = req.session.user.id;
+        const csv = (req.body && req.body.csv) ? String(req.body.csv) : '';
+        if (!csv.trim()) return res.json({ success: false, error: 'No CSV data provided' });
+
+        const profileRes = await pool.query(
+            'SELECT current_level, grading_scale FROM public.cgpa_profiles WHERE user_id = $1', [userId]
+        );
+        const profile = profileRes.rows[0];
+        const defaultLevel = profile ? (parseInt(profile.current_level) || 300) : 300;
+        const scale = profile ? (parseInt(profile.grading_scale) || 5) : 5;
+        const allowedGrades = scale === 5 ? ['A', 'B', 'C', 'D', 'E', 'F'] : ['A', 'B', 'C', 'D', 'F'];
+
+        const seen = new Set();
+        const existing = await pool.query(
+            'SELECT course_code FROM public.cgpa_courses WHERE user_id = $1 AND deleted = false', [userId]
+        );
+        existing.rows.forEach(r => seen.add(String(r.course_code).trim().toUpperCase()));
+
+        const lines = csv.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        let imported = 0, skipped = 0;
+
+        for (const raw of lines) {
+            const parts = raw.split(',').map(p => p.trim());
+            if (!parts[0]) { skipped++; continue; }
+            if (/^course[_ ]?code$/i.test(parts[0])) { skipped++; continue; }
+
+            const code = parts[0].toUpperCase();
+            const title = parts[1] || 'Course Module';
+            const units = parseInt(parts[2]) || 3;
+            const grade = (parts[3] || 'A').trim().toUpperCase();
+            const level = parseInt(parts[4]) || defaultLevel;
+            const semester = parseInt(parts[5]) || 1;
+
+            if (seen.has(code)) { skipped++; continue; }
+            if (units < 1 || units > 8) { skipped++; continue; }
+            if (!allowedGrades.includes(grade)) { skipped++; continue; }
+
+            await pool.query(
+                `INSERT INTO public.cgpa_courses
+                 (user_id, course_code, title, level_scope, semester, credit_units, grade, is_hidden, deleted)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, false, false)`,
+                [userId, code, title, level, semester, units, grade]
+            );
+            seen.add(code);
+            imported++;
+        }
+
+        res.json({ success: true, imported, skipped });
+    } catch (err) {
+        console.error('CSV Import Error:', err);
+        res.status(500).json({ success: false, error: 'Error importing courses' });
     }
 });
 
@@ -7180,7 +7283,7 @@ app.post('/api/study/cgpa-sync', isAuth, requirePaid, async (req, res) => {
 });
 
 // API: CGPA forecast / what-if analysis
-app.post('/api/cgpa/forecast', isAuth, async (req, res) => {
+app.post('/api/cgpa/forecast', isAuth, requirePaid, featureLock('cgpa'), async (req, res) => {
   try {
     const uid = req.session.user.id;
     const profile = await pool.query('SELECT * FROM public.cgpa_profiles WHERE user_id = $1', [uid]);
@@ -7238,7 +7341,7 @@ app.post('/api/cgpa/forecast', isAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/api/cgpa/ai-predict', isAuth, async (req, res) => {
+app.post('/api/cgpa/ai-predict', isAuth, requirePaid, featureLock('cgpa'), async (req, res) => {
   try {
     const uid = req.session.user.id;
     const profile = await pool.query('SELECT * FROM public.cgpa_profiles WHERE user_id = $1', [uid]);
@@ -7258,7 +7361,7 @@ Predict their likely GPA range next semester, identify subjects they are at risk
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
-app.post('/api/cgpa/ai-whatif', isAuth, async (req, res) => {
+app.post('/api/cgpa/ai-whatif', isAuth, requirePaid, featureLock('cgpa'), async (req, res) => {
   try {
     const { courseName, units, anticipatedGrade } = req.body;
     if (!courseName || !units || !anticipatedGrade) return res.json({ success: false, error: 'Fill in all fields.' });
@@ -7284,7 +7387,7 @@ app.post('/api/cgpa/ai-whatif', isAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
-app.post('/api/cgpa/bulk-whatif', isAuth, async (req, res) => {
+app.post('/api/cgpa/bulk-whatif', isAuth, requirePaid, featureLock('cgpa'), async (req, res) => {
   try {
     const { courses: whatifCourses } = req.body;
     if (!whatifCourses || !Array.isArray(whatifCourses) || whatifCourses.length === 0)
@@ -7322,13 +7425,13 @@ app.post('/api/cgpa/bulk-whatif', isAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
-app.post('/api/cgpa/ai-chat', isAuth, async (req, res) => {
+app.post('/api/cgpa/ai-chat', isAuth, requirePaid, featureLock('cgpa'), async (req, res) => {
   try {
     const { message, history } = req.body;
     if (!message || !message.trim()) return res.json({ success: false, error: 'Empty message.' });
     const uid = req.session.user.id;
     const cleanUser = cleanAiText(message);
-    await pool.query('INSERT INTO study_chat_messages (user_id, course_id, subtopic_id, role, message) VALUES ($1, 0, 0, $2, $3)', [uid, 'user:' + cleanUser]).catch(()=>{});
+    await pool.query('INSERT INTO study_chat_messages (user_id, course_id, subtopic_id, role, message) VALUES ($1, 0, 0, $2, $3)', [uid, 'user', cleanUser]).catch(()=>{});
     const profile = await pool.query('SELECT * FROM public.cgpa_profiles WHERE user_id = $1', [uid]);
     const courses = await pool.query("SELECT course_code, credit_units, grade, level_scope, semester FROM public.cgpa_courses WHERE user_id = $1 AND deleted = false AND is_hidden = false ORDER BY id DESC LIMIT 20", [uid]);
     let ctx = '';
@@ -7351,7 +7454,7 @@ app.post('/api/cgpa/ai-chat', isAuth, async (req, res) => {
 });
 
 // API: Transcript export - structured JSON
-app.get('/api/cgpa/transcript', isAuth, async (req, res) => {
+app.get('/api/cgpa/transcript', isAuth, requirePaid, featureLock('cgpa'), async (req, res) => {
   try {
     const uid = req.session.user.id;
     const user = await pool.query('SELECT fullname, email FROM users WHERE id = $1', [uid]);
