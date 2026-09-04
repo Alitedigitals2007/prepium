@@ -354,7 +354,8 @@
     font-size: .52rem; font-weight: 700; text-transform: uppercase; letter-spacing: .3px;
     background: var(--bg); color: var(--text-muted); padding: 2px 6px; border-radius: 4px;
 }
-.cmeta { font-size: .68rem; color: var(--text-sub); display: flex; gap: 1rem; }
+.cmeta { font-size: .68rem; color: var(--text-sub); display: flex; flex-wrap: wrap; gap: .5rem 1rem; min-width: 0; }
+.ccode { overflow-wrap: anywhere; }
 .crow-right { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
 .grade-chip {
     width: 36px; height: 36px; border-radius: var(--radius);
@@ -628,6 +629,26 @@
     background: rgba(30, 41, 59, 0.4);
     backdrop-filter: blur(12px);
     border: 1px solid rgba(71, 85, 105, 0.3);
+}
+
+/* RESPONSIVE: header cluster + course rows */
+@media (max-width: 640px) {
+    .header-nav { flex-wrap: wrap; row-gap: 6px; padding: 12px 12px 8px; }
+    .header-title { font-size: .95rem; min-width: 0; }
+    .top-action-cluster { width: 100%; justify-content: flex-end; flex-wrap: wrap; gap: 6px; }
+    .top-action-cluster .btn-sm { padding: 6px 8px; font-size: .6rem; white-space: nowrap; }
+}
+@media (max-width: 420px) {
+    .top-action-cluster { justify-content: space-between; }
+    .top-action-cluster .btn-sm { flex: 1; padding: 6px 4px; font-size: .58rem; }
+    .hero { padding: 20px 16px; }
+    .crow { gap: 8px; }
+    .crow-check { padding-right: 6px; }
+    .crow-right { gap: 5px; }
+    .act { width: 28px; height: 28px; }
+    .grade-chip { width: 32px; height: 32px; }
+    .cmeta { font-size: .62rem; }
+    .ccode { font-size: .82rem; }
 }
 </style>
 <%- include('partials/theme-toggle') %>
@@ -990,6 +1011,17 @@
              data-semester="<%= c.semester %>">
             <div class="crow-check">
                 <input type="checkbox" class="row-check" value="<%= c.id %>" onchange="updateBulkBar()">
+            </div>
+            <div class="crow-left">
+                <div class="ccode">
+                    <%= c.code %>
+                    <% if (c.is_hidden) { %><span class="excl-tag">excluded</span><% } %>
+                </div>
+                <div class="cmeta">
+                    <span><%= c.credit_units %> units</span>
+                    <% if (c.title) { %><span>· <%= c.title %></span><% } %>
+                    <span>· L<%= c.level_scope %> S<%= c.semester %></span>
+                </div>
             </div>
             <div class="crow-right">
                 <div class="grade-chip <%= c.grade %>"><%= c.grade %></div>
