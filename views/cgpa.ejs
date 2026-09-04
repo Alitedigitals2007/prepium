@@ -701,33 +701,43 @@
 .ccode { font-size: .98rem; }
 .crow-right { gap: 8px; }
 
-/* Desktop: two-column app layout */
+/* Desktop: dashboard layout — hero + tools left, course list right */
 @media (min-width: 1180px) {
-    .app-shell { max-width: 1320px; padding: 20px 28px; }
+    .app-shell { max-width: 1440px; padding: 18px 26px; }
     .cgpa-layout {
         display: grid;
-        grid-template-columns: minmax(0, 1.18fr) minmax(0, 1fr);
-        gap: 18px;
+        grid-template-columns: minmax(0, 400px) minmax(0, 1fr);
+        grid-template-areas:
+            "hero   main"
+            "tiles  main"
+            "side   main";
+        column-gap: 22px;
+        row-gap: 16px;
         align-items: start;
-        margin-top: 14px;
+        margin-top: 12px;
     }
-    .cgpa-col-main { display: flex; flex-direction: column; gap: 14px; }
-    .cgpa-col-side { display: flex; flex-direction: column; gap: 14px; }
-    .cgpa-layout .filters,
-    .cgpa-layout .filter-row2,
-    .cgpa-layout .course-card,
-    .cgpa-layout .analytics { width: 100%; margin-left: 0; margin-right: 0; box-sizing: border-box; }
-    .cgpa-layout .filters { padding: 0; }
-    .cgpa-layout .filter-row2 { padding: 12px 0 0; }
-    .cgpa-layout .course-card { margin-top: 0; }
-    .cgpa-layout .analytics { margin: 0; }
-    .reset-section { max-width: none; margin-left: 0; margin-right: 0; }
+    .hero { grid-area: hero; margin: 0; }
+    .tiles { grid-area: tiles; margin: 0; }
+    .cgpa-col-main { grid-area: main; min-width: 0; }
+    .cgpa-col-side {
+        grid-area: side;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+    .cgpa-col-side .analytics { width: 100%; margin: 0; }
+    .cgpa-col-main .filters { padding: 0; }
+    .cgpa-col-main .filter-row2 { padding: 12px 0 0; }
+    .cgpa-col-main .course-card { margin-top: 14px; width: 100%; }
+    .reset-section { max-width: none; margin: 16px 0 0; }
 }
 
-/* Tablet + phone: single app column, tidy gutters */
+/* Tablet: single app column, tidy gutters */
 @media (max-width: 1179px) and (min-width: 640px) {
-    .app-shell { max-width: 860px; }
-    .course-card, .analytics { margin-left: 14px; margin-right: 14px; }
+    .app-shell { max-width: 880px; padding: 16px; }
+    .cgpa-layout { display: block; }
+    .hero, .tiles, .course-card, .analytics { margin-left: 0; margin-right: 0; }
 }
 @media (max-width: 639px) {
     .hero { margin-left: 10px; margin-right: 10px; padding: 22px 18px 18px; border-radius: 20px; }
@@ -947,6 +957,7 @@
     }
 %>
 
+<div class="cgpa-layout">
 <!-- Hero -->
 <div class="hero reveal-scale hover-lift">
     <svg width="0" height="0"><defs>
@@ -982,25 +993,24 @@
 
 <!-- Tiles -->
 <div class="tiles reveal">
-<div class="tile t-blue hover-lift">
-    <div class="tile-icon"><i class="fas fa-layer-group"></i></div>
-    <div class="tile-num"><%= totalUnits %></div>
-    <div class="tile-label">Units</div>
-</div>
-<div class="tile t-teal hover-lift">
-    <div class="tile-icon"><i class="fas fa-star"></i></div>
-    <div class="tile-num"><%= totalPoints.toFixed(1) %></div>
-    <div class="tile-label">Quality Pts</div>
-</div>
-<div class="tile t-amber hover-lift">
-    <div class="tile-icon"><i class="fas fa-book-open"></i></div>
-    <div class="tile-num"><%= courses.length %></div>
-    <div class="tile-label">Courses</div>
-</div>
-</div>
+    <div class="tile t-blue hover-lift">
+        <div class="tile-icon"><i class="fas fa-layer-group"></i></div>
+        <div class="tile-num"><%= totalUnits %></div>
+        <div class="tile-label">Units</div>
+    </div>
+    <div class="tile t-teal hover-lift">
+        <div class="tile-icon"><i class="fas fa-star"></i></div>
+        <div class="tile-num"><%= totalPoints.toFixed(1) %></div>
+        <div class="tile-label">Quality Pts</div>
+    </div>
+    <div class="tile t-amber hover-lift">
+        <div class="tile-icon"><i class="fas fa-book-open"></i></div>
+        <div class="tile-num"><%= courses.length %></div>
+        <div class="tile-label">Courses</div>
+    </div>
+    </div>
 
-<div class="cgpa-layout">
-  <div class="cgpa-col-main">
+    <div class="cgpa-col-main">
 <!-- Filters -->
 <div class="filters">
     <div class="pill-row" id="lvl-pills">
