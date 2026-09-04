@@ -7530,84 +7530,153 @@ app.get('/api/cgpa/transcript/pdf', isAuth, requirePaid, async (req, res) => {
     const semesterLabel = s => 'Level ' + s.level + ' — ' + (String(s.semester) === '1' ? 'First' : 'Second') + ' Semester';
 
     const PDFDocument = require('pdfkit');
-    const doc = new PDFDocument({ size: 'A4', margin: 48 });
+    const doc = new PDFDocument({ size: 'A4', margin: 44, bufferPages: true });
     const fileName = 'Transcript_' + studentName.replace(/[^\w]+/g, '_') + '.pdf';
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="' + fileName + '"');
     doc.pipe(res);
 
-    const brand = [37, 99, 235];
-    const gray = '#64748b';
+    const M = 44;
+    const W = doc.page.width - M * 2;
+    const INK = '#0f172a', MUTED = '#64748b', BRAND = '#2563eb';
+    const NAVY = '#0b1437', INDIGO = '#1e1b4b';
 
-    // Header band
-    doc.rect(0, 0, doc.page.width, 96).fill('#0b1437');
-    doc.fill('#ffffff').font('Helvetica-Bold').fontSize(20).text('PREPIUM', 48, 22);
-    doc.fill('#93c5fd').font('Helvetica').fontSize(10).text('Official Transcript of Academic Record', 48, 48);
-    doc.fontSize(8).fill('#64748b').text('Reference: ' + refNum + '   |   Issued: ' + new Date().toLocaleString('en-GB'), 48, 66);
+    // ---- Brand header band (page 1) ----
+    const bandH = 118;
+    const bandGrad = doc.linearGradient(0, 0, 0, bandH);
+    bandGrad.stop(0, NAVY).stop(1, INDIGO);
+    doc.rect(0, 0, doc.page.width, bandH).fill(bandGrad);
+    doc.rect(0, bandH - 4, doc.page.width, 4).fill(BRAND);
+    doc.circle(M, 40, 5).fill('#60a5fa');
+    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(21).text('PREPIUM', M + 14, 27);
+    doc.fillColor('#93c5fd').font('Helvetica').fontSize(9.5).text('Official Transcript of Academic Record', M + 14, 54);
+    doc.fillColor('#94a3b8').font('Helvetica').fontSize(7.5);
+    doc.text('REF: ' + refNum, M + 14, 76, { align: 'left' });
+    doc.text('Issued: ' + new Date().toLocaleString('en-GB'), M + 14, 90, { align: 'left' });
+    doc.fillColor('#bfdbfe').font('Helvetica-Bold').fontSize(8).text('STUDENT-OWNED ACADEMIC RECORD', M, 98, { align: 'right', width: doc.page.width - M * 2 });
 
-    doc.y = 122;
-    doc.fill('#0f172a').font('Helvetica-Bold').fontSize(13).text('Student Record');
-    doc.moveDown(0.3);
-    doc.font('Helvetica').fontSize(10).fill('#1e293b');
-    doc.text('Name: ' + studentName);
-    doc.text('Email: ' + (user.rows[0]?.email || ''));
-    doc.text('Department: ' + (dept || 'Not specified'));
-    doc.text('Current Level: ' + (currentLevel || 'Not specified') + '    |    Grading Scale: ' + scale + '-Point');
-    doc.moveDown(0.6);
+    doc.y = bandH + 22;
 
+    // ---- Student info card ----
+    const infoTop = doc.y;
+    const infoH = 96;
+    doc.roundedRect(M, infoTop, W, infoH, 10).fill('#f8fafc');
+    doc.roundedRect(M, infoTop, W, infoH, 10).strokeColor('#e2e8f0').lineWidth(1).stroke();
+    const field = (label, value, x, y, w) => {
+      doc.fillColor(MUTED).font('Helvetica').fontSize(6.3).text(label.toUpperCase(), x, y);
+      doc.fillColor(INK).font('Helvetica-Bold').fontSize(9.6).text(value || '-', x, y + 11, { width: w, ellipsis: true });
+    };
+    const col = (W - 36) / 3;
+    const pad = 18;
+    field('Full Name', studentName, M + pad, infoTop + 14, col);
+    field('Department', dept || 'Not specified', M + pad + col, infoTop + 14, col);
+    field('Current Level', (currentLevel ? currentLevel + ' Level' : 'Not specified'), M + pad + col * 2, infoTop + 14, col);
+    field('Email', user.rows[0]?.email || '', M + pad, infoTop + 52, col * 2 + 8);
+    field('Grading Scale', scale + '-Point System', M + pad + col * 2, infoTop + 52, col);
+
+    doc.y = infoTop + infoH + 16;
+
+    // ---- CGPA hero panel ----
+    const heroTop = doc.y;
+    const heroH = 92;
+    const heroGrad = doc.linearGradient(0, heroTop, 0, heroTop + heroH);
+    heroGrad.stop(0, BRAND).stop(1, '#4f46e5');
+    doc.roundedRect(M, heroTop, W, heroH, 12).fill(heroGrad);
+    doc.fillColor('#dbeafe').font('Helvetica').fontSize(7).text('CUMULATIVE GPA (CGPA)', M + 22, heroTop + 16);
+    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(40).text(cgpa.toFixed(2), M + 22, heroTop + 28);
+    doc.fillColor('#dbeafe').font('Helvetica').fontSize(10).text('/ ' + scale + '.00', M + 22 + 122, heroTop + 50);
+    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(10);
+    doc.text(degreeClass || 'Pass', M + W - 190, heroTop + 34, { width: 170, align: 'right', ellipsis: true });
+    doc.fillColor('#dbeafe').font('Helvetica').fontSize(7.5).text('TOTAL UNITS: ' + totalUnits + '    |    TOTAL POINTS: ' + totalPoints.toFixed(1), M + W - 190, heroTop + 54, { width: 170, align: 'right' });
+
+    doc.y = heroTop + heroH + 20;
+
+    // ---- Helper: next page + footer reminder ----
+    const ensure = (need) => {
+      if (doc.y + need > doc.page.height - 66) { doc.addPage(); }
+    };
+
+    // ---- Semester blocks ----
     if (!semesters.length) {
-      doc.fill('#0f172a').font('Helvetica-Bold').fontSize(11).text('No courses logged yet.');
+      doc.fillColor(MUTED).font('Helvetica').fontSize(11).text('No courses have been logged yet. Add courses on the CGPA tracker to build your transcript.', M, doc.y + 8, { width: W });
     }
 
+    const gradeColor = (g) => (g === 'F' ? '#dc2626' : g === 'E' ? '#f59e0b' : INK);
+
     semesters.forEach(s => {
-      if (doc.y > doc.page.height - 130) { doc.addPage(); }
       const semCgpa = s.units > 0 ? (s.points / s.units).toFixed(2) : '0.00';
-      doc.rect(48, doc.y, 20, 20).fill('#2563eb');
-      doc.fill('#ffffff').font('Helvetica-Bold').fontSize(10).text(String(s.level).slice(-3), 54, doc.y + 5);
-      doc.x = 74;
-      doc.fill('#0f172a').font('Helvetica-Bold').fontSize(11).text(semesterLabel(s) + '   (SGPA: ' + semCgpa + ')', 74, doc.y + 4);
-      doc.moveDown(0.6);
+      ensure(150);
+      // Semester banner
+      const sTop = doc.y;
+      doc.roundedRect(M, sTop, W, 30, 8).fill('#1e293b');
+      doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(10).text('LEVEL ' + s.level + '  |  ' + (String(s.semester) === '1' ? 'FIRST' : 'SECOND') + ' SEMESTER', M + 16, sTop + 9);
+      doc.fillColor('#93c5fd').font('Helvetica-Bold').fontSize(9).text('SGPA ' + semCgpa, M + W - 96, sTop + 9, { width: 80, align: 'right' });
+      doc.y = sTop + 38;
 
-      const startY = doc.y;
-      doc.font('Helvetica-Bold').fontSize(8.5).fill('#334155');
-      doc.rect(48, doc.y, doc.page.width - 96, 18).fill('#f1f5f9');
-      doc.text('COURSE CODE', 54, doc.y + 5, { width: 110 });
-      doc.text('COURSE TITLE', 164, doc.y + 5, { width: 200 });
-      doc.text('UNITS', 388, doc.y + 5, { width: 50 });
-      doc.text('GRADE', 452, doc.y + 5, { width: 50 });
-      doc.moveDown(0.5);
+      // Column headers
+      const hTop = doc.y;
+      doc.rect(M, hTop, W, 20).fill('#eef2ff');
+      doc.fillColor('#4f46e5').font('Helvetica-Bold').fontSize(6.8);
+      doc.text('CODE', M + 12, hTop + 7);
+      doc.text('COURSE TITLE', M + 108, hTop + 7);
+      doc.text('UNIT', M + W - 118, hTop + 7, { width: 34, align: 'right' });
+      doc.text('GRADE', M + W - 74, hTop + 7, { width: 40, align: 'right' });
+      doc.text('GP', M + W - 36, hTop + 7, { width: 30, align: 'right' });
+      doc.y = hTop + 20;
 
-      s.courses.forEach(c => {
-        if (doc.y > doc.page.height - 60) { doc.addPage(); }
-        doc.font('Helvetica').fontSize(9).fill('#1e293b');
-        doc.text(c.code || '-', 54, doc.y, { width: 110 });
-        doc.text(c.title || '', 164, doc.y, { width: 200 });
-        doc.text(String(c.units), 388, doc.y, { width: 50 });
-        doc.font('Helvetica-Bold').fill(c.grade === 'F' ? '#dc2626' : '#0f172a').text(c.grade, 452, doc.y, { width: 50 });
-        doc.fill('#1e293b').font('Helvetica');
-        if (c.excluded) { doc.font('Helvetica-Oblique').fontSize(7.5).fill('#94a3b8').text('(excluded)', 164, doc.y - 9, { width: 200 }); }
-        doc.moveDown(0.35);
+      const cx = { code: M + 12, title: M + 108, unit: M + W - 118, grade: M + W - 74, gp: M + W - 36 };
+      const cw = { title: (M + W - 118) - (M + 108) - 12, unit: 34, grade: 40, gp: 30 };
+
+      s.courses.forEach((c, i) => {
+        if (doc.y > doc.page.height - 70) { doc.addPage(); }
+        const rowTop = doc.y;
+        const gp = gpMap[c.grade] || 0;
+        const titleH = doc.heightOfString(c.title || '', { width: cw.title });
+        const rowH = Math.max(20, titleH + 8);
+        if (i % 2 === 1) doc.rect(M, rowTop, W, rowH).fill('#fafbff');
+        doc.fillColor(c.excluded ? '#cbd5e1' : INK);
+        doc.font(c.excluded ? 'Helvetica-Oblique' : 'Helvetica').fontSize(8.8);
+        doc.text(c.code || '-', cx.code, rowTop + 6, { width: 88, ellipsis: true });
+        doc.text(c.title || '', cx.title, rowTop + 6, { width: cw.title });
+        if (c.excluded) doc.fillColor('#94a3b8').font('Helvetica-Oblique').fontSize(6.5).text('(excluded from CGPA)', cx.title + cw.title - 92, rowTop + 6, { width: 92, align: 'right' });
+        doc.fillColor(gradeColor(c.grade)).font('Helvetica-Bold').fontSize(9);
+        doc.text(String(c.units), cx.unit, rowTop + 6, { width: cw.unit, align: 'right' });
+        doc.text(String(c.grade), cx.grade, rowTop + 6, { width: cw.grade, align: 'right' });
+        doc.fillColor(MUTED).font('Helvetica').fontSize(8.6).text(gp.toFixed(1), cx.gp, rowTop + 6, { width: cw.gp, align: 'right' });
+        doc.y = rowTop + rowH;
       });
 
-      doc.moveDown(0.2);
+      // Semester totals bar
+      const tTop = doc.y;
+      doc.roundedRect(M, tTop, W, 22, 6).fill('#eef2ff');
+      const passed = s.courses.filter(c => c.grade !== 'F' && !c.excluded).length;
+      doc.fillColor('#4338ca').font('Helvetica-Bold').fontSize(7.8)
+        .text('SEMESTER TOTAL: ' + s.units + ' UNITS  |  ' + passed + ' COURSE(S) PASSED', M + 14, tTop + 7);
+      doc.text('GPA ' + semCgpa + ' / ' + scale + '.00', M + W - 120, tTop + 7, { width: 106, align: 'right' });
+      doc.y = tTop + 30;
     });
 
-    doc.moveDown(0.8);
-    doc.moveTo(48, doc.y).lineTo(doc.page.width - 48, doc.y).strokeColor('#e2e8f0').lineWidth(1).stroke();
     doc.moveDown(0.6);
-    doc.fill('#0f172a').font('Helvetica-Bold').fontSize(12).text('Cumulative Results');
-    doc.moveDown(0.3);
-    doc.font('Helvetica').fontSize(10).fill('#1e293b');
-    doc.text('Total Units Earned: ' + totalUnits);
-    doc.text('Cumulative GPA (CGPA): ' + cgpa.toFixed(2) + ' / ' + scale + '.00');
-    doc.text('Classification: ' + degreeClass);
-    doc.text('Reference Number: ' + refNum);
-    doc.moveDown(0.7);
+    ensure(110);
 
-    doc.font('Helvetica-Oblique').fontSize(8).fill(gray)
-      .text('NOTICE: This transcript is generated from student-provided academic records via the Prepium CGPA Tracker. It is not an official university document.', { width: doc.page.width - 96 });
-    doc.moveDown(0.3);
-    doc.text('Generated: ' + new Date().toLocaleString('en-GB') + '  |  Prepium  |  theprepium.vercel.app', { width: doc.page.width - 96 });
+    // ---- Final footer note ----
+    doc.moveTo(M, doc.y).lineTo(M + W, doc.y).strokeColor('#e2e8f0').lineWidth(1).stroke();
+    doc.y += 10;
+    doc.fillColor(MUTED).font('Helvetica-Oblique').fontSize(7.6)
+      .text('NOTICE: This transcript is auto-generated from records provided by the student in the Prepium CGPA Tracker. It is a personal academic summary and is NOT an official university document.', M, doc.y, { width: W });
+    doc.y += 14;
+    doc.fillColor('#94a3b8').font('Helvetica').fontSize(7)
+      .text('Reference: ' + refNum + '   |   Generated: ' + new Date().toLocaleString('en-GB') + '   |   Prepium  |  theprepium.vercel.app', M, doc.y, { width: W });
+
+    // ---- Page footers (all pages) ----
+    const range = doc.bufferedPageRange();
+    for (let i = range.start; i < range.start + range.count; i++) {
+      doc.switchToPage(i);
+      const ph = doc.page.height;
+      doc.fillColor('#cbd5e1').font('Helvetica').fontSize(7.5);
+      doc.text('PREPIUM  |  Official Transcript  |  ' + refNum, M, ph - 34, { width: W * 0.6 });
+      doc.text('Page ' + (i + 1) + ' of ' + range.count, M, ph - 34, { width: W, align: 'right' });
+    }
 
     doc.end();
   } catch (err) {
