@@ -6726,6 +6726,11 @@ app.post('/admin/db-manager/query', isAdmin, async (req, res) => {
 });
 
 // ==================== STUDY DASHBOARD ====================
+app.get('/games', isAuth, async (req, res) => {
+  res.locals.seo.title = 'Prepium | Games Hub';
+  res.render('games', { user: req.session.user });
+});
+
 app.get('/study', isAuth, requirePaid, featureLock('study'), async (req, res) => {
   try {
     const uid = req.session.user.id;
@@ -7139,7 +7144,11 @@ app.post('/api/study/youtube/search', isAuth, requirePaid, async (req, res) => {
     const prompt = `Generate a list of 5 YouTube video search queries for studying the topic: "${searchQuery}". Return a JSON array of strings. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
     const aiRes = await studyPromptJSON(prompt);
     let terms = [];
-    try { terms = JSON.parse(aiRes.text.replace(/```json/g, '').replace(/```/g, '').trim()); } catch { terms = [searchQuery]; }
+    try {
+      var extracted = extractJsonItems(aiRes.text);
+      terms = JSON.parse(extracted);
+      if (!Array.isArray(terms)) terms = (terms && (terms.items || terms.terms || terms.queries)) || [searchQuery];
+    } catch { terms = [searchQuery]; }
     const html = terms.map(function(t) {
       const encoded = encodeURIComponent(t);
       return '<div class="yt-card" onclick="window.open(\'https://www.youtube.com/results?search_query=' + encoded + '\',\'_blank\')"><i class="fab fa-youtube" style="color:#ff0000;font-size:1.5rem;"></i><div><strong>' + t + '</strong><br><span style="font-size:0.75rem;color:var(--text-sub)">Click to search on YouTube</span></div></div>';
