@@ -41,9 +41,9 @@
     <div class="status-bar"></div>
     
     <div class="header-nav">
-        <a href="/study/course/<%= courseId %>" class="back-circle"><i class="fas fa-arrow-left"></i></a>
+        <a href="/study/course/<%= typeof courseId !== 'undefined' ? courseId : 0 %>" class="back-circle"><i class="fas fa-arrow-left"></i></a>
         <div class="header-title">Flashcards</div>
-        <div style="width:42px"></div>
+        <%- include('partials/drawer-trigger') %>
     </div>
 
     <div class="page-content">

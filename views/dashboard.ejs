@@ -13,6 +13,9 @@
         .dash-greeting { font-size: 0.62rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
         .dash-name { font-size: 1.15rem; font-weight: 800; line-height: 1.2; }
         .dash-header-right { display: flex; align-items: center; gap: 8px; }
+        .hamburger-btn { width: 42px; height: 42px; border-radius: 12px; background: var(--surface-solid); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 1rem; cursor: pointer; transition: var(--transition); }
+        .hamburger-btn:hover { background: var(--bg); border-color: var(--brand); }
+        .hamburger-btn:active { transform: scale(0.92); }
         .notif-bell { width: 42px; height: 42px; border-radius: 14px; background: var(--surface-solid); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 1rem; cursor: pointer; position: relative; box-shadow: var(--shadow-sm); transition: var(--transition); }
         .notif-bell:active { transform: scale(0.92); }
         .notif-dot { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--danger); border: 2px solid var(--surface-solid); }
@@ -49,9 +52,63 @@
 
         .section-head { padding: 0.5rem 1.25rem 0.75rem; display: flex; align-items: center; justify-content: space-between; }
         .section-head h2 { font-size: 1rem; font-weight: 800; letter-spacing: -0.3px; }
-        .section-head .see-all { font-size: 0.68rem; font-weight: 700; color: var(--brand); cursor: pointer; text-decoration: none; }
+        .section-head .see-all { font-size: 0.68rem; font-weight: 700; color: var(--brand); cursor: pointer; text-decoration: none; background: none; border: none; font-family: var(--font); }
 
-        /* Today list rows */
+        /* ── Phone-style app grid ── */
+        .app-grid { padding: 0 1.25rem; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 6px; }
+        .app-tile { display: flex; flex-direction: column; align-items: center; gap: 7px; text-decoration: none; position: relative; }
+        .app-tile:active .at-icon { transform: scale(0.9); }
+        .app-tile .at-icon {
+            width: 56px; height: 56px; border-radius: 17px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem; position: relative;
+            background: var(--surface-solid); border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm); transition: transform 0.15s var(--ease-out);
+        }
+        .app-tile .at-label { font-size: 0.62rem; font-weight: 700; color: var(--text-secondary); text-align: center; line-height: 1.25; max-width: 74px; }
+        .app-tile.locked .at-icon { opacity: 0.55; }
+        .app-tile.locked .at-label { opacity: 0.55; }
+        .app-tile .at-lock {
+            position: absolute; top: -3px; right: 6px;
+            width: 18px; height: 18px; border-radius: 50%;
+            background: var(--surface-solid); border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.55rem; color: var(--text-muted); box-shadow: var(--shadow-sm);
+        }
+        .at-icon.c-blue { background: var(--brand-soft); color: var(--brand); border-color: transparent; }
+        .at-icon.c-green { background: var(--success-soft); color: var(--success); border-color: transparent; }
+        .at-icon.c-amber { background: var(--warning-soft); color: var(--warning); border-color: transparent; }
+        .at-icon.c-red { background: var(--danger-soft); color: var(--danger); border-color: transparent; }
+        .at-icon.c-grad { background: var(--brand-gradient); color: #fff; border-color: transparent; box-shadow: 0 4px 14px var(--brand-light); }
+        .at-icon.c-teal { background: linear-gradient(135deg,#0d9488,#0891b2); color: #fff; border-color: transparent; }
+        .at-icon.c-orange { background: linear-gradient(135deg,#f59e0b,#ef4444); color: #fff; border-color: transparent; }
+
+        /* ── App drawer (all apps) ── */
+        .app-drawer {
+            position: fixed; inset: 0; z-index: 3000;
+            background: var(--bg); display: none;
+            overflow-y: auto; -webkit-overflow-scrolling: touch;
+            padding: 18px 16px 60px;
+        }
+        .app-drawer.open { display: block; }
+        .drawer-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; max-width: 640px; margin-left: auto; margin-right: auto; }
+        .drawer-head h2 { font-size: 1.15rem; font-weight: 800; color: var(--text-primary); margin: 0; }
+        .drawer-close { width: 40px; height: 40px; border-radius: 13px; border: 1px solid var(--border); background: var(--surface-solid); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .drawer-search {
+            width: 100%; max-width: 640px; margin: 0 auto 18px; display: block;
+            padding: 12px 16px; border-radius: 14px; border: 1px solid var(--border);
+            background: var(--surface-solid); color: var(--text-primary);
+            font-family: var(--font); font-size: 0.88rem; box-sizing: border-box;
+        }
+        .drawer-group-label {
+            font-size: 0.66rem; font-weight: 800; text-transform: uppercase;
+            letter-spacing: 0.08em; color: var(--text-muted);
+            max-width: 640px; margin: 18px auto 10px;
+        }
+        .drawer-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px 6px; max-width: 640px; margin: 0 auto; }
+        .drawer-empty { text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 20px 0; max-width: 640px; margin: 0 auto; }
+
+        /* Today rows */
         .today-list { padding: 0 1.25rem; display: grid; gap: 8px; }
         .today-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--surface-solid); border: 1px solid var(--border); box-shadow: var(--shadow-sm); text-decoration: none; color: inherit; }
         .today-row .tr-icon { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; background: var(--brand-soft); color: var(--brand); }
@@ -59,24 +116,6 @@
         .today-row .tr-title { font-size: 0.8rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .today-row .tr-meta { font-size: 0.66rem; color: var(--text-secondary); font-weight: 600; margin-top: 1px; }
         .today-row .tr-badge { flex-shrink: 0; }
-
-        .feature-grid { padding: 0 1.25rem; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .feature-card { background: var(--surface-solid); border-radius: 18px; padding: 18px 14px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); text-decoration: none; color: inherit; transition: all 0.3s var(--ease-out); display: flex; flex-direction: column; }
-        .feature-card:active { transform: scale(0.96); }
-        .feature-card .fc-icon { width: 42px; height: 42px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1rem; margin-bottom: 12px; }
-        .feature-card .fc-label { font-size: 0.78rem; font-weight: 800; margin-bottom: 2px; }
-        .feature-card .fc-desc { font-size: 0.65rem; color: var(--text-secondary); font-weight: 600; line-height: 1.3; }
-        .feature-card.featured { grid-column: span 2; flex-direction: row; align-items: center; gap: 16px; padding: 16px 18px; background: var(--brand-gradient); color: white; border: none; box-shadow: 0 6px 24px var(--brand-light); }
-        .feature-card.featured .fc-icon { background: rgba(255,255,255,0.2); color: white; margin-bottom: 0; }
-        .feature-card.featured .fc-body { flex: 1; }
-        .feature-card.featured .fc-label { font-size: 0.88rem; }
-        .feature-card.featured .fc-desc { color: rgba(255,255,255,0.75); }
-        .feature-card.featured .fc-arrow { width: 32px; height: 32px; border-radius: 10px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .feature-card.locked { opacity: 0.6; }
-        .feature-card.locked .fc-icon { background: var(--bg); color: var(--text-muted); }
-        .feature-card.locked::after { display: none; }
-        .feature-card .lock-overlay { display: none; }
-        .feature-card.locked .lock-overlay { display: flex; align-items: center; justify-content: center; position: absolute; inset: 0; background: var(--surface); backdrop-filter: blur(2px); border-radius: 18px; font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; z-index: 2; cursor: pointer; }
 
         .quick-resume { padding: 0 1.25rem; }
         .resume-card { background: var(--surface-solid); border-radius: 18px; padding: 16px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: 14px; text-decoration: none; color: inherit; margin-bottom: 10px; transition: var(--transition); }
@@ -86,15 +125,6 @@
         .resume-card .rc-body .rc-title { font-size: 0.82rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .resume-card .rc-body .rc-meta { font-size: 0.65rem; color: var(--text-secondary); font-weight: 600; margin-top: 1px; }
         .resume-card .rc-progress { width: 40px; text-align: right; font-size: 0.75rem; font-weight: 800; color: var(--brand); }
-
-        .weak-card { margin: 0 1.25rem 1.25rem; border-radius: 18px; padding: 16px; background: var(--surface-solid); border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
-        .weak-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; }
-        .weak-row + .weak-row { border-top: 1px dashed var(--border-solid); }
-        .weak-row .wr-icon { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 10px; background: var(--warning-soft); color: var(--warning); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
-        .weak-row .wr-body { flex: 1; min-width: 0; }
-        .weak-row .wr-title { font-size: 0.8rem; font-weight: 700; }
-        .weak-row .wr-meta { font-size: 0.65rem; color: var(--text-secondary); font-weight: 600; }
-        .weak-row .wr-score { font-weight: 800; font-size: 0.85rem; color: var(--warning); }
 
         .daily-banner { margin: 0 1.25rem 1.25rem; padding: 18px 20px; border-radius: 20px; background: linear-gradient(135deg,var(--accent),var(--brand)); color: white; display: flex; align-items: center; justify-content: space-between; text-decoration: none; box-shadow: 0 6px 20px var(--brand-light); position: relative; overflow: hidden; }
         .daily-banner::before { content: ''; position: absolute; top: -40%; right: -20%; width: 160px; height: 160px; border-radius: 50%; background: rgba(255,255,255,0.08); }
@@ -116,13 +146,13 @@
 
         .bottom-spacer { height: 20px; }
 
-        /* ── Desktop layout ≥1024px ── */
+        /* ── Desktop ≥1024px ── */
         @media (min-width: 1024px) {
             .app-shell { padding-bottom: 40px; }
             .dash-content { max-width: 1080px; margin: 0 auto; padding: 0 32px 40px; }
             .dash-columns { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
             .dash-col-main { min-width: 0; }
-            .dash-col-side { min-width: 0; display: grid; gap: 0; }
+            .dash-col-side { min-width: 0; }
             .dash-header { padding: 2rem 0 1rem; }
             .hero-strip { padding: 0 0 1.25rem; }
             .hero-stat { flex: 1 1 calc(25% - 6px); }
@@ -130,11 +160,10 @@
             .onboard-card { margin: 0 0 1.25rem; }
             .upgrade-strip { margin: 0 0 1.25rem; }
             .section-head { padding: 0.5rem 0 0.75rem; }
-            .feature-grid { padding: 0; grid-template-columns: repeat(4, 1fr); }
-            .feature-card.featured { grid-column: span 4; }
+            .app-grid { padding: 0; grid-template-columns: repeat(6, 1fr); gap: 20px 8px; }
+            .app-tile .at-icon { width: 64px; height: 64px; }
             .today-list { padding: 0; }
             .quick-resume { padding: 0; }
-            .weak-card { margin: 0 0 1.25rem; }
             .daily-banner { margin: 0 0 1.25rem; }
             .dash-side-block { background: var(--surface-solid); border: 1px solid var(--border); border-radius: 18px; padding: 16px; box-shadow: var(--shadow-sm); margin-bottom: 16px; }
             .dash-side-block h3 { font-size: 0.8rem; font-weight: 800; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; color: var(--text-primary); }
@@ -161,6 +190,9 @@
   <div class="dash-content">
     <div class="dash-header">
         <div class="dash-header-left">
+            <button class="hamburger-btn" onclick="openDrawer()" aria-label="All apps">
+                <i class="fas fa-bars"></i>
+            </button>
             <div class="dash-avatar"><%= user.fullname ? user.fullname.charAt(0).toUpperCase() : 'U' %></div>
             <div>
                 <div class="dash-greeting" id="greeting-text">Good morning</div>
@@ -278,117 +310,50 @@
         <% } %>
 
         <div class="section-head">
-            <h2>Your Tools</h2>
+            <h2>Your apps</h2>
+            <button class="see-all" onclick="openDrawer()">See all <i class="fas fa-chevron-right" style="font-size:0.55rem;"></i></button>
         </div>
 
-        <div class="feature-grid">
-            <a href="/daily-task" class="feature-card featured" style="background:linear-gradient(135deg,#0d9488,#0891b2);margin-bottom:10px;">
-                <div class="fc-icon"><i class="fas fa-tasks"></i></div>
-                <div class="fc-body">
-                    <div class="fc-label">Daily Task</div>
-                    <div class="fc-desc">Timetable, goals, deadlines & weekly report</div>
-                </div>
-                <div class="fc-arrow"><i class="fas fa-arrow-right"></i></div>
+        <div class="app-grid">
+            <a href="/daily-task" class="app-tile">
+                <div class="at-icon c-teal"><i class="fas fa-tasks"></i></div>
+                <span class="at-label">Daily Task</span>
             </a>
-
-            <a href="/study" class="feature-card featured">
-                <div class="fc-icon"><i class="fas fa-graduation-cap"></i></div>
-                <div class="fc-body">
-                    <div class="fc-label">Study with AI</div>
-                    <div class="fc-desc">Courses, flashcards, quizzes & AI tutor</div>
-                </div>
-                <div class="fc-arrow"><i class="fas fa-arrow-right"></i></div>
+            <a href="/study" class="app-tile">
+                <div class="at-icon c-grad"><i class="fas fa-graduation-cap"></i></div>
+                <span class="at-label">Study Hub</span>
             </a>
-
-            <a href="/daily-challenge" class="feature-card">
-                <div class="fc-icon" style="background:var(--success-soft);color:var(--success);"><i class="fas fa-calendar-check"></i></div>
-                <div class="fc-label">Daily Challenge</div>
-                <div class="fc-desc">Free daily competition</div>
+            <a href="/setup-test" class="app-tile">
+                <div class="at-icon c-blue"><i class="fas fa-bolt"></i></div>
+                <span class="at-label">Practice Quiz</span>
             </a>
-
-            <a href="/library" class="feature-card">
-                <div class="fc-icon" style="background:var(--brand-soft);color:var(--brand);"><i class="fas fa-building-columns"></i></div>
-                <div class="fc-label">Course Library</div>
-                <div class="fc-desc">Notes & past questions</div>
+            <a href="/ai-quiz" class="app-tile <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>">
+                <% if (!user.has_paid) { %><span class="at-lock"><i class="fas fa-lock"></i></span><% } %>
+                <div class="at-icon c-green"><i class="fas fa-wand-magic-sparkles"></i></div>
+                <span class="at-label">AI Quiz</span>
             </a>
-
-            <a href="/competition" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
-                <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-                <div class="fc-icon" style="background:var(--brand-light);color:var(--accent);"><i class="fas fa-trophy"></i></div>
-                <div class="fc-label">Live Arena</div>
-                <div class="fc-desc">Real-time rankings</div>
+            <a href="/library" class="app-tile">
+                <div class="at-icon c-blue"><i class="fas fa-building-columns"></i></div>
+                <span class="at-label">Library</span>
             </a>
-
-            <a href="/squads" class="feature-card">
-                <div class="fc-icon" style="background:var(--warning-soft);color:var(--warning);"><i class="fas fa-users"></i></div>
-                <div class="fc-label">Squad Streaks</div>
-                <div class="fc-desc">Study with friends, win together</div>
+            <a href="/cgpa" class="app-tile <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>">
+                <% if (!user.has_paid) { %><span class="at-lock"><i class="fas fa-lock"></i></span><% } %>
+                <div class="at-icon c-blue"><i class="fas fa-chart-line"></i></div>
+                <span class="at-label">CGPA</span>
             </a>
-
-            <a href="/cgpa" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
-                <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-                <div class="fc-icon" style="background:var(--brand-soft);color:var(--accent);"><i class="fas fa-chart-line"></i></div>
-                <div class="fc-label">CGPA Tracker</div>
-                <div class="fc-desc">Forecast & AI advisor</div>
+            <a href="/timetable" class="app-tile <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>">
+                <% if (!user.has_paid) { %><span class="at-lock"><i class="fas fa-lock"></i></span><% } %>
+                <div class="at-icon c-amber"><i class="fas fa-calendar-alt"></i></div>
+                <span class="at-label">Timetable</span>
             </a>
-
-            <a href="/ai-quiz" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
-                <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-                <div class="fc-icon" style="background:var(--success-soft);color:var(--success);"><i class="fas fa-wand-magic-sparkles"></i></div>
-                <div class="fc-label">AI Quiz Generator</div>
-                <div class="fc-desc">Generate quizzes from PDF</div>
+            <a href="/daily-challenge" class="app-tile">
+                <div class="at-icon c-orange"><i class="fas fa-calendar-check"></i></div>
+                <span class="at-label">Challenge</span>
             </a>
-
-            <a href="/timetable" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
-                <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-                <div class="fc-icon" style="background:var(--brand-light);color:var(--brand);"><i class="fas fa-table"></i></div>
-                <div class="fc-label">Timetable</div>
-                <div class="fc-desc">AI-powered schedule</div>
-            </a>
-
-            <a href="/reading-timetable" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
-                <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-                <div class="fc-icon" style="background:var(--brand-soft);color:var(--accent);"><i class="fas fa-book-open"></i></div>
-                <div class="fc-label">Reading Schedule</div>
-                <div class="fc-desc">Smart study plan</div>
-            </a>
-
-            <a href="/deadlines" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
-                <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-                <div class="fc-icon" style="background:var(--danger-soft);color:var(--danger);"><i class="fas fa-hourglass-half"></i></div>
-                <div class="fc-label">Deadlines</div>
-                <div class="fc-desc">Track milestones</div>
-            </a>
-
-            <a href="/history" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
-                <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-                <div class="fc-icon" style="background:var(--warning-soft);color:var(--warning);"><i class="fas fa-chart-bar"></i></div>
-                <div class="fc-label">History</div>
-                <div class="fc-desc">Quiz performance</div>
-            </a>
-
-            <% if (typeof isPaidSchool !== 'undefined' && isPaidSchool) { %>
-            <a href="/refer" class="feature-card featured" style="background:linear-gradient(135deg,#f59e0b,#ef4444);">
-                <div class="fc-icon" style="background:rgba(255,255,255,0.2);color:#fff;"><i class="fas fa-gift"></i></div>
-                <div class="fc-body">
-                    <div class="fc-label" style="color:#fff;">Refer & Earn</div>
-                    <div class="fc-desc" style="color:rgba(255,255,255,0.85);">Invite friends, earn real money</div>
-                </div>
-                <div class="fc-arrow"><i class="fas fa-arrow-right"></i></div>
-            </a>
-            <% } %>
-
-            <a href="/guide" class="feature-card">
-                <div class="fc-icon" style="background:var(--brand-soft);color:var(--text-primary);"><i class="fas fa-book"></i></div>
-                <div class="fc-label">User Guide</div>
-                <div class="fc-desc">How to use every feature</div>
-            </a>
-
-            <a href="/suggestions" class="feature-card">
-                <div class="fc-icon" style="background:var(--brand-soft);color:var(--accent);"><i class="fas fa-lightbulb"></i></div>
-                <div class="fc-label">Feedback</div>
-                <div class="fc-desc">Share your thoughts</div>
-            </a>
+            <button class="app-tile" onclick="openDrawer()" style="background:none;border:none;padding:0;font-family:var(--font);cursor:pointer;">
+                <div class="at-icon" style="background:var(--bg);color:var(--text-secondary);"><i class="fas fa-grip"></i></div>
+                <span class="at-label">All Apps</span>
+            </button>
         </div>
 
         <div class="section-head" style="padding-top:1.25rem;">
@@ -446,6 +411,23 @@
             <% } %>
         </div>
 
+        <% if (typeof recentQuiz !== 'undefined' && recentQuiz) { %>
+        <div class="section-head" style="padding-top:1.25rem;">
+            <h2>Recent Activity</h2>
+            <a href="/history" class="see-all">History <i class="fas fa-arrow-right" style="font-size:0.6rem;"></i></a>
+        </div>
+        <div class="quick-resume">
+            <a href="/history" class="resume-card">
+                <div class="rc-icon"><i class="fas fa-bolt"></i></div>
+                <div class="rc-body">
+                    <div class="rc-title"><%= recentQuiz.subject || 'Quiz' %></div>
+                    <div class="rc-meta"><%= new Date(recentQuiz.date_taken).toLocaleDateString('en-GB', { day:'numeric', month:'short' }) %></div>
+                </div>
+                <div class="rc-progress"><%= recentQuiz.score %>/<%= recentQuiz.total_questions %></div>
+            </a>
+        </div>
+        <% } %>
+
         <div style="margin-top:1.25rem;" class="dash-mobile-only">
             <div class="section-head">
                 <h2>Daily Challenge</h2>
@@ -477,7 +459,7 @@
                     </div>
                 </div>
                 <% }); %>
-                <a href="/setup-test" class="see-all" style="display:inline-block;margin-top:8px;font-size:0.7rem;font-weight:700;color:var(--brand);text-decoration:none;">Practise these <i class="fas fa-arrow-right" style="font-size:0.6rem;"></i></a>
+                <a href="/setup-test" style="display:inline-block;margin-top:8px;font-size:0.7rem;font-weight:700;color:var(--brand);text-decoration:none;">Practise these <i class="fas fa-arrow-right" style="font-size:0.6rem;"></i></a>
             <% } else { %>
                 <p class="side-empty">Take a couple of practice quizzes and your weakest subjects will show up here automatically.</p>
             <% } %>
@@ -508,7 +490,71 @@
 
     <div class="bottom-spacer"></div>
   </div>
+</div>
+
+<!-- App drawer -->
+<div class="app-drawer" id="appDrawer" role="dialog" aria-label="All apps">
+    <div class="drawer-head">
+        <h2>All apps</h2>
+        <button class="drawer-close" onclick="closeDrawer()" aria-label="Close"><i class="fas fa-xmark"></i></button>
+    </div>
+    <input type="search" class="drawer-search" id="drawerSearch" placeholder="Search apps…" oninput="filterDrawer()">
+    <div id="drawerBody">
+        <div class="drawer-group-label">Study</div>
+        <div class="drawer-grid">
+            <a href="/study" class="drawer-tile" data-name="Study Hub"><div class="at-icon c-grad"><i class="fas fa-book-open"></i></div><span>Study Hub</span></a>
+            <a href="/setup-test" class="drawer-tile" data-name="Practice Quiz"><div class="at-icon c-blue"><i class="fas fa-bolt"></i></div><span>Practice Quiz</span></a>
+            <a href="/subjects" class="drawer-tile" data-name="Subjects"><div class="at-icon c-teal"><i class="fas fa-list"></i></div><span>Subjects</span></a>
+            <a href="/ai-quiz" class="drawer-tile <%= user.has_paid ? '' : 'locked' %>" data-name="AI Quiz"><div class="at-icon c-green"><i class="fas fa-wand-magic-sparkles"></i></div><span>AI Quiz</span><span class="at-lock" style="position:static;"><i class="fas fa-lock"></i></span></a>
+            <a href="/library" class="drawer-tile" data-name="Library"><div class="at-icon c-blue"><i class="fas fa-building-columns"></i></div><span>Course Library</span></a>
+            <a href="/study/session" class="drawer-tile" data-name="Session"><div class="at-icon c-purple"><i class="fas fa-play-circle"></i></div><span>Study Session</span></a>
+        </div>
+        <div class="drawer-group-label">Academics</div>
+        <div class="drawer-grid">
+            <a href="/cgpa" class="drawer-tile <%= user.has_paid ? '' : 'locked' %>" data-name="CGPA"><div class="at-icon c-blue"><i class="fas fa-chart-line"></i></div><span>CGPA Tracker</span><span class="at-lock" style="position:static;"><i class="fas fa-lock"></i></span></a>
+            <a href="/timetable" class="drawer-tile <%= user.has_paid ? '' : 'locked' %>" data-name="Timetable"><div class="at-icon c-amber"><i class="fas fa-calendar-alt"></i></div><span>Timetable</span><span class="at-lock" style="position:static;"><i class="fas fa-lock"></i></span></a>
+            <a href="/reading-timetable" class="drawer-tile <%= user.has_paid ? '' : 'locked' %>" data-name="Reading"><div class="at-icon c-teal"><i class="fas fa-book-dropped"></i></div><span>Reading Plan</span><span class="at-lock" style="position:static;"><i class="fas fa-lock"></i></span></a>
+            <a href="/deadlines" class="drawer-tile <%= user.has_paid ? '' : 'locked' %>" data-name="Deadlines"><div class="at-icon c-red"><i class="fas fa-calendar-check"></i></div><span>Deadlines</span><span class="at-lock" style="position:static;"><i class="fas fa-lock"></i></span></a>
+            <a href="/history" class="drawer-tile" data-name="History"><div class="at-icon c-green"><i class="fas fa-chart-bar"></i></div><span>History</span></a>
+            <% if (user.has_paid) { %>
+            <a href="/daily-task" class="drawer-tile" data-name="Daily"><div class="at-icon c-grad"><i class="fas fa-tasks"></i></div><span>Daily Task</span></a>
+            <% } %>
+        </div>
+        <div class="drawer-group-label">Community</div>
+        <div class="drawer-grid">
+            <a href="/daily-challenge" class="drawer-tile" data-name="Challenge"><div class="at-icon c-orange"><i class="fas fa-fire-alt"></i></div><span>Daily Challenge</span></a>
+            <a href="/competition" class="drawer-tile <%= user.has_paid ? '' : 'locked' %>" data-name="Arena"><div class="at-icon c-red"><i class="fas fa-trophy"></i></div><span>Live Arena</span><span class="at-lock" style="position:static;"><i class="fas fa-lock"></i></span></a>
+            <a href="/squads" class="drawer-tile" data-name="Squads"><div class="at-icon c-purple"><i class="fas fa-users"></i></div><span>Squad Streaks</span></a>
+            <a href="/notifications" class="drawer-tile" data-name="Notifications"><div class="at-icon c-teal"><i class="fas fa-bell"></i></div><span>Notifications</span></a>
+            <a href="/suggestions" class="drawer-tile" data-name="Feedback"><div class="at-icon c-green"><i class="fas fa-lightbulb"></i></div><span>Send Feedback</span></a>
+        </div>
+        <div class="drawer-group-label">More</div>
+        <div class="drawer-grid">
+            <a href="/upgrade" class="drawer-tile" data-name="Premium"><div class="at-icon c-grad"><i class="fas fa-crown"></i></div><span>Premium</span></a>
+            <a href="/install" class="drawer-tile" data-name="Install"><div class="at-icon c-blue"><i class="fas fa-mobile-screen"></i></div><span>Install App</span></a>
+            <a href="/profile" class="drawer-tile" data-name="Profile"><div class="at-icon c-teal"><i class="fas fa-user"></i></div><span>Your Profile</span></a>
+            <a href="/guide" class="drawer-tile" data-name="Guide"><div class="at-icon c-grad"><i class="fas fa-book"></i></div><span>Student Guide</span></a>
+            <a href="/refer" class="drawer-tile" data-name="Referral"><div class="at-icon c-orange"><i class="fas fa-hand-holding-heart"></i></div><span>Refer & Earn</span></a>
+            <a href="/how-it-works" class="drawer-tile" data-name="How It Works"><div class="at-icon c-purple"><i class="fas fa-circle-info"></i></div><span>How It Works</span></a>
+            <a href="/terms" class="drawer-tile" data-name="Terms"><div class="at-icon c-grad"><i class="fas fa-file-contract"></i></div><span>Terms</span></a>
+            <a href="/privacy" class="drawer-tile" data-name="Privacy"><div class="at-icon c-grad"><i class="fas fa-lock"></i></div><span>Privacy</span></a>
+        </div>
+        <p class="drawer-empty">No apps found. Try adjusting your search.</p>
+    </div>
+</div>
+
 <%- include('partials/bottom-nav', { activeNav: 'dashboard' }) %>
+
+</div>
+
+<style>
+    .drawer-tile { display: flex; flex-direction: column; align-items: center; gap: 7px; text-decoration: none; color: inherit; }
+    .drawer-tile .at-icon { width: 48px; height: 48px; border-radius: 14px; font-size: 1.25rem; display: flex; align-items: center; justify-content: center; }
+    .drawer-tile .at-label { font-size: 0.68rem; font-weight: 700; color: var(--text-secondary); text-align: center; }
+    .drawer-tile.locked .at-icon { opacity: 0.5; }
+    .drawer-tile.locked .at-label { opacity: 0.5; }
+    .drawer-tile .at-lock { position: absolute; top: -4px; right: -4px; background: var(--surface-solid); border: 1px solid var(--border); padding: 2px; border-radius: 50%; font-size: 0.38rem; }
+</style>
 
 <script>
 function lockedAction(e) {
@@ -551,7 +597,7 @@ function payWithPaystack(e, presets) {
             key: '<%= paystack_key %>',
             email: '<%= user.email %>',
             amount: amount,
-            currency: 'NGN',
+            currency: 'NGR',
             callback: function(response) {
                 var ref = response.reference;
                 var dest = '/verify-payment?reference=' + ref;
@@ -564,21 +610,39 @@ function payWithPaystack(e, presets) {
     });
 }
 
+function openDrawer() { document.getElementById('appDrawer').classList.add('open'); document.body.style.overflow = 'hidden'; }
+function closeDrawer() { document.getElementById('appDrawer').classList.remove('open'); document.body.style.overflow = ''; }
+function filterDrawer() {
+    var search = document.getElementById('drawerSearch').value.toLowerCase();
+    var body = document.getElementById('drawerBody');
+    if (body) {
+        body.querySelectorAll('.drawer-tile').forEach(function(el) {
+            var text = el.textContent.toLowerCase();
+            el.style.display = text.includes(search) ? '' : 'none';
+        });
+        body.querySelectorAll('.drawer-group-label, .drawer-empty').forEach(function(el) {
+            el.style.display = Array.from(el.parentElement.children).some(function(sib) { return sib.classList.contains('drawer-tile') && sib.style.display !== 'none'; }) ? '' : 'none';
+        });
+    }
+}
+
 (function() {
-    const params = new URLSearchParams(window.location.search);
-    const payment = params.get('payment');
+    var params = new URLSearchParams(window.location.search);
+    var payment = params.get('payment');
     if (payment === 'success') {
         Swal.fire({ icon: 'success', title: 'Payment Successful!', text: 'Premium unlocked!', timer: 3000, timerProgressBar: true, showConfirmButton: true }).then(() => window.history.replaceState({}, document.title, '/dashboard'));
     } else if (payment === 'failed') {
-        Swal.fire({ icon: 'error', title: 'Payment Failed', text: 'Please try again', timer: 4000, showConfirmButton: true }).then(() => window.history.replaceState({}, document.title, '/dashboard'));
+        Swal.fire({ icon: 'error', title: 'Payment Failed', text: 'Please try again', timer: 4000, timerProgressBar: true, showConfirmButton: true }).then(() => window.history.replaceState({}, document.title, '/dashboard'));
     }
-
-    const hour = new Date().getHours();
-    let g = 'Good morning';
+    var hour = new Date().getHours();
+    var g = 'Good morning';
     if (hour < 12) g = 'Good morning';
     else if (hour < 17) g = 'Good afternoon';
-    document.getElementById('greeting-text').textContent = g;
+    var greetEl = document.getElementById('greeting-text');
+    if (greetEl) greetEl.textContent = g;
 })();
 </script>
+
+<%- include('partials/install-banner') %>
 </body>
 </html>

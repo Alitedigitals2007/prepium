@@ -3,56 +3,68 @@
 <head>
     <%- include('partials/head') %>
     <style>
-        .app-shell { padding: 2rem 1.5rem; }
-        @media (min-width: 1024px) { .app-shell { padding-left: 1.5rem !important; } }
+        .app-shell { padding-bottom: 80px; }
+        .lobby-card { background: var(--surface-solid); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 16px; box-shadow: var(--shadow-sm); }
+        .subject-tag { display: inline-block; background: var(--surface); padding: 5px 12px; border-radius: 10px; font-weight: 800; font-size: 0.8rem; border: 1px solid var(--border); margin: 4px; }
         
-        .card { background: var(--bg); border: 1px solid var(--border); border-radius: 24px; padding: 1.5rem; margin-bottom: 20px; }
-        .subject-tag { display: inline-block; background: var(--surface-solid); padding: 5px 12px; border-radius: 10px; font-weight: 800; font-size: 0.8rem; border: 1px solid var(--border-solid); margin: 5px; }
+        .instruction-item { display: flex; gap: 14px; margin-bottom: 14px; align-items: flex-start); }
+        .instruction-icon { width: 40px; height: 40px; background: var(--brand-soft); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: var(--brand); flex-shrink: 0; }
         
-        .instruction-item { display: flex; gap: 15px; margin-bottom: 15px; align-items: flex-start; }
-        .icon { width: 40px; height: 40px; background: var(--brand-soft); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
-        
-        .go-btn { background: var(--brand); color: white; width: 100%; padding: 1.2rem; border-radius: 20px; border: none; font-weight: 800; font-size: 1.1rem; cursor: pointer; box-shadow: var(--shadow-lg); }
+        .go-btn { background: var(--brand-gradient); color: white; width: 100%; padding: 1.2rem; border-radius: 20px; border: none; font-weight: 800; font-size: 1.1rem; cursor: pointer; box-shadow: 0 8px 28px var(--brand-light); display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .go-btn:active { transform: scale(0.98); }
+        .change-link { text-align: center; margin-top: 16px; }
+        .change-link a { color: var(--text-secondary); font-weight: 700; text-decoration: none; font-size: 0.82rem; }
+        .change-link a:hover { color: var(--brand); }
     </style>
     <%- include('partials/theme-toggle') %>
 </head>
 <body>
-    <div class="app-shell">
-        <a href="/dashboard" class="back-circle" aria-label="Back to dashboard" style="text-decoration:none;"><i class="fas fa-arrow-left"></i></a>
-        <h2 style="font-weight: 800; font-size: 1.6rem;">Ready for Your Exam?</h2>
-        <p style="color: var(--text-secondary); font-weight: 600;">Confirm your choices and start the exam.</p>
+<%- include('partials/sidebar') %>
+<div class="app-shell">
+    <div class="status-bar"></div>
+    <div class="header-nav">
+        <a href="/dashboard" class="back-circle" title="Back to Dashboard"><i class="fas fa-arrow-left"></i></a>
+        <div class="header-title">Start Exam</div>
+        <%- include('partials/drawer-trigger') %>
+    </div>
 
-        <div class="card">
-            <h4 style="margin: 0 0 10px; font-weight: 800;">Selected Subjects</h4>
-            <% setup.summary.forEach(s => { %>
-                <span class="subject-tag"><%= s.name %> (<%= s.count %>)</span>
-            <% }) %>
-            <hr style="border: 0; border-top: 1px solid var(--border-solid); margin: 15px 0;">
-            <div style="display: flex; justify-content: space-between; font-weight: 800;">
-                <span>Total Questions: <%= setup.totalQs %></span>
-                <span>Time: <%= setup.duration %> Mins</span>
+    <div class="page-content">
+        <div class="lobby-card">
+            <h4 style="margin: 0 0 10px; font-weight: 800; font-size: 0.82rem; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.5px;">Selected Subjects</h4>
+            <% if (setup && setup.summary) { %>
+                <% setup.summary.forEach(s => { %>
+                    <span class="subject-tag"><%= s.name %> (<%= s.count %>)</span>
+                <% }) %>
+            <% } %>
+            <hr style="border: 0; border-top: 1px solid var(--border); margin: 14px 0;">
+            <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 0.8rem; color: var(--text-secondary);">
+                <span>Total Questions: <%= setup && setup.totalQs ? setup.totalQs : 0 %></span>
+                <span>Time: <%= setup && setup.duration ? setup.duration : 0 %> Mins</span>
             </div>
         </div>
 
-        <h4 style="font-weight: 800;">Important Instructions</h4>
+        <h4 style="font-weight: 800; margin: 0 0 12px; color: var(--text-primary); font-size: 0.85rem;">Important Instructions</h4>
         <div class="instruction-item">
-            <div class="icon"><i class="fas fa-clock"></i></div>
-            <div><b style="display: block;">Timed Session</b> Once you click "Start", the countdown begins and cannot be paused.</div>
+            <div class="instruction-icon"><i class="fas fa-clock"></i></div>
+            <div><strong style="display: block; font-size: 0.72rem; margin-bottom: 2px;">Timed Session</strong> <span style="font-size: 0.74rem; color: var(--text-secondary);">Once you click "Start", the countdown begins and cannot be paused.</span></div>
         </div>
         <div class="instruction-item">
-            <div class="icon"><i class="fas fa-floppy-disk"></i></div>
-            <div><b style="display: block;">Auto-Save</b> Your progress is saved as you answer. You can jump between questions.</div>
+            <div class="instruction-icon"><i class="fas fa-floppy-disk"></i></div>
+            <div><strong style="display: block; font-size: 0.72rem; margin-bottom: 2px;">Auto-Save</strong> <span style="font-size: 0.74rem; color: var(--text-secondary);">Your progress is saved as you answer. You can jump between questions.</span></div>
         </div>
         <div class="instruction-item">
-            <div class="icon"><i class="fas fa-ban"></i></div>
-            <div><b style="display: block;">Strict Exit</b> Closing the app or refreshing may submit your current progress.</div>
+            <div class="instruction-icon"><i class="fas fa-ban"></i></div>
+            <div><strong style="display: block; font-size: 0.72rem; margin-bottom: 2px;">Strict Exit</strong> <span style="font-size: 0.74rem; color: var(--text-secondary);">Closing the app or refreshing may submit your current progress.</span></div>
         </div>
-
-        <form action="/live-exam" method="POST">
-            <button type="submit" class="go-btn"><i class="fas fa-rocket"></i> Confirm & Start</button>
-        </form>
-        <p style="text-align: center; margin-top: 15px;"><a href="/setup-test" style="color: var(--text-muted); font-weight: 800; text-decoration: none;">Change Selection</a></p>
     </div>
-<script src="/js/animations.js"></script>
+
+    <form action="/live-exam" method="POST" style="padding: 0 1.5rem 12px;">
+        <button type="submit" class="go-btn"><i class="fas fa-rocket"></i> Confirm & Start</button>
+    </form>
+    <div class="change-link">
+        <a href="/setup-test">Change Selection</a>
+    </div>
+
+    <%- include('partials/bottom-nav', { activeNav: 'study' }) %>
 </body>
 </html>

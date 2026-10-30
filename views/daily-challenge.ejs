@@ -95,8 +95,13 @@
 <%- include('partials/sidebar') %>
 <div class="app-shell">
     <div class="main-area">
-        <div class="page-head">
-            <h1><i class="fas fa-calendar-check" style="color:var(--brand);"></i> Daily Challenge</h1>
+        <div class="header-nav">
+            <a href="/dashboard" class="back-circle"><i class="fas fa-arrow-left"></i></a>
+            <div class="header-title">Daily Challenge</div>
+            <%- include('partials/drawer-trigger') %>
+        </div>
+
+        <div class="page-subhead">
             <p>Pick up to 3 subjects, answer 15 questions, climb the ranks</p>
         </div>
 

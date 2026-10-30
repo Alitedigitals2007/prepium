@@ -247,6 +247,24 @@ body::before {
 }
 .back-circle:hover { border-color: var(--brand); color: var(--brand); transform: translateX(-2px); }
 
+/* Drawer trigger (hamburger for app drawer) */
+.drawer-trigger {
+  width: 42px;
+  height: 42px;
+  background: var(--surface);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+  transition: var(--transition);
+  z-index: 110;
+}
+.drawer-trigger:hover { border-color: var(--brand); color: var(--brand); }
+
 .header-title {
   font-size: 1.15rem;
   font-weight: 800;

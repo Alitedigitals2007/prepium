@@ -3,8 +3,8 @@
 <head>
     <%- include('partials/head') %>
     <style>
-        .page-header { padding: 1.5rem 1.5rem 0.5rem; display: flex; align-items: center; justify-content: space-between; }
-        .page-header h1 { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.5px; }
+        .page-header { padding: 1.5rem 1.5rem 0.5rem; display: flex; align-items: center; gap: 12px; }
+        .page-header h1 { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.5px; flex: 1; }
         .page-header .date-badge { font-size: 0.68rem; font-weight: 700; color: var(--text-secondary); background: var(--bg); padding: 6px 14px; border-radius: 20px; }
 
         .summary-strip { display: flex; gap: 8px; padding: 0.5rem 1.5rem 1rem; }
@@ -68,10 +68,12 @@
 <%- include('partials/sidebar') %>
 <div class="app-shell">
     <div class="page-header">
+        <a href="/dashboard" class="back-circle"><i class="fas fa-arrow-left"></i></a>
         <div>
             <h1>Daily Task</h1>
         </div>
         <div class="date-badge"><i class="fas fa-calendar-alt"></i> <%= new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) %></div>
+        <%- include('partials/drawer-trigger') %>
     </div>
 
     <div class="summary-strip">

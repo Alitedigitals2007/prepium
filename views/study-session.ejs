@@ -88,7 +88,7 @@
     <div class="header-nav">
         <a href="/study" class="back-circle"><i class="fas fa-arrow-left"></i></a>
         <div class="header-title"><%= session ? session.course_name : 'Study Session' %></div>
-        <div style="width:42px"></div>
+        <%- include('partials/drawer-trigger') %>
     </div>
 
     <div class="page-content">

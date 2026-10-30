@@ -35,4 +35,29 @@
             }
         });
     })();
+
+    /* Global app-drawer controls (available on all pages) */
+    window.openDrawer = function () {
+        var d = document.getElementById('appDrawer');
+        if (!d) return;
+        d.classList.add('open');
+        document.body.style.overflow = 'hidden';
+    };
+    window.closeDrawer = function () {
+        var d = document.getElementById('appDrawer');
+        if (!d) return;
+        d.classList.remove('open');
+        document.body.style.overflow = '';
+    };
+    window.filterDrawer = function () {
+        var search = document.getElementById('drawerSearch');
+        if (!search) return;
+        search = search.value.toLowerCase();
+        var body = document.getElementById('drawerBody');
+        if (!body) return;
+        body.querySelectorAll('.drawer-tile').forEach(function (el) {
+            var text = el.textContent.toLowerCase();
+            el.style.display = text.includes(search) ? '' : 'none';
+        });
+    };
 </script>

@@ -139,7 +139,7 @@
     <div class="header-nav">
         <a href="javascript:history.back()" class="back-circle"><i class="fas fa-arrow-left"></i></a>
         <div class="header-title"><%= (subtopic.subtopic_name || subtopic.title) %></div>
-        <div style="width:42px"></div>
+        <%- include('partials/drawer-trigger') %>
     </div>
     <div class="page-content">
         <div class="top-bar">
