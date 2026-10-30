@@ -25,14 +25,14 @@
         .streak-badge i { font-size: 0.85rem; }
 
         /* Next action hero card */
-        .next-card { margin: 0 1.25rem 1.5rem; border-radius: 24px; padding: 22px 20px; background: var(--brand-gradient); color: #fff; display: flex; align-items: center; gap: 16px; text-decoration: none; box-shadow: 0 10px 32px var(--brand-light); position: relative; overflow: hidden; }
+        .next-card { margin: 0 1.25rem 1.5rem; border-radius: 24px; padding: 22px 20px; background: linear-gradient(135deg,#dbeafe,#c7d2fe); color: var(--text-primary); display: flex; align-items: center; gap: 16px; text-decoration: none; box-shadow: 0 6px 20px rgba(59,130,246,0.25); position: relative; overflow: hidden; border: 1px solid var(--border); }
         .next-card::before { content: ''; position: absolute; top: -40%; right: -10%; width: 200px; height: 200px; border-radius: 50%; background: rgba(255,255,255,0.1); }
-        .next-card .nc-icon { width: 52px; height: 52px; flex: 0 0 52px; border-radius: 16px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; position: relative; }
+        .next-card .nc-icon { width: 52px; height: 52px; flex: 0 0 52px; border-radius: 16px; background: rgba(59,130,246,0.15); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; position: relative; color: #2563eb; }
         .next-card .nc-body { flex: 1; min-width: 0; position: relative; }
-        .next-card .nc-kicker { font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; opacity: 0.85; }
-        .next-card .nc-title { font-size: 1.05rem; font-weight: 800; margin: 3px 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .next-card .nc-sub { font-size: 0.72rem; opacity: 0.9; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .next-card .nc-cta { flex-shrink: 0; padding: 10px 18px; border-radius: 14px; background: rgba(255,255,255,0.25); color: #fff; font-weight: 800; font-size: 0.75rem; position: relative; }
+        .next-card .nc-kicker { font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; opacity: 0.8; color: #475569; }
+        .next-card .nc-title { font-size: 1.05rem; font-weight: 800; margin: 3px 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #1e293b; }
+        .next-card .nc-sub { font-size: 0.72rem; opacity: 0.8; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #475569; }
+        .next-card .nc-cta { flex-shrink: 0; padding: 10px 18px; border-radius: 14px; background: rgba(59,130,246,0.15); color: #2563eb; font-weight: 800; font-size: 0.75rem; position: relative; }
 
         /* Onboarding */
         .onboard-card { margin: 0 1.25rem 1.25rem; border-radius: 20px; padding: 20px 18px; background: var(--surface-solid); border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
@@ -84,13 +84,13 @@
         .dock-item span { font-size: 0.64rem; font-weight: 600; color: var(--text-secondary); margin-top: 3px; }
         .dock-item.locked { opacity: 0.55; }
         .dock-icon { width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; box-shadow: var(--shadow-sm); }
-        .dock-icon.c-blue { background: var(--brand-soft); color: var(--brand); }
-        .dock-icon.c-green { background: var(--success-soft); color: var(--success); }
-        .dock-icon.c-amber { background: var(--warning-soft); color: var(--warning); }
-        .dock-icon.c-red { background: var(--danger-soft); color: var(--danger); }
-        .dock-icon.c-grad { background: var(--brand-gradient); color: #fff; box-shadow: 0 4px 14px var(--brand-light); }
-        .dock-icon.c-teal { background: linear-gradient(135deg,#0d9488,#0891b2); color: #fff; }
-        .dock-icon.c-orange { background: linear-gradient(135deg,#f59e0b,#ef4444); color: #fff; }
+        .dock-icon.c-blue { background: #dbeafe; color: #2563eb; }
+        .dock-icon.c-green { background: #dcfce7; color: #16a34a; }
+        .dock-icon.c-amber { background: #fef3c7; color: #d97706; }
+        .dock-icon.c-red { background: #fee2e2; color: #dc2626; }
+        .dock-icon.c-grad { background: #c7d2fe; color: #4338ca; }
+        .dock-icon.c-teal { background: #ccfbf1; color: #0d9488; }
+        .dock-icon.c-orange { background: #fed7aa; color: #f59e0b; }
         .dock-lock { position: absolute; top: -4px; right: 4px; width: 16px; height: 16px; border-radius: 50%; background: var(--surface-solid); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 0.4rem; color: var(--text-muted); }
 
         /* ── App drawer (all apps) ── */
@@ -554,14 +554,14 @@
     .drawer-tile.locked .at-icon { opacity: 0.45; }
     .drawer-tile.locked .at-label { opacity: 0.45; }
     .drawer-tile .at-lock { position: static; background: var(--danger-soft); border: 1px solid var(--danger); padding: 2px 4px; border-radius: 50%; font-size: 0.38rem; color: var(--danger); }
-    .drawer-tile .at-icon.c-blue { background: var(--brand-soft); color: var(--brand); border-color: transparent; }
-    .drawer-tile .at-icon.c-grad { background: var(--brand-gradient); color: #fff; border-color: transparent; box-shadow: 0 4px 14px var(--brand-light); }
-    .drawer-tile .at-icon.c-teal { background: linear-gradient(135deg,#0d9488,#0891b2); color: #fff; border-color: transparent; }
-    .drawer-tile .at-icon.c-orange { background: linear-gradient(135deg,#f59e0b,#ef4444); color: #fff; border-color: transparent; }
-    .drawer-tile .at-icon.c-green { background: var(--success-soft); color: var(--success); border-color: transparent; }
-    .drawer-tile .at-icon.c-red { background: var(--danger-soft); color: var(--danger); border-color: transparent; }
-    .drawer-tile .at-icon.c-purple { background: linear-gradient(135deg,#7c3aed,#a855f7); color: #fff; border-color: transparent; }
-    .drawer-tile .at-icon.c-amber { background: var(--warning-soft); color: var(--warning); border-color: transparent; }
+    .drawer-tile .at-icon.c-blue { background: #dbeafe; color: #2563eb; border-color: transparent; }
+    .drawer-tile .at-icon.c-grad { background: #c7d2fe; color: #4338ca; border-color: transparent; }
+    .drawer-tile .at-icon.c-teal { background: #ccfbf1; color: #0d9488; border-color: transparent; }
+    .drawer-tile .at-icon.c-orange { background: #fed7aa; color: #f59e0b; border-color: transparent; }
+    .drawer-tile .at-icon.c-green { background: #dcfce7; color: #16a34a; border-color: transparent; }
+    .drawer-tile .at-icon.c-red { background: #fee2e2; color: #dc2626; border-color: transparent; }
+    .drawer-tile .at-icon.c-purple { background: #e9d5ff; color: #7c3aed; border-color: transparent; }
+    .drawer-tile .at-icon.c-amber { background: #fef3c7; color: #d97706; border-color: transparent; }
     .drawer-empty { text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 20px 0; max-width: 640px; margin: 0 auto; }
 </style>
 
