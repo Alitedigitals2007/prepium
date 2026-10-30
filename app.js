@@ -6731,6 +6731,11 @@ app.get('/games', isAuth, async (req, res) => {
   res.render('games', { user: req.session.user });
 });
 
+app.get('/games/sudoku', isAuth, async (req, res) => { res.render('games-sudoku', { user: req.session.user }); });
+app.get('/games/scramble', isAuth, async (req, res) => { res.render('games-scramble', { user: req.session.user }); });
+app.get('/games/chess', isAuth, async (req, res) => { res.render('games-chess', { user: req.session.user }); });
+app.get('/games/crossword', isAuth, async (req, res) => { res.render('games-crossword', { user: req.session.user }); });
+
 app.get('/study', isAuth, requirePaid, featureLock('study'), async (req, res) => {
   try {
     const uid = req.session.user.id;

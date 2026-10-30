@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <style>
+        .status-bar { height: env(safe-area-inset-top, 0px); }
+        .page-content { padding: 0 1.5rem 1.5rem; }
+        .chess-header { font-size:1.3rem;font-weight:800;margin-bottom:0.5rem;text-align:center; }
+        #chessBoard{width:100%;max-width:360px;margin:0 auto;}
+        .chess-controls{display:flex;gap:8px;justify-content:center;margin:1rem 0;}
+        .chess-btn{flex:1;padding:12px;border-radius:var(--radius-sm);border:none;cursor:pointer;font-weight:700;background:var(--brand-gradient);color:white;transition:all 0.15s;}
+        .chess-btn.secondary{flex:1;background:var(--surface-solid);color:var(--text-primary);border:1px solid var(--border);}
+        .chess-btn:hover{transform:scale(1.05);}
+        .status-badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:0.7rem;font-weight:700;margin-left:8px;}
+        .status-badge.white{background:var(--bg);color:var(--text-primary);}
+        .status-badge.black{background:#000;color:#fff;}
+        .history-card{background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-top:1rem;max-height:150px;overflow-y:auto;font-size:0.75rem;color:var(--text-secondary);}
+        @media (min-width:431px){ .app-shell{border-left:1px solid var(--glass-border);border-right:1px solid var(--glass-border);margin:0 auto; }}
+    </style>
+    <%- include('partials/theme-toggle') %>
+</head>
+<body>
+<%- include('partials/sidebar') %>
+<div class="app-shell">
+    <div class="status-bar"></div>
+    <div class="header-nav">
+        <a href="/games" class="back-circle"><i class="fas fa-arrow-left"></i></a>
+        <div class="header-title">Chess</div>
+    </div>
+    <div class="page-content">
+        <div class="chess-header">Play Solo <span class="status-badge white" id="turnIndicator">White</span></div>
+        <div id="chessBoard"></div>
+        <div class="chess-controls">
+            <button class="chess-btn secondary" onclick="newGame()">New Game</button>
+            <button class="chess-btn" onclick="undoMove()">Undo</button>
+            <button class="chess-btn secondary" onclick="engineMove()">AI Move</button>
+        </div>
+        <div class="history-card" id="moveHistory"></div>
+    </div>
+    <%- include('partials/bottom-nav', { activeNav: 'study' }) %>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard.js/1.0.0/js/chessboard-1.0.0.min.js"></script>
+<script>
+var game=new Chess(),board,null,analysisMode=false;
+function init(){ 
+  board=new Chessboard('chessBoard',{position:'start',draggable:true,onDragStart:onDragStart,onDrop:onDrop});
+  updateTurn(); updateHistory();
+}
+function onDragStart(pos,piece,source,target){
+  if(game.game_over()) return false;
+  if((piece.search(/^k/)!==-1) && board.moves().filter(m=>m.san==='O-O').length+board.moves().filter(m=>m.san==='O-O-O').length>0)return false;
+  return true;
+}
+function onDrop(pos,piece,source,target){
+  var move=board.moves().find(m=>m.san===pos.san);
+  if(!move) return'snapback';
+  game.move(move);
+  board.position(game.fen());
+  if(!game.game_over()) engineMove();
+  updateTurn(); updateHistory();
+}
+function updateTurn(){ document.getElementById('turnIndicator').textContent=game.turn()==='w'?'White':'Black'; document.getElementById('turnIndicator').className=game.turn()==='w'?'status-badge white':'status-badge black'; }
+function updateHistory(){ var hist=game.history(); document.getElementById('moveHistory').textContent='Moves: '+hist.join(', '); }
+function newGame(){ game.reset(); board.start(); updateTurn(); updateHistory(); }
+function undoMove(){ game.undo(); board.position(game.fen()); updateTurn(); updateHistory(); }
+function engineMove(){ var moves=game.moves(); if(moves.length===0)return; var best=moves[Math.floor(Math.random()*moves.length)]; game.move(best); board.position(game.fen()); updateTurn(); updateHistory(); }
+document.addEventListener('DOMContentLoaded',init);
+</script>
+<%- include('partials/bottom-nav', { activeNav: 'study' }) %>
+</div>
+</body>
+</html>

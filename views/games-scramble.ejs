@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <style>
+        .status-bar { height: env(safe-area-inset-top, 0px); }
+        .page-content { padding: 0 1.5rem 1.5rem; }
+        .game-header { font-size:1.3rem;font-weight:800;margin-bottom:0.5rem;text-align:center; }
+        .scramble-word { font-size:2.2rem;font-weight:800;letter-spacing:8px;text-align:center;cursor:pointer;margin:1rem 0;padding:16px;background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--radius-lg);transition:all 0.2s; }
+        .scramble-word:hover { background:var(--brand-light);transform:scale(1.02); }
+        .scramble-input { width:100%;padding:14px;border-radius:var(--radius-sm);font-size:1.1rem;font-weight:600;text-align:center;letter-spacing:2px;text-transform:uppercase;border:2px solid var(--brand); }
+        .scramble-btn { width:100%;padding:14px;margin-top:0.5rem;border-radius:var(--radius-sm);border:none;cursor:pointer;font-size:1rem;font-weight:800;color:white;background:var(--brand-gradient);transition:all 0.15s; }
+        .scramble-btn:hover { opacity:0.9;transform:scale(1.02); }
+        .stats-row{display:flex;gap:8px;margin-bottom:1rem;}
+        .stat-chip{flex:1;background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--radius);padding:12px;text-align:center;}
+        .stat-chip.num{font-size:1.4rem;font-weight:800;}
+        @keyframes spin {0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+        @media (min-width:431px){ .app-shell{border-left:1px solid var(--glass-border);border-right:1px solid var(--glass-border);margin:0 auto; }}
+    </style>
+    <%- include('partials/theme-toggle') %>
+</head>
+<body>
+<%- include('partials/sidebar') %>
+<div class="app-shell">
+    <div class="status-bar"></div>
+    <div class="header-nav">
+        <a href="/games" class="back-circle"><i class="fas fa-arrow-left"></i></a>
+        <div class="header-title">Word Scramble</div>
+    </div>
+    <div class="page-content">
+        <div class="stats-row">
+            <div class="stat-chip"><div class="num" id="sCrTime">60</div><div class="lbl">Time</div></div>
+            <div class="stat-chip"><div class="num" id="sCrScore">0</div><div class="lbl">Score</div></div>
+            <div class="stat-chip"><div class="num" id="sCrStars">★★★</div><div class="lbl">Stars</div></div>
+        </div>
+        <div class="game-header">Decode the term!</div>
+        <div class="scramble-word" id="scrambleWord" onclick="shuffleWord()"></div>
+        <input type="text" class="scramble-input" id="scrambleInput" placeholder="Type your answer..." autocomplete="off">
+        <button class="scramble-btn" onclick="checkScramble()">Submit</button>
+        <div style="text-align:center;margin-top:1rem;font-size:0.85rem;color:var(--text-sub)"><span id="hint"></span></div>
+    </div>
+    <%- include('partials/bottom-nav', { activeNav: 'study' }) %>
+</div>
+<script>
+var words = [
+  {term:'CALCULUS',hint:'Math branch: derivatives & integrals'},
+  {term:'PHOTOSYNTHESIS',hint:'Process in plants'},
+  {term:'MITOCHONDRIA',hint:'Cell powerhouse'},
+  {term:'NEURON',hint:'Basic brain cell'},
+  {term:'DNA',hint:'Genetic material'},
+  {term:'RELATIVITY',hint:'Einstein\'s theory'}
+];
+var current,nScore=0,timeLeft=60,td;
+function shuffle(w){return w.split('').sort(()=>0.5-Math.random()).join('');}
+function start(){ if(!td) td=setInterval(tick,1000); nScore=0;document.getElementById('sCrScore').textContent=0; document.getElementById('hint').textContent=''; next();}
+function tick(){ timeLeft--; document.getElementById('sCrTime').textContent=timeLeft; if(timeLeft<=0){ end(); } }
+function next(){ current=words[Math.floor(Math.random()*words.length)]; document.getElementById('scrambleWord').textContent=shuffle(current.term); document.getElementById('scrambleInput').value=''; document.getElementById('scrambleInput').focus(); document.getElementById('hint').textContent=current.hint.substring(0,30)+'...'; localStorage.setItem('sCrScore',nScore); }
+function checkScramble(){ var v=document.getElementById('scrambleInput').value.trim().toUpperCase(); if(v===current.term){ nScore+=10*timeLeft; document.getElementById('sCrScore').textContent=nScore; localStorage.setItem('sCrScore',nScore); document.getElementById('scrambleWord').textContent=shuffle(current.term); document.getElementById('scrambleInput').value=''; timeLeft+=5; if(nScore>=50) showStars(1); if(nScore>=100) showStars(2); if(nScore>=150) showStars(3); } }
+function showStars(n){ document.getElementById('sCrStars').textContent='★'.repeat(n)+'☆'.repeat(3-n); }
+function end(){ clearInterval(td); Swal.fire({icon:'success',title:'Time\'s up!',text:'Score: '+nScore + (nScore>=100?'\nStars achieved!':''),timer:3000,showConfirmButton:false}); localStorage.setItem('sudokuWins',(parseInt(localStorage.getItem('sudokuWins')||0)+nScore).toString()); }
+document.getElementById('scrambleInput').addEventListener('keydown',e=>{ if(e.key==='Enter') checkScramble(); });
+start();
+</script>
+<%- include('partials/bottom-nav', { activeNav: 'study' }) %>
+</div>
+</body>
+</html>

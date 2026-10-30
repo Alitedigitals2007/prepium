@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <style>
+        .status-bar { height: env(safe-area-inset-top, 0px); }
+        .page-content { padding: 0 1.5rem 1.5rem; }
+        .crossword-header { font-size:1.2rem;font-weight:800;margin-bottom:0.5rem;text-align:center; }
+        .crossword-grid{display:grid;grid-template-columns:repeat(10,32px);gap:2px;max-width:340px;margin:0 auto;background:var(--surface-solid);padding:12px;border-radius:var(--radius-sm);border:1px solid var(--border);}
+        .c-cell{width:32px;height:32px;border:1px solid var(--border-solid);display:flex;align-items:center;justify-content:center;font-weight:700;cursor:pointer;transition:all 0.15s;text-align:center;outline:2px solid transparent;}
+        .c-cell.number{font-size:0.7rem;color:var(--text-sub);margin:0 2px 0 0;}
+        .c-cell.double{background:var(--bg);}
+        .c-cell.black{background:var(--border-solid);cursor:default;}
+        .c-cell:hover:not(.black){background:var(--brand-light);}
+        .clues{margin:1rem 0;padding:0 1rem;}
+        .clue{margin:0.4rem 0;font-size:0.8rem;color:var(--text-secondary);}
+        .clue strong{color:var(--brand);margin-right:6px;}
+        .check-btn{width:100%;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--brand-gradient);color:white;font-weight:700;cursor:pointer;transition:all 0.15s;}
+        .check-btn:hover{opacity:0.9;}
+        @media (min-width:431px){ .app-shell{border-left:1px solid var(--glass-border);border-right:1px solid var(--glass-border);margin:0 auto; }}
+    </style>
+    <%- include('partials/theme-toggle') %>
+</head>
+<body>
+<%- include('partials/sidebar') %>
+<div class="app-shell">
+    <div class="status-bar"></div>
+    <div class="header-nav">
+        <a href="/games" class="back-circle"><i class="fas fa-arrow-left"></i></a>
+        <div class="header-title">Crossword</div>
+    </div>
+    <div class="page-content">
+        <div class="crossword-header">Quick Academic Crossword</div>
+        <div id="crosswordGrid"></div>
+        <div class="clues"><strong>Across:</strong>
+            <div class="clue"><span>1.</span> Capital of France (5)</div>
+            <div class="clue"><span>3.</span> Chemical symbol for gold (2)</div>
+        </div>
+        <div class="clues"><strong>Down:</strong>
+            <div class="clue"><span>2.</span> Largest planet (7)</div>
+        </div>
+        <button class="check-btn" onclick="checkCrossword()">Check Answers</button>
+    </div>
+    <%- include('partials/bottom-nav', { activeNav: 'study' }) %>
+</div>
+<script>
+// Simple 3x3 crossword - A=Across, D=Down
+var grid=[['P','A','R'],['R','I','S'],['E','S',' ']];
+// Answers: 1 DOWN=PARIS, 2 ACROSS=RIS, 3 DOWN=ES
+function render(){
+  var html='',num=1;
+  for(var r=0;r<3;r++){
+    for(var c=0;c<3;c++){
+      var isBlack=grid[r][c]===' ';
+      var cls=isBlack?'black':'c-cell';
+      var shows=(r===0||grid[r-1][c]===' ')&&!isBlack?'number':'';
+      html+='<div class="'+cls+'" data-r="'+r+'" data-c="'+c+'" onclick="select(this)">'+
+        (isBlack?'':(grid[r][c]||''))+'</div>';
+    }
+  }
+  document.getElementById('crosswordGrid').innerHTML=html;
+}
+function select(el){ el.classList.toggle('double'); }
+function checkCrossword(){
+  var cells=document.querySelectorAll('.c-cell:not(.black)');
+  var correct=Array.from(cells).every(c=>c.textContent&&'PARRISE'.includes(c.textContent));
+  Swal.fire(correct?'success':'error',correct?'Correct! 🎉':'Keep trying!','Time');
+}
+render();
+</script>
+<%- include('partials/bottom-nav', { activeNav: 'study' }) %>
+</div>
+</body>
+</html>

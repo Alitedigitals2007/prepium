@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <style>
+        .status-bar { height: env(safe-area-inset-top, 0px); }
+        .page-content { padding: 0 1.5rem 1.5rem; }
+        .game-header { font-size:1.2rem;font-weight:800;margin-bottom:1rem;text-align:center; }
+        .sudoku-grid { display:grid;grid-template-columns:repeat(9,calc((100vw-3vw)/9));gap:2px;max-width:320px;margin:0 auto; }
+        .sudoku-cell { width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;border:1px solid var(--border-solid);background:var(--surface);font-weight:700;font-size:1.1rem;cursor:pointer;transition:all 0.15s; }
+        .sudoku-cell.clicked { background:var(--brand-light); }
+        .sudoku-cell.given { background:var(--bg);cursor:default; }
+        .sudoku-cell:hover:not(.given) { background:var(--brand-soft); }
+        .sudoku-controls { display:flex;gap:8px;justify-content:center;margin:1rem 0; }
+        .sudoku-btn { flex:1;padding:12px;border-radius:var(--radius-sm);border:none;cursor:pointer;font-weight:700;transition:all 0.15s; }
+        .sudoku-btn.primary { background:var(--brand-gradient);color:white; }
+        .sudoku-btn.secondary { background:var(--surface-solid);color:var(--text-primary);border:1px solid var(--border); }
+        @keyframes confetti {
+            0%{transform:translateY(0) rotate(0deg);}
+            100%{transform:translateY(-20px) rotate(360deg);}
+        }
+        @media (min-width:431px){ .app-shell{border-left:1px solid var(--glass-border);border-right:1px solid var(--glass-border);margin:0 auto; }}
+    </style>
+    <%- include('partials/theme-toggle') %>
+</head>
+<body>
+<%- include('partials/sidebar') %>
+<div class="app-shell">
+    <div class="status-bar"></div>
+    <div class="header-nav">
+        <a href="/games" class="back-circle"><i class="fas fa-arrow-left"></i></a>
+        <div class="header-title">Sudoku</div>
+    </div>
+    <div class="page-content">
+        <div class="game-header">Easy Level • Solve the puzzle!</div>
+        <div id="sudokuBoard" class="sudoku-grid"></div>
+        <div class="sudoku-controls">
+            <button class="sudoku-btn secondary" onclick="checkSudoku()">Check</button>
+            <button class="sudoku-btn" onclick="resetSudoku()">New Puzzle</button>
+        </div>
+    </div>
+    <%- include('partials/bottom-nav', { activeNav: 'study' }) %>
+</div>
+<script>
+// EASY SUDOKU PUZZLE (0 = empty)
+var puzzle = [
+  [5,3,0,0,7,0,0,0,0],
+  [6,0,0,1,9,5,0,0,0],
+  [0,9,8,0,0,0,0,6,0],
+  [8,0,0,0,6,0,0,0,3],
+  [4,0,0,8,0,3,0,0,1],
+  [7,0,0,0,2,0,0,0,6],
+  [0,6,0,0,0,0,2,8,0],
+  [0,0,0,4,1,9,0,0,5],
+  [0,0,0,0,8,0,0,7,9]
+];
+var solution = [
+  [5,3,4,6,7,8,9,1,2],
+  [6,7,2,1,9,5,3,4,8],
+  [1,9,8,3,4,2,5,6,7],
+  [8,5,9,7,6,1,4,2,3],
+  [4,2,6,8,5,3,7,9,1],
+  [7,1,3,9,2,4,8,5,6],
+  [9,6,1,5,3,7,2,8,4],
+  [2,8,7,4,1,9,6,3,5],
+  [3,4,5,2,8,6,1,7,9]
+];
+var grid, clicks=[], currentPlayer='player';
+function resetSudoku(){
+  grid = JSON.parse(JSON.stringify(puzzle));
+  renderBoard();
+}
+function renderBoard(){
+  var html=''; clicks=[];
+  for(var r=0;r<9;r++){
+    for(var c=0;c<9;c++){
+      var val=grid[r][c], given=val!==0;
+      var cls=given?'given':'sudoku-cell';
+      html+='<div class="'+cls+'" data-r="'+r+'" data-c="'+c+'" onclick="selectCell(this)">'+(given?val:'')+''</div>';
+    }
+  }
+  document.getElementById('sudokuBoard').innerHTML=html;
+}
+function selectCell(el){
+  clicks.forEach(c=>c.classList.remove('clicked'));
+  el.classList.add('clicked');
+}
+function checkSudoku(){
+  var correct=true;
+  clicks.forEach(c=>{
+    var r=parseInt(c.dataset.r), col=parseInt(c.dataset.c);
+    if(grid[r][col]!==solution[r][col]) correct=false;
+  });
+  if(clicks.length===0) return;
+  if(correct){ showWin(); }
+}
+function showWin(){
+  var confetti=new Array(100).fill().map(()=>Math.random());
+  confetti.forEach((_,i)=>{
+    var el=document.createElement('div');
+    el.style.cssText='position:fixed;top:'+(window.innerHeight/2)+'px;left:'+(Math.random()*window.innerWidth)+'px;width:8px;height:8px;background:'+randomColor()+';border-radius:50%;opacity:0.7;pointer-events:none;position:absolute;';
+    el.style.top='10px';
+    el.style.left=(Math.random()*window.innerWidth)+'px';
+    el.style.transition='transform 1s ease-out,top 1s';
+    el.style.transform='translateY(-100px) rotate('+i*36+'deg)';
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),1500);
+  });
+  localStorage.setItem('sudokuWins', parseInt(localStorage.getItem('sudokuWins')||0)+1);
+  Swal.fire({icon:'success',title:'Well done!',text:'You solved it! 🎉',timer:2000,showConfirmButton:false});
+  setTimeout(resetSudoku,1200);
+}
+function randomColor(){ return ['#ef4444','#f59e0b','#10b981','#3b82f6','#8b5cf6'][Math.floor(Math.random()*5)]; }
+document.addEventListener('keydown',function(e){
+  if(e.key>='1' && e.key<='9' && clicks.length){
+    var el=clicks[0], r=parseInt(el.dataset.r), c=parseInt(el.dataset.c);
+    if(puzzle[r][c]===0){ grid[r][c]=parseInt(e.key); el.textContent=e.key; }
+  }
+});
+resetSudoku();
+</script>
+<%- include('partials/bottom-nav', { activeNav: 'study' }) %>
+</div>
+</body>
+</html>
