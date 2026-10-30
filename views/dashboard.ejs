@@ -5,7 +5,8 @@
     <script src="https://js.paystack.co/v1/inline.js"></script>
     <style>
         body::before { display: none; }
-        .app-shell { background: transparent; backdrop-filter: none; border: none; padding-bottom: 110px; }
+        .app-shell { background: var(--bg); backdrop-filter: none; border: none; padding-bottom: 110px; }
+        .dash-content { position: relative; min-height: 100vh; }
 
         .dash-header { padding: 1.25rem 1.25rem 0.75rem; display: flex; align-items: center; justify-content: space-between; }
         .dash-header-left { display: flex; align-items: center; gap: 12px; }
@@ -97,24 +98,24 @@
             position: fixed; inset: 0; z-index: 3000;
             background: var(--bg); display: none;
             overflow-y: auto; -webkit-overflow-scrolling: touch;
-            padding: 18px 16px 60px;
+            padding: 24px 16px 80px;
         }
         .app-drawer.open { display: block; }
-        .drawer-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; max-width: 640px; margin-left: auto; margin-right: auto; }
-        .drawer-head h2 { font-size: 1.15rem; font-weight: 800; color: var(--text-primary); margin: 0; }
-        .drawer-close { width: 40px; height: 40px; border-radius: 13px; border: 1px solid var(--border); background: var(--surface-solid); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .drawer-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; max-width: 640px; margin-left: auto; margin-right: auto; }
+        .drawer-head h2 { font-size: 1.2rem; font-weight: 800; color: var(--text-primary); margin: 0; }
+        .drawer-close { width: 44px; height: 44px; border-radius: 16px; background: var(--surface-solid); border: 1px solid var(--border); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.1rem; }
         .drawer-search {
-            width: 100%; max-width: 640px; margin: 0 auto 18px; display: block;
-            padding: 12px 16px; border-radius: 14px; border: 1px solid var(--border);
+            width: 100%; max-width: 640px; margin: 0 auto 20px; display: block;
+            padding: 13px 18px; border-radius: 16px; border: 1.5px solid var(--border);
             background: var(--surface-solid); color: var(--text-primary);
-            font-family: var(--font); font-size: 0.88rem; box-sizing: border-box;
+            font-family: var(--font); font-size: 0.92rem; box-sizing: border-box;
         }
         .drawer-group-label {
             font-size: 0.66rem; font-weight: 800; text-transform: uppercase;
             letter-spacing: 0.08em; color: var(--text-muted);
-            max-width: 640px; margin: 18px auto 10px;
+            max-width: 640px; margin: 22px auto 12px;
         }
-        .drawer-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px 6px; max-width: 640px; margin: 0 auto; }
+        .drawer-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px 8px; max-width: 640px; margin: 0 auto; }
         .drawer-empty { text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 20px 0; max-width: 640px; margin: 0 auto; }
 
         /* Today rows */
@@ -546,12 +547,14 @@
 </div>
 
 <style>
-    .drawer-tile { display: flex; flex-direction: column; align-items: center; gap: 7px; text-decoration: none; color: inherit; }
-    .drawer-tile .at-icon { width: 48px; height: 48px; border-radius: 14px; font-size: 1.25rem; display: flex; align-items: center; justify-content: center; }
-    .drawer-tile .at-label { font-size: 0.68rem; font-weight: 700; color: var(--text-secondary); text-align: center; }
-    .drawer-tile.locked .at-icon { opacity: 0.5; }
-    .drawer-tile.locked .at-label { opacity: 0.5; }
-    .drawer-tile .at-lock { position: absolute; top: -4px; right: -4px; background: var(--surface-solid); border: 1px solid var(--border); padding: 2px; border-radius: 50%; font-size: 0.38rem; }
+    .drawer-tile { display: flex; flex-direction: column; align-items: center; gap: 8px; text-decoration: none; color: inherit; transition: var(--transition); }
+    .drawer-tile:active { transform: scale(0.92); }
+    .drawer-tile .at-icon { width: 56px; height: 56px; border-radius: 18px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+    .drawer-tile .at-label { font-size: 0.7rem; font-weight: 600; color: var(--text-secondary); text-align: center; max-width: 70px; line-height: 1.2; }
+    .drawer-tile.locked .at-icon { opacity: 0.45; }
+    .drawer-tile.locked .at-label { opacity: 0.45; }
+    .drawer-tile .at-lock { position: static; background: var(--danger-soft); border: 1px solid var(--danger); padding: 2px 4px; border-radius: 50%; font-size: 0.38rem; color: var(--danger); }
+    .drawer-empty { text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 20px 0; max-width: 640px; margin: 0 auto; display: none; }
 </style>
 
 <script>
