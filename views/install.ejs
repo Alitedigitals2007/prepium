@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <style>
+        .inst-wrap { max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
+        .inst-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 26px; }
+        .inst-logo { display: flex; align-items: center; gap: 10px; font-weight: 800; color: var(--text-primary); text-decoration: none; font-size: 1.05rem; }
+        .inst-logo span { width: 34px; height: 34px; border-radius: 10px; background: var(--brand-gradient); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
+        .inst-hero { text-align: center; padding: 10px 0 26px; }
+        .inst-hero .ih-icon {
+            width: 76px; height: 76px; margin: 0 auto 16px; border-radius: 20px;
+            background: var(--brand-gradient); color: #fff;
+            display: flex; align-items: center; justify-content: center; font-size: 1.8rem;
+            box-shadow: 0 10px 30px var(--brand-light);
+        }
+        .inst-hero h1 { font-size: 1.6rem; font-weight: 800; color: var(--text-primary); margin: 0 0 8px; letter-spacing: -0.02em; }
+        .inst-hero p { font-size: 0.9rem; color: var(--text-secondary); max-width: 460px; margin: 0 auto; line-height: 1.6; }
+        .inst-btn-wrap { margin-top: 20px; }
+        .inst-note { font-size: 0.75rem; color: var(--text-muted); margin-top: 10px; }
+
+        .inst-benefits { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 26px 0; }
+        .inst-benefit {
+            padding: 14px 10px; border-radius: 14px; text-align: center;
+            background: var(--surface); border: 1px solid var(--border);
+        }
+        .inst-benefit i { font-size: 1.1rem; color: var(--brand); margin-bottom: 6px; display: block; }
+        .inst-benefit b { display: block; font-size: 0.75rem; color: var(--text-primary); }
+        .inst-benefit span { font-size: 0.65rem; color: var(--text-muted); font-weight: 600; }
+
+        .inst-steps { display: grid; gap: 10px; }
+        .inst-step { display: flex; gap: 12px; padding: 14px 16px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); }
+        .inst-step .is-num { width: 28px; height: 28px; flex: 0 0 28px; border-radius: 50%; background: var(--brand-soft); color: var(--brand); font-weight: 800; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; }
+        .inst-step .is-body b { display: block; font-size: 0.84rem; color: var(--text-primary); }
+        .inst-step .is-body p { margin: 2px 0 0; font-size: 0.78rem; color: var(--text-secondary); line-height: 1.55; }
+        .inst-step .is-body i.fas { color: var(--brand); }
+
+        .platform-tabs { display: flex; gap: 8px; margin: 22px 0 14px; flex-wrap: wrap; }
+        .platform-tab {
+            padding: 10px 16px; border-radius: 12px; border: 1px solid var(--border);
+            background: var(--surface-solid); color: var(--text-secondary);
+            font-weight: 700; font-size: 0.78rem; cursor: pointer; font-family: var(--font);
+            display: flex; align-items: center; gap: 7px; min-height: 44px;
+        }
+        .platform-tab.active { background: var(--brand-soft); border-color: var(--brand-light); color: var(--brand); }
+        .platform-panel { display: none; }
+        .platform-panel.active { display: block; }
+    </style>
+</head>
+<body>
+    <div class="inst-wrap">
+        <div class="inst-top">
+            <a href="/" class="inst-logo"><span>P</span> Prepium</a>
+            <% if (user) { %><a href="/dashboard" class="btn btn-outline btn-sm" style="text-decoration:none;">Dashboard</a><% } else { %><a href="/login" class="btn btn-outline btn-sm" style="text-decoration:none;">Sign in</a><% } %>
+        </div>
+
+        <div class="inst-hero">
+            <div class="ih-icon"><i class="fas fa-bolt"></i></div>
+            <h1>Install Prepium</h1>
+            <p>Get Prepium as an app on your phone — full screen, faster loading, and one tap away from your study plan.</p>
+            <div class="inst-btn-wrap">
+                <button id="inst-trigger" class="btn btn-primary" style="display:none;"><i class="fas fa-download"></i> Install now</button>
+                <div id="inst-installed" class="notice-strip" style="display:none; text-align:left;">
+                    <i class="fas fa-circle-check"></i>
+                    <span>Prepium is already installed on this device — look for it in your apps.</span>
+                </div>
+            </div>
+            <div class="inst-note" id="inst-note">Follow the steps for your device below.</div>
+        </div>
+
+        <div class="inst-benefits">
+            <div class="inst-benefit"><i class="fas fa-gauge-high"></i><b>Faster</b><span>Loads quicker than the browser</span></div>
+            <div class="inst-benefit"><i class="fas fa-expand"></i><b>Full screen</b><span>No browser bars, more focus</span></div>
+            <div class="inst-benefit"><i class="fas fa-bell"></i><b>Handy</b><span>One tap from your home screen</span></div>
+        </div>
+
+        <div class="platform-tabs" role="tablist">
+            <button class="platform-tab active" data-platform="android" role="tab"><i class="fab fa-android"></i> Android</button>
+            <button class="platform-tab" data-platform="ios" role="tab"><i class="fab fa-apple"></i> iPhone / iPad</button>
+            <button class="platform-tab" data-platform="desktop" role="tab"><i class="fas fa-desktop"></i> Computer</button>
+        </div>
+
+        <div class="inst-steps platform-panel active" data-panel="android">
+            <div class="inst-step">
+                <div class="is-num">1</div>
+                <div class="is-body"><b>Open Prepium in Chrome</b><p>Visit <strong>theprepium.vercel.app</strong> in the Chrome browser (works best).</p></div>
+            </div>
+            <div class="inst-step">
+                <div class="is-num">2</div>
+                <div class="is-body"><b>Tap the install banner</b><p>When the "Install Prepium" banner appears at the bottom, tap <strong>Install</strong>. You can also open the <i class="fas fa-ellipsis-vertical"></i> menu and choose <strong>Install app</strong> or <strong>Add to Home screen</strong>.</p></div>
+            </div>
+            <div class="inst-step">
+                <div class="is-num">3</div>
+                <div class="is-body"><b>Confirm</b><p>Tap <strong>Install</strong> again in the confirmation popup. The Prepium icon appears on your home screen like any other app.</p></div>
+            </div>
+        </div>
+
+        <div class="inst-steps platform-panel" data-panel="ios">
+            <div class="inst-step">
+                <div class="is-num">1</div>
+                <div class="is-body"><b>Open Prepium in Safari</b><p>Visit <strong>theprepium.vercel.app</strong> in Safari (required — Chrome on iPhone cannot install apps).</p></div>
+            </div>
+            <div class="inst-step">
+                <div class="is-num">2</div>
+                <div class="is-body"><b>Tap the Share button</b><p>Tap the <i class="fas fa-arrow-up-from-bracket"></i> Share button at the bottom of Safari.</p></div>
+            </div>
+            <div class="inst-step">
+                <div class="is-num">3</div>
+                <div class="is-body"><b>Choose "Add to Home Screen"</b><p>Scroll if needed, tap <strong>Add to Home Screen</strong>, then tap <strong>Add</strong>. The Prepium icon appears on your home screen.</p></div>
+            </div>
+        </div>
+
+        <div class="inst-steps platform-panel" data-panel="desktop">
+            <div class="inst-step">
+                <div class="is-num">1</div>
+                <div class="is-body"><b>Open Prepium in Chrome or Edge</b><p>Visit <strong>theprepium.vercel.app</strong> on your computer.</p></div>
+            </div>
+            <div class="inst-step">
+                <div class="is-num">2</div>
+                <div class="is-body"><b>Click the install icon</b><p>Look for the <i class="fas fa-download"></i> install icon in the address bar, or open the browser menu and choose <strong>Install Prepium</strong>.</p></div>
+            </div>
+            <div class="inst-step">
+                <div class="is-num">3</div>
+                <div class="is-body"><b>Confirm</b><p>Click <strong>Install</strong>. Prepium opens in its own window and gets its own icon in your taskbar or dock.</p></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function () {
+        var trigger = document.getElementById('inst-trigger');
+        var installedBox = document.getElementById('inst-installed');
+        var note = document.getElementById('inst-note');
+        var deferred = null;
+
+        function isStandalone() {
+            return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        }
+
+        if (isStandalone()) {
+            installedBox.style.display = 'flex';
+            note.style.display = 'none';
+            return;
+        }
+
+        window.addEventListener('beforeinstallprompt', function (e) {
+            e.preventDefault();
+            deferred = e;
+            trigger.style.display = 'inline-flex';
+            note.textContent = 'Your browser supports one-tap install — use the button above, or the steps below.';
+        });
+
+        trigger.addEventListener('click', function () {
+            if (!deferred) return;
+            deferred.prompt();
+            deferred.userChoice.then(function () { deferred = null; trigger.style.display = 'none'; });
+        });
+
+        // Auto-select the tab matching the visitor's platform
+        var ua = navigator.userAgent || '';
+        var pick = 'android';
+        if (/iphone|ipad|ipod/i.test(ua)) pick = 'ios';
+        else if (!(/android|mobile/i.test(ua))) pick = 'desktop';
+        var tabs = document.querySelectorAll('.platform-tab');
+        var panels = document.querySelectorAll('.platform-panel');
+        tabs.forEach(function (t) { t.classList.toggle('active', t.getAttribute('data-platform') === pick); });
+        panels.forEach(function (p) { p.classList.toggle('active', p.getAttribute('data-panel') === pick); });
+
+        tabs.forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                var key = tab.getAttribute('data-platform');
+                tabs.forEach(function (t) { t.classList.toggle('active', t === tab); });
+                panels.forEach(function (p) { p.classList.toggle('active', p.getAttribute('data-panel') === key); });
+            });
+        });
+    })();
+    </script>
+</body>
+</html>

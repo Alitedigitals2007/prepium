@@ -657,6 +657,13 @@ app.get('/offline', (req, res) => {
     res.render('offline', { user: req.session.user || null });
 });
 
+// Dedicated app-installation guide page
+app.get('/install', (req, res) => {
+    res.locals.seo.title = 'Install Prepium App';
+    res.locals.seo.description = 'Install the Prepium app on your Android phone, iPhone or computer for a faster, full-screen study experience.';
+    res.render('install', { user: req.session.user || null });
+});
+
 // Auth Routes
 app.get('/signup', async (req, res) => {
     try {

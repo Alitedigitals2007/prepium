@@ -40,7 +40,12 @@
                     <div style="font-weight:800;font-size:1rem;"><%= exam.title %></div>
                     <div style="font-size:0.72rem;color:var(--text-secondary);font-weight:700;"><%= questions.length %> questions · <%= exam.duration_minutes %> minutes</div>
                 </div>
-                <div class="timer-pill" id="timerPill"><i class="fas fa-hourglass-half"></i> <span id="timerDisplay"></span></div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <button type="button" id="exitBtn" onclick="confirmExit()" title="Submit and exit" style="width:36px;height:36px;border-radius:10px;border:1px solid var(--border);background:var(--surface-solid);color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-door-open"></i>
+                    </button>
+                    <div class="timer-pill" id="timerPill"><i class="fas fa-hourglass-half"></i> <span id="timerDisplay"></span></div>
+                </div>
             </div>
             <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
         </div>
@@ -189,6 +194,19 @@ var REMAINING = <%= remainingSeconds %>;
         });
         box.appendChild(frag);
         rnzRender(box);
+    }
+
+    function confirmExit() {
+        if (typeof Swal === 'undefined') { submit(); return; }
+        Swal.fire({
+            icon: 'warning',
+            title: 'Leave the exam?',
+            text: 'Your answers will be submitted and graded with what you have answered so far.',
+            showCancelButton: true,
+            confirmButtonText: 'Submit & Exit',
+            cancelButtonText: 'Keep going',
+            confirmButtonColor: '#dc2626'
+        }).then(function (r) { if (r.isConfirmed) submit(); });
     }
 
     function submit() {

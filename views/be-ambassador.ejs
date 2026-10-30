@@ -170,7 +170,7 @@
                 </div>
             </div>
 
-            <button class="btn-action" onclick="goToStep(2)">Proceed to Form âž”</button>
+            <button class="btn-action" onclick="goToStep(2)">Proceed to Form  <i class="fas fa-arrow-right"></i></button>
             <div class="login-toggle-link" onclick="goToStep('login')">Already registered? <span>Sign in</span></div>
         </div>
 
@@ -189,7 +189,7 @@
                     <textarea id="bank_details" placeholder="OPay | 9154681851 | Atilola Israel" required></textarea>
                 </div>
 
-                <button type="submit" class="btn-action" id="submitBtn">Generate Unique ID âž”</button>
+                <button type="submit" class="btn-action" id="submitBtn">Generate Unique ID  <i class="fas fa-arrow-right"></i></button>
             </form>
             <div class="login-toggle-link" onclick="goToStep(1)" style="margin-top: 1.25rem;">❮ Go Back</div>
         </div>
@@ -207,7 +207,7 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn-action" id="loginBtn">Log in to Portal âž”</button>
+                <button type="submit" class="btn-action" id="loginBtn">Log in to Portal  <i class="fas fa-arrow-right"></i></button>
             </form>
             <div class="login-toggle-link" onclick="goToStep(1)" style="margin-top: 1.25rem;">❮ Back to Registration</div>
         </div>
@@ -310,9 +310,9 @@
                     generateCertificate(data.name, data.referral_code);
 
                     const waText = encodeURIComponent(
-                        `Hi! ðŸ‘‹ I have officially registered as a Prepium Ambassador!\n\n` +
+                        `Hi!  I have officially registered as a Prepium Ambassador!\n\n` +
                         `Use my referral code to prepare for your exams: *${data.referral_code}*\n\n` +
-                        `Register on Prepium and let's ace our exams together! ðŸš€`
+                        `Register on Prepium and let's ace our exams together! `
                     );
                     document.getElementById('waShareBtn').href = `https://wa.me/?text=${waText}`;
 
@@ -320,14 +320,14 @@
                 } else {
                     alert(data.error || "An error occurred. Please try again.");
                     submitBtn.disabled = false;
-                    submitBtn.textContent = "Generate Unique ID âž”";
+                    submitBtn.textContent = "Generate Unique ID  <i class="fas fa-arrow-right"></i>";
                 }
             })
             .catch(err => {
                 console.error(err);
                 alert("Please check your connection and try again.");
                 submitBtn.disabled = false;
-                submitBtn.textContent = "Generate Unique ID âž”";
+                submitBtn.textContent = "Generate Unique ID  <i class="fas fa-arrow-right"></i>";
             });
         });
 
@@ -360,14 +360,14 @@
                 } else {
                     alert(data.error || "Login failed. Please check your code.");
                     loginBtn.disabled = false;
-                    loginBtn.textContent = "Log in to Portal âž”";
+                    loginBtn.textContent = "Log in to Portal  <i class="fas fa-arrow-right"></i>";
                 }
             })
             .catch(err => {
                 console.error(err);
                 alert("Please check your internet connection.");
                 loginBtn.disabled = false;
-                loginBtn.textContent = "Log in to Portal âž”";
+                loginBtn.textContent = "Log in to Portal  <i class="fas fa-arrow-right"></i>";
             });
         });
 

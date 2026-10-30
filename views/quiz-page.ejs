@@ -63,7 +63,12 @@
     <div class="quiz-header">
         <div class="top-bar">
             <span id="progress-text" style="font-weight: 800; font-size: 0.9rem; color: var(--text-secondary);">Loading...</span>
-            <div id="timer">00:00</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <button type="button" id="exit-btn" onclick="confirmExit()" title="Submit and exit" style="width:36px;height:36px;border-radius:10px;border:1px solid var(--border);background:var(--surface-solid);color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                    <i class="fas fa-door-open"></i>
+                </button>
+                <div id="timer">00:00</div>
+            </div>
         </div>
         <div class="palette-container">
             <div class="palette-grid" id="palette"></div>
@@ -85,7 +90,7 @@
             <input type="text" id="display" class="calc-screen" readonly value="0">
             <div class="calc-grid">
                 <button class="c-btn" onclick="toggleUnit()">DRG</button>
-                <button class="c-btn" onclick="sciFunc('sqrt')">âˆš</button>
+                <button class="c-btn" onclick="sciFunc('sqrt')">√</button>
                 <button class="c-btn" onclick="trig('sin')">sin</button>
                 <button class="c-btn" style="color:var(--danger)" onclick="clearCalc()">AC</button>
                 
@@ -97,7 +102,7 @@
                 <button class="c-btn" onclick="press('4')">4</button>
                 <button class="c-btn" onclick="press('5')">5</button>
                 <button class="c-btn" onclick="press('6')">6</button>
-                <button class="c-btn op" onclick="press('*')">Ã—</button>
+                <button class="c-btn op" onclick="press('*')">×</button>
                 
                 <button class="c-btn" onclick="press('1')">1</button>
                 <button class="c-btn" onclick="press('2')">2</button>
@@ -106,13 +111,13 @@
                 
                 <button class="c-btn" onclick="press('0')">0</button>
                 <button class="c-btn" onclick="press('.')">.</button>
-                <button class="c-btn" onclick="backspace()">âŒ«</button>
+                <button class="c-btn" onclick="backspace()">⌫</button>
                 <button class="c-btn op" onclick="press('+')">+</button>
                 
                 <button class="c-btn eq" style="grid-column: span 4;" onclick="solve()">=</button>
             </div>
         </div>
-        <button id="calc-toggle" onclick="toggleCalc()">ðŸ–©</button>
+        <button id="calc-toggle" onclick="toggleCalc()"></button>
     </div>
 
     <form id="submit-form" action="/submit-exam" method="POST" style="display: none;">
@@ -209,8 +214,8 @@
         }
 
         /* --- SUBMISSION --- */
-        function triggerSubmit() {
-            if (confirm("Submit your answers and see your results?")) {
+        function triggerSubmit(skipConfirm) {
+            if (skipConfirm || confirm("Submit your answers and see your results?")) {
                 const now = Date.now();
                 const totalSeconds = Math.floor((now - startTime) / 1000);
                 const m = Math.floor(totalSeconds / 60);
@@ -228,6 +233,19 @@
         }
 
         /* --- TIMER --- */
+        function confirmExit() {
+            if (typeof Swal === 'undefined') { doExit(); return; }
+            Swal.fire({
+                icon: 'warning',
+                title: 'Leave the quiz?',
+                text: 'Your answers will be submitted and graded with what you have answered so far.',
+                showCancelButton: true,
+                confirmButtonText: 'Submit & Exit',
+                cancelButtonText: 'Keep going',
+                confirmButtonColor: '#dc2626'
+            }).then(function (r) { if (r.isConfirmed) doExit(); });
+        }
+        function doExit() { triggerSubmit(true); }
         function startTimer() {
             const endTime = <%= quiz.endTime.getTime() %>;
             if (!endTime) return;
@@ -273,7 +291,7 @@
         function solve() {
             const d = document.getElementById('display');
             try {
-                let formula = d.value.replace(/Ã—/g, '*').replace(/÷/g, '/');
+                let formula = d.value.replace(/×/g, '*').replace(/÷/g, '/');
                 let res = eval(formula);
                 d.value = Number.isInteger(res) ? res : parseFloat(res.toFixed(6));
             } catch(e) { d.value = "Error"; }

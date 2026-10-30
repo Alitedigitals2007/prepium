@@ -356,7 +356,7 @@ function loadNotes() {
 document.getElementById('notesArea').value = '<%= session ? (session.notes || "").replace(/'/g, "\\'").replace(/\n/g, "\\n") : '' %>';
 }
 
-/* â”€â”€ Session start prompt on load â”€â”€ */
+/* -- Session start prompt on load -- */
 (function autoInit() {
   var prompted = sessionStorage.getItem('study_session_prompted');
   if (!prompted) {

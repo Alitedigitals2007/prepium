@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <%- include('partials/head') %>
@@ -312,7 +313,6 @@
     background: var(--brand);
     opacity: 0.9;
 }
-.pill.on { background: var(--brand); border-color: var(--brand); color: #fff; }
 .filter-row2 {
     display: flex; align-items: center; justify-content: space-between;
     padding: 10px 14px 0;
@@ -732,6 +732,7 @@
     .cgpa-col-side .analytics { margin: 0; }
 }
 
+</style>
 <%- include('partials/theme-toggle') %>
 </head>
 <body>
@@ -1258,7 +1259,7 @@
             <div class="fg">
                 <label>Grade
                     <% if (hasProfile) { %>
-                    <small style="text-transform:none;letter-spacing:0;color:var(--blue);">(<%= profile.grading_scale %>-pt)</small>
+                    <small style="text-transform:none;letter-spacing:0;color:var(--brand);">(<%= profile.grading_scale %>-pt)</small>
                     <% } %>
                 </label>
                 <select id="add-grade" aria-describedby="add-error" required style="width:100%;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-weight:600;outline:none;box-sizing:border-box">

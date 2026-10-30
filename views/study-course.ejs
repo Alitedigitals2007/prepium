@@ -89,6 +89,8 @@
     <div class="quick-actions">
         <button class="q-btn" onclick="startSession()"><i class="fas fa-play-circle"></i> Study</button>
         <button class="q-btn" onclick="openAIClass()"><i class="fas fa-robot"></i> AI Class</button>
+        <button class="q-btn" onclick="showQuizSetup()"><i class="fas fa-list-check"></i> Quiz</button>
+        <button class="q-btn" onclick="openFlashcards()"><i class="fas fa-clone"></i> Cards</button>
     </div>
 
     <div class="section-label">
@@ -257,7 +259,15 @@ function openSubtopic(id) {
 }
 
 function startSession() {
-    Swal.fire({ icon: 'info', title: 'Open a subtopic', text: 'Go to a subtopic to start a study session with timer.', confirmButtonText: 'OK' });
+    var subs = <%= JSON.stringify((topics || []).reduce(function(acc, t) { return acc.concat((t.subtopics || []).map(function(st) { return { id: st.id, status: st.status }; })); }, [])) %>;
+    var firstPending = null, firstAny = null;
+    subs.forEach(function(st) {
+        if (!firstAny) firstAny = st.id;
+        if (!firstPending && (st.status === 'pending' || st.status === 'accepted' || st.status === 'ai-generated')) firstPending = st.id;
+    });
+    var target = firstPending || firstAny;
+    if (target) { window.location.href = '/study/subtopic/' + target; return; }
+    Swal.fire({ icon: 'info', title: 'No subtopics yet', text: 'Add a topic and generate its subtopics first — then start a guided study session.', confirmButtonText: 'OK' });
 }
 
 function showQuizSetup() {

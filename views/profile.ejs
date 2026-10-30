@@ -90,7 +90,7 @@
         }
         .badge-pill i { font-size: 0.85rem; }
         .badge-pill.uni i { color: var(--brand); }
-        .badge-pill.dept i { color: var(--green); }
+        .badge-pill.dept i { color: var(--success); }
 
         /* Stats Section */
         .stats-section { padding: 1.5rem 1.5rem 0.75rem; }
@@ -190,6 +190,9 @@
         }
         .menu-icon.blue { background: var(--brand-light); color: var(--brand); }
         .menu-icon.red { background: var(--danger-soft); color: var(--danger); }
+        .menu-icon.green { background: var(--success-soft); color: var(--success); }
+        .menu-icon.orange { background: var(--warning-soft); color: var(--warning); }
+        .menu-icon.purple { background: var(--brand-light); color: var(--brand); }
         .menu-text {
             font-weight: 700; font-size: 0.92rem;
         }
@@ -267,6 +270,37 @@
             </div>
         </div>
 
+        <!-- Account Status -->
+        <div class="menu-section">
+            <div class="section-label" style="padding: 0 0 12px;">Account</div>
+            <div class="menu-card">
+                <% if (user.has_paid) { %>
+                <div class="menu-item" style="cursor:default;">
+                    <div class="menu-left">
+                        <div class="menu-icon green"><i class="fas fa-crown"></i></div>
+                        <span class="menu-text">Premium is active<span style="display:block;font-size:0.68rem;color:var(--text-muted);font-weight:600;">Lifetime access — no renewals</span></span>
+                    </div>
+                    <i class="fas fa-circle-check" style="color:var(--success);"></i>
+                </div>
+                <% } else { %>
+                <a href="/upgrade" class="menu-item">
+                    <div class="menu-left">
+                        <div class="menu-icon orange"><i class="fas fa-crown"></i></div>
+                        <span class="menu-text">Upgrade to Premium<span style="display:block;font-size:0.68rem;color:var(--text-muted);font-weight:600;">AI tutor, PDF-to-quiz, CGPA tools & more</span></span>
+                    </div>
+                    <i class="fas fa-chevron-right menu-chevron"></i>
+                </a>
+                <% } %>
+                <a href="/install" class="menu-item">
+                    <div class="menu-left">
+                        <div class="menu-icon blue"><i class="fas fa-mobile-screen"></i></div>
+                        <span class="menu-text">Install the App<span style="display:block;font-size:0.68rem;color:var(--text-muted);font-weight:600;">Add Prepium to your home screen</span></span>
+                    </div>
+                    <i class="fas fa-chevron-right menu-chevron"></i>
+                </a>
+            </div>
+        </div>
+
         <!-- Menu Section -->
         <div class="menu-section">
             <div class="section-label" style="padding: 0 0 12px;">Quick Actions</div>
@@ -275,6 +309,20 @@
                     <div class="menu-left">
                         <div class="menu-icon blue"><i class="fas fa-chart-pie"></i></div>
                         <span class="menu-text">View Performance Analytics</span>
+                    </div>
+                    <i class="fas fa-chevron-right menu-chevron"></i>
+                </a>
+                <a href="/library" class="menu-item">
+                    <div class="menu-left">
+                        <div class="menu-icon purple"><i class="fas fa-building-columns"></i></div>
+                        <span class="menu-text">Course Library</span>
+                    </div>
+                    <i class="fas fa-chevron-right menu-chevron"></i>
+                </a>
+                <a href="/suggestions" class="menu-item">
+                    <div class="menu-left">
+                        <div class="menu-icon green"><i class="fas fa-lightbulb"></i></div>
+                        <span class="menu-text">Send Feedback</span>
                     </div>
                     <i class="fas fa-chevron-right menu-chevron"></i>
                 </a>
