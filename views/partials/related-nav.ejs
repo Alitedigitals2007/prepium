@@ -48,7 +48,7 @@
 </style>
 
 <%
-  // Defaults so pages can call <%- include('partials/related-nav', { activeNav: 'profile' }) %>
+  // Defaults so pages can include this partial with an "activeNav" style links override.
   const _links = (typeof links !== 'undefined' && Array.isArray(links)) ? links : [
     { href: '/dashboard', icon: 'fa-home', eyebrow: 'Back', label: 'Dashboard', tone: 'brand-soft' },
     { href: '/study',      icon: 'fa-graduation-cap', eyebrow: 'Continue', label: 'Study Hub', tone: 'blue' },

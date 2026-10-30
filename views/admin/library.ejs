@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex,nofollow">
+    <title>Library Moderation | Prepium Admin</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f4f8; margin: 0; padding: 24px; color: #0f172a; }
+        .wrap { max-width: 900px; margin: 0 auto; }
+        h1 { font-size: 1.4rem; margin: 0 0 6px; }
+        .sub { font-size: 0.85rem; color: #475569; margin: 0 0 20px; }
+        .back { display: inline-block; margin-bottom: 16px; color: #2563eb; font-weight: 700; text-decoration: none; font-size: 0.85rem; }
+        .panel { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px; margin-bottom: 18px; }
+        .panel h2 { font-size: 1rem; margin: 0 0 12px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        th { text-align: left; padding: 8px 6px; border-bottom: 2px solid #e2e8f0; font-size: 0.7rem; text-transform: uppercase; color: #64748b; }
+        td { padding: 10px 6px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+        .btn { display: inline-block; padding: 7px 12px; border-radius: 8px; font-size: 0.72rem; font-weight: 700; text-decoration: none; border: none; cursor: pointer; }
+        .btn-ok { background: #16a34a; color: #fff; }
+        .btn-no { background: #f1f5f9; color: #475569; }
+        .btn-x { background: #fee2e2; color: #dc2626; }
+        form { display: inline; }
+        .empty { color: #94a3b8; font-size: 0.8rem; padding: 10px 0; }
+        a.res-link { color: #2563eb; word-break: break-all; }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <a class="back" href="/admin/dashboard">&larr; Admin Dashboard</a>
+        <h1>Library Moderation</h1>
+        <p class="sub">Review community-submitted study resources. Verified resources are labelled publicly; unverified ones stay labelled "Unverified".</p>
+
+        <div class="panel">
+            <h2>Pending review (<%= pending.length %>)</h2>
+            <% if (pending.length) { %>
+            <table>
+                <tr><th>Resource</th><th>Course</th><th>University</th><th>By</th><th>Actions</th></tr>
+                <% pending.forEach(function(r) { %>
+                <tr>
+                    <td><strong><%= r.title %></strong><br><a class="res-link" href="<%= r.url %>" target="_blank" rel="noopener noreferrer"><%= r.url %></a></td>
+                    <td><%= r.course_code %> — <%= r.course_title %></td>
+                    <td><%= r.uni_name %></td>
+                    <td><%= r.contributor_name %></td>
+                    <td>
+                        <form method="post" action="/admin/library/verify/<%= r.id %>"><button class="btn btn-ok" type="submit">Verify</button></form>
+                        <form method="post" action="/admin/library/delete/<%= r.id %>"><button class="btn btn-x" type="submit">Delete</button></form>
+                    </td>
+                </tr>
+                <% }); %>
+            </table>
+            <% } else { %><div class="empty">Nothing pending. All caught up.</div><% } %>
+        </div>
+
+        <div class="panel">
+            <h2>Verified resources (<%= verified.length %>)</h2>
+            <% if (verified.length) { %>
+            <table>
+                <tr><th>Resource</th><th>Course</th><th>University</th><th>Actions</th></tr>
+                <% verified.forEach(function(r) { %>
+                <tr>
+                    <td><strong><%= r.title %></strong></td>
+                    <td><%= r.course_code %></td>
+                    <td><%= r.uni_name %></td>
+                    <td>
+                        <form method="post" action="/admin/library/unverify/<%= r.id %>"><button class="btn btn-no" type="submit">Unverify</button></form>
+                        <form method="post" action="/admin/library/delete/<%= r.id %>"><button class="btn btn-x" type="submit">Delete</button></form>
+                    </td>
+                </tr>
+                <% }); %>
+            </table>
+            <% } else { %><div class="empty">No verified resources yet.</div><% } %>
+        </div>
+    </div>
+</body>
+</html>

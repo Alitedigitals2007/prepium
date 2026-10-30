@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <style>
+        .lib-wrap { max-width: 760px; margin: 0 auto; padding: 24px 16px 60px; }
+        .lib-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+        .lib-logo { display: flex; align-items: center; gap: 10px; font-weight: 800; color: var(--text-primary); text-decoration: none; font-size: 1.05rem; }
+        .lib-logo span { width: 34px; height: 34px; border-radius: 10px; background: var(--brand-gradient); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
+        .lib-crumb { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px; }
+        .lib-crumb a { color: var(--brand); text-decoration: none; font-weight: 600; }
+        .course-hero {
+            border-radius: 20px; padding: 22px 20px; background: var(--surface);
+            border: 1px solid var(--border); box-shadow: var(--shadow-md); margin-bottom: 24px;
+        }
+        .course-hero .ch-code { display: inline-block; font-size: 0.75rem; font-weight: 800; color: var(--brand); background: var(--brand-soft); padding: 4px 10px; border-radius: 8px; margin-bottom: 10px; }
+        .course-hero h1 { font-size: 1.35rem; font-weight: 800; color: var(--text-primary); margin: 0 0 6px; line-height: 1.3; }
+        .course-hero .ch-meta { font-size: 0.78rem; color: var(--text-secondary); }
+        .res-row {
+            display: flex; align-items: flex-start; gap: 12px; padding: 14px;
+            border-radius: 14px; background: var(--surface); border: 1px solid var(--border); margin-bottom: 10px;
+        }
+        .res-row .rs-ico { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 12px; background: var(--brand-soft); color: var(--brand); display: flex; align-items: center; justify-content: center; font-size: 0.85rem; }
+        .res-row .rs-body { flex: 1; min-width: 0; }
+        .res-row .rs-title { font-size: 0.86rem; font-weight: 700; color: var(--text-primary); }
+        .res-row .rs-meta { font-size: 0.68rem; color: var(--text-muted); font-weight: 600; margin-top: 2px; }
+        .res-row .rs-desc { font-size: 0.76rem; color: var(--text-secondary); margin-top: 5px; line-height: 1.5; }
+        .res-row .rs-open {
+            flex-shrink: 0; align-self: center; padding: 9px 14px; border-radius: 10px;
+            background: var(--brand); color: #fff; font-weight: 700; font-size: 0.72rem; text-decoration: none;
+        }
+        .contribute-box {
+            margin-top: 26px; border-radius: 18px; padding: 20px;
+            background: var(--surface); border: 1px solid var(--border);
+        }
+        .contribute-box h2 { font-size: 1rem; font-weight: 800; margin: 0 0 4px; }
+        .contribute-box > p { font-size: 0.78rem; color: var(--text-secondary); margin: 0 0 14px; }
+        .contribute-box label { display: block; font-size: 0.72rem; font-weight: 700; color: var(--text-secondary); margin: 12px 0 5px; }
+        .contribute-box input, .contribute-box select, .contribute-box textarea {
+            width: 100%; padding: 11px 13px; border-radius: 12px;
+            border: 1px solid var(--border); background: var(--surface-solid);
+            color: var(--text-primary); font-family: var(--font); font-size: 0.85rem; box-sizing: border-box;
+        }
+        .contribute-box textarea { min-height: 70px; resize: vertical; }
+        .contribute-box .btn { width: 100%; justify-content: center; margin-top: 16px; }
+        .new-course-fields { display: none; border-top: 1px dashed var(--border-solid); margin-top: 14px; padding-top: 4px; }
+        .new-course-fields.show { display: block; }
+        .toggle-new-course { background: none; border: none; color: var(--brand); font-weight: 700; font-size: 0.78rem; cursor: pointer; padding: 0; font-family: var(--font); }
+        .empty-note { padding: 22px; border-radius: 16px; background: var(--surface); border: 1px dashed var(--border-solid); text-align: center; color: var(--text-secondary); font-size: 0.85rem; line-height: 1.6; }
+    </style>
+</head>
+<body>
+    <div class="lib-wrap">
+        <div class="lib-top">
+            <a href="/" class="lib-logo"><span>P</span> Prepium</a>
+            <a href="/library/department/<%= course.department_id %>" class="btn btn-outline btn-sm" style="text-decoration:none;"><i class="fas fa-arrow-left"></i> Back</a>
+        </div>
+        <div class="lib-crumb">
+            <a href="/library">Library</a> /
+            <a href="/library/<%= course.uni_slug %>"><%= course.uni_name %></a> /
+            <a href="/library/faculty/<%= course.faculty_id %>"><%= course.faculty %></a> /
+            <a href="/library/department/<%= course.department_id %>"><%= course.department %></a>
+        </div>
+        <div class="course-hero">
+            <span class="ch-code"><%= course.code || 'COURSE' %></span>
+            <h1><%= course.title %></h1>
+            <div class="ch-meta"><%= course.department %> · <%= course.uni_name %> · <%= course.level %> Level · Semester <%= course.semester %></div>
+            <% if (course.description) { %><p style="font-size:0.82rem;color:var(--text-secondary);margin:10px 0 0;line-height:1.6;"><%= course.description %></p><% } %>
+        </div>
+
+        <div class="lib-section-title" style="font-size:0.75rem;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:12px;">Study resources</div>
+
+        <% if (resources.length) { %>
+            <% resources.forEach(function(r) { %>
+            <div class="res-row">
+                <div class="rs-ico"><i class="fas <%= r.category === 'past_question' ? 'fa-file-circle-question' : (r.category === 'solution' ? 'fa-square-check' : 'fa-file-lines') %>"></i></div>
+                <div class="rs-body">
+                    <div class="rs-title"><%= r.title %></div>
+                    <div class="rs-meta"><%= categoryLabel(r.category) %> · shared by <%= r.contributor_name %>
+                        <% if (r.is_verified) { %> · <span style="color:var(--success);font-weight:700;">Verified</span><% } else { %> · <span style="color:var(--warning);font-weight:700;">Unverified</span><% } %>
+                    </div>
+                    <% if (r.description) { %><div class="rs-desc"><%= r.description %></div><% } %>
+                </div>
+                <a class="rs-open" href="<%= r.url %>" target="_blank" rel="noopener noreferrer nofollow">Open</a>
+            </div>
+            <% }); %>
+        <% } else { %>
+            <div class="empty-note">
+                No resources shared for this course yet.<br>
+                Be the first — share your notes or past questions below.
+            </div>
+        <% } %>
+
+        <div class="contribute-box">
+            <h2>Share a resource</h2>
+            <p>Help your schoolmates — submit lecture notes, past questions or solutions. Submissions are reviewed before they are marked verified.</p>
+            <% if (user) { %>
+            <form id="contribute-form">
+                <label for="c-title">Title</label>
+                <input id="c-title" type="text" maxlength="200" placeholder="e.g. 2023/2024 Session Past Questions" required>
+                <label for="c-category">Type</label>
+                <select id="c-category">
+                    <% categories.forEach(function(cat) { %>
+                    <option value="<%= cat %>"><%= categoryLabel(cat) %></option>
+                    <% }); %>
+                </select>
+                <label for="c-url">Link (Google Drive, OneDrive…)</label>
+                <input id="c-url" type="url" placeholder="https://…" required>
+                <label for="c-desc">Description (optional)</label>
+                <textarea id="c-desc" maxlength="500" placeholder="What does this resource cover?"></textarea>
+                <button type="button" class="toggle-new-course" id="toggle-new-course" style="margin-top:12px;">+ Add a new course instead</button>
+                <div class="new-course-fields" id="new-course-fields">
+                    <label for="nc-code">New course code</label>
+                    <input id="nc-code" type="text" maxlength="20" placeholder="e.g. CHM 101">
+                    <label for="nc-title">New course title</label>
+                    <input id="nc-title" type="text" maxlength="200" placeholder="e.g. Basic Physical Chemistry">
+                    <label for="nc-level">Level</label>
+                    <select id="nc-level"><option value="100">100 Level</option><option value="200">200 Level</option><option value="300">300 Level</option><option value="400">400 Level</option><option value="500">500 Level</option></select>
+                    <label for="nc-sem">Semester</label>
+                    <select id="nc-sem"><option value="1">1st semester</option><option value="2">2nd semester</option></select>
+                </div>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Submit for review</button>
+            </form>
+            <% } else { %>
+            <a href="/login" class="btn btn-primary" style="width:100%;justify-content:center;text-decoration:none;">Sign in to contribute</a>
+            <% } %>
+        </div>
+    </div>
+    <script>
+    (function () {
+        var toggle = document.getElementById('toggle-new-course');
+        if (toggle) toggle.addEventListener('click', function () {
+            document.getElementById('new-course-fields').classList.toggle('show');
+        });
+        var form = document.getElementById('contribute-form');
+        if (form) form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var newCourseShown = document.getElementById('new-course-fields').classList.contains('show');
+            var payload = {
+                courseId: <%= course.id %>,
+                title: document.getElementById('c-title').value.trim(),
+                category: document.getElementById('c-category').value,
+                url: document.getElementById('c-url').value.trim(),
+                description: document.getElementById('c-desc').value.trim()
+            };
+            if (newCourseShown) {
+                payload.courseId = null;
+                payload.newCourseCode = document.getElementById('nc-code').value.trim();
+                payload.newCourseTitle = document.getElementById('nc-title').value.trim();
+                payload.newCourseLevel = document.getElementById('nc-level').value;
+                payload.newCourseSemester = document.getElementById('nc-sem').value;
+            }
+            var btn = form.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            fetch('/api/library/contribute', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(function (r) { return r.json(); }).then(function (d) {
+                if (d.success) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire('Submitted!', d.message, 'success').then(function () { location.reload(); });
+                    } else { alert(d.message); location.reload(); }
+                } else {
+                    btn.disabled = false;
+                    if (typeof Swal !== 'undefined') Swal.fire('Not submitted', d.message || 'Please try again', 'error');
+                    else alert(d.message || 'Please try again');
+                }
+            }).catch(function () {
+                btn.disabled = false;
+                if (typeof Swal !== 'undefined') Swal.fire('Error', 'Could not submit. Check your connection.', 'error');
+            });
+        });
+    })();
+    </script>
+</body>
+</html>

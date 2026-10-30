@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <style>
+        .lib-wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 60px; }
+        .lib-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+        .lib-logo { display: flex; align-items: center; gap: 10px; font-weight: 800; color: var(--text-primary); text-decoration: none; font-size: 1.05rem; }
+        .lib-logo span { width: 34px; height: 34px; border-radius: 10px; background: var(--brand-gradient); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
+        .lib-crumb { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px; }
+        .lib-crumb a { color: var(--brand); text-decoration: none; font-weight: 600; }
+        .lib-h1 { font-size: 1.5rem; font-weight: 800; color: var(--text-primary); margin: 0 0 4px; }
+        .lib-sub { font-size: 0.85rem; color: var(--text-secondary); margin: 0 0 18px; }
+        .filter-bar {
+            display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+            padding: 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); margin-bottom: 16px;
+        }
+        .filter-bar select {
+            padding: 9px 12px; border-radius: 10px; border: 1px solid var(--border);
+            background: var(--surface-solid); color: var(--text-primary); font-family: var(--font); font-size: 0.8rem;
+        }
+        .filter-bar input {
+            flex: 1; min-width: 140px; padding: 9px 12px; border-radius: 10px;
+            border: 1px solid var(--border); background: var(--surface-solid); color: var(--text-primary); font-family: var(--font); font-size: 0.8rem;
+        }
+        .filter-bar button { padding: 9px 16px; border-radius: 10px; border: none; background: var(--brand); color: #fff; font-weight: 700; font-size: 0.78rem; cursor: pointer; }
+        .course-row {
+            display: flex; align-items: center; gap: 12px; padding: 14px;
+            border-radius: 14px; background: var(--surface); border: 1px solid var(--border);
+            margin-bottom: 8px; text-decoration: none; color: inherit; transition: var(--transition);
+        }
+        .course-row:hover { border-color: var(--brand); }
+        .course-row .cr-code { font-size: 0.72rem; font-weight: 800; color: var(--brand); background: var(--brand-soft); padding: 4px 9px; border-radius: 8px; flex-shrink: 0; min-width: 64px; text-align: center; }
+        .course-row .cr-body { flex: 1; min-width: 0; }
+        .course-row .cr-title { font-size: 0.85rem; font-weight: 700; }
+        .course-row .cr-meta { font-size: 0.66rem; color: var(--text-muted); font-weight: 600; margin-top: 1px; }
+        .course-row .cr-res { font-size: 0.66rem; font-weight: 700; color: var(--text-secondary); background: rgba(148,163,184,0.15); padding: 4px 9px; border-radius: 8px; flex-shrink: 0; }
+        .empty-note { padding: 22px; border-radius: 16px; background: var(--surface); border: 1px dashed var(--border-solid); text-align: center; color: var(--text-secondary); font-size: 0.85rem; line-height: 1.6; }
+    </style>
+</head>
+<body>
+    <div class="lib-wrap">
+        <div class="lib-top">
+            <a href="/" class="lib-logo"><span>P</span> Prepium</a>
+            <a href="/library/faculty/<%= department.faculty_id %>" class="btn btn-outline btn-sm" style="text-decoration:none;"><i class="fas fa-arrow-left"></i> Departments</a>
+        </div>
+        <div class="lib-crumb">
+            <a href="/library">Library</a> /
+            <a href="/library/<%= department.uni_slug %>"><%= department.uni_name %></a> /
+            <a href="/library/faculty/<%= department.faculty_id %>"><%= department.faculty_name %></a> /
+            <%= department.name %>
+        </div>
+        <h1 class="lib-h1"><%= department.name %></h1>
+        <p class="lib-sub">Courses in <%= department.name %>, <%= department.uni_name %>.</p>
+
+        <form class="filter-bar" method="get" action="/library/department/<%= department.id %>">
+            <input type="search" name="q" value="<%= q %>" placeholder="Search code or title" aria-label="Search courses">
+            <select name="level" aria-label="Level">
+                <option value="0">All levels</option>
+                <% [100,200,300,400,500].forEach(function(l) { %>
+                <option value="<%= l %>" <%= level === l ? 'selected' : '' %>><%= l %> Level</option>
+                <% }); %>
+            </select>
+            <select name="semester" aria-label="Semester">
+                <option value="0">Both semesters</option>
+                <option value="1" <%= semester === 1 ? 'selected' : '' %>>1st semester</option>
+                <option value="2" <%= semester === 2 ? 'selected' : '' %>>2nd semester</option>
+            </select>
+            <button type="submit">Filter</button>
+        </form>
+
+        <% if (courses.length) { %>
+            <% courses.forEach(function(c) { %>
+            <a href="/library/course/<%= c.id %>" class="course-row">
+                <span class="cr-code"><%= c.code || '—' %></span>
+                <div class="cr-body">
+                    <div class="cr-title"><%= c.title %></div>
+                    <div class="cr-meta"><%= c.level %> Level · Semester <%= c.semester %></div>
+                </div>
+                <span class="cr-res"><%= c.resource_count %> resource<%= c.resource_count == 1 ? '' : 's' %></span>
+            </a>
+            <% }); %>
+        <% } else { %>
+            <div class="empty-note">
+                No courses match here yet.<br>
+                Signed-in students can add courses and share notes or past questions from the course page.
+            </div>
+        <% } %>
+    </div>
+</body>
+</html>

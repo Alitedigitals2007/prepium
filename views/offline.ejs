@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <style>
+        .off-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; text-align: center; }
+        .off-card { max-width: 420px; }
+        .off-ico {
+            width: 84px; height: 84px; margin: 0 auto 18px; border-radius: 24px;
+            background: var(--brand-soft); color: var(--brand);
+            display: flex; align-items: center; justify-content: center; font-size: 2rem;
+        }
+        .off-card h1 { font-size: 1.4rem; font-weight: 800; color: var(--text-primary); margin: 0 0 8px; }
+        .off-card p { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.65; margin: 0 0 20px; }
+        .off-hint { font-size: 0.76rem; color: var(--text-muted); margin-top: 18px; line-height: 1.6; }
+    </style>
+</head>
+<body>
+    <div class="off-wrap">
+        <div class="off-card">
+            <div class="off-ico"><i class="fas fa-wifi" style="transform:rotate(55deg);"></i></div>
+            <h1>You're offline</h1>
+            <p>Prepium needs an internet connection for quizzes, AI tools and your study data. Reconnect to pick up where you left off.</p>
+            <button class="btn btn-primary" onclick="location.reload()"><i class="fas fa-rotate-right"></i> Try again</button>
+            <p class="off-hint">Your account and saved study materials are safe on the server — nothing is lost while you're offline.</p>
+        </div>
+    </div>
+</body>
+</html>

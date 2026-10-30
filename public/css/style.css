@@ -1190,3 +1190,105 @@ textarea { resize: vertical; min-height: 100px; }
   0% { transform: scale(0.9); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
 }
+
+/* ============================================================
+   Shared components — page headers, badges, states, a11y
+   ============================================================ */
+
+/* Sidebar nav group labels */
+.sidebar-group {
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding: 14px 14px 5px;
+}
+.sidebar-nav > .sidebar-group:first-child { padding-top: 4px; }
+.sidebar-link .notification-dot { margin-left: auto; }
+
+/* Accessible focus ring */
+:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Consistent page header used across inner pages */
+.page-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.page-head-icon {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border-radius: 14px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+}
+.page-head-titles { min-width: 0; }
+.page-head-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.25;
+}
+.page-head-sub {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 2px 0 0;
+}
+
+/* Badge / pill system */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+.badge-brand { background: var(--brand-light); color: var(--brand); }
+.badge-success { background: var(--success-soft); color: var(--success); }
+.badge-danger { background: var(--danger-soft); color: var(--danger); }
+.badge-warning { background: var(--warning-soft); color: var(--warning); }
+.badge-muted { background: rgba(148, 163, 184, 0.15); color: var(--text-secondary); }
+
+/* Polished empty state */
+.empty-state-cta { margin-top: 14px; }
+
+/* Skeleton line helpers */
+.skeleton-line {
+  height: 12px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+/* Inline notice strip */
+.notice-strip {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--brand-soft);
+  border: 1px solid var(--brand-light);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.notice-strip i { color: var(--brand); margin-top: 2px; }
+.notice-strip.warning { background: var(--warning-soft); border-color: rgba(217, 119, 6, 0.2); }
+.notice-strip.warning i { color: var(--warning); }

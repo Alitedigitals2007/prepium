@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <style>
+        .lib-wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 60px; }
+        .lib-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+        .lib-logo { display: flex; align-items: center; gap: 10px; font-weight: 800; color: var(--text-primary); text-decoration: none; font-size: 1.05rem; }
+        .lib-logo span { width: 34px; height: 34px; border-radius: 10px; background: var(--brand-gradient); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
+        .lib-crumb { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px; }
+        .lib-crumb a { color: var(--brand); text-decoration: none; font-weight: 600; }
+        .lib-h1 { font-size: 1.5rem; font-weight: 800; color: var(--text-primary); margin: 0 0 4px; }
+        .lib-sub { font-size: 0.85rem; color: var(--text-secondary); margin: 0 0 22px; }
+        .dep-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        @media (min-width: 640px) { .dep-grid { grid-template-columns: 1fr 1fr; } }
+        .dep-card {
+            display: flex; align-items: center; gap: 12px; padding: 15px 16px;
+            border-radius: 16px; background: var(--surface); border: 1px solid var(--border);
+            text-decoration: none; color: inherit; transition: var(--transition);
+        }
+        .dep-card:hover { border-color: var(--brand); box-shadow: var(--shadow-md); }
+        .dep-card .dc-ico { width: 40px; height: 40px; flex: 0 0 40px; border-radius: 12px; background: var(--brand-soft); color: var(--brand); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
+        .dep-card .dc-body { flex: 1; min-width: 0; }
+        .dep-card .dc-name { font-size: 0.85rem; font-weight: 700; }
+        .dep-card .dc-meta { font-size: 0.66rem; color: var(--text-muted); font-weight: 600; margin-top: 2px; }
+        .empty-note { padding: 22px; border-radius: 16px; background: var(--surface); border: 1px dashed var(--border-solid); text-align: center; color: var(--text-secondary); font-size: 0.85rem; line-height: 1.6; }
+    </style>
+</head>
+<body>
+    <div class="lib-wrap">
+        <div class="lib-top">
+            <a href="/" class="lib-logo"><span>P</span> Prepium</a>
+            <a href="/library/<%= faculty.uni_slug %>" class="btn btn-outline btn-sm" style="text-decoration:none;"><i class="fas fa-arrow-left"></i> Faculties</a>
+        </div>
+        <div class="lib-crumb">
+            <a href="/library">Library</a> / <a href="/library/<%= faculty.uni_slug %>"><%= faculty.uni_name %></a> / <%= faculty.name %>
+        </div>
+        <h1 class="lib-h1"><%= faculty.name %></h1>
+        <p class="lib-sub">Departments in <%= faculty.name %>, <%= faculty.uni_name %>.</p>
+
+        <% if (departments.length) { %>
+        <div class="dep-grid">
+            <% departments.forEach(function(d) { %>
+            <a href="/library/department/<%= d.id %>" class="dep-card">
+                <div class="dc-ico"><i class="fas fa-folder-open"></i></div>
+                <div class="dc-body">
+                    <div class="dc-name"><%= d.name %></div>
+                    <div class="dc-meta"><%= d.course_count %> course<%= d.course_count == 1 ? '' : 's' %> listed</div>
+                </div>
+                <i class="fas fa-chevron-right" style="font-size:0.7rem;color:var(--text-muted);"></i>
+            </a>
+            <% }); %>
+        </div>
+        <% } else { %>
+            <div class="empty-note">
+                No departments listed under <%= faculty.name %> yet.<br>
+                Signed-in students can contribute courses — they appear here after review.
+            </div>
+        <% } %>
+    </div>
+</body>
+</html>

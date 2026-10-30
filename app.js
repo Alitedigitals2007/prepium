@@ -575,20 +575,16 @@ app.get('/sitemap.xml', async function (req, res) {
       { loc: BASE_URL + '/guide', priority: '0.6', changefreq: 'monthly' },
       { loc: BASE_URL + '/how-it-works', priority: '0.7', changefreq: 'monthly' },
       { loc: BASE_URL + '/signup', priority: '0.5', changefreq: 'monthly' },
-      { loc: BASE_URL + '/login', priority: '0.5', changefreq: 'monthly' }
+      { loc: BASE_URL + '/login', priority: '0.5', changefreq: 'monthly' },
+      { loc: BASE_URL + '/library', priority: '0.8', changefreq: 'weekly' },
+      { loc: BASE_URL + '/library/university-of-ibadan', priority: '0.7', changefreq: 'weekly' }
     ];
-    const courses = await pool.query("SELECT id, course_name, updated_at FROM study_courses ORDER BY id").catch(() => ({ rows: [] }));
-    for (const c of courses.rows) {
-      pages.push({ loc: BASE_URL + '/study/course/' + c.id, priority: '0.8', changefreq: 'weekly', lastmod: c.updated_at });
+    const libUnis = await pool.query("SELECT slug FROM universities WHERE id IN (SELECT DISTINCT university_id FROM library_courses)").catch(() => ({ rows: [] }));
+    for (const lu of libUnis.rows) {
+      pages.push({ loc: BASE_URL + '/library/' + lu.slug, priority: '0.7', changefreq: 'weekly' });
     }
-    const topics = await pool.query("SELECT id, topic_name, updated_at FROM study_topics ORDER BY id").catch(() => ({ rows: [] }));
-    for (const t of topics.rows) {
-      pages.push({ loc: BASE_URL + '/study/topic/' + t.id, priority: '0.7', changefreq: 'weekly', lastmod: t.updated_at });
-    }
-    const subtopics = await pool.query("SELECT id, subtopic_name, updated_at FROM study_subtopics ORDER BY id").catch(() => ({ rows: [] }));
-    for (const s of subtopics.rows) {
-      pages.push({ loc: BASE_URL + '/study/subtopic/' + s.id, priority: '0.6', changefreq: 'weekly', lastmod: s.updated_at });
-    }
+    // Study Hub pages are behind authentication and premium entitlements, so they
+    // are intentionally excluded from the sitemap (no private content in search).
     let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
     for (const p of pages) {
       xml += '  <url>\n    <loc>' + p.loc + '</loc>\n    <priority>' + p.priority + '</priority>\n    <changefreq>' + p.changefreq + '</changefreq>\n';
@@ -653,6 +649,12 @@ app.get('/terms', (req, res) => {
 
 app.get('/privacy', (req, res) => {
     res.render('privacy');
+});
+
+// Offline fallback for the PWA service worker
+app.get('/offline', (req, res) => {
+    res.locals.seo.robots = 'noindex,nofollow';
+    res.render('offline', { user: req.session.user || null });
 });
 
 // Auth Routes
@@ -1380,7 +1382,32 @@ app.post('/admin/universities/config/:id', isAdmin, async (req, res) => {
 // PREMIUM UPGRADE PAGE
 // ==========================================
 app.get('/upgrade', isAuth, async (req, res) => {
-  res.render('upgrade', { user: req.session.user });
+  try {
+    const userId = req.session.user.id;
+    const userRes = await pool.query('SELECT has_paid, used_coupon, migrated_free, migrated_locked FROM users WHERE id = $1', [userId]);
+    const u = userRes.rows[0] || {};
+    const school = await getSchoolForUser(userId);
+    const premiumSettings = await getPremiumSettings();
+    const isPaidSchool = !!school && school.is_paid;
+    const schoolPrice = isPaidSchool && school.price ? school.price : premiumSettings.recharge_price;
+    const schoolLocked = (school && Array.isArray(school.locked_features)) ? school.locked_features : [];
+    res.locals.seo.title = 'Prepium Premium | Unlock AI Study Tools';
+    res.locals.seo.description = 'Unlock the full Prepium experience — AI study assistant, PDF-to-quiz generator, flashcards, CGPA tools, smart planners and more.';
+    res.render('upgrade', {
+      user: { ...req.session.user, ...u },
+      paystack_key: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_your_key',
+      premiumPrice: isPaidSchool ? schoolPrice : PREMIUM_PRICE,
+      rechargePrice: schoolPrice,
+      isPaidSchool,
+      migratedLocked: !!(u.migrated_free && u.migrated_locked && !u.has_paid),
+      schoolLockedFeatures: schoolLocked,
+      paymentState: req.query.payment === 'success' ? 'success' : (req.query.payment === 'failed' ? 'failed' : null),
+      paymentReason: req.query.reason || null
+    });
+  } catch (err) {
+    console.error('Upgrade page error:', err);
+    res.redirect('/dashboard');
+  }
 });
 
 // ==========================================
@@ -1500,7 +1527,7 @@ app.get('/dashboard', isStudent, async (req, res) => {
 
         // 1. Fetch Fresh User Data (Payment, Streak, and Quiz Attempts)
         const userRes = await pool.query(
-            'SELECT has_paid, current_streak, quiz_attempts, migrated_free, migrated_at, migrated_locked FROM users WHERE id = $1', 
+            'SELECT has_paid, current_streak, quiz_attempts, migrated_free, migrated_at, migrated_locked FROM users WHERE id = $1',
             [userId]
         );
         const userData = userRes.rows[0];
@@ -1511,27 +1538,13 @@ app.get('/dashboard', isStudent, async (req, res) => {
 
         // 3. Get Recent History
         const historyRes = await pool.query(`
-            SELECT score, subject, TO_CHAR(taken_at, 'Mon DD, HH24:MI') as time 
-            FROM results 
-            WHERE user_id = $1 
-            ORDER BY taken_at DESC 
+            SELECT score, subject, TO_CHAR(taken_at, 'Mon DD, HH24:MI') as time
+            FROM results
+            WHERE user_id = $1
+            ORDER BY taken_at DESC
             LIMIT 5`, [userId]);
 
-        // 4. Get Active Competition & Subjects
-        const compRes = await pool.query('SELECT * FROM competitions WHERE is_active = true LIMIT 1');
-        const subjectsRes = await pool.query('SELECT * FROM subjects ORDER BY name ASC');
-
-        // 5. Count upcoming deadlines (within 24 hours)
-        const deadlineCount = await pool.query(
-            `SELECT COUNT(*) FROM deadlines 
-             WHERE user_id = $1 
-             AND (due_date + due_time) > NOW() 
-             AND (due_date + due_time) < NOW() + INTERVAL '24 hours'`,
-            [userId]
-        );
-        const upcomingDeadlines = parseInt(deadlineCount.rows[0].count) || 0;
-
-        // 6. Get study stats for dashboard
+        // 4. Get study stats for dashboard
         const [studyStatsRes, quizStatsRes, streakRes] = await Promise.all([
             pool.query('SELECT COALESCE(SUM(elapsed_seconds), 0) as t, COUNT(*) as s FROM study_sessions WHERE user_id = $1 AND status = $2', [userId, 'completed']),
             pool.query(`SELECT
@@ -1551,7 +1564,7 @@ app.get('/dashboard', isStudent, async (req, res) => {
         const aiQuizRes = await pool.query('SELECT COUNT(*) FROM quiz_results WHERE user_id = $1 AND subject_id IS NULL', [userId]);
         const aiQuizCount = parseInt(aiQuizRes.rows[0].count) || 0;
 
-        // 7. Get recent quiz
+        // 5. Get recent quiz
         const recentQuizRes = await pool.query(`
             SELECT COALESCE(s.name, qr.title, 'Quiz') as subject, qr.score, qr.total_questions, TO_CHAR(qr.created_at, 'YYYY-MM-DD') as date_taken
             FROM quiz_results qr
@@ -1565,33 +1578,90 @@ app.get('/dashboard', isStudent, async (req, res) => {
 
         const recentQuiz = recentQuizRes.rows[0] || null;
 
-        // 8. School-based access: pricing + refer eligibility
+        // 6. School-based access: pricing + refer eligibility
         const school = await getSchoolForUser(userId);
         const premiumSettings = await getPremiumSettings();
         const isPaidSchool = !!school && school.is_paid;
         const schoolPrice = isPaidSchool && school.price ? school.price : premiumSettings.recharge_price;
 
-        res.render('dashboard', { 
-            user: { ...req.session.user, ...userData }, 
+        // 7. Personalised next-action data (real data only, batched)
+        const todayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+        const [resumeRes, deadlinesRes, flashcardRes, planRes, tasksRes, footprintRes, weakRes] = await Promise.all([
+            pool.query(`SELECT a.id, a.question_count, a.created_at, c.course_name
+                        FROM study_quiz_attempts a
+                        LEFT JOIN study_courses c ON c.id = a.course_id
+                        WHERE a.user_id = $1 AND a.status = 'in_progress'
+                        ORDER BY a.created_at DESC LIMIT 1`, [userId]),
+            pool.query(`SELECT id, title, due_date, due_time FROM deadlines
+                        WHERE user_id = $1 AND (due_date + due_time) > NOW()
+                        ORDER BY due_date ASC, due_time ASC LIMIT 4`, [userId]),
+            pool.query('SELECT COUNT(*) AS c FROM study_flashcards WHERE user_id = $1', [userId]),
+            pool.query(`SELECT course, course_code, start_time, end_time FROM reading_timetables
+                        WHERE user_id = $1 AND day = $2 ORDER BY start_time LIMIT 4`, [userId, todayName]),
+            pool.query(`SELECT COUNT(*) AS c FROM daily_task_items WHERE user_id = $1 AND task_date = CURRENT_DATE AND is_done = false`, [userId]),
+            pool.query(`SELECT
+                (SELECT COUNT(*) FROM results WHERE user_id = $1) AS r,
+                (SELECT COUNT(*) FROM study_sessions WHERE user_id = $1) AS s,
+                (SELECT COUNT(*) FROM study_courses WHERE user_id = $1) AS c`, [userId]),
+            pool.query(`SELECT subject, AVG(score::float / NULLIF(total_questions,0) * 100) AS avg_pct, COUNT(*) AS attempts
+                        FROM results WHERE user_id = $1 AND total_questions > 0
+                        GROUP BY subject HAVING COUNT(*) >= 2 AND AVG(score::float / NULLIF(total_questions,0) * 100) < 60
+                        ORDER BY avg_pct ASC LIMIT 2`, [userId])
+        ]);
+
+        const resumeAttempt = resumeRes.rows[0] || null;
+        const upcomingDeadlinesList = deadlinesRes.rows;
+        const flashcardCount = parseInt(flashcardRes.rows[0].c) || 0;
+        const todayPlan = planRes.rows;
+        const pendingTasks = parseInt(tasksRes.rows[0].c) || 0;
+        const footprint = footprintRes.rows[0] || { r: 0, s: 0, c: 0 };
+        const isNewUser = (parseInt(footprint.r) || 0) === 0 && (parseInt(footprint.s) || 0) === 0 && (parseInt(footprint.c) || 0) === 0;
+        const weakSubjects = weakRes.rows.map(w => ({ subject: w.subject, avg_pct: Math.round(parseFloat(w.avg_pct)), attempts: parseInt(w.attempts) }));
+
+        // Build the single next-action recommendation from real data
+        let nextAction = null;
+        if (resumeAttempt) {
+            nextAction = { icon: 'fa-play', title: 'Continue your quiz', sub: (resumeAttempt.course_name || 'Practice quiz') + ' \u00b7 ' + (resumeAttempt.question_count || 10) + ' questions', href: '/study/quiz/' + resumeAttempt.id, cta: 'Resume' };
+        } else if (upcomingDeadlinesList.length > 0) {
+            const d = upcomingDeadlinesList[0];
+            const due = new Date(d.due_date);
+            const days = Math.ceil((due - new Date(new Date().toDateString())) / 86400000);
+            nextAction = { icon: 'fa-hourglass-half', title: d.title, sub: days <= 0 ? 'Due today' : (days === 1 ? 'Due tomorrow' : 'Due in ' + days + ' days'), href: '/deadlines', cta: 'View' };
+        } else if (flashcardCount > 0) {
+            nextAction = { icon: 'fa-clone', title: 'Review your flashcards', sub: flashcardCount + ' card' + (flashcardCount === 1 ? '' : 's') + ' saved across your courses', href: '/study', cta: 'Revise' };
+        } else if (weakSubjects.length > 0) {
+            nextAction = { icon: 'fa-bullseye', title: 'Practise ' + weakSubjects[0].subject, sub: 'Average ' + weakSubjects[0].avg_pct + '% over ' + weakSubjects[0].attempts + ' attempts — more practice will help', href: '/setup-test', cta: 'Practise' };
+        } else if (todayPlan.length > 0) {
+            nextAction = { icon: 'fa-book-open', title: "Follow today's reading plan", sub: todayPlan.length + ' session' + (todayPlan.length === 1 ? '' : 's') + ' scheduled for ' + todayName, href: '/reading-timetable', cta: 'Start' };
+        } else if (pendingTasks > 0) {
+            nextAction = { icon: 'fa-tasks', title: 'Complete today\u2019s tasks', sub: pendingTasks + ' task' + (pendingTasks === 1 ? '' : 's') + ' still open', href: '/daily-task', cta: 'Open' };
+        }
+
+        res.render('dashboard', {
+            user: { ...req.session.user, ...userData },
             notice: await getLoginNotice(),
-            competition: compRes.rows[0],
-            subjects: subjectsRes.rows,
-            history: historyRes.rows,
             unreadNotifs,
-            upcomingDeadlines,
+            history: historyRes.rows,
             streak,
             studySessions,
             quizCount,
             avgScore,
             aiQuizCount,
             recentQuiz,
+            nextAction,
+            upcomingDeadlinesList,
+            todayPlan,
+            todayName,
+            pendingTasks,
+            flashcardCount,
+            weakSubjects,
+            isNewUser,
             paystack_key: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_your_key',
             premiumPrice: isPaidSchool ? schoolPrice : PREMIUM_PRICE,
             rechargePrice: schoolPrice,
             isPaidSchool,
             referEnabled: isPaidSchool,
-            migratedLocked: !!(userData && userData.migrated_free && userData.migrated_locked && !userData.has_paid),
-            currentTime: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })
+            migratedLocked: !!(userData && userData.migrated_free && userData.migrated_locked && !userData.has_paid)
         });
     } catch (err) {
         console.error("Dashboard Error:", err);
@@ -5533,12 +5603,19 @@ app.post('/upload-pdf', uploadMemory.single('lecture_note'), async (req, res) =>
 });
 
 // POST: Generate quizzes from client-extracted PDF text
-app.post('/generate-ai-quiz', isAuth, requirePaid, async (req, res) => {
+app.post('/generate-ai-quiz', isAuth, requirePaid, rateLimit(12, 60000), async (req, res) => {
     try {
         const { pdfText, fileName, num_questions, quiz_duration, question_type, difficulty } = req.body;
 
         if (!pdfText || !pdfText.trim()) {
-            return res.status(400).json({ success: false, message: "Could not extract text from PDF. Try a different file." });
+            return res.status(400).json({ success: false, message: "Could not extract text from this PDF. If it is a scanned or image-only document, the text cannot be read — try a PDF with selectable text." });
+        }
+
+        // Detect scanned / image-only PDFs: after stripping whitespace the text
+        // must contain enough real characters to build meaningful questions from.
+        const meaningfulText = pdfText.replace(/\s+/g, '');
+        if (meaningfulText.length < 200) {
+            return res.status(400).json({ success: false, message: "This PDF does not contain enough readable text (it may be scanned or image-only). Try a text-based lecture note." });
         }
 
         const numQuestions = parseInt(num_questions) || 5;
@@ -6797,7 +6874,7 @@ app.get('/api/study/topics/:courseId', isAuth, async (req, res) => {
 });
 
 // ==================== STUDY API: SUBTOPICS ====================
-app.post('/api/study/subtopics/ai-generate', isAuth, requirePaid, async (req, res) => {
+app.post('/api/study/subtopics/ai-generate', isAuth, requirePaid, rateLimit(12, 60000), async (req, res) => {
   try {
     const { topicId, courseId, topicTitle, courseName, courseCode } = req.body;
     const prompt = `For the topic "${topicTitle}" in the course "${courseName}"${courseCode ? ' (' + courseCode + ')' : ''}, generate between 8 and 15 RELEVANT subtopics that cover the most important aspects of this topic within this specific course. Only include subtopics that are genuinely relevant to this course and topic — do NOT pad the list, do NOT generate more than 15, and aim for at least 8. Arrange them from foundational concepts first to more advanced aspects later. Return a JSON array of strings. Do NOT wrap in markdown code blocks. ONLY output raw JSON.`;
@@ -6870,7 +6947,7 @@ app.get('/api/study/subtopic/:id', isAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/api/study/subtopic/:id/content', isAuth, requirePaid, async (req, res) => {
+app.post('/api/study/subtopic/:id/content', isAuth, requirePaid, rateLimit(12, 60000), async (req, res) => {
   try {
     const st = await pool.query('SELECT * FROM study_subtopics WHERE id = $1', [req.params.id]);
     if (!st.rows[0]) return res.json({ success: false, error: 'Not found' });
@@ -6985,7 +7062,7 @@ app.post('/api/study/sessions/end', isAuth, requirePaid, async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
-app.post('/api/study/session/summarize', isAuth, requirePaid, async (req, res) => {
+app.post('/api/study/session/summarize', isAuth, requirePaid, rateLimit(12, 60000), async (req, res) => {
   try {
     const { notes, courseName } = req.body;
     if (!notes || !notes.trim()) return res.json({ success: false, error: 'No notes to summarize.' });
@@ -7006,7 +7083,7 @@ app.post('/api/study/sessions/update', isAuth, requirePaid, async (req, res) => 
 });
 
 // ==================== STUDY API: AI CHAT (streaming SSE) ====================
-app.post('/api/study/chat', isAuth, requirePaid, async (req, res) => {
+app.post('/api/study/chat', isAuth, requirePaid, rateLimit(20, 60000), async (req, res) => {
   try {
     const { message, courseId, subtopicId, courseName } = req.body;
     const uid = req.session.user.id;
@@ -7068,7 +7145,7 @@ app.post('/api/study/youtube/search', isAuth, requirePaid, async (req, res) => {
 });
 
 // ==================== STUDY API: QUIZ ====================
-app.post('/api/study/quiz/generate', isAuth, requirePaid, async (req, res) => {
+app.post('/api/study/quiz/generate', isAuth, requirePaid, rateLimit(12, 60000), async (req, res) => {
   try {
     const { courseId, subtopicId, topicTitle, questionType, questionCount, timeLimit } = req.body;
     const count = parseInt(questionCount) || 10;
@@ -7177,7 +7254,7 @@ app.get('/api/study/quiz/result/:attemptId', isAuth, async (req, res) => {
 });
 
 // ==================== STUDY API: FLASHCARDS ====================
-app.post('/api/study/flashcards/generate', isAuth, requirePaid, async (req, res) => {
+app.post('/api/study/flashcards/generate', isAuth, requirePaid, rateLimit(12, 60000), async (req, res) => {
   try {
     const { courseId, subtopicId, topicTitle, count } = req.body;
     const fcCount = parseInt(count) || 10;
@@ -7341,7 +7418,7 @@ app.post('/api/cgpa/forecast', isAuth, requirePaid, featureLock('cgpa'), async (
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/api/cgpa/ai-predict', isAuth, requirePaid, featureLock('cgpa'), async (req, res) => {
+app.post('/api/cgpa/ai-predict', isAuth, requirePaid, featureLock('cgpa'), rateLimit(12, 60000), async (req, res) => {
   try {
     const uid = req.session.user.id;
     const profile = await pool.query('SELECT * FROM public.cgpa_profiles WHERE user_id = $1', [uid]);
@@ -7425,7 +7502,7 @@ app.post('/api/cgpa/bulk-whatif', isAuth, requirePaid, featureLock('cgpa'), asyn
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
-app.post('/api/cgpa/ai-chat', isAuth, requirePaid, featureLock('cgpa'), async (req, res) => {
+app.post('/api/cgpa/ai-chat', isAuth, requirePaid, featureLock('cgpa'), rateLimit(20, 60000), async (req, res) => {
   try {
     const { message, history } = req.body;
     if (!message || !message.trim()) return res.json({ success: false, error: 'Empty message.' });
@@ -8050,6 +8127,301 @@ Return ONLY raw JSON (no markdown, no code fences) exactly like:
   if (!parsed) return { error: 'AI returned invalid data.' };
   return { answer: (parsed.answer || '').trim(), explanation: (parsed.explanation || '').trim(), provider: res.provider };
 }
+
+// ======================== COURSE LIBRARY ========================
+// Structured academic resource library: University -> Faculty -> Department -> Level -> Semester -> Course
+// Public, searchable, community-contributed with admin verification.
+
+(async function initLibrary() {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS library_faculties (
+                id SERIAL PRIMARY KEY,
+                university_id INTEGER NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                slug VARCHAR(255) NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(university_id, slug)
+            )`);
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS library_departments (
+                id SERIAL PRIMARY KEY,
+                faculty_id INTEGER NOT NULL REFERENCES library_faculties(id) ON DELETE CASCADE,
+                university_id INTEGER NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                slug VARCHAR(255) NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(faculty_id, slug)
+            )`);
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS library_courses (
+                id SERIAL PRIMARY KEY,
+                department_id INTEGER NOT NULL REFERENCES library_departments(id) ON DELETE CASCADE,
+                university_id INTEGER NOT NULL,
+                code VARCHAR(50) NOT NULL DEFAULT '',
+                title VARCHAR(500) NOT NULL,
+                description TEXT DEFAULT '',
+                level INTEGER DEFAULT 100,
+                semester INTEGER DEFAULT 1,
+                added_by INTEGER,
+                created_at TIMESTAMP DEFAULT NOW()
+            )`);
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS library_resources (
+                id SERIAL PRIMARY KEY,
+                course_id INTEGER NOT NULL REFERENCES library_courses(id) ON DELETE CASCADE,
+                university_id INTEGER NOT NULL,
+                title VARCHAR(500) NOT NULL,
+                category VARCHAR(50) DEFAULT 'notes',
+                url TEXT DEFAULT '',
+                description TEXT DEFAULT '',
+                contributor_user_id INTEGER,
+                contributor_name VARCHAR(255) DEFAULT 'Anonymous',
+                is_verified BOOLEAN DEFAULT false,
+                created_at TIMESTAMP DEFAULT NOW()
+            )`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_lib_courses_uni ON library_courses(university_id)`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_lib_resources_course ON library_resources(course_id)`);
+        console.log('[Library] tables ready');
+    } catch (err) {
+        console.error('[Library] setup:', err.message);
+    }
+})();
+
+function libSlug(s) {
+    return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'x';
+}
+
+const LIB_CATEGORIES = ['notes', 'past_question', 'solution', 'textbook', 'summary', 'other'];
+function libCategoryLabel(c) {
+    return { notes: 'Lecture Notes', past_question: 'Past Question', solution: 'Solution', textbook: 'Textbook', summary: 'Summary', other: 'Other' }[c] || 'Other';
+}
+
+// Library hub: university picker + global search
+app.get('/library', async (req, res) => {
+    try {
+        res.locals.seo.title = 'Course Library | Prepium';
+        res.locals.seo.description = 'Browse Nigerian university courses, lecture notes, past questions and study resources - organised by faculty, department, level and semester.';
+        const q = (req.query.q || '').toString().trim().slice(0, 100);
+        let universities = [];
+        let results = [];
+        try { universities = (await pool.query('SELECT id, name, slug FROM universities ORDER BY name ASC')).rows; } catch (_) {}
+        if (q) {
+            results = await pool.query(`
+                SELECT c.id, c.code, c.title, c.level, c.semester, d.name AS department, f.name AS faculty, u.name AS university, u.slug AS uni_slug,
+                (SELECT COUNT(*) FROM library_resources r WHERE r.course_id = c.id) AS resource_count
+                FROM library_courses c
+                JOIN library_departments d ON d.id = c.department_id
+                JOIN library_faculties f ON f.id = d.faculty_id
+                JOIN universities u ON u.id = c.university_id
+                WHERE c.code ILIKE $1 OR c.title ILIKE $1
+                ORDER BY u.name ASC, c.code ASC LIMIT 40`, ['%' + q + '%']);
+        }
+        const uniCounts = await pool.query(`SELECT university_id, COUNT(*) AS courses FROM library_courses GROUP BY university_id`).catch(() => ({ rows: [] }));
+        const countMap = {};
+        uniCounts.rows.forEach(r => { countMap[r.university_id] = parseInt(r.courses); });
+        res.render('library', {
+            user: req.session.user || null,
+            universities: universities.map(u => ({ ...u, course_count: countMap[u.id] || 0 })),
+            q,
+            results: q ? results.rows : []
+        });
+    } catch (err) {
+        console.error('Library error:', err);
+        res.status(500).send('Something went wrong.');
+    }
+});
+
+// University page: faculties
+app.get('/library/:uniSlug', async (req, res) => {
+    try {
+        const uni = await pool.query('SELECT id, name, slug FROM universities WHERE slug = $1', [req.params.uniSlug]);
+        if (!uni.rows[0]) return res.status(404).send('Not found');
+        const faculties = await pool.query(`
+            SELECT f.id, f.name, f.slug,
+            (SELECT COUNT(*) FROM library_departments d WHERE d.faculty_id = f.id) AS dept_count,
+            (SELECT COUNT(*) FROM library_courses c WHERE c.department_id IN (SELECT id FROM library_departments d2 WHERE d2.faculty_id = f.id)) AS course_count
+            FROM library_faculties f
+            WHERE f.university_id = $1 ORDER BY f.name ASC`, [uni.rows[0].id]);
+        res.locals.seo.title = uni.rows[0].name + ' Courses | Prepium Library';
+        res.locals.seo.description = 'Browse ' + uni.rows[0].name + ' courses by faculty and department - notes, past questions and study resources.';
+        res.render('library-university', {
+            user: req.session.user || null,
+            university: uni.rows[0],
+            faculties: faculties.rows
+        });
+    } catch (err) {
+        console.error('Library uni error:', err);
+        res.status(500).send('Something went wrong.');
+    }
+});
+
+// Faculty page: departments
+app.get('/library/faculty/:id', async (req, res) => {
+    try {
+        const f = await pool.query(`
+            SELECT f.id, f.name, f.slug, u.id AS uni_id, u.name AS uni_name, u.slug AS uni_slug
+            FROM library_faculties f JOIN universities u ON u.id = f.university_id WHERE f.id = $1`, [req.params.id]);
+        if (!f.rows[0]) return res.status(404).send('Not found');
+        const departments = await pool.query(`
+            SELECT d.id, d.name, d.slug,
+            (SELECT COUNT(*) FROM library_courses c WHERE c.department_id = d.id) AS course_count
+            FROM library_departments d WHERE d.faculty_id = $1 ORDER BY d.name ASC`, [f.rows[0].id]);
+        res.locals.seo.title = f.rows[0].name + ' - ' + f.rows[0].uni_name + ' | Prepium Library';
+        res.locals.seo.description = 'Departments in ' + f.rows[0].name + ', ' + f.rows[0].uni_name + '.';
+        res.render('library-department', {
+            user: req.session.user || null,
+            faculty: f.rows[0],
+            departments: departments.rows
+        });
+    } catch (err) {
+        console.error('Library faculty error:', err);
+        res.status(500).send('Something went wrong.');
+    }
+});
+
+// Department page: courses with filters + search
+app.get('/library/department/:id', async (req, res) => {
+    try {
+        const d = await pool.query(`
+            SELECT d.id, d.name, f.id AS faculty_id, f.name AS faculty_name, u.id AS uni_id, u.name AS uni_name, u.slug AS uni_slug
+            FROM library_departments d JOIN library_faculties f ON f.id = d.faculty_id JOIN universities u ON u.id = d.university_id
+            WHERE d.id = $1`, [req.params.id]);
+        if (!d.rows[0]) return res.status(404).send('Not found');
+        const level = parseInt(req.query.level) || 0;
+        const semester = parseInt(req.query.semester) || 0;
+        const q = (req.query.q || '').toString().trim().slice(0, 100);
+        const clauses = ['c.department_id = $1'];
+        const params = [d.rows[0].id];
+        if (level) { params.push(level); clauses.push('c.level = $' + params.length); }
+        if (semester) { params.push(semester); clauses.push('c.semester = $' + params.length); }
+        if (q) { params.push('%' + q + '%'); clauses.push("(c.code ILIKE $" + params.length + " OR c.title ILIKE $" + params.length + ")"); }
+        const courses = await pool.query(`
+            SELECT c.id, c.code, c.title, c.level, c.semester,
+            (SELECT COUNT(*) FROM library_resources r WHERE r.course_id = c.id) AS resource_count
+            FROM library_courses c WHERE ` + clauses.join(' AND ') + `
+            ORDER BY c.level ASC, c.code ASC LIMIT 100`, params);
+        res.locals.seo.title = d.rows[0].name + ' Courses | Prepium Library';
+        res.locals.seo.description = 'Courses in ' + d.rows[0].name + ', ' + d.rows[0].uni_name + '.';
+        res.render('library-courses', {
+            user: req.session.user || null,
+            department: d.rows[0],
+            courses: courses.rows,
+            level, semester, q
+        });
+    } catch (err) {
+        console.error('Library dept error:', err);
+        res.status(500).send('Something went wrong.');
+    }
+});
+
+// Course detail: resources
+app.get('/library/course/:id', async (req, res) => {
+    try {
+        const c = await pool.query(`
+            SELECT c.id, c.code, c.title, c.description, c.level, c.semester, d.id AS department_id, d.name AS department, f.id AS faculty_id, f.name AS faculty,
+            u.id AS uni_id, u.name AS uni_name, u.slug AS uni_slug
+            FROM library_courses c JOIN library_departments d ON d.id = c.department_id
+            JOIN library_faculties f ON f.id = d.faculty_id JOIN universities u ON u.id = c.university_id
+            WHERE c.id = $1`, [req.params.id]);
+        if (!c.rows[0]) return res.status(404).send('Not found');
+        const resources = await pool.query(`
+            SELECT id, title, category, url, description, contributor_name, is_verified, created_at
+            FROM library_resources WHERE course_id = $1 ORDER BY is_verified DESC, created_at DESC LIMIT 50`, [c.rows[0].id]);
+        res.locals.seo.title = c.rows[0].code + ' - ' + c.rows[0].title + ' | Prepium Library';
+        res.locals.seo.description = 'Study resources for ' + c.rows[0].code + ' (' + c.rows[0].title + ') - notes, past questions and solutions.';
+        res.render('library-course', {
+            user: req.session.user || null,
+            course: c.rows[0],
+            resources: resources.rows,
+            categories: LIB_CATEGORIES,
+            categoryLabel: libCategoryLabel
+        });
+    } catch (err) {
+        console.error('Library course error:', err);
+        res.status(500).send('Something went wrong.');
+    }
+});
+
+// Contribute: add a resource (or a new course) - stored unverified until an admin approves
+app.post('/api/library/contribute', isAuth, rateLimit(10, 60000), async (req, res) => {
+    try {
+        const body = req.body || {};
+        const courseId = parseInt(body.courseId) || 0;
+        const title = String(body.title || '').trim().slice(0, 500);
+        const url = String(body.url || '').trim().slice(0, 2000);
+        const description = String(body.description || '').trim().slice(0, 1000);
+        const category = LIB_CATEGORIES.includes(body.category) ? body.category : 'other';
+        if (!title || !url) return res.status(400).json({ success: false, message: 'Resource title and link are required' });
+        if (!/^https:\/\//i.test(url)) return res.status(400).json({ success: false, message: 'Link must start with https://' });
+
+        let courseIdFinal = courseId;
+        if (!courseIdFinal) {
+            const code = String(body.newCourseCode || '').trim().slice(0, 50);
+            const titleC = String(body.newCourseTitle || '').trim().slice(0, 500);
+            if (!code || !titleC) return res.status(400).json({ success: false, message: 'Course code and title are required' });
+            const uni = await getSchoolForUser(req.session.user.id);
+            if (!uni) return res.status(400).json({ success: false, message: 'Set your university in your profile first' });
+            const depRow = await pool.query(`
+                SELECT d.id, d.university_id FROM library_departments d
+                JOIN library_faculties f ON f.id = d.faculty_id
+                WHERE f.university_id = $1 ORDER BY d.name ASC LIMIT 1`, [uni.id]);
+            if (!depRow.rows[0]) return res.status(400).json({ success: false, message: 'Your university is not in the library yet' });
+            const lvl = [100, 200, 300, 400, 500].includes(parseInt(body.newCourseLevel)) ? parseInt(body.newCourseLevel) : 100;
+            const sem = [1, 2].includes(parseInt(body.newCourseSemester)) ? parseInt(body.newCourseSemester) : 1;
+            const ins = await pool.query(`
+                INSERT INTO library_courses (department_id, university_id, code, title, level, semester, added_by)
+                VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+                [depRow.rows[0].id, depRow.rows[0].university_id, code, titleC, lvl, sem, req.session.user.id]);
+            courseIdFinal = ins.rows[0].id;
+        }
+        const course = await pool.query('SELECT university_id FROM library_courses WHERE id = $1', [courseIdFinal]);
+        if (!course.rows[0]) return res.status(404).json({ success: false, message: 'Course not found' });
+        const contributor = await pool.query('SELECT fullname FROM users WHERE id = $1', [req.session.user.id]);
+        await pool.query(`
+            INSERT INTO library_resources (course_id, university_id, title, category, url, description, contributor_user_id, contributor_name, is_verified)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,false)`,
+            [courseIdFinal, course.rows[0].university_id, title, category, url, description,
+             req.session.user.id, (contributor.rows[0] && contributor.rows[0].fullname) || 'Anonymous']);
+        res.json({ success: true, message: 'Thank you! Your resource was submitted and will appear once reviewed.' });
+    } catch (err) {
+        console.error('Library contribute error:', err);
+        res.status(500).json({ success: false, message: 'Could not submit resource' });
+    }
+});
+
+// Admin: verify/unverify/delete resources
+app.get('/admin/library', isAdmin, async (req, res) => {
+    try {
+        const pending = await pool.query(`
+            SELECT r.id, r.title, r.category, r.url, r.contributor_name, r.created_at, c.code AS course_code, c.title AS course_title, u.name AS uni_name
+            FROM library_resources r JOIN library_courses c ON c.id = r.course_id JOIN universities u ON u.id = r.university_id
+            WHERE r.is_verified = false ORDER BY r.created_at DESC LIMIT 100`);
+        const verified = await pool.query(`
+            SELECT r.id, r.title, c.code AS course_code, u.name AS uni_name
+            FROM library_resources r JOIN library_courses c ON c.id = r.course_id JOIN universities u ON u.id = r.university_id
+            WHERE r.is_verified = true ORDER BY r.created_at DESC LIMIT 100`);
+        res.render('admin/library', { pending: pending.rows, verified: verified.rows });
+    } catch (err) {
+        console.error('Admin library error:', err);
+        res.status(500).send('Database Error');
+    }
+});
+app.post('/admin/library/verify/:id', isAdmin, async (req, res) => {
+    try { await pool.query('UPDATE library_resources SET is_verified = true WHERE id = $1', [req.params.id]); } catch (_) {}
+    res.redirect('/admin/library');
+});
+app.post('/admin/library/unverify/:id', isAdmin, async (req, res) => {
+    try { await pool.query('UPDATE library_resources SET is_verified = false WHERE id = $1', [req.params.id]); } catch (_) {}
+    res.redirect('/admin/library');
+});
+app.post('/admin/library/delete/:id', isAdmin, async (req, res) => {
+    try { await pool.query('DELETE FROM library_resources WHERE id = $1', [req.params.id]); } catch (_) {}
+    res.redirect('/admin/library');
+});
+
+// ======================== END COURSE LIBRARY ========================
+
 
 if (require.main === module) {
     const PORT = process.env.PORT || 3000;

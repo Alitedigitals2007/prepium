@@ -5,33 +5,40 @@
 <aside class="sidebar">
   <a href="/dashboard" class="sidebar-logo">PREPIUM<span>.</span> <span class="logo-dot"></span></a>
   <nav class="sidebar-nav">
+    <div class="sidebar-group">Overview</div>
     <a href="/dashboard" class="sidebar-link">
       <i class="fas fa-home"></i> Dashboard
-    </a>
-    <a href="/guide" class="sidebar-link">
-      <i class="fas fa-book"></i> User Guide
     </a>
     <a href="/daily-task" class="sidebar-link">
       <i class="fas fa-tasks"></i> Daily Task
     </a>
+    <div class="sidebar-group">Study</div>
     <a href="/study" class="sidebar-link">
       <i class="fas fa-graduation-cap"></i> Study Hub
     </a>
-    <a href="/timetable" class="sidebar-link">
-      <i class="fas fa-calendar-alt"></i> Timetable
+    <a href="/library" class="sidebar-link">
+      <i class="fas fa-building-columns"></i> Course Library
+    </a>
+    <a href="/ai-quiz" class="sidebar-link">
+      <i class="fas fa-robot"></i> Quiz Generator
     </a>
     <a href="/reading-timetable" class="sidebar-link">
       <i class="fas fa-book-open"></i> Reading Schedule
     </a>
+    <div class="sidebar-group">Academics</div>
+    <a href="/timetable" class="sidebar-link">
+      <i class="fas fa-calendar-alt"></i> Timetable
+    </a>
     <a href="/cgpa" class="sidebar-link">
       <i class="fas fa-chart-line"></i> CGPA Tracker
-    </a>
-    <a href="/history" class="sidebar-link">
-      <i class="fas fa-chart-bar"></i> History
     </a>
     <a href="/deadlines" class="sidebar-link">
       <i class="fas fa-flag"></i> Deadlines
     </a>
+    <a href="/history" class="sidebar-link">
+      <i class="fas fa-chart-bar"></i> History
+    </a>
+    <div class="sidebar-group">Community</div>
     <a href="/daily-challenge" class="sidebar-link">
       <i class="fas fa-calendar-check"></i> Daily Challenge
     </a>
@@ -41,17 +48,21 @@
     <a href="/squads" class="sidebar-link">
       <i class="fas fa-users"></i> Squad Streaks
     </a>
+    <div class="sidebar-group">Account</div>
     <a href="/notifications" class="sidebar-link">
       <i class="fas fa-bell"></i> Notifications
       <% if (typeof unreadNotifs !== 'undefined' && unreadNotifs > 0) { %>
         <span class="notification-dot" style="position:static;display:inline-flex;margin-left:auto;"><%= unreadNotifs %></span>
       <% } %>
     </a>
-    <a href="/ai-quiz" class="sidebar-link">
-      <i class="fas fa-robot"></i> Quiz Generator
+    <a href="/upgrade" class="sidebar-link">
+      <i class="fas fa-crown"></i> Premium
     </a>
     <a href="/suggestions" class="sidebar-link">
       <i class="fas fa-lightbulb"></i> Feedback
+    </a>
+    <a href="/guide" class="sidebar-link">
+      <i class="fas fa-book"></i> User Guide
     </a>
   </nav>
   <div class="sidebar-footer">
@@ -64,7 +75,7 @@
     </div>
     <div class="sidebar-user">
       <div class="sidebar-avatar">
-        <% if (typeof user !== 'undefined' && user.fullname) { %>
+        <% if (user && user.fullname) { %>
           <%= user.fullname.charAt(0).toUpperCase() %>
         <% } else { %>
           <i class="fas fa-user"></i>
@@ -72,10 +83,10 @@
       </div>
       <div class="sidebar-user-info">
         <div class="sidebar-user-name">
-          <%= typeof user !== 'undefined' && user.fullname ? user.fullname : 'User' %>
+          <%= user && user.fullname ? user.fullname : 'User' %>
         </div>
         <div class="sidebar-user-email">
-          <%= typeof user !== 'undefined' && user.email ? user.email : '' %>
+          <%= user && user.email ? user.email : '' %>
         </div>
       </div>
     </div>

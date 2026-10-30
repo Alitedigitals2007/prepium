@@ -5,7 +5,7 @@
     <script src="https://js.paystack.co/v1/inline.js"></script>
     <style>
         body::before { display: none; }
-        .app-shell { background: transparent; backdrop-filter: none; border: none; padding-bottom: 100px; }
+        .app-shell { background: transparent; backdrop-filter: none; border: none; padding-bottom: 110px; }
 
         .dash-header { padding: 1.25rem 1.25rem 0.75rem; display: flex; align-items: center; justify-content: space-between; }
         .dash-header-left { display: flex; align-items: center; gap: 12px; }
@@ -19,32 +19,46 @@
         .streak-badge { display: flex; align-items: center; gap: 5px; padding: 8px 14px; border-radius: 12px; background: linear-gradient(135deg,#f97316,#ef4444); color: white; font-weight: 800; font-size: 0.75rem; box-shadow: 0 4px 12px rgba(239,68,68,0.25); }
         .streak-badge i { font-size: 0.85rem; }
 
+        /* Next action hero card */
+        .next-card { margin: 0 1.25rem 1.25rem; border-radius: 20px; padding: 18px; background: var(--brand-gradient); color: #fff; display: flex; align-items: center; gap: 14px; text-decoration: none; box-shadow: 0 8px 28px var(--brand-light); position: relative; overflow: hidden; }
+        .next-card::before { content: ''; position: absolute; top: -45%; right: -15%; width: 170px; height: 170px; border-radius: 50%; background: rgba(255,255,255,0.09); }
+        .next-card .nc-icon { width: 46px; height: 46px; flex: 0 0 46px; border-radius: 14px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 1.05rem; position: relative; }
+        .next-card .nc-body { flex: 1; min-width: 0; position: relative; }
+        .next-card .nc-kicker { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; opacity: 0.8; }
+        .next-card .nc-title { font-size: 0.95rem; font-weight: 800; margin: 2px 0 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .next-card .nc-sub { font-size: 0.68rem; opacity: 0.85; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .next-card .nc-cta { flex-shrink: 0; padding: 9px 16px; border-radius: 12px; background: rgba(255,255,255,0.22); color: #fff; font-weight: 800; font-size: 0.72rem; position: relative; }
+
+        /* Onboarding */
+        .onboard-card { margin: 0 1.25rem 1.25rem; border-radius: 20px; padding: 20px 18px; background: var(--surface-solid); border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+        .onboard-card h3 { font-size: 1rem; font-weight: 800; margin: 0 0 4px; }
+        .onboard-card > p { font-size: 0.75rem; color: var(--text-secondary); margin: 0 0 14px; }
+        .onboard-steps { display: grid; gap: 8px; }
+        .onboard-step { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 14px; background: var(--bg); text-decoration: none; color: inherit; }
+        .onboard-step .os-num { width: 26px; height: 26px; flex: 0 0 26px; border-radius: 50%; background: var(--brand-soft); color: var(--brand); font-weight: 800; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; }
+        .onboard-step .os-body { flex: 1; min-width: 0; }
+        .onboard-step .os-title { font-size: 0.8rem; font-weight: 700; }
+        .onboard-step .os-sub { font-size: 0.66rem; color: var(--text-secondary); }
+        .onboard-step i.fa-chevron-right { font-size: 0.65rem; color: var(--text-muted); }
+
         .hero-strip { padding: 0 1.25rem 1.25rem; display: flex; flex-wrap: wrap; gap: 8px; }
         .hero-stat { flex: 1 1 calc(50% - 4px); min-width: 0; background: var(--surface-solid); border-radius: 18px; padding: 14px 10px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
         .hero-stat .stat-icon { width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; margin-bottom: 8px; }
         .hero-stat .stat-num { font-size: 1.3rem; font-weight: 800; line-height: 1; }
         .hero-stat .stat-label { font-size: 0.6rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 3px; }
 
-        .quick-mood { padding: 0 1.25rem 1rem; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
-        .quick-mood::-webkit-scrollbar { display: none; }
-        .mood-chip { flex-shrink: 0; padding: 10px 18px; border-radius: 14px; background: var(--surface-solid); border: 1px solid var(--border); font-weight: 700; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--text-primary); box-shadow: var(--shadow-sm); transition: var(--transition); }
-        .mood-chip:active { transform: scale(0.95); }
-        .mood-chip i { font-size: 0.85rem; }
-        .mood-chip.primary { background: var(--brand-gradient); color: white; border: none; box-shadow: 0 4px 14px var(--brand-light); }
-
-        <% if (!user.has_paid) { %>
-        .upgrade-strip { margin: 0 1.25rem 1.25rem; padding: 18px 20px; border-radius: 20px; background: linear-gradient(135deg,var(--surface-solid) 0%,var(--surface) 100%); color: var(--text-primary); display: flex; align-items: center; gap: 14px; position: relative; overflow: hidden; border: 1px solid var(--border); }
-        .upgrade-strip::before { content: ''; position: absolute; top: -50%; right: -20%; width: 200px; height: 200px; border-radius: 50%; background: var(--brand-light); }
-        .upgrade-strip .us-icon { width: 44px; height: 44px; border-radius: 14px; background: var(--brand-light); display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0; color: var(--brand); }
-        .upgrade-strip .us-content { flex: 1; }
-        .upgrade-strip .us-content h4 { font-size: 0.85rem; font-weight: 800; margin: 0; }
-        .upgrade-strip .us-content p { font-size: 0.7rem; opacity: 0.7; font-weight: 500; margin: 2px 0 0; color: var(--text-secondary); }
-        .upgrade-strip .us-btn { padding: 10px 18px; border-radius: 12px; background: var(--brand); color: white; font-weight: 800; font-size: 0.72rem; border: none; cursor: pointer; flex-shrink: 0; }
-        <% } %>
-
         .section-head { padding: 0.5rem 1.25rem 0.75rem; display: flex; align-items: center; justify-content: space-between; }
         .section-head h2 { font-size: 1rem; font-weight: 800; letter-spacing: -0.3px; }
         .section-head .see-all { font-size: 0.68rem; font-weight: 700; color: var(--brand); cursor: pointer; text-decoration: none; }
+
+        /* Today list rows */
+        .today-list { padding: 0 1.25rem; display: grid; gap: 8px; }
+        .today-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--surface-solid); border: 1px solid var(--border); box-shadow: var(--shadow-sm); text-decoration: none; color: inherit; }
+        .today-row .tr-icon { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; background: var(--brand-soft); color: var(--brand); }
+        .today-row .tr-body { flex: 1; min-width: 0; }
+        .today-row .tr-title { font-size: 0.8rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .today-row .tr-meta { font-size: 0.66rem; color: var(--text-secondary); font-weight: 600; margin-top: 1px; }
+        .today-row .tr-badge { flex-shrink: 0; }
 
         .feature-grid { padding: 0 1.25rem; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .feature-card { background: var(--surface-solid); border-radius: 18px; padding: 18px 14px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); text-decoration: none; color: inherit; transition: all 0.3s var(--ease-out); display: flex; flex-direction: column; }
@@ -52,14 +66,12 @@
         .feature-card .fc-icon { width: 42px; height: 42px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1rem; margin-bottom: 12px; }
         .feature-card .fc-label { font-size: 0.78rem; font-weight: 800; margin-bottom: 2px; }
         .feature-card .fc-desc { font-size: 0.65rem; color: var(--text-secondary); font-weight: 600; line-height: 1.3; }
-        .feature-card .fc-badge { display: inline-flex; align-items: center; gap: 3px; margin-top: 8px; padding: 3px 8px; border-radius: 6px; font-size: 0.58rem; font-weight: 700; }
         .feature-card.featured { grid-column: span 2; flex-direction: row; align-items: center; gap: 16px; padding: 16px 18px; background: var(--brand-gradient); color: white; border: none; box-shadow: 0 6px 24px var(--brand-light); }
         .feature-card.featured .fc-icon { background: rgba(255,255,255,0.2); color: white; margin-bottom: 0; }
         .feature-card.featured .fc-body { flex: 1; }
         .feature-card.featured .fc-label { font-size: 0.88rem; }
         .feature-card.featured .fc-desc { color: rgba(255,255,255,0.75); }
         .feature-card.featured .fc-arrow { width: 32px; height: 32px; border-radius: 10px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-
         .feature-card.locked { opacity: 0.6; }
         .feature-card.locked .fc-icon { background: var(--bg); color: var(--text-muted); }
         .feature-card.locked::after { display: none; }
@@ -75,6 +87,15 @@
         .resume-card .rc-body .rc-meta { font-size: 0.65rem; color: var(--text-secondary); font-weight: 600; margin-top: 1px; }
         .resume-card .rc-progress { width: 40px; text-align: right; font-size: 0.75rem; font-weight: 800; color: var(--brand); }
 
+        .weak-card { margin: 0 1.25rem 1.25rem; border-radius: 18px; padding: 16px; background: var(--surface-solid); border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+        .weak-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; }
+        .weak-row + .weak-row { border-top: 1px dashed var(--border-solid); }
+        .weak-row .wr-icon { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 10px; background: var(--warning-soft); color: var(--warning); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
+        .weak-row .wr-body { flex: 1; min-width: 0; }
+        .weak-row .wr-title { font-size: 0.8rem; font-weight: 700; }
+        .weak-row .wr-meta { font-size: 0.65rem; color: var(--text-secondary); font-weight: 600; }
+        .weak-row .wr-score { font-weight: 800; font-size: 0.85rem; color: var(--warning); }
+
         .daily-banner { margin: 0 1.25rem 1.25rem; padding: 18px 20px; border-radius: 20px; background: linear-gradient(135deg,var(--accent),var(--brand)); color: white; display: flex; align-items: center; justify-content: space-between; text-decoration: none; box-shadow: 0 6px 20px var(--brand-light); position: relative; overflow: hidden; }
         .daily-banner::before { content: ''; position: absolute; top: -40%; right: -20%; width: 160px; height: 160px; border-radius: 50%; background: rgba(255,255,255,0.08); }
         .daily-banner .db-left { display: flex; align-items: center; gap: 12px; position: relative; }
@@ -83,7 +104,53 @@
         .daily-banner .db-text p { font-size: 0.68rem; opacity: 0.85; margin: 2px 0 0; font-weight: 500; }
         .daily-banner .db-arrow { font-size: 0.8rem; opacity: 0.7; position: relative; }
 
+        <% if (!user.has_paid) { %>
+        .upgrade-strip { margin: 0 1.25rem 1.25rem; padding: 18px 20px; border-radius: 20px; background: linear-gradient(135deg,var(--surface-solid) 0%,var(--surface) 100%); color: var(--text-primary); display: flex; align-items: center; gap: 14px; position: relative; overflow: hidden; border: 1px solid var(--border); }
+        .upgrade-strip::before { content: ''; position: absolute; top: -50%; right: -20%; width: 200px; height: 200px; border-radius: 50%; background: var(--brand-light); }
+        .upgrade-strip .us-icon { width: 44px; height: 44px; border-radius: 14px; background: var(--brand-light); display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0; color: var(--brand); }
+        .upgrade-strip .us-content { flex: 1; }
+        .upgrade-strip .us-content h4 { font-size: 0.85rem; font-weight: 800; margin: 0; }
+        .upgrade-strip .us-content p { font-size: 0.7rem; opacity: 0.7; font-weight: 500; margin: 2px 0 0; color: var(--text-secondary); }
+        .upgrade-strip .us-btn { padding: 10px 18px; border-radius: 12px; background: var(--brand); color: white; font-weight: 800; font-size: 0.72rem; border: none; cursor: pointer; flex-shrink: 0; }
+        <% } %>
+
         .bottom-spacer { height: 20px; }
+
+        /* ── Desktop layout ≥1024px ── */
+        @media (min-width: 1024px) {
+            .app-shell { padding-bottom: 40px; }
+            .dash-content { max-width: 1080px; margin: 0 auto; padding: 0 32px 40px; }
+            .dash-columns { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
+            .dash-col-main { min-width: 0; }
+            .dash-col-side { min-width: 0; display: grid; gap: 0; }
+            .dash-header { padding: 2rem 0 1rem; }
+            .hero-strip { padding: 0 0 1.25rem; }
+            .hero-stat { flex: 1 1 calc(25% - 6px); }
+            .next-card { margin: 0 0 1.25rem; }
+            .onboard-card { margin: 0 0 1.25rem; }
+            .upgrade-strip { margin: 0 0 1.25rem; }
+            .section-head { padding: 0.5rem 0 0.75rem; }
+            .feature-grid { padding: 0; grid-template-columns: repeat(4, 1fr); }
+            .feature-card.featured { grid-column: span 4; }
+            .today-list { padding: 0; }
+            .quick-resume { padding: 0; }
+            .weak-card { margin: 0 0 1.25rem; }
+            .daily-banner { margin: 0 0 1.25rem; }
+            .dash-side-block { background: var(--surface-solid); border: 1px solid var(--border); border-radius: 18px; padding: 16px; box-shadow: var(--shadow-sm); margin-bottom: 16px; }
+            .dash-side-block h3 { font-size: 0.8rem; font-weight: 800; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; color: var(--text-primary); }
+            .dash-side-block h3 i { color: var(--brand); font-size: 0.8rem; }
+            .side-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+            .side-row + .side-row { border-top: 1px dashed var(--border-solid); }
+            .side-row .sr-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brand); flex-shrink: 0; }
+            .side-row .sr-body { flex: 1; min-width: 0; }
+            .side-row .sr-title { font-size: 0.76rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .side-row .sr-meta { font-size: 0.64rem; color: var(--text-secondary); font-weight: 600; }
+            .side-empty { font-size: 0.72rem; color: var(--text-muted); line-height: 1.5; }
+            .dash-mobile-only { display: none !important; }
+        }
+        @media (max-width: 1023.98px) {
+            .dash-desktop-only { display: none !important; }
+        }
     </style>
     <%- include('partials/theme-toggle') %>
 </head>
@@ -91,6 +158,7 @@
 <%- include('partials/app-intro') %>
 <%- include('partials/sidebar') %>
 <div class="app-shell">
+  <div class="dash-content">
     <div class="dash-header">
         <div class="dash-header-left">
             <div class="dash-avatar"><%= user.fullname ? user.fullname.charAt(0).toUpperCase() : 'U' %></div>
@@ -101,12 +169,66 @@
         </div>
         <div class="dash-header-right">
             <div class="streak-badge"><i class="fas fa-fire"></i> <%= typeof streak !== 'undefined' ? streak : 0 %></div>
-            <a href="/notifications" class="notif-bell">
+            <a href="/notifications" class="notif-bell" aria-label="Notifications">
                 <i class="fas fa-bell"></i>
                 <% if (typeof unreadNotifs !== 'undefined' && unreadNotifs > 0) { %><div class="notif-dot"></div><% } %>
             </a>
         </div>
     </div>
+
+    <% if (typeof notice !== 'undefined' && notice && notice.message) { %>
+    <div class="notice-strip" style="margin:0 1.25rem 1.25rem;">
+        <i class="fas fa-bullhorn"></i>
+        <span>
+            <%= notice.message %>
+            <% if (notice.link) { %> <a href="<%= notice.link %>" style="color:var(--brand);font-weight:700;"><%= notice.link_text || 'Learn more' %></a><% } %>
+        </span>
+    </div>
+    <% } %>
+
+    <% if (typeof isNewUser !== 'undefined' && isNewUser) { %>
+    <div class="onboard-card">
+        <h3>Welcome to Prepium, <%= user.fullname ? user.fullname.split(' ')[0] : 'Student' %>!</h3>
+        <p>Set up your academics in three quick steps and get a study plan built around your courses.</p>
+        <div class="onboard-steps">
+            <a href="/study" class="onboard-step">
+                <div class="os-num">1</div>
+                <div class="os-body"><div class="os-title">Add your courses</div><div class="os-sub">Build your Study Hub so the AI tutor knows your syllabus</div></div>
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            <a href="/timetable" class="onboard-step">
+                <div class="os-num">2</div>
+                <div class="os-body"><div class="os-title">Add your timetable</div><div class="os-sub">Snap a photo — AI fills in your class schedule</div></div>
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            <a href="/setup-test" class="onboard-step">
+                <div class="os-num">3</div>
+                <div class="os-body"><div class="os-title">Take your first practice quiz</div><div class="os-sub">Pick your courses and start practising for exams</div></div>
+                <i class="fas fa-chevron-right"></i>
+            </a>
+        </div>
+    </div>
+    <% } else if (typeof nextAction !== 'undefined' && nextAction) { %>
+    <a href="<%= nextAction.href %>" class="next-card">
+        <div class="nc-icon"><i class="fas <%= nextAction.icon %>"></i></div>
+        <div class="nc-body">
+            <div class="nc-kicker">Continue studying</div>
+            <div class="nc-title"><%= nextAction.title %></div>
+            <div class="nc-sub"><%= nextAction.sub %></div>
+        </div>
+        <div class="nc-cta"><%= nextAction.cta %></div>
+    </a>
+    <% } else { %>
+    <a href="/setup-test" class="next-card">
+        <div class="nc-icon"><i class="fas fa-bolt"></i></div>
+        <div class="nc-body">
+            <div class="nc-kicker">Continue studying</div>
+            <div class="nc-title">Start a practice quiz</div>
+            <div class="nc-sub">Pick your courses and test yourself</div>
+        </div>
+        <div class="nc-cta">Start</div>
+    </a>
+    <% } %>
 
     <div class="hero-strip">
         <div class="hero-stat">
@@ -131,205 +253,268 @@
         </div>
     </div>
 
-    <div class="quick-mood">
-        <div class="mood-chip primary" onclick="location.href='/daily-task'"><i class="fas fa-tasks"></i> Daily Task</div>
-        <div class="mood-chip" onclick="location.href='/study'"><i class="fas fa-graduation-cap"></i> Study Hub</div>
-        <div class="mood-chip" onclick="location.href='/setup-test'"><i class="fas fa-bolt"></i> Quiz</div>
-        <div class="mood-chip" onclick="location.href='/timetable'"><i class="fas fa-table"></i> Timetable</div>
-        <div class="mood-chip" onclick="location.href='/cgpa'"><i class="fas fa-chart-line"></i> CGPA</div>
-        <div class="mood-chip" onclick="location.href='/history'"><i class="fas fa-chart-bar"></i> History</div>
-        <div class="mood-chip" onclick="location.href='/daily-challenge'"><i class="fas fa-calendar-check"></i> Challenge</div>
-    </div>
-
-    <% if (!user.has_paid) { %>
-    <% if (migratedLocked) { %>
-    <div class="upgrade-strip" style="background:linear-gradient(135deg,#fdf3e6 0%,var(--surface) 100%);border-color:var(--accent);">
-        <div class="us-icon"><i class="fas fa-rotate-left"></i></div>
-        <div class="us-content">
-            <h4>Recharge Premium</h4>
-            <p>Your free migration period is over — pay ₦<%= rechargePrice.toLocaleString() %> to continue</p>
+    <div class="dash-columns">
+      <div class="dash-col-main">
+        <% if (!user.has_paid) { %>
+        <% if (migratedLocked) { %>
+        <div class="upgrade-strip" style="background:linear-gradient(135deg,#fdf3e6 0%,var(--surface) 100%);border-color:var(--accent);">
+            <div class="us-icon"><i class="fas fa-rotate-left"></i></div>
+            <div class="us-content">
+                <h4>Recharge Premium</h4>
+                <p>Your free migration period is over — pay &#8358;<%= rechargePrice.toLocaleString() %> to continue</p>
+            </div>
+            <button class="us-btn" onclick="payWithPaystack(event)">Recharge Now</button>
         </div>
-        <button class="us-btn" onclick="payWithPaystack(event)">Recharge Now</button>
-    </div>
-    <% } else { %>
-    <div class="upgrade-strip">
-        <div class="us-icon"><i class="fas fa-crown"></i></div>
-        <div class="us-content">
-            <h4>Unlock Premium</h4>
-            <p>AI tutors, CGPA tracker & more</p>
+        <% } else { %>
+        <div class="upgrade-strip">
+            <div class="us-icon"><i class="fas fa-crown"></i></div>
+            <div class="us-content">
+                <h4>Unlock Premium</h4>
+                <p>AI tutors, CGPA tracker & more</p>
+            </div>
+            <button class="us-btn" onclick="location.href='/upgrade'">See Premium</button>
         </div>
-        <button class="us-btn" onclick="location.href='/migrate-premium'">Migrate to Premium</button>
-    </div>
-    <% } %>
-    <% } %>
-
-    <div class="section-head">
-        <h2>Your Tools</h2>
-    </div>
-
-    <div class="feature-grid">
-
-        <!-- ═══ TOP PRIORITY ═══ -->
-        <a href="/daily-task" class="feature-card featured" style="background:linear-gradient(135deg,#0d9488,#0891b2);margin-bottom:10px;">
-            <div class="fc-icon"><i class="fas fa-tasks"></i></div>
-            <div class="fc-body">
-                <div class="fc-label">Daily Task</div>
-                <div class="fc-desc">Timetable, goals, deadlines & weekly report</div>
-            </div>
-            <div class="fc-arrow"><i class="fas fa-arrow-right"></i></div>
-        </a>
-
-        <a href="/study" class="feature-card featured">
-            <div class="fc-icon"><i class="fas fa-graduation-cap"></i></div>
-            <div class="fc-body">
-                <div class="fc-label">Study with AI</div>
-                <div class="fc-desc">Courses, flashcards, quizzes & AI tutor</div>
-            </div>
-            <div class="fc-arrow"><i class="fas fa-arrow-right"></i></div>
-        </a>
-
-        <!-- ═══ DAILY & SOCIAL ═══ -->
-        <a href="/daily-challenge" class="feature-card">
-            <div class="fc-icon" style="background:var(--success-soft);color:var(--success);"><i class="fas fa-calendar-check"></i></div>
-            <div class="fc-label">Daily Challenge</div>
-            <div class="fc-desc">Free daily competition</div>
-        </a>
-
-        <a href="/competition" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
-            <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-            <div class="fc-icon" style="background:var(--brand-light);color:var(--accent);"><i class="fas fa-trophy"></i></div>
-            <div class="fc-label">Live Arena</div>
-            <div class="fc-desc">Real-time rankings</div>
-        </a>
-
-        <a href="/squads" class="feature-card">
-            <div class="fc-icon" style="background:var(--warning-soft);color:var(--warning);"><i class="fas fa-users"></i></div>
-            <div class="fc-label">Squad Streaks</div>
-            <div class="fc-desc">Study with friends, win together</div>
-        </a>
-
-        <!-- ═══ ACADEMIC TOOLS ═══ -->
-        <a href="/cgpa" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
-            <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-            <div class="fc-icon" style="background:var(--brand-soft);color:var(--accent);"><i class="fas fa-chart-line"></i></div>
-            <div class="fc-label">CGPA Tracker</div>
-            <div class="fc-desc">Forecast & AI advisor</div>
-        </a>
-
-        <a href="/ai-quiz" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
-            <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-            <div class="fc-icon" style="background:var(--success-soft);color:var(--success);"><i class="fas fa-wand-magic-sparkles"></i></div>
-            <div class="fc-label">AI Quiz Generator</div>
-            <div class="fc-desc">Generate quizzes from PDF</div>
-        </a>
-
-        <a href="/timetable" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
-            <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-            <div class="fc-icon" style="background:var(--brand-light);color:var(--brand);"><i class="fas fa-table"></i></div>
-            <div class="fc-label">Timetable</div>
-            <div class="fc-desc">AI-powered schedule</div>
-        </a>
-
-        <a href="/reading-timetable" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
-            <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-            <div class="fc-icon" style="background:var(--brand-soft);color:var(--accent);"><i class="fas fa-book-open"></i></div>
-            <div class="fc-label">Reading Schedule</div>
-            <div class="fc-desc">Smart study plan</div>
-        </a>
-
-        <a href="/deadlines" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
-            <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-            <div class="fc-icon" style="background:var(--danger-soft);color:var(--danger);"><i class="fas fa-hourglass-half"></i></div>
-            <div class="fc-label">Deadlines</div>
-            <div class="fc-desc">Track milestones</div>
-        </a>
-
-        <a href="/history" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
-            <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
-            <div class="fc-icon" style="background:var(--warning-soft);color:var(--warning);"><i class="fas fa-chart-bar"></i></div>
-            <div class="fc-label">History</div>
-            <div class="fc-desc">Quiz performance</div>
-        </a>
-
-        <% if (typeof isPaidSchool !== 'undefined' && isPaidSchool) { %>
-        <a href="/refer" class="feature-card featured" style="background:linear-gradient(135deg,#f59e0b,#ef4444);">
-            <div class="fc-icon" style="background:rgba(255,255,255,0.2);color:#fff;"><i class="fas fa-gift"></i></div>
-            <div class="fc-body">
-                <div class="fc-label" style="color:#fff;">Refer & Earn</div>
-                <div class="fc-desc" style="color:rgba(255,255,255,0.85);">Invite friends, earn real money</div>
-            </div>
-            <div class="fc-arrow"><i class="fas fa-arrow-right"></i></div>
-        </a>
+        <% } %>
         <% } %>
 
-        <!-- ═══ EXTRAS ═══ -->
-        <a href="/guide" class="feature-card">
-            <div class="fc-icon" style="background:var(--brand-soft);color:var(--text-primary);"><i class="fas fa-book"></i></div>
-            <div class="fc-label">User Guide</div>
-            <div class="fc-desc">How to use every feature</div>
-        </a>
-
-        <a href="/suggestions" class="feature-card">
-            <div class="fc-icon" style="background:var(--brand-soft);color:var(--accent);"><i class="fas fa-lightbulb"></i></div>
-            <div class="fc-label">Feedback</div>
-            <div class="fc-desc">Share your thoughts</div>
-        </a>
-    </div>
-
-    <% if (typeof recentQuiz !== 'undefined' && recentQuiz) { %>
-    <div class="section-head" style="padding-top:0.75rem;">
-        <h2>Recent Activity</h2>
-    </div>
-    <div class="quick-resume">
-        <a href="/history" class="resume-card">
-            <div class="rc-icon"><i class="fas fa-bolt"></i></div>
-            <div class="rc-body">
-                <div class="rc-title"><%= recentQuiz.subject || 'Quiz' %></div>
-                <div class="rc-meta"><%= new Date(recentQuiz.date_taken).toLocaleDateString('en-GB', { day:'numeric', month:'short' }) %></div>
-            </div>
-            <div class="rc-progress"><%= recentQuiz.score %>/<%= recentQuiz.total_questions %></div>
-        </a>
-    </div>
-    <% } %>
-
-    <div style="margin-top:1rem;">
         <div class="section-head">
-            <h2>Daily Challenge</h2>
-            <a href="/daily-challenge" class="see-all">Join <i class="fas fa-arrow-right" style="font-size:0.6rem;"></i></a>
+            <h2>Your Tools</h2>
         </div>
-        <a href="/daily-challenge" class="daily-banner">
-            <div class="db-left">
-                <div class="db-icon"><i class="fas fa-fire-alt"></i></div>
-                <div class="db-text">
-                    <h4>Today's Challenge</h4>
-                    <p>Compete live with peers</p>
+
+        <div class="feature-grid">
+            <a href="/daily-task" class="feature-card featured" style="background:linear-gradient(135deg,#0d9488,#0891b2);margin-bottom:10px;">
+                <div class="fc-icon"><i class="fas fa-tasks"></i></div>
+                <div class="fc-body">
+                    <div class="fc-label">Daily Task</div>
+                    <div class="fc-desc">Timetable, goals, deadlines & weekly report</div>
                 </div>
+                <div class="fc-arrow"><i class="fas fa-arrow-right"></i></div>
+            </a>
+
+            <a href="/study" class="feature-card featured">
+                <div class="fc-icon"><i class="fas fa-graduation-cap"></i></div>
+                <div class="fc-body">
+                    <div class="fc-label">Study with AI</div>
+                    <div class="fc-desc">Courses, flashcards, quizzes & AI tutor</div>
+                </div>
+                <div class="fc-arrow"><i class="fas fa-arrow-right"></i></div>
+            </a>
+
+            <a href="/daily-challenge" class="feature-card">
+                <div class="fc-icon" style="background:var(--success-soft);color:var(--success);"><i class="fas fa-calendar-check"></i></div>
+                <div class="fc-label">Daily Challenge</div>
+                <div class="fc-desc">Free daily competition</div>
+            </a>
+
+            <a href="/library" class="feature-card">
+                <div class="fc-icon" style="background:var(--brand-soft);color:var(--brand);"><i class="fas fa-building-columns"></i></div>
+                <div class="fc-label">Course Library</div>
+                <div class="fc-desc">Notes & past questions</div>
+            </a>
+
+            <a href="/competition" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
+                <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
+                <div class="fc-icon" style="background:var(--brand-light);color:var(--accent);"><i class="fas fa-trophy"></i></div>
+                <div class="fc-label">Live Arena</div>
+                <div class="fc-desc">Real-time rankings</div>
+            </a>
+
+            <a href="/squads" class="feature-card">
+                <div class="fc-icon" style="background:var(--warning-soft);color:var(--warning);"><i class="fas fa-users"></i></div>
+                <div class="fc-label">Squad Streaks</div>
+                <div class="fc-desc">Study with friends, win together</div>
+            </a>
+
+            <a href="/cgpa" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
+                <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
+                <div class="fc-icon" style="background:var(--brand-soft);color:var(--accent);"><i class="fas fa-chart-line"></i></div>
+                <div class="fc-label">CGPA Tracker</div>
+                <div class="fc-desc">Forecast & AI advisor</div>
+            </a>
+
+            <a href="/ai-quiz" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
+                <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
+                <div class="fc-icon" style="background:var(--success-soft);color:var(--success);"><i class="fas fa-wand-magic-sparkles"></i></div>
+                <div class="fc-label">AI Quiz Generator</div>
+                <div class="fc-desc">Generate quizzes from PDF</div>
+            </a>
+
+            <a href="/timetable" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
+                <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
+                <div class="fc-icon" style="background:var(--brand-light);color:var(--brand);"><i class="fas fa-table"></i></div>
+                <div class="fc-label">Timetable</div>
+                <div class="fc-desc">AI-powered schedule</div>
+            </a>
+
+            <a href="/reading-timetable" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
+                <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
+                <div class="fc-icon" style="background:var(--brand-soft);color:var(--accent);"><i class="fas fa-book-open"></i></div>
+                <div class="fc-label">Reading Schedule</div>
+                <div class="fc-desc">Smart study plan</div>
+            </a>
+
+            <a href="/deadlines" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
+                <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
+                <div class="fc-icon" style="background:var(--danger-soft);color:var(--danger);"><i class="fas fa-hourglass-half"></i></div>
+                <div class="fc-label">Deadlines</div>
+                <div class="fc-desc">Track milestones</div>
+            </a>
+
+            <a href="/history" class="feature-card <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>" style="position:relative;">
+                <% if (!user.has_paid) { %><div class="lock-overlay"><i class="fas fa-lock"></i> Premium</div><% } %>
+                <div class="fc-icon" style="background:var(--warning-soft);color:var(--warning);"><i class="fas fa-chart-bar"></i></div>
+                <div class="fc-label">History</div>
+                <div class="fc-desc">Quiz performance</div>
+            </a>
+
+            <% if (typeof isPaidSchool !== 'undefined' && isPaidSchool) { %>
+            <a href="/refer" class="feature-card featured" style="background:linear-gradient(135deg,#f59e0b,#ef4444);">
+                <div class="fc-icon" style="background:rgba(255,255,255,0.2);color:#fff;"><i class="fas fa-gift"></i></div>
+                <div class="fc-body">
+                    <div class="fc-label" style="color:#fff;">Refer & Earn</div>
+                    <div class="fc-desc" style="color:rgba(255,255,255,0.85);">Invite friends, earn real money</div>
+                </div>
+                <div class="fc-arrow"><i class="fas fa-arrow-right"></i></div>
+            </a>
+            <% } %>
+
+            <a href="/guide" class="feature-card">
+                <div class="fc-icon" style="background:var(--brand-soft);color:var(--text-primary);"><i class="fas fa-book"></i></div>
+                <div class="fc-label">User Guide</div>
+                <div class="fc-desc">How to use every feature</div>
+            </a>
+
+            <a href="/suggestions" class="feature-card">
+                <div class="fc-icon" style="background:var(--brand-soft);color:var(--accent);"><i class="fas fa-lightbulb"></i></div>
+                <div class="fc-label">Feedback</div>
+                <div class="fc-desc">Share your thoughts</div>
+            </a>
+        </div>
+
+        <div class="section-head" style="padding-top:1.25rem;">
+            <h2>Today & Upcoming</h2>
+            <a href="/deadlines" class="see-all">All deadlines <i class="fas fa-arrow-right" style="font-size:0.6rem;"></i></a>
+        </div>
+
+        <div class="today-list">
+            <% if (typeof todayPlan !== 'undefined' && todayPlan.length) { %>
+                <% todayPlan.forEach(function(p) { %>
+                <a href="/reading-timetable" class="today-row">
+                    <div class="tr-icon"><i class="fas fa-book-open"></i></div>
+                    <div class="tr-body">
+                        <div class="tr-title"><%= p.course %><%= p.course_code ? ' · ' + p.course_code : '' %></div>
+                        <div class="tr-meta">Reading plan · <%= String(p.start_time).slice(0,5) %>–<%= String(p.end_time).slice(0,5) %></div>
+                    </div>
+                    <span class="badge badge-brand tr-badge">Today</span>
+                </a>
+                <% }); %>
+            <% } %>
+            <% if (typeof pendingTasks !== 'undefined' && pendingTasks > 0) { %>
+            <a href="/daily-task" class="today-row">
+                <div class="tr-icon" style="background:var(--warning-soft);color:var(--warning);"><i class="fas fa-tasks"></i></div>
+                <div class="tr-body">
+                    <div class="tr-title"><%= pendingTasks %> task<%= pendingTasks === 1 ? '' : 's' %> still open</div>
+                    <div class="tr-meta">Daily task planner</div>
+                </div>
+                <span class="badge badge-warning tr-badge">Open</span>
+            </a>
+            <% } %>
+            <% if (typeof upcomingDeadlinesList !== 'undefined' && upcomingDeadlinesList.length) { %>
+                <% upcomingDeadlinesList.forEach(function(d) {
+                    var due = new Date(d.due_date);
+                    var days = Math.ceil((due - new Date(new Date().toDateString())) / 86400000);
+                    var label = days <= 0 ? 'Today' : (days === 1 ? 'Tomorrow' : due.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }));
+                    var urgent = days <= 1; %>
+                <a href="/deadlines" class="today-row">
+                    <div class="tr-icon" style="background:var(--danger-soft);color:var(--danger);"><i class="fas fa-hourglass-half"></i></div>
+                    <div class="tr-body">
+                        <div class="tr-title"><%= d.title %></div>
+                        <div class="tr-meta">Deadline<%= d.due_time ? ' · ' + String(d.due_time).slice(0,5) : '' %></div>
+                    </div>
+                    <span class="badge <%= urgent ? 'badge-danger' : 'badge-muted' %> tr-badge"><%= label %></span>
+                </a>
+                <% }); %>
+            <% } %>
+            <% if ((!todayPlan || !todayPlan.length) && (!pendingTasks) && (!upcomingDeadlinesList || !upcomingDeadlinesList.length)) { %>
+                <div class="today-row" style="cursor:default;">
+                    <div class="tr-icon" style="background:var(--success-soft);color:var(--success);"><i class="fas fa-mug-hot"></i></div>
+                    <div class="tr-body">
+                        <div class="tr-title">Nothing scheduled</div>
+                        <div class="tr-meta">Add deadlines or a reading plan to see them here</div>
+                    </div>
+                </div>
+            <% } %>
+        </div>
+
+        <div style="margin-top:1.25rem;" class="dash-mobile-only">
+            <div class="section-head">
+                <h2>Daily Challenge</h2>
+                <a href="/daily-challenge" class="see-all">Join <i class="fas fa-arrow-right" style="font-size:0.6rem;"></i></a>
             </div>
-            <div class="db-arrow"><i class="fas fa-chevron-right"></i></div>
-        </a>
+            <a href="/daily-challenge" class="daily-banner">
+                <div class="db-left">
+                    <div class="db-icon"><i class="fas fa-fire-alt"></i></div>
+                    <div class="db-text">
+                        <h4>Today's Challenge</h4>
+                        <p>Compete live with peers</p>
+                    </div>
+                </div>
+                <div class="db-arrow"><i class="fas fa-chevron-right"></i></div>
+            </a>
+        </div>
+      </div>
+
+      <div class="dash-col-side dash-desktop-only">
+        <div class="dash-side-block">
+            <h3><i class="fas fa-bullseye"></i> Topics to improve</h3>
+            <% if (typeof weakSubjects !== 'undefined' && weakSubjects.length) { %>
+                <% weakSubjects.forEach(function(w) { %>
+                <div class="side-row">
+                    <div class="sr-dot" style="background:var(--warning);"></div>
+                    <div class="sr-body">
+                        <div class="sr-title"><%= w.subject %></div>
+                        <div class="sr-meta">Avg <%= w.avg_pct %>% over <%= w.attempts %> attempt<%= w.attempts === 1 ? '' : 's' %></div>
+                    </div>
+                </div>
+                <% }); %>
+                <a href="/setup-test" class="see-all" style="display:inline-block;margin-top:8px;font-size:0.7rem;font-weight:700;color:var(--brand);text-decoration:none;">Practise these <i class="fas fa-arrow-right" style="font-size:0.6rem;"></i></a>
+            <% } else { %>
+                <p class="side-empty">Take a couple of practice quizzes and your weakest subjects will show up here automatically.</p>
+            <% } %>
+        </div>
+        <div class="dash-side-block">
+            <h3><i class="fas fa-clock-rotate-left"></i> Recent activity</h3>
+            <% if (typeof history !== 'undefined' && history.length) { %>
+                <% history.forEach(function(h) { %>
+                <div class="side-row">
+                    <div class="sr-dot"></div>
+                    <div class="sr-body">
+                        <div class="sr-title"><%= h.subject || 'Quiz' %></div>
+                        <div class="sr-meta"><%= h.score %> correct · <%= h.time %></div>
+                    </div>
+                </div>
+                <% }); %>
+            <% } else { %>
+                <p class="side-empty">Your quiz history will appear here after your first practice session.</p>
+            <% } %>
+        </div>
+        <div class="dash-side-block">
+            <h3><i class="fas fa-fire-alt"></i> Daily Challenge</h3>
+            <p class="side-empty" style="margin-bottom:10px;">A fresh 10-question challenge every day, with a weekly leaderboard.</p>
+            <a href="/daily-challenge" class="btn btn-primary btn-sm" style="text-decoration:none;"><i class="fas fa-play"></i> Play today</a>
+        </div>
+      </div>
     </div>
 
     <div class="bottom-spacer"></div>
-
-    <nav class="bottom-nav">
-        <a href="/dashboard" class="nav-link active"><i class="fas fa-home"></i><span>Home</span></a>
-        <a href="/study" class="nav-link"><i class="fas fa-graduation-cap"></i><span>Study</span></a>
-
-        <a href="/history" class="nav-link"><i class="fas fa-chart-bar"></i><span>Stats</span></a>
-        <a href="/profile" class="nav-link"><i class="fas fa-user-circle"></i><span>Profile</span></a>
-    </nav>
-</div>
+  </div>
+<%- include('partials/bottom-nav', { activeNav: 'dashboard' }) %>
 
 <script>
-function migrateToPremium(e) {
-    if (e) { e.preventDefault(); }
-    window.location.href = '/migrate-premium';
-}
-
 function lockedAction(e) {
     if (e) { e.preventDefault(); }
     if (<%= migratedLocked %>) { payWithPaystack(null); return; }
-    window.location.href = '/migrate-premium';
+    window.location.href = '/upgrade';
 }
 
 function payWithPaystack(e, presets) {
@@ -358,11 +543,8 @@ function payWithPaystack(e, presets) {
     }).then(function(result) {
         if (!result || !result.isConfirmed || !result.value) return;
         var info = result.value;
-        var callbackUrl = '/verify-payment?reference=';
-        if (info.code) callbackUrl += 'REPLACE_REF&coupon=' + encodeURIComponent(info.code);
-        else callbackUrl += 'REPLACE_REF';
         if (info.discountLabel) {
-            Swal.fire({ icon: 'info', title: info.discountLabel + ' applied!', text: 'You pay ₦' + info.amount.toLocaleString(), timer: 2000, showConfirmButton: false });
+            Swal.fire({ icon: 'info', title: info.discountLabel + ' applied!', text: 'You pay \u20A6' + info.amount.toLocaleString(), timer: 2000, showConfirmButton: false });
         }
         var amount = (info.amount || pAmount) * 100;
         var handler = PaystackPop.setup({
