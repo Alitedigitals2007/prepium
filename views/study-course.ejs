@@ -169,8 +169,8 @@
 
 <script>
 var courseId = <%= course ? course.id : 0 %>;
-var courseName = '<%= course ? course.course_name.replace(/'/g, "\\'") : '' %>';
-var courseCode = '<%= course ? course.course_code.replace(/'/g, "\\'") : '' %>';
+var courseName = <%- JSON.stringify(course ? course.course_name : '') %>;
+var courseCode = <%- JSON.stringify(course ? course.course_code : '') %>;
 
 function toggleSubtopicList(header) {
     header.nextElementSibling.classList.toggle('open');
@@ -259,7 +259,7 @@ function openSubtopic(id) {
 }
 
 function startSession() {
-    var subs = <%= JSON.stringify((topics || []).reduce(function(acc, t) { return acc.concat((t.subtopics || []).map(function(st) { return { id: st.id, status: st.status }; })); }, [])) %>;
+    var subs = <%- JSON.stringify((topics || []).reduce(function(acc, t) { return acc.concat((t.subtopics || []).map(function(st) { return { id: st.id, status: st.status }; })); }, [])) %>;
     var firstPending = null, firstAny = null;
     subs.forEach(function(st) {
         if (!firstAny) firstAny = st.id;

@@ -90,7 +90,7 @@
 
 <script>
 var courseId = <%= courseId %>;
-var courseName = '<%= typeof courseName !== 'undefined' ? courseName.replace(/'/g, "\\'") : '' %>';
+var courseName = <%- JSON.stringify(typeof courseName !== 'undefined' ? courseName : '') %>;
 var flashcards = [];
 var currentIndex = 0;
 var cardCount = 10;

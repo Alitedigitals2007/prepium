@@ -225,7 +225,7 @@
 <script>
 var sessionId = <%= session ? session.id : 0 %>;
 var courseId = <%= session ? session.course_id : 0 %>;
-var courseName = '<%= session ? session.course_name.replace(/'/g, "\\'") : '' %>';
+var courseName = <%- JSON.stringify(session ? session.course_name : '') %>;
 var timerInterval = null;
 var elapsedSeconds = <%= session ? session.elapsed_seconds : 0 %>;
 var isRunning = false;
