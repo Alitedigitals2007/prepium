@@ -8451,4 +8451,36 @@ app.use((err, req, res, next) => {
   res.status(500).send('Something went wrong. Please try again later.');
 });
 
+// ==================== SOCIAL FEATURES ====================
+// Send friend request
+app.post('/api/friends/request', isAuth, async (req, res) => {
+    try {
+        const { friendId } = req.body;
+        const uid = req.session.user.id;
+        if (!friendId || parseInt(friendId) === uid) return res.status(400).json({ success: false, error: 'Invalid friend ID' });
+        await pool.query('INSERT INTO friendships (user_id, friend_id, status) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', [uid, parseInt(friendId), 'pending']);
+        res.json({ success: true });
+    } catch(e){ res.status(500).json({ success: false, error: e.message }); }
+});
+
+// Accept friend request
+app.post('/api/friends/accept', isAuth, async (req, res) => {
+    try {
+        const { friendId } = req.body;
+        const uid = req.session.user.id;
+        await pool.query('UPDATE friendships SET status = $1 WHERE user_id = $2 AND friend_id = $3', ['accepted', uid, parseInt(friendId)]);
+        res.json({ success: true });
+    } catch(e){ res.status(500).json({ success: false, error: e.message }); }
+});
+
+// Get friends list
+app.get('/api/friends', isAuth, async (req, res) => {
+    try {
+        const uid = req.session.user.id;
+        const r = await pool.query('SELECT u.id, u.fullname, u.email FROM friendships f JOIN users u ON f.friend_id = u.id WHERE f.user_id = $1 AND f.status = $2', [uid, 'accepted']);
+        res.json({ friends: r.rows });
+    } catch(e){ res.status(500).json({ error: e.message }); }
+});
+
+
 module.exports = app;

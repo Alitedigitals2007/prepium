@@ -17,6 +17,10 @@
         @media (min-width: 431px) { .app-shell { border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); margin: 0 auto; } }
     </style>
     <%- include('partials/theme-toggle') %>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard.js/1.0.0/css/chessboard-1.0.0.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard.js/1.0.0/js/chessboard-1.0.0.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 <%- include('partials/sidebar') %>
@@ -59,8 +63,9 @@
 
         <div id="game-chess" class="game-area hidden">
             <h2>Chess</h2>
-            <p style="font-size:0.8rem;color:var(--text-sub);margin-bottom:1rem;">Play against the computer.</p>
-            <iframe src="https://www.chess.com/play/computer" style="width:100%;height:500px;border:none;border-radius:12px;" loading="lazy"></iframe>
+            <p style="font-size:0.8rem;color:var(--text-sub);margin-bottom:1rem;">Play instantly in your browser.</p>
+            <div id="chessboard" style="width:100%;max-width:400px;margin:0 auto;"></div>
+            <div style="text-align:center;margin-top:1rem;"><button onclick="resetChess()" style="padding:8px 16px;border:none;background:var(--brand-gradient);color:white;border-radius:8px;font-weight:600;cursor:pointer;">New Game</button></div>
         </div>
     </div>
     <%- include('partials/bottom-nav', { activeNav: 'study' }) %>
@@ -102,6 +107,16 @@ function checkScramble(){ var v = document.getElementById('scrambleInput').value
 
 // Crossword
 function checkCross(){ var v = document.getElementById('crossInput').value.trim().toUpperCase(); var msg = document.getElementById('crossMsg'); if (v === 'PARIS'){ msg.textContent='Correct! 🎉'; msg.style.color='var(--success)'; } else { msg.textContent='Try again.'; msg.style.color='var(--danger)'; } }
+
+// Chess with chessboard.js CDN - Solo play
+var board = null, game = { moves: [] };
+function onDragStart(pos, piece, source, target, pieceColor){ if (game.game_over()) return false; if ((piece.search(/^k/) !== -1) && board.moves().filter(m => m.san === 'O-O').length + board.moves().filter(m => m.san === 'O-O-O').length > 0) return false; return true; }
+function onDrop(pos, piece, source, target){ var moves = board.moves(); if (moves.length === 0) return 'snapback'; if (moves.indexOf(pos.san) < 0) return 'snapback'; board.move(pos.san); game.moves.push(pos.san); return undefined; }
+function resetChess(){ var config = { position: 'start', draggable: true, onDragStart: onDragStart, onDrop: onDrop, sparePieces: false }; if (board) { board.position('start'); game.moves=[]; } else { board = Chessboard('chessboard', config); } }
+// Quick multiplayer stub - requires socket.io backend
+var socket = null, currentGameId = null, playingAs = null;
+function joinChessGame(gameId, asWhite){ socket = io(); currentGameId = gameId; playingAs = asWhite; socket.emit('join', 'chess:' + gameId); }
+document.addEventListener('DOMContentLoaded', function(){ resetChess(); });
 </script>
 <%- include('partials/bottom-nav', { activeNav: 'study' }) %>
 </div>
