@@ -89,9 +89,12 @@
     <div class="status-bar"></div>
     
     <div class="page-header">
-        <div>
-            <h1>Study</h1>
-            <p>Courses, flashcards & AI tutor</p>
+        <div style="display:flex;align-items:center;gap:12px;">
+            <%- include('partials/drawer-trigger') %>
+            <div>
+                <h1>Study</h1>
+                <p>Courses, flashcards & AI tutor</p>
+            </div>
         </div>
         <div class="study-actions">
             <button class="action-btn primary" onclick="addCourse()" title="Add a course manually"><i class="fas fa-plus"></i> Add</button>

@@ -193,13 +193,14 @@
             <button class="hamburger-btn" onclick="openDrawer()" aria-label="All apps">
                 <i class="fas fa-bars"></i>
             </button>
-            <div class="dash-avatar"><%= user.fullname ? user.fullname.charAt(0).toUpperCase() : 'U' %></div>
+             <div class="dash-avatar"><%= user.fullname ? user.fullname.charAt(0).toUpperCase() : 'U' %></div>
             <div>
                 <div class="dash-greeting" id="greeting-text">Good morning</div>
                 <div class="dash-name"><%= user.fullname ? user.fullname.split(' ')[0] : 'Student' %></div>
             </div>
         </div>
-        <div class="dash-header-right">
+        <div class="dash-header_right">
+            <div class="dash-clock" id="dashClock" style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);">--:--</div>
             <div class="streak-badge"><i class="fas fa-fire"></i> <%= typeof streak !== 'undefined' ? streak : 0 %></div>
             <a href="/notifications" class="notif-bell" aria-label="Notifications">
                 <i class="fas fa-bell"></i>
@@ -638,8 +639,21 @@ function filterDrawer() {
     var g = 'Good morning';
     if (hour < 12) g = 'Good morning';
     else if (hour < 17) g = 'Good afternoon';
+    else if (hour < 21) g = 'Good evening';
+    else g = 'Good night';
     var greetEl = document.getElementById('greeting-text');
     if (greetEl) greetEl.textContent = g;
+    
+    function updateClock() {
+        var now = new Date();
+        var h = now.getHours();
+        var m = now.getMinutes();
+        var timeStr = (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+        var clk = document.getElementById('dashClock');
+        if (clk) clk.textContent = timeStr;
+    }
+    updateClock();
+    setInterval(updateClock, 10000);
 })();
 </script>
 

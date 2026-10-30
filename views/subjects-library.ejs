@@ -228,16 +228,11 @@
     <div class="app-shell">
         <div class="status-bar"></div>
         
-        <header>
-            <div class="header-left">
-                <div class="avatar-sm"><%= user.fullname ? user.fullname[0].toUpperCase() : 'U' %></div>
-                <div class="header-title">
-                    <h1>Study Library</h1>
-                    <p><%= user.has_paid ? 'Premium Access' : 'Free Tier' %></p>
-                </div>
-            </div>
-            <a href="/dashboard" class="back-btn"><i class="fas fa-arrow-left"></i></a>
-        </header>
+        <div class="header-nav">
+            <a href="/dashboard" class="back-circle"><i class="fas fa-arrow-left"></i></a>
+            <div class="header-title">Study Library</div>
+            <%- include('partials/drawer-trigger') %>
+        </div>
 
         <div class="search-area reveal">
             <div class="search-wrapper">
