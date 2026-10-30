@@ -75,13 +75,21 @@
             display: flex; align-items: center; justify-content: center;
             font-size: 0.55rem; color: var(--text-muted); box-shadow: var(--shadow-sm);
         }
-        .at-icon.c-blue { background: var(--brand-soft); color: var(--brand); border-color: transparent; }
-        .at-icon.c-green { background: var(--success-soft); color: var(--success); border-color: transparent; }
-        .at-icon.c-amber { background: var(--warning-soft); color: var(--warning); border-color: transparent; }
-        .at-icon.c-red { background: var(--danger-soft); color: var(--danger); border-color: transparent; }
-        .at-icon.c-grad { background: var(--brand-gradient); color: #fff; border-color: transparent; box-shadow: 0 4px 14px var(--brand-light); }
-        .at-icon.c-teal { background: linear-gradient(135deg,#0d9488,#0891b2); color: #fff; border-color: transparent; }
-        .at-icon.c-orange { background: linear-gradient(135deg,#f59e0b,#ef4444); color: #fff; border-color: transparent; }
+
+        /* Quick dock (phone-style home bar) */
+        .quick-dock { padding: 0 1.25rem; display: flex; justify-content: space-around; margin-bottom: 1.5rem; }
+        .dock-item { display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: inherit; font-family: var(--font); background: none; border: none; cursor: pointer; flex: 1; max-width: 72px; }
+        .dock-item span { font-size: 0.62rem; font-weight: 600; color: var(--text-secondary); margin-top: 2px; }
+        .dock-item.locked { opacity: 0.55; }
+        .dock-icon { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; box-shadow: var(--shadow-sm); }
+        .dock-icon.c-blue { background: var(--brand-soft); color: var(--brand); }
+        .dock-icon.c-green { background: var(--success-soft); color: var(--success); }
+        .dock-icon.c-amber { background: var(--warning-soft); color: var(--warning); }
+        .dock-icon.c-red { background: var(--danger-soft); color: var(--danger); }
+        .dock-icon.c-grad { background: var(--brand-gradient); color: #fff; box-shadow: 0 4px 14px var(--brand-light); }
+        .dock-icon.c-teal { background: linear-gradient(135deg,#0d9488,#0891b2); color: #fff; }
+        .dock-icon.c-orange { background: linear-gradient(135deg,#f59e0b,#ef4444); color: #fff; }
+        .dock-lock { position: absolute; top: -4px; right: 4px; width: 16px; height: 16px; border-radius: 50%; background: var(--surface-solid); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 0.4rem; color: var(--text-muted); }
 
         /* ── App drawer (all apps) ── */
         .app-drawer {
@@ -311,49 +319,35 @@
         <% } %>
 
         <div class="section-head">
-            <h2>Your apps</h2>
-            <button class="see-all" onclick="openDrawer()">See all <i class="fas fa-chevron-right" style="font-size:0.55rem;"></i></button>
+            <h2>Quick Access</h2>
+            <button class="see-all" onclick="openDrawer()">All apps <i class="fas fa-chevron-right" style="font-size:0.55rem;"></i></button>
         </div>
 
-        <div class="app-grid">
-            <a href="/daily-task" class="app-tile">
-                <div class="at-icon c-teal"><i class="fas fa-tasks"></i></div>
-                <span class="at-label">Daily Task</span>
+        <div class="quick-dock">
+            <a href="/study" class="dock-item">
+                <div class="dock-icon c-grad"><i class="fas fa-graduation-cap"></i></div>
+                <span>Study</span>
             </a>
-            <a href="/study" class="app-tile">
-                <div class="at-icon c-grad"><i class="fas fa-graduation-cap"></i></div>
-                <span class="at-label">Study Hub</span>
+            <a href="/setup-test" class="dock-item">
+                <div class="dock-icon c-blue"><i class="fas fa-bolt"></i></div>
+                <span>Quiz</span>
             </a>
-            <a href="/setup-test" class="app-tile">
-                <div class="at-icon c-blue"><i class="fas fa-bolt"></i></div>
-                <span class="at-label">Practice Quiz</span>
+            <a href="/daily-challenge" class="dock-item">
+                <div class="dock-icon c-orange"><i class="fas fa-fire-alt"></i></div>
+                <span>Challenge</span>
             </a>
-            <a href="/ai-quiz" class="app-tile <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>">
-                <% if (!user.has_paid) { %><span class="at-lock"><i class="fas fa-lock"></i></span><% } %>
-                <div class="at-icon c-green"><i class="fas fa-wand-magic-sparkles"></i></div>
-                <span class="at-label">AI Quiz</span>
+            <a href="/daily-task" class="dock-item">
+                <div class="dock-icon c-teal"><i class="fas fa-tasks"></i></div>
+                <span>Tasks</span>
             </a>
-            <a href="/library" class="app-tile">
-                <div class="at-icon c-blue"><i class="fas fa-building-columns"></i></div>
-                <span class="at-label">Library</span>
+            <a href="/ai-quiz" class="dock-item <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>">
+                <% if (!user.has_paid) { %><span class="dock-lock"><i class="fas fa-lock"></i></span><% } %>
+                <div class="dock-icon c-green"><i class="fas fa-wand-magic-sparkles"></i></div>
+                <span>AI Quiz</span>
             </a>
-            <a href="/cgpa" class="app-tile <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>">
-                <% if (!user.has_paid) { %><span class="at-lock"><i class="fas fa-lock"></i></span><% } %>
-                <div class="at-icon c-blue"><i class="fas fa-chart-line"></i></div>
-                <span class="at-label">CGPA</span>
-            </a>
-            <a href="/timetable" class="app-tile <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>">
-                <% if (!user.has_paid) { %><span class="at-lock"><i class="fas fa-lock"></i></span><% } %>
-                <div class="at-icon c-amber"><i class="fas fa-calendar-alt"></i></div>
-                <span class="at-label">Timetable</span>
-            </a>
-            <a href="/daily-challenge" class="app-tile">
-                <div class="at-icon c-orange"><i class="fas fa-calendar-check"></i></div>
-                <span class="at-label">Challenge</span>
-            </a>
-            <button class="app-tile" onclick="openDrawer()" style="background:none;border:none;padding:0;font-family:var(--font);cursor:pointer;">
-                <div class="at-icon" style="background:var(--bg);color:var(--text-secondary);"><i class="fas fa-grip"></i></div>
-                <span class="at-label">All Apps</span>
+            <button class="dock-item" onclick="openDrawer()" style="background:none;border:none;font-family:var(--font);">
+                <div class="dock-icon" style="background:var(--bg);color:var(--text-secondary);"><i class="fas fa-grip"></i></div>
+                <span>All Apps</span>
             </button>
         </div>
 
@@ -536,6 +530,8 @@
             <a href="/profile" class="drawer-tile" data-name="Profile"><div class="at-icon c-teal"><i class="fas fa-user"></i></div><span>Your Profile</span></a>
             <a href="/guide" class="drawer-tile" data-name="Guide"><div class="at-icon c-grad"><i class="fas fa-book"></i></div><span>Student Guide</span></a>
             <a href="/refer" class="drawer-tile" data-name="Referral"><div class="at-icon c-orange"><i class="fas fa-hand-holding-heart"></i></div><span>Refer & Earn</span></a>
+            <a href="/renaissance" class="drawer-tile" data-name="Renaissance"><div class="at-icon c-purple"><i class="fas fa-seedling"></i></div><span>Renaissance</span></a>
+            <a href="/ambassador/dashboard" class="drawer-tile" data-name="Ambassador"><div class="at-icon c-green"><i class="fas fa-handshake"></i></div><span>Ambassador</span></a>
             <a href="/how-it-works" class="drawer-tile" data-name="How It Works"><div class="at-icon c-purple"><i class="fas fa-circle-info"></i></div><span>How It Works</span></a>
             <a href="/terms" class="drawer-tile" data-name="Terms"><div class="at-icon c-grad"><i class="fas fa-file-contract"></i></div><span>Terms</span></a>
             <a href="/privacy" class="drawer-tile" data-name="Privacy"><div class="at-icon c-grad"><i class="fas fa-lock"></i></div><span>Privacy</span></a>
