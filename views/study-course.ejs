@@ -16,6 +16,8 @@
         .quick-actions { display: flex; gap: 8px; padding: 0 1.5rem 1rem; }
         .q-btn { flex: 1; padding: 12px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 0.72rem; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: var(--transition); background: var(--surface-solid); border: 1px solid var(--border); color: var(--text-primary); }
         .q-btn i { font-size: 1rem; color: var(--brand); }
+        .q-btn { transition: all 0.18s ease; }
+        .q-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(37,99,235,0.15); }
         .q-btn:active { transform: scale(0.95); }
         .q-btn.primary { background: var(--brand-gradient); color: white; border: none; }
         .q-btn.primary i { color: white; }
@@ -24,7 +26,8 @@
         .section-label { font-size: 0.62rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; padding: 0.5rem 1.5rem 0.5rem; display: flex; justify-content: space-between; align-items: center; }
         .section-label .action-link { font-size: 0.68rem; text-transform: none; letter-spacing: 0; color: var(--brand); cursor: pointer; font-weight: 700; background: none; border: none; font-family: inherit; }
 
-        .topic-item { margin: 0 1.5rem 8px; background: var(--surface-solid); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; transition: var(--transition); }
+        .topic-item { margin: 0 1.5rem 8px; background: var(--surface-solid); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; transition: all 0.18s ease; }
+        .topic-item:hover { box-shadow: 0 4px 14px rgba(37,99,235,0.1); }
         .topic-header { display: flex; align-items: center; gap: 10px; padding: 14px 14px; cursor: pointer; }
         .topic-header:active { background: var(--surface); }
         .topic-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--brand); flex-shrink: 0; }

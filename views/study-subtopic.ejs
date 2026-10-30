@@ -36,6 +36,8 @@
 .tab-content.active{display:block}
 /* Generate button */
 .gen-btn{padding:12px 24px;border-radius:var(--radius-sm);border:none;background:var(--brand-gradient);color:white;font-family:inherit;font-weight:700;font-size:0.82rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:all .12s}
+.gen-btn{transition:all 0.18s ease;}
+.gen-btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(37,99,235,0.2);}
 .gen-btn:active{transform:scale(0.97)}
 .gen-btn.secondary{background:var(--bg);color:var(--text-primary);border:1.5px solid var(--border)}
 .gen-btn.sm{padding:8px 16px;font-size:0.72rem}
@@ -49,7 +51,8 @@
 .sec-formula-block{display:block;text-align:center;margin:12px 0;padding:14px 16px;background:var(--brand-light);border:1px solid var(--brand);border-radius:8px;overflow-x:auto}
 /* Key terms grid */
 .sec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-top:2px}
-.sec-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.sec-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;transition:all 0.18s ease;}
+.sec-card:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(37,99,235,0.08);}
 .sec-card b{font-family:'IBM Plex Mono',monospace;color:var(--brand);font-size:0.72rem;display:block;margin-bottom:2px}
 .sec-card span{font-size:0.76rem;color:var(--text-secondary);line-height:1.5;display:block}
 /* Step-by-step */
