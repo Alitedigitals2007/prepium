@@ -499,44 +499,44 @@
     <div id="drawerBody">
         <div class="drawer-group-label">Study</div>
         <div class="drawer-grid">
-            <a href="/study" class="drawer-tile" data-name="Study Hub"><div class="at-icon c-grad"><i class="fas fa-book-open"></i></div><span>Study Hub</span></a>
-            <a href="/setup-test" class="drawer-tile" data-name="Practice Quiz"><div class="at-icon c-blue"><i class="fas fa-bolt"></i></div><span>Practice Quiz</span></a>
-            <a href="/subjects" class="drawer-tile" data-name="Subjects"><div class="at-icon c-teal"><i class="fas fa-list"></i></div><span>Subjects</span></a>
-            <a href="/ai-quiz" class="drawer-tile <%= user.has_paid ? '' : 'locked' %>" data-name="AI Quiz"><div class="at-icon c-green"><i class="fas fa-wand-magic-sparkles"></i></div><span>AI Quiz</span><span class="at-lock" style="position:static;"><i class="fas fa-lock"></i></span></a>
-            <a href="/library" class="drawer-tile" data-name="Library"><div class="at-icon c-blue"><i class="fas fa-building-columns"></i></div><span>Course Library</span></a>
-            <a href="/study/session" class="drawer-tile" data-name="Session"><div class="at-icon c-purple"><i class="fas fa-play-circle"></i></div><span>Study Session</span></a>
+            <a href="/study" class="drawer-tile" data-name="Study Hub"><div class="at-icon c-grad"><i class="fas fa-book-open"></i></div><span class="at-label">Study Hub</span></a>
+            <a href="/setup-test" class="drawer-tile" data-name="Practice Quiz"><div class="at-icon c-blue"><i class="fas fa-bolt"></i></div><span class="at-label">Practice Quiz</span></a>
+            <a href="/subjects" class="drawer-tile" data-name="Subjects"><div class="at-icon c-teal"><i class="fas fa-list"></i></div><span class="at-label">Subjects</span></a>
+            <a href="/ai-quiz" class="drawer-tile <%= user.has_paid ? '' : 'locked' %>" data-name="AI Quiz"><div class="at-icon c-green"><i class="fas fa-wand-magic-sparkles"></i></div><span class="at-label">AI Quiz</span><span class="at-lock"><i class="fas fa-lock"></i></span></a>
+            <a href="/library" class="drawer-tile" data-name="Library"><div class="at-icon c-blue"><i class="fas fa-building-columns"></i></div><span class="at-label">Course Library</span></a>
+            <a href="/study/session" class="drawer-tile" data-name="Session"><div class="at-icon c-purple"><i class="fas fa-play-circle"></i></div><span class="at-label">Study Session</span></a>
         </div>
         <div class="drawer-group-label">Academics</div>
         <div class="drawer-grid">
-            <a href="/cgpa" class="drawer-tile <%= user.has_paid ? '' : 'locked' %>" data-name="CGPA"><div class="at-icon c-blue"><i class="fas fa-chart-line"></i></div><span>CGPA Tracker</span><span class="at-lock" style="position:static;"><i class="fas fa-lock"></i></span></a>
-            <a href="/timetable" class="drawer-tile <%= user.has_paid ? '' : 'locked' %>" data-name="Timetable"><div class="at-icon c-amber"><i class="fas fa-calendar-alt"></i></div><span>Timetable</span><span class="at-lock" style="position:static;"><i class="fas fa-lock"></i></span></a>
-            <a href="/reading-timetable" class="drawer-tile <%= user.has_paid ? '' : 'locked' %>" data-name="Reading"><div class="at-icon c-teal"><i class="fas fa-book-dropped"></i></div><span>Reading Plan</span><span class="at-lock" style="position:static;"><i class="fas fa-lock"></i></span></a>
-            <a href="/deadlines" class="drawer-tile <%= user.has_paid ? '' : 'locked' %>" data-name="Deadlines"><div class="at-icon c-red"><i class="fas fa-calendar-check"></i></div><span>Deadlines</span><span class="at-lock" style="position:static;"><i class="fas fa-lock"></i></span></a>
-            <a href="/history" class="drawer-tile" data-name="History"><div class="at-icon c-green"><i class="fas fa-chart-bar"></i></div><span>History</span></a>
+            <a href="/cgpa" class="drawer-tile <%= user.has_paid ? '' : 'locked' %>" data-name="CGPA"><div class="at-icon c-blue"><i class="fas fa-chart-line"></i></div><span class="at-label">CGPA Tracker</span><span class="at-lock"><i class="fas fa-lock"></i></span></a>
+            <a href="/timetable" class="drawer-tile <%= user.has_paid ? '' : 'locked' %>" data-name="Timetable"><div class="at-icon c-amber"><i class="fas fa-calendar-alt"></i></div><span class="at-label">Timetable</span><span class="at-lock"><i class="fas fa-lock"></i></span></a>
+            <a href="/reading-timetable" class="drawer-tile <%= user.has_paid ? '' : 'locked' %>" data-name="Reading"><div class="at-icon c-teal"><i class="fas fa-book-dropped"></i></div><span class="at-label">Reading Plan</span><span class="at-lock"><i class="fas fa-lock"></i></span></a>
+            <a href="/deadlines" class="drawer-tile <%= user.has_paid ? '' : 'locked' %>" data-name="Deadlines"><div class="at-icon c-red"><i class="fas fa-calendar-check"></i></div><span class="at-label">Deadlines</span><span class="at-lock"><i class="fas fa-lock"></i></span></a>
+            <a href="/history" class="drawer-tile" data-name="History"><div class="at-icon c-green"><i class="fas fa-chart-bar"></i></div><span class="at-label">History</span></a>
             <% if (user.has_paid) { %>
-            <a href="/daily-task" class="drawer-tile" data-name="Daily"><div class="at-icon c-grad"><i class="fas fa-tasks"></i></div><span>Daily Task</span></a>
+            <a href="/daily-task" class="drawer-tile" data-name="Daily"><div class="at-icon c-grad"><i class="fas fa-tasks"></i></div><span class="at-label">Daily Task</span></a>
             <% } %>
         </div>
         <div class="drawer-group-label">Community</div>
         <div class="drawer-grid">
-            <a href="/daily-challenge" class="drawer-tile" data-name="Challenge"><div class="at-icon c-orange"><i class="fas fa-fire-alt"></i></div><span>Daily Challenge</span></a>
-            <a href="/competition" class="drawer-tile <%= user.has_paid ? '' : 'locked' %>" data-name="Arena"><div class="at-icon c-red"><i class="fas fa-trophy"></i></div><span>Live Arena</span><span class="at-lock" style="position:static;"><i class="fas fa-lock"></i></span></a>
-            <a href="/squads" class="drawer-tile" data-name="Squads"><div class="at-icon c-purple"><i class="fas fa-users"></i></div><span>Squad Streaks</span></a>
-            <a href="/notifications" class="drawer-tile" data-name="Notifications"><div class="at-icon c-teal"><i class="fas fa-bell"></i></div><span>Notifications</span></a>
-            <a href="/suggestions" class="drawer-tile" data-name="Feedback"><div class="at-icon c-green"><i class="fas fa-lightbulb"></i></div><span>Send Feedback</span></a>
+            <a href="/daily-challenge" class="drawer-tile" data-name="Challenge"><div class="at-icon c-orange"><i class="fas fa-fire-alt"></i></div><span class="at-label">Daily Challenge</span></a>
+            <a href="/competition" class="drawer-tile <%= user.has_paid ? '' : 'locked' %>" data-name="Arena"><div class="at-icon c-red"><i class="fas fa-trophy"></i></div><span class="at-label">Live Arena</span><span class="at-lock"><i class="fas fa-lock"></i></span></a>
+            <a href="/squads" class="drawer-tile" data-name="Squads"><div class="at-icon c-purple"><i class="fas fa-users"></i></div><span class="at-label">Squad Streaks</span></a>
+            <a href="/notifications" class="drawer-tile" data-name="Notifications"><div class="at-icon c-teal"><i class="fas fa-bell"></i></div><span class="at-label">Notifications</span></a>
+            <a href="/suggestions" class="drawer-tile" data-name="Feedback"><div class="at-icon c-green"><i class="fas fa-lightbulb"></i></div><span class="at-label">Feedback</span></a>
         </div>
         <div class="drawer-group-label">More</div>
         <div class="drawer-grid">
-            <a href="/upgrade" class="drawer-tile" data-name="Premium"><div class="at-icon c-grad"><i class="fas fa-crown"></i></div><span>Premium</span></a>
-            <a href="/install" class="drawer-tile" data-name="Install"><div class="at-icon c-blue"><i class="fas fa-mobile-screen"></i></div><span>Install App</span></a>
-            <a href="/profile" class="drawer-tile" data-name="Profile"><div class="at-icon c-teal"><i class="fas fa-user"></i></div><span>Your Profile</span></a>
-            <a href="/guide" class="drawer-tile" data-name="Guide"><div class="at-icon c-grad"><i class="fas fa-book"></i></div><span>Student Guide</span></a>
-            <a href="/refer" class="drawer-tile" data-name="Referral"><div class="at-icon c-orange"><i class="fas fa-hand-holding-heart"></i></div><span>Refer & Earn</span></a>
-            <a href="/renaissance" class="drawer-tile" data-name="Renaissance"><div class="at-icon c-purple"><i class="fas fa-seedling"></i></div><span>Renaissance</span></a>
-            <a href="/ambassador/dashboard" class="drawer-tile" data-name="Ambassador"><div class="at-icon c-green"><i class="fas fa-handshake"></i></div><span>Ambassador</span></a>
-            <a href="/how-it-works" class="drawer-tile" data-name="How It Works"><div class="at-icon c-purple"><i class="fas fa-circle-info"></i></div><span>How It Works</span></a>
-            <a href="/terms" class="drawer-tile" data-name="Terms"><div class="at-icon c-grad"><i class="fas fa-file-contract"></i></div><span>Terms</span></a>
-            <a href="/privacy" class="drawer-tile" data-name="Privacy"><div class="at-icon c-grad"><i class="fas fa-lock"></i></div><span>Privacy</span></a>
+            <a href="/upgrade" class="drawer-tile" data-name="Premium"><div class="at-icon c-grad"><i class="fas fa-crown"></i></div><span class="at-label">Premium</span></a>
+            <a href="/install" class="drawer-tile" data-name="Install"><div class="at-icon c-blue"><i class="fas fa-mobile-screen"></i></div><span class="at-label">Install App</span></a>
+            <a href="/profile" class="drawer-tile" data-name="Profile"><div class="at-icon c-teal"><i class="fas fa-user"></i></div><span class="at-label">Profile</span></a>
+            <a href="/guide" class="drawer-tile" data-name="Guide"><div class="at-icon c-grad"><i class="fas fa-book"></i></div><span class="at-label">Guide</span></a>
+            <a href="/refer" class="drawer-tile" data-name="Referral"><div class="at-icon c-orange"><i class="fas fa-hand-holding-heart"></i></div><span class="at-label">Refer &amp; Earn</span></a>
+            <a href="/renaissance" class="drawer-tile" data-name="Renaissance"><div class="at-icon c-purple"><i class="fas fa-seedling"></i></div><span class="at-label">Renaissance</span></a>
+            <a href="/ambassador/dashboard" class="drawer-tile" data-name="Ambassador"><div class="at-icon c-green"><i class="fas fa-handshake"></i></div><span class="at-label">Ambassador</span></a>
+            <a href="/how-it-works" class="drawer-tile" data-name="How It Works"><div class="at-icon c-purple"><i class="fas fa-circle-info"></i></div><span class="at-label">How It Works</span></a>
+            <a href="/terms" class="drawer-tile" data-name="Terms"><div class="at-icon c-grad"><i class="fas fa-file-contract"></i></div><span class="at-label">Terms</span></a>
+            <a href="/privacy" class="drawer-tile" data-name="Privacy"><div class="at-icon c-grad"><i class="fas fa-lock"></i></div><span class="at-label">Privacy</span></a>
         </div>
         <p class="drawer-empty">No apps found. Try adjusting your search.</p>
     </div>
@@ -550,11 +550,19 @@
     .drawer-tile { display: flex; flex-direction: column; align-items: center; gap: 8px; text-decoration: none; color: inherit; transition: var(--transition); }
     .drawer-tile:active { transform: scale(0.92); }
     .drawer-tile .at-icon { width: 56px; height: 56px; border-radius: 18px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
-    .drawer-tile .at-label { font-size: 0.7rem; font-weight: 600; color: var(--text-secondary); text-align: center; max-width: 70px; line-height: 1.2; }
+    .drawer-tile .at-label { font-size: 0.7rem; font-weight: 600; color: var(--text-secondary); text-align: center; }
     .drawer-tile.locked .at-icon { opacity: 0.45; }
     .drawer-tile.locked .at-label { opacity: 0.45; }
     .drawer-tile .at-lock { position: static; background: var(--danger-soft); border: 1px solid var(--danger); padding: 2px 4px; border-radius: 50%; font-size: 0.38rem; color: var(--danger); }
-    .drawer-empty { text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 20px 0; max-width: 640px; margin: 0 auto; display: none; }
+    .drawer-tile .at-icon.c-blue { background: var(--brand-soft); color: var(--brand); border-color: transparent; }
+    .drawer-tile .at-icon.c-grad { background: var(--brand-gradient); color: #fff; border-color: transparent; box-shadow: 0 4px 14px var(--brand-light); }
+    .drawer-tile .at-icon.c-teal { background: linear-gradient(135deg,#0d9488,#0891b2); color: #fff; border-color: transparent; }
+    .drawer-tile .at-icon.c-orange { background: linear-gradient(135deg,#f59e0b,#ef4444); color: #fff; border-color: transparent; }
+    .drawer-tile .at-icon.c-green { background: var(--success-soft); color: var(--success); border-color: transparent; }
+    .drawer-tile .at-icon.c-red { background: var(--danger-soft); color: var(--danger); border-color: transparent; }
+    .drawer-tile .at-icon.c-purple { background: linear-gradient(135deg,#7c3aed,#a855f7); color: #fff; border-color: transparent; }
+    .drawer-tile .at-icon.c-amber { background: var(--warning-soft); color: var(--warning); border-color: transparent; }
+    .drawer-empty { text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 20px 0; max-width: 640px; margin: 0 auto; }
 </style>
 
 <script>
