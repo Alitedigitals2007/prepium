@@ -56,6 +56,8 @@
             border: 1px solid rgba(255, 255, 255, 0.24);
             font-size: 1.15rem; font-weight: 800; text-transform: uppercase;
             animation: tileIn 0.3s var(--ease-spring) both;
+            box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.18), inset 0 2px 0 rgba(255, 255, 255, 0.22), 0 3px 7px rgba(0, 0, 0, 0.22);
+            text-shadow: 0 2px 3px rgba(0, 0, 0, 0.35);
         }
         @keyframes tileIn { from { opacity: 0; transform: translateY(8px) scale(0.8); } }
         .hint-text { margin-top: 0.8rem; font-size: 0.72rem; opacity: 0.9; min-height: 1.1em; position: relative; z-index: 1; }
@@ -104,6 +106,19 @@
         .hist-main { flex: 1; color: var(--text-secondary); font-weight: 600; }
         .hist-score { font-weight: 800; color: var(--brand); }
         .empty-hist { padding: 1.1rem 0.85rem; text-align: center; font-size: 0.72rem; color: var(--text-muted); }
+
+        .start-overlay { position: fixed; inset: 0; z-index: 55; background: rgba(2, 6, 23, 0.62); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 1rem; }
+        .start-card { background: var(--surface-solid); border-radius: 24px; padding: 1.5rem 1.2rem 1.2rem; max-width: 400px; width: 100%; text-align: center; box-shadow: var(--shadow-xl); animation: cardIn 0.35s var(--ease-spring) both; }
+        @keyframes cardIn { from { opacity: 0; transform: translateY(24px) scale(0.94); } }
+        .start-icon { width: 62px; height: 62px; margin: 0 auto 0.7rem; border-radius: 18px; display: grid; place-items: center; font-size: 1.6rem; color: #fff; background: linear-gradient(135deg, #047857, #10b981); box-shadow: 0 10px 24px rgba(5, 150, 105, 0.4); }
+        .start-card h2 { font-size: 1.15rem; font-weight: 800; }
+        .start-card > p { font-size: 0.72rem; color: var(--text-muted); margin-top: 3px; }
+        .start-info { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; margin: 1rem 0 0.8rem; }
+        .start-info div { background: var(--bg); border: 1px solid var(--border-solid); border-radius: 12px; padding: 0.6rem 0.3rem; }
+        .start-info b { display: block; font-size: 0.95rem; font-weight: 800; color: var(--text-primary); }
+        .start-info span { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 700; }
+        .start-note { font-size: 0.6rem; color: var(--text-muted); margin-bottom: 0.9rem; }
+        .start-cta { width: 100%; border: none; border-radius: 14px; padding: 0.85rem; font-family: inherit; font-weight: 800; font-size: 0.85rem; background: linear-gradient(135deg, #047857, #10b981); color: #fff; cursor: pointer; box-shadow: 0 8px 20px rgba(5, 150, 105, 0.35); }
         @media (min-width: 431px) { .app-shell { border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); margin: 0 auto; } }
     </style>
     <%- include('partials/theme-toggle') %>
@@ -330,13 +345,19 @@
         input.disabled = true;
         timeEl.textContent = '0';
         document.getElementById('newBtn').innerHTML = '<i class="fas fa-play"></i> Play again';
-        saveResult(score, function () {
+        saveResult(score, function (data) {
+            var xp = data && typeof data.xp_gained === 'number' ? data.xp_gained : null;
+            var xpLine = '';
+            if (xp !== null) {
+                xpLine = '<div style="margin-top:6px;font-weight:800;color:#16a34a">+' + xp + ' XP</div>' +
+                         '<div style="font-size:0.72rem;color:#64748b">Level ' + (data.level || 1) + ' · ' + (data.xp || 0).toLocaleString() + ' XP total</div>';
+            }
             Swal.fire({
                 icon: score > 0 ? 'success' : 'info',
                 title: "Time's up!",
                 html: '<div style="font-size:0.9rem;line-height:1.8">' +
-                      '<b style="font-size:1.8rem;color:var(--brand)">' + score + '</b> points<br>' +
-                      solved + ' words solved · best streak ' + bestStreak +
+                      '<b style="font-size:1.8rem;color:var(--brand)">' + score + '</b> points' + xpLine +
+                      '<div style="font-size:0.72rem;color:#64748b;margin-top:4px">' + solved + ' words solved · best streak ' + bestStreak + '</div>' +
                       '</div>',
                 confirmButtonText: 'Play again',
                 confirmButtonColor: '#047857',
@@ -357,7 +378,9 @@
                 game: 'scramble', score: finalScore, outcome: 'completed', duration: DURATION,
                 metadata: { solved: solved, skipped: skipped, bestStreak: bestStreak, hints: hintsUsed }
             })
-        }).then(function () { loadStats(); }).catch(function () {}).finally(function () { if (cb) cb(); });
+        }).then(function (r) { return r.json(); })
+            .then(function (data) { loadStats(); if (cb) cb(data); })
+            .catch(function () { if (cb) cb(null); });
     }
 
     function loadStats() {
@@ -400,8 +423,28 @@
     style.textContent = '@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}} .shake{animation:shake .3s ease}';
     document.head.appendChild(style);
 
+    window.beginGame = function () {
+        document.getElementById('startOverlay').style.display = 'none';
+        startGame();
+    };
+
     loadStats();
 })();
 </script>
+
+<div class="start-overlay" id="startOverlay">
+    <div class="start-card">
+        <div class="start-icon"><i class="fas fa-shuffle"></i></div>
+        <h2>Word Scramble</h2>
+        <p>Unscramble as many academic terms as you can in 60 seconds</p>
+        <div class="start-info">
+            <div><b>60s</b><span>Timer</span></div>
+            <div><b>+10</b><span>Per word</span></div>
+            <div><b>+XP</b><span>Streak bonus</span></div>
+        </div>
+        <p class="start-note">Score converts to XP when the round ends</p>
+        <button class="start-cta" onclick="beginGame()"><i class="fas fa-play"></i> Start game</button>
+    </div>
+</div>
 </body>
 </html>

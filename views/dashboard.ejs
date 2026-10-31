@@ -520,6 +520,9 @@
         </div>
         <div class="drawer-group-label">Community</div>
         <div class="drawer-grid">
+            <a href="/chat" class="drawer-tile" data-name="Chats"><div class="at-icon c-green"><i class="fas fa-comments"></i></div><span class="at-label">Chats</span></a>
+            <a href="/friends" class="drawer-tile" data-name="Friends"><div class="at-icon c-blue"><i class="fas fa-user-group"></i></div><span class="at-label">Friends</span></a>
+            <a href="/status" class="drawer-tile" data-name="Status"><div class="at-icon c-orange"><i class="fas fa-circle-notch"></i></div><span class="at-label">Status</span></a>
             <a href="/daily-challenge" class="drawer-tile" data-name="Challenge"><div class="at-icon c-orange"><i class="fas fa-fire-alt"></i></div><span class="at-label">Daily Challenge</span></a>
             <a href="/competition" class="drawer-tile <%= user.has_paid ? '' : 'locked' %>" data-name="Arena"><div class="at-icon c-red"><i class="fas fa-trophy"></i></div><span class="at-label">Live Arena</span><span class="at-lock"><i class="fas fa-lock"></i></span></a>
             <a href="/squads" class="drawer-tile" data-name="Squads"><div class="at-icon c-purple"><i class="fas fa-users"></i></div><span class="at-label">Squad Streaks</span></a>
@@ -534,7 +537,6 @@
             <a href="/guide" class="drawer-tile" data-name="Guide"><div class="at-icon c-grad"><i class="fas fa-book"></i></div><span class="at-label">Guide</span></a>
             <a href="/refer" class="drawer-tile" data-name="Referral"><div class="at-icon c-orange"><i class="fas fa-hand-holding-heart"></i></div><span class="at-label">Refer &amp; Earn</span></a>
             <a href="/renaissance" class="drawer-tile" data-name="Renaissance"><div class="at-icon c-purple"><i class="fas fa-seedling"></i></div><span class="at-label">Renaissance</span></a>
-            <a href="/ambassador/dashboard" class="drawer-tile" data-name="Ambassador"><div class="at-icon c-green"><i class="fas fa-handshake"></i></div><span class="at-label">Ambassador</span></a>
             <a href="/how-it-works" class="drawer-tile" data-name="How It Works"><div class="at-icon c-purple"><i class="fas fa-circle-info"></i></div><span class="at-label">How It Works</span></a>
             <a href="/terms" class="drawer-tile" data-name="Terms"><div class="at-icon c-grad"><i class="fas fa-file-contract"></i></div><span class="at-label">Terms</span></a>
             <a href="/privacy" class="drawer-tile" data-name="Privacy"><div class="at-icon c-grad"><i class="fas fa-lock"></i></div><span class="at-label">Privacy</span></a>
@@ -550,7 +552,7 @@
 <style>
     .drawer-tile { display: flex; flex-direction: column; align-items: center; gap: 8px; text-decoration: none; color: inherit; transition: var(--transition); }
     .drawer-tile:active { transform: scale(0.92); }
-    .drawer-tile .at-icon { width: 56px; height: 56px; border-radius: 18px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+    .drawer-tile .at-icon { width: 56px; height: 56px; border-radius: 18px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.08), inset 0 2px 0 rgba(255, 255, 255, 0.35), var(--shadow-sm); }
     .drawer-tile .at-label { font-size: 0.7rem; font-weight: 600; color: var(--text-secondary); text-align: center; }
     .drawer-tile.locked .at-icon { opacity: 0.45; }
     .drawer-tile.locked .at-label { opacity: 0.45; }

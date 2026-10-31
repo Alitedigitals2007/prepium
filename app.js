@@ -475,15 +475,17 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
+const sessionStore = new pgSession({
+    pool: pool,
+    tableName: 'user_sessions',
+    createTableIfMissing: true
+});
+
 app.use(session({
     secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    store: new pgSession({
-        pool: pool,
-        tableName: 'user_sessions',
-        createTableIfMissing: true
-    }),
+    store: sessionStore,
     cookie: {
         maxAge: 1000 * 60 * 60 * 24,
         secure: process.env.NODE_ENV === 'production',
@@ -6670,6 +6672,15 @@ app.post('/admin/db-manager/query', isAdmin, async (req, res) => {
 // ==================== GAMES HUB ====================
 const GAME_TYPES = ['sudoku', 'scramble', 'chess', 'crossword'];
 const GAME_OUTCOMES = ['win', 'loss', 'draw', 'completed', 'abandoned'];
+const GAME_XP = { sudoku: 40, scramble: 30, chess: 60, crossword: 50 };
+const XP_DIFF_MULT = { easy: 1, medium: 1.5, hard: 2.25 };
+
+function levelForXp(xp) {
+    return Math.floor(Math.sqrt(Math.max(0, xp || 0) / 100)) + 1;
+}
+function xpForLevel(level) {
+    return 100 * Math.pow(Math.max(1, level) - 1, 2);
+}
 
 (async function initGameResults() {
   try {
@@ -6685,6 +6696,7 @@ const GAME_OUTCOMES = ['win', 'loss', 'draw', 'completed', 'abandoned'];
     )`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_game_results_user ON game_results(user_id, created_at DESC)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_game_results_game ON game_results(user_id, game, score DESC)`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS xp INTEGER NOT NULL DEFAULT 0`);
     console.log('[Games] Results table ready');
   } catch (e) { console.error('[Games] Init:', e.message); }
 })();
@@ -6709,7 +6721,10 @@ async function getGameStats(userId) {
 
 app.get('/api/games/stats', isAuth, async (req, res) => {
   try {
-    res.json({ success: true, ...(await getGameStats(req.session.user.id)) });
+    const me = await pool.query('SELECT COALESCE(xp, 0) AS xp FROM users WHERE id = $1', [req.session.user.id]);
+    const xp = me.rows[0] ? me.rows[0].xp : 0;
+    const level = levelForXp(xp);
+    res.json({ success: true, ...(await getGameStats(req.session.user.id)), xp, level, next_level_xp: xpForLevel(level + 1), current_level_xp: xpForLevel(level) });
   } catch (e) {
     console.error('[Games] Stats error:', e.message);
     res.status(500).json({ success: false, error: 'Could not load game stats' });
@@ -6755,7 +6770,32 @@ app.post('/api/games/result', isAuth, async (req, res) => {
       [req.session.user.id, game, safeScore, safeOutcome, safeDuration, metaJson]
     );
 
-    res.json({ success: true, id: inserted.rows[0].id, created_at: inserted.rows[0].created_at, score: safeScore });
+    const difficulty = String((meta && meta.difficulty) || '').toLowerCase();
+    const mult = XP_DIFF_MULT[difficulty] || 1;
+    const base = GAME_XP[game] || 30;
+    let xpDelta = 0;
+    if (safeOutcome === 'win' || safeOutcome === 'completed') {
+      xpDelta = Math.round(base * mult) + Math.floor(safeScore / 100);
+    } else if (safeOutcome === 'draw') {
+      xpDelta = Math.round(base * mult * 0.4);
+    } else {
+      xpDelta = -Math.round(base * 0.25);
+    }
+    const xpRow = await pool.query(
+      'UPDATE users SET xp = GREATEST(0, COALESCE(xp, 0) + $1) WHERE id = $2 RETURNING xp',
+      [xpDelta, req.session.user.id]
+    );
+    const totalXp = xpRow.rows[0] ? xpRow.rows[0].xp : 0;
+
+    res.json({
+      success: true,
+      id: inserted.rows[0].id,
+      created_at: inserted.rows[0].created_at,
+      score: safeScore,
+      xp_gained: xpDelta,
+      xp: totalXp,
+      level: levelForXp(totalXp)
+    });
   } catch (e) {
     console.error('[Games] Save error:', e.message);
     res.status(500).json({ success: false, error: 'Could not save result' });
@@ -8561,17 +8601,657 @@ app.get('/api/friends', isAuth, async (req, res) => {
     try {
         const uid = req.session.user.id;
         const r = await pool.query(
-            `SELECT u.id, u.fullname, u.email
+            `SELECT u.id, u.fullname, u.email, COALESCE(u.xp, 0) AS xp
              FROM friendships f
              JOIN users u ON u.id = CASE WHEN f.user_id = $1 THEN f.friend_id ELSE f.user_id END
-             WHERE (f.user_id = $1 OR f.friend_id = $1) AND f.status = $2`,
+             WHERE (f.user_id = $1 OR f.friend_id = $1) AND f.status = $2
+             ORDER BY u.fullname`,
             [uid, 'accepted']
         );
         const seen = new Set();
-        const friends = r.rows.filter(u => (seen.has(u.id) ? false : (seen.add(u.id), true)));
+        const friends = r.rows.filter(u => (seen.has(u.id) ? false : (seen.add(u.id), true)))
+            .map(u => ({ ...u, level: levelForXp(u.xp) }));
         res.json({ friends });
     } catch(e){ res.status(500).json({ error: 'Could not load friends' }); }
 });
+
+// ==================== COMMUNITY: XP LEADERBOARD, CHAT, STATUS ====================
+let io = null;
+
+async function emitToMembers(conversationId, event, payload, excludeUserId) {
+    if (!io) return;
+    try {
+        const r = await pool.query('SELECT user_id FROM conversation_members WHERE conversation_id = $1', [conversationId]);
+        r.rows.forEach(row => {
+            if (excludeUserId && row.user_id === excludeUserId) return;
+            io.to('user_' + row.user_id).emit(event, payload);
+        });
+    } catch (e) { console.error('[Chat] Emit error:', e.message); }
+}
+
+(async function initCommunity() {
+    try {
+        await pool.query(`CREATE TABLE IF NOT EXISTS conversations (
+            id SERIAL PRIMARY KEY,
+            type VARCHAR(10) NOT NULL DEFAULT 'direct',
+            name VARCHAR(100),
+            created_by INTEGER,
+            created_at TIMESTAMP DEFAULT NOW()
+        )`);
+        await pool.query(`CREATE TABLE IF NOT EXISTS conversation_members (
+            conversation_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            role VARCHAR(10) NOT NULL DEFAULT 'member',
+            last_read_at TIMESTAMP DEFAULT NOW(),
+            last_active_at TIMESTAMP DEFAULT NOW(),
+            PRIMARY KEY (conversation_id, user_id)
+        )`);
+        await pool.query(`CREATE TABLE IF NOT EXISTS chat_messages (
+            id SERIAL PRIMARY KEY,
+            conversation_id INTEGER NOT NULL,
+            sender_id INTEGER NOT NULL,
+            kind VARCHAR(10) NOT NULL DEFAULT 'text',
+            body TEXT,
+            media BYTEA,
+            media_mime VARCHAR(100),
+            media_name VARCHAR(200),
+            media_duration INTEGER,
+            created_at TIMESTAMP DEFAULT NOW()
+        )`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_messages_conv ON chat_messages(conversation_id, created_at DESC)`);
+        await pool.query(`CREATE TABLE IF NOT EXISTS status_posts (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            kind VARCHAR(10) NOT NULL DEFAULT 'text',
+            body TEXT,
+            bg_color VARCHAR(30) DEFAULT '#2563eb',
+            media BYTEA,
+            media_mime VARCHAR(100),
+            privacy VARCHAR(10) NOT NULL DEFAULT 'friends',
+            created_at TIMESTAMP DEFAULT NOW(),
+            expires_at TIMESTAMP NOT NULL
+        )`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_status_posts_exp ON status_posts(expires_at)`);
+        await pool.query(`CREATE TABLE IF NOT EXISTS status_views (
+            status_id INTEGER NOT NULL,
+            viewer_id INTEGER NOT NULL,
+            viewed_at TIMESTAMP DEFAULT NOW(),
+            PRIMARY KEY (status_id, viewer_id)
+        )`);
+        console.log('[Community] Tables ready');
+    } catch (e) { console.error('[Community] Init:', e.message); }
+})();
+
+async function conversationRole(cid, uid) {
+    const r = await pool.query('SELECT role FROM conversation_members WHERE conversation_id = $1 AND user_id = $2', [cid, uid]);
+    return r.rows[0] ? r.rows[0].role : null;
+}
+
+async function areFriends(a, b) {
+    const r = await pool.query(
+        `SELECT 1 FROM friendships WHERE status = 'accepted' AND ((user_id = $1 AND friend_id = $2) OR (friend_id = $1 AND user_id = $2))`,
+        [a, b]
+    );
+    return !!r.rows[0];
+}
+
+// ---- Friend search / requests / remove ----
+app.get('/api/friends/search', isAuth, async (req, res) => {
+    try {
+        const q = String(req.query.q || '').trim().slice(0, 60);
+        const uid = req.session.user.id;
+        if (q.length < 2) return res.json({ success: true, results: [] });
+        const r = await pool.query(
+            `SELECT id, fullname, email, COALESCE(xp, 0) AS xp
+             FROM users
+             WHERE id <> $1 AND (fullname ILIKE $2 OR email ILIKE $2 OR unique_code::text = $3)
+             ORDER BY fullname LIMIT 12`,
+            [uid, '%' + q + '%', q]
+        );
+        const rel = await pool.query('SELECT user_id, friend_id, status FROM friendships WHERE user_id = $1 OR friend_id = $1', [uid]);
+        const map = {};
+        rel.rows.forEach(row => {
+            const other = row.user_id === uid ? row.friend_id : row.user_id;
+            if (row.status === 'accepted') map[other] = 'friends';
+            else if (row.status === 'pending') map[other] = row.user_id === uid ? 'request_sent' : 'request_received';
+        });
+        res.json({
+            success: true,
+            results: r.rows.map(u => ({
+                id: u.id, fullname: u.fullname, email: u.email,
+                level: levelForXp(u.xp),
+                relationship: map[u.id] || 'none'
+            }))
+        });
+    } catch (e) { res.status(500).json({ success: false, error: 'Search failed' }); }
+});
+
+app.get('/api/friends/requests', isAuth, async (req, res) => {
+    try {
+        const uid = req.session.user.id;
+        const incoming = await pool.query(
+            `SELECT u.id, u.fullname, u.email, f.created_at
+             FROM friendships f JOIN users u ON u.id = f.user_id
+             WHERE f.friend_id = $1 AND f.status = 'pending' ORDER BY f.created_at DESC`,
+            [uid]
+        );
+        const outgoing = await pool.query(
+            `SELECT u.id, u.fullname, u.email, f.created_at
+             FROM friendships f JOIN users u ON u.id = f.friend_id
+             WHERE f.user_id = $1 AND f.status = 'pending' ORDER BY f.created_at DESC`,
+            [uid]
+        );
+        res.json({ success: true, incoming: incoming.rows, outgoing: outgoing.rows });
+    } catch (e) { res.status(500).json({ success: false, error: 'Could not load requests' }); }
+});
+
+app.post('/api/friends/remove', isAuth, async (req, res) => {
+    try {
+        const friendId = parseInt(req.body.friendId, 10);
+        const uid = req.session.user.id;
+        if (!friendId) return res.status(400).json({ success: false, error: 'Invalid friend ID' });
+        await pool.query('DELETE FROM friendships WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)', [uid, friendId]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ success: false, error: 'Could not remove friend' }); }
+});
+
+app.get('/api/friends/leaderboard', isAuth, async (req, res) => {
+    try {
+        const uid = req.session.user.id;
+        const r = await pool.query(
+            `SELECT u.id, u.fullname, COALESCE(u.xp, 0) AS xp,
+                    (SELECT COUNT(*) FROM game_results g WHERE g.user_id = u.id)::int AS plays
+             FROM users u
+             WHERE u.id = $1 OR u.id IN (
+                 SELECT CASE WHEN f.user_id = $1 THEN f.friend_id ELSE f.user_id END
+                 FROM friendships f
+                 WHERE f.status = 'accepted' AND (f.user_id = $1 OR f.friend_id = $1)
+             )
+             ORDER BY xp DESC, fullname ASC LIMIT 50`,
+            [uid]
+        );
+        res.json({
+            success: true,
+            leaderboard: r.rows.map((row, i) => ({
+                id: row.id, fullname: row.fullname, xp: row.xp, plays: row.plays,
+                level: levelForXp(row.xp), rank: i + 1, is_me: row.id === uid
+            }))
+        });
+    } catch (e) { res.status(500).json({ success: false, error: 'Could not load leaderboard' }); }
+});
+
+app.get('/friends', isAuth, (req, res) => {
+    res.locals.seo.title = 'Prepium | Friends';
+    res.render('friends', { user: req.session.user });
+});
+
+// ---- Chat: conversations ----
+app.get('/api/chat/conversations', isAuth, async (req, res) => {
+    try {
+        const uid = req.session.user.id;
+        const r = await pool.query(
+            `SELECT c.id, c.type, c.name, c.created_by,
+                    cm.last_read_at AS my_last_read,
+                    (SELECT COUNT(*) FROM chat_messages m
+                      WHERE m.conversation_id = c.id AND m.sender_id <> $1 AND m.created_at > cm.last_read_at)::int AS unread,
+                    lm.kind AS last_kind, lm.body AS last_body, lm.sender_id AS last_sender, lm.created_at AS last_at
+             FROM conversation_members cm
+             JOIN conversations c ON c.id = cm.conversation_id
+             LEFT JOIN LATERAL (
+                 SELECT kind, body, sender_id, created_at FROM chat_messages
+                 WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1
+             ) lm ON true
+             WHERE cm.user_id = $1
+             ORDER BY COALESCE(lm.created_at, c.created_at) DESC`,
+            [uid]
+        );
+        const convIds = r.rows.map(c => c.id);
+        let others = [];
+        if (convIds.length) {
+            const o = await pool.query(
+                `SELECT cm.conversation_id, u.id, u.fullname
+                 FROM conversation_members cm JOIN users u ON u.id = cm.user_id
+                 WHERE cm.conversation_id = ANY($1) AND cm.user_id <> $2`,
+                [convIds, uid]
+            );
+            others = o.rows;
+        }
+        const preview = (c) => {
+            if (!c.last_at) return 'Say hello 👋';
+            if (c.last_kind === 'image') return '📷 Photo';
+            if (c.last_kind === 'voice') return '🎤 Voice note';
+            return String(c.last_body || '').slice(0, 70);
+        };
+        res.json({
+            success: true,
+            conversations: r.rows.map(c => {
+                const members = others.filter(o => o.conversation_id === c.id);
+                const title = c.type === 'group' ? (c.name || 'Group') : (members[0] ? members[0].fullname : 'Conversation');
+                return {
+                    id: c.id, type: c.type, title,
+                    member_count: members.length + 1,
+                    unread: c.unread,
+                    last_preview: preview(c),
+                    last_at: c.last_at,
+                    last_sender_me: c.last_sender === uid
+                };
+            })
+        });
+    } catch (e) {
+        console.error('[Chat] List error:', e.message);
+        res.status(500).json({ success: false, error: 'Could not load chats' });
+    }
+});
+
+app.post('/api/chat/conversations', isAuth, async (req, res) => {
+    try {
+        const uid = req.session.user.id;
+        const body = req.body || {};
+        if (body.userId) {
+            const otherId = parseInt(body.userId, 10);
+            if (!otherId || otherId === uid) return res.status(400).json({ success: false, error: 'Invalid user' });
+            if (!(await areFriends(uid, otherId))) return res.status(403).json({ success: false, error: 'You can only chat with friends' });
+            const existing = await pool.query(
+                `SELECT c.id FROM conversations c
+                 JOIN conversation_members a ON a.conversation_id = c.id AND a.user_id = $1
+                 JOIN conversation_members b ON b.conversation_id = c.id AND b.user_id = $2
+                 WHERE c.type = 'direct' LIMIT 1`,
+                [uid, otherId]
+            );
+            if (existing.rows[0]) return res.json({ success: true, id: existing.rows[0].id, existing: true });
+            const created = await pool.query(
+                `INSERT INTO conversations (type, created_by) VALUES ('direct', $1) RETURNING id`,
+                [uid]
+            );
+            const cid = created.rows[0].id;
+            await pool.query(
+                `INSERT INTO conversation_members (conversation_id, user_id, role) VALUES ($1, $2, 'member'), ($1, $3, 'member')`,
+                [cid, uid, otherId]
+            );
+            return res.json({ success: true, id: cid });
+        }
+        const name = String(body.name || '').trim().slice(0, 60);
+        const memberIds = Array.isArray(body.memberIds) ? [...new Set(body.memberIds.map(x => parseInt(x, 10)).filter(Boolean))] : [];
+        if (!name) return res.status(400).json({ success: false, error: 'Group name is required' });
+        if (!memberIds.length) return res.status(400).json({ success: false, error: 'Add at least one member' });
+        if (memberIds.length > 50) return res.status(400).json({ success: false, error: 'Too many members' });
+        for (const mid of memberIds) {
+            if (!(await areFriends(uid, mid))) return res.status(403).json({ success: false, error: 'All members must be your friends' });
+        }
+        const created = await pool.query(
+            `INSERT INTO conversations (type, name, created_by) VALUES ('group', $1, $2) RETURNING id`,
+            [name, uid]
+        );
+        const cid = created.rows[0].id;
+        const vals = [[cid, uid, 'admin'], ...memberIds.map(mid => [cid, mid, 'member'])];
+        for (const v of vals) {
+            await pool.query(
+                `INSERT INTO conversation_members (conversation_id, user_id, role) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+                v
+            );
+        }
+        res.json({ success: true, id: cid });
+    } catch (e) {
+        console.error('[Chat] Create error:', e.message);
+        res.status(500).json({ success: false, error: 'Could not create chat' });
+    }
+});
+
+app.get('/api/chat/conversations/:id/messages', isAuth, async (req, res) => {
+    try {
+        const cid = parseInt(req.params.id, 10);
+        const uid = req.session.user.id;
+        const role = await conversationRole(cid, uid);
+        if (!role) return res.status(403).json({ success: false, error: 'Not a member of this chat' });
+        const limit = Math.min(80, Math.max(10, parseInt(req.query.limit, 10) || 50));
+        const msgs = await pool.query(
+            `SELECT m.id, m.sender_id, m.kind, m.body, m.media_duration, m.created_at, u.fullname AS sender_name
+             FROM chat_messages m JOIN users u ON u.id = m.sender_id
+             WHERE m.conversation_id = $1 ORDER BY m.created_at DESC LIMIT $2`,
+            [cid, limit]
+        );
+        const members = await pool.query(
+            `SELECT user_id, last_read_at, last_active_at FROM conversation_members WHERE conversation_id = $1`,
+            [cid]
+        );
+        await pool.query('UPDATE conversation_members SET last_active_at = NOW() WHERE conversation_id = $1 AND user_id = $2', [cid, uid]);
+        if (req.query.read === '1') {
+            await pool.query('UPDATE conversation_members SET last_read_at = NOW() WHERE conversation_id = $1 AND user_id = $2', [cid, uid]);
+        }
+        const others = members.rows.filter(m => m.user_id !== uid);
+        const allRead = (at) => others.every(o => o.last_read_at && new Date(o.last_read_at) >= at);
+        const allActive = (at) => others.every(o => o.last_active_at && new Date(o.last_active_at) >= at);
+        const messages = msgs.rows.reverse().map(m => {
+            const mine = m.sender_id === uid;
+            let status = null;
+            if (mine) {
+                status = 'sent';
+                if (allActive(m.created_at)) status = 'delivered';
+                if (allRead(m.created_at)) status = 'read';
+            }
+            return {
+                id: m.id, sender_id: m.sender_id, sender_name: m.sender_name,
+                kind: m.kind, body: m.body, media_duration: m.media_duration,
+                created_at: m.created_at, mine, status
+            };
+        });
+        res.json({ success: true, messages, my_role: role });
+    } catch (e) {
+        console.error('[Chat] Messages error:', e.message);
+        res.status(500).json({ success: false, error: 'Could not load messages' });
+    }
+});
+
+app.post('/api/chat/conversations/:id/send', isAuth, uploadMemory.single('media'), async (req, res) => {
+    try {
+        const cid = parseInt(req.params.id, 10);
+        const uid = req.session.user.id;
+        const role = await conversationRole(cid, uid);
+        if (!role) return res.status(403).json({ success: false, error: 'Not a member of this chat' });
+        const kind = String(req.body.kind || 'text');
+        let body = null, media = null, mediaMime = null, mediaName = null, mediaDuration = null;
+
+        if (kind === 'text') {
+            body = String(req.body.body || '').trim().slice(0, 4000);
+            if (!body) return res.status(400).json({ success: false, error: 'Message is empty' });
+        } else if (kind === 'image' || kind === 'voice') {
+            if (!req.file) return res.status(400).json({ success: false, error: 'No file uploaded' });
+            if (req.file.size > 8 * 1024 * 1024) return res.status(400).json({ success: false, error: 'File too large (max 8MB)' });
+            if (kind === 'image' && !/^image\//.test(req.file.mimetype)) return res.status(400).json({ success: false, error: 'Not an image' });
+            if (kind === 'voice' && !/^(audio|video)\//.test(req.file.mimetype)) return res.status(400).json({ success: false, error: 'Not an audio file' });
+            media = req.file.buffer;
+            mediaMime = req.file.mimetype;
+            mediaName = String(req.file.originalname || 'media').replace(/[^\w.\- ]/g, '_').slice(0, 100);
+            mediaDuration = kind === 'voice' ? Math.max(1, Math.min(600, parseInt(req.body.duration, 10) || 0)) : null;
+        } else {
+            return res.status(400).json({ success: false, error: 'Unknown message kind' });
+        }
+
+        const inserted = await pool.query(
+            `INSERT INTO chat_messages (conversation_id, sender_id, kind, body, media, media_mime, media_name, media_duration)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, created_at`,
+            [cid, uid, kind, body, media, mediaMime, mediaName, mediaDuration]
+        );
+        await pool.query(
+            'UPDATE conversation_members SET last_read_at = NOW(), last_active_at = NOW() WHERE conversation_id = $1 AND user_id = $2',
+            [cid, uid]
+        );
+        const message = {
+            id: inserted.rows[0].id,
+            conversation_id: cid,
+            sender_id: uid,
+            sender_name: req.session.user.fullname,
+            kind, body,
+            media_duration: mediaDuration,
+            created_at: inserted.rows[0].created_at,
+            mine: true,
+            status: 'sent'
+        };
+        emitToMembers(cid, 'chat:message', { conversationId: cid, message }, uid);
+        res.json({ success: true, message });
+    } catch (e) {
+        console.error('[Chat] Send error:', e.message);
+        res.status(500).json({ success: false, error: 'Could not send message' });
+    }
+});
+
+app.get('/api/chat/media/:messageId', isAuth, async (req, res) => {
+    try {
+        const mid = parseInt(req.params.messageId, 10);
+        const uid = req.session.user.id;
+        const r = await pool.query(
+            `SELECT m.media, m.media_mime, m.media_name FROM chat_messages m
+             JOIN conversation_members cm ON cm.conversation_id = m.conversation_id AND cm.user_id = $2
+             WHERE m.id = $1`,
+            [mid, uid]
+        );
+        if (!r.rows[0] || !r.rows[0].media) return res.status(404).json({ error: 'Media not found' });
+        const file = r.rows[0];
+        res.setHeader('Content-Type', file.media_mime || 'application/octet-stream');
+        res.setHeader('Content-Disposition', `inline; filename="${file.media_name || 'media'}"`);
+        res.setHeader('Cache-Control', 'private, max-age=86400');
+        res.send(file.media);
+    } catch (e) { res.status(500).json({ error: 'Could not load media' }); }
+});
+
+app.post('/api/chat/conversations/:id/read', isAuth, async (req, res) => {
+    try {
+        const cid = parseInt(req.params.id, 10);
+        const uid = req.session.user.id;
+        if (!(await conversationRole(cid, uid))) return res.status(403).json({ success: false, error: 'Not a member' });
+        const at = new Date();
+        await pool.query('UPDATE conversation_members SET last_read_at = $1, last_active_at = $1 WHERE conversation_id = $2 AND user_id = $3', [at, cid, uid]);
+        emitToMembers(cid, 'chat:read', { conversationId: cid, userId: uid, at: at.toISOString() }, uid);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ success: false, error: 'Could not mark read' }); }
+});
+
+app.get('/api/chat/conversations/:id/info', isAuth, async (req, res) => {
+    try {
+        const cid = parseInt(req.params.id, 10);
+        const uid = req.session.user.id;
+        const myRole = await conversationRole(cid, uid);
+        if (!myRole) return res.status(403).json({ success: false, error: 'Not a member' });
+        const conv = await pool.query('SELECT id, type, name, created_by FROM conversations WHERE id = $1', [cid]);
+        if (!conv.rows[0]) return res.status(404).json({ success: false, error: 'Chat not found' });
+        const members = await pool.query(
+            `SELECT u.id, u.fullname, COALESCE(u.xp, 0) AS xp, cm.role
+             FROM conversation_members cm JOIN users u ON u.id = cm.user_id
+             WHERE cm.conversation_id = $1 ORDER BY cm.role DESC, u.fullname`,
+            [cid]
+        );
+        res.json({
+            success: true,
+            conversation: conv.rows[0],
+            my_role: myRole,
+            members: members.rows.map(m => ({ ...m, level: levelForXp(m.xp) }))
+        });
+    } catch (e) { res.status(500).json({ success: false, error: 'Could not load chat info' }); }
+});
+
+app.post('/api/chat/conversations/:id/members', isAuth, async (req, res) => {
+    try {
+        const cid = parseInt(req.params.id, 10);
+        const uid = req.session.user.id;
+        if ((await conversationRole(cid, uid)) !== 'admin') return res.status(403).json({ success: false, error: 'Only admins can add members' });
+        const conv = await pool.query('SELECT type FROM conversations WHERE id = $1', [cid]);
+        if (!conv.rows[0] || conv.rows[0].type !== 'group') return res.status(400).json({ success: false, error: 'Not a group' });
+        const userIds = Array.isArray(req.body.userIds) ? [...new Set(req.body.userIds.map(x => parseInt(x, 10)).filter(Boolean))] : [];
+        if (!userIds.length) return res.status(400).json({ success: false, error: 'No users selected' });
+        for (const mid of userIds) {
+            if (!(await areFriends(uid, mid))) return res.status(403).json({ success: false, error: 'Members must be your friends' });
+        }
+        for (const mid of userIds) {
+            await pool.query(
+                `INSERT INTO conversation_members (conversation_id, user_id, role) VALUES ($1, $2, 'member') ON CONFLICT DO NOTHING`,
+                [cid, mid]
+            );
+        }
+        emitToMembers(cid, 'chat:members', { conversationId: cid }, uid);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ success: false, error: 'Could not add members' }); }
+});
+
+app.post('/api/chat/conversations/:id/remove-member', isAuth, async (req, res) => {
+    try {
+        const cid = parseInt(req.params.id, 10);
+        const uid = req.session.user.id;
+        const targetId = parseInt(req.body.userId, 10);
+        if ((await conversationRole(cid, uid)) !== 'admin') return res.status(403).json({ success: false, error: 'Only admins can remove members' });
+        if (!targetId || targetId === uid) return res.status(400).json({ success: false, error: 'Invalid member' });
+        await pool.query('DELETE FROM conversation_members WHERE conversation_id = $1 AND user_id = $2', [cid, targetId]);
+        emitToMembers(cid, 'chat:members', { conversationId: cid }, uid);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ success: false, error: 'Could not remove member' }); }
+});
+
+app.post('/api/chat/conversations/:id/rename', isAuth, async (req, res) => {
+    try {
+        const cid = parseInt(req.params.id, 10);
+        const uid = req.session.user.id;
+        if ((await conversationRole(cid, uid)) !== 'admin') return res.status(403).json({ success: false, error: 'Only admins can rename' });
+        const name = String(req.body.name || '').trim().slice(0, 60);
+        if (!name) return res.status(400).json({ success: false, error: 'Name is required' });
+        await pool.query('UPDATE conversations SET name = $1 WHERE id = $2', [name, cid]);
+        emitToMembers(cid, 'chat:members', { conversationId: cid }, uid);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ success: false, error: 'Could not rename' }); }
+});
+
+app.post('/api/chat/conversations/:id/leave', isAuth, async (req, res) => {
+    try {
+        const cid = parseInt(req.params.id, 10);
+        const uid = req.session.user.id;
+        const conv = await pool.query('SELECT type FROM conversations WHERE id = $1', [cid]);
+        if (!conv.rows[0]) return res.status(404).json({ success: false, error: 'Chat not found' });
+        if (conv.rows[0].type === 'direct') return res.status(400).json({ success: false, error: 'Direct chats cannot be left' });
+        await pool.query('DELETE FROM conversation_members WHERE conversation_id = $1 AND user_id = $2', [cid, uid]);
+        emitToMembers(cid, 'chat:members', { conversationId: cid }, uid);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ success: false, error: 'Could not leave group' }); }
+});
+
+app.delete('/api/chat/conversations/:id', isAuth, async (req, res) => {
+    try {
+        const cid = parseInt(req.params.id, 10);
+        const uid = req.session.user.id;
+        if ((await conversationRole(cid, uid)) !== 'admin') return res.status(403).json({ success: false, error: 'Only admins can delete the group' });
+        await pool.query('DELETE FROM chat_messages WHERE conversation_id = $1', [cid]);
+        await pool.query('DELETE FROM conversation_members WHERE conversation_id = $1', [cid]);
+        await pool.query('DELETE FROM conversations WHERE id = $1', [cid]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ success: false, error: 'Could not delete group' }); }
+});
+
+// ---- Status (stories) ----
+app.post('/api/status', isAuth, uploadMemory.single('media'), async (req, res) => {
+    try {
+        const uid = req.session.user.id;
+        const privacy = ['public', 'friends'].includes(req.body.privacy) ? req.body.privacy : 'friends';
+        const kind = String(req.body.kind || 'text');
+        if (kind === 'text') {
+            const body = String(req.body.body || '').trim().slice(0, 200);
+            if (!body) return res.status(400).json({ success: false, error: 'Status text is required' });
+            const bg = /^#[0-9a-fA-F]{6}$/.test(req.body.bg_color || '') ? req.body.bg_color : '#2563eb';
+            await pool.query(
+                `INSERT INTO status_posts (user_id, kind, body, bg_color, privacy, expires_at)
+                 VALUES ($1, 'text', $2, $3, $4, NOW() + INTERVAL '24 hours')`,
+                [uid, body, bg, privacy]
+            );
+        } else if (kind === 'image') {
+            if (!req.file) return res.status(400).json({ success: false, error: 'No image uploaded' });
+            if (req.file.size > 8 * 1024 * 1024) return res.status(400).json({ success: false, error: 'Image too large (max 8MB)' });
+            if (!/^image\//.test(req.file.mimetype)) return res.status(400).json({ success: false, error: 'Not an image' });
+            await pool.query(
+                `INSERT INTO status_posts (user_id, kind, media, media_mime, privacy, expires_at)
+                 VALUES ($1, 'image', $2, $3, $4, NOW() + INTERVAL '24 hours')`,
+                [uid, req.file.buffer, req.file.mimetype, privacy]
+            );
+        } else {
+            return res.status(400).json({ success: false, error: 'Unknown status kind' });
+        }
+        res.json({ success: true });
+    } catch (e) {
+        console.error('[Status] Create error:', e.message);
+        res.status(500).json({ success: false, error: 'Could not post status' });
+    }
+});
+
+app.get('/api/status/feed', isAuth, async (req, res) => {
+    try {
+        const uid = req.session.user.id;
+        const r = await pool.query(
+            `SELECT s.id, s.user_id, s.kind, s.body, s.bg_color, s.privacy, s.created_at,
+                    u.fullname,
+                    (SELECT COUNT(*) FROM status_views v WHERE v.status_id = s.id)::int AS views,
+                    EXISTS(SELECT 1 FROM status_views v WHERE v.status_id = s.id AND v.viewer_id = $1) AS viewed
+             FROM status_posts s JOIN users u ON u.id = s.user_id
+             WHERE s.expires_at > NOW() AND (
+                 s.user_id = $1
+                 OR s.privacy = 'public'
+                 OR (s.privacy = 'friends' AND EXISTS(
+                     SELECT 1 FROM friendships f
+                     WHERE f.status = 'accepted'
+                       AND ((f.user_id = $1 AND f.friend_id = s.user_id) OR (f.friend_id = $1 AND f.user_id = s.user_id))
+                 ))
+             )
+             ORDER BY s.created_at ASC`,
+            [uid]
+        );
+        const groups = {};
+        r.rows.forEach(s => {
+            if (!groups[s.user_id]) groups[s.user_id] = { user_id: s.user_id, fullname: s.fullname, is_me: s.user_id === uid, all_viewed: true, statuses: [] };
+            const g = groups[s.user_id];
+            g.statuses.push({
+                id: s.id, kind: s.kind, body: s.body, bg_color: s.bg_color,
+                privacy: s.privacy, created_at: s.created_at, views: s.views, viewed: s.viewed
+            });
+            if (!s.viewed) g.all_viewed = false;
+        });
+        const list = Object.values(groups).sort((a, b) => {
+            if (a.is_me !== b.is_me) return a.is_me ? -1 : 1;
+            if (a.all_viewed !== b.all_viewed) return a.all_viewed ? 1 : -1;
+            return b.statuses[b.statuses.length - 1].created_at - a.statuses[a.statuses.length - 1].created_at;
+        });
+        res.json({ success: true, groups: list });
+    } catch (e) {
+        console.error('[Status] Feed error:', e.message);
+        res.status(500).json({ success: false, error: 'Could not load status feed' });
+    }
+});
+
+app.post('/api/status/:id/view', isAuth, async (req, res) => {
+    try {
+        const sid = parseInt(req.params.id, 10);
+        const uid = req.session.user.id;
+        await pool.query('INSERT INTO status_views (status_id, viewer_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [sid, uid]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ success: false, error: 'Could not mark viewed' }); }
+});
+
+app.delete('/api/status/:id', isAuth, async (req, res) => {
+    try {
+        const sid = parseInt(req.params.id, 10);
+        const uid = req.session.user.id;
+        await pool.query('DELETE FROM status_posts WHERE id = $1 AND user_id = $2', [sid, uid]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ success: false, error: 'Could not delete status' }); }
+});
+
+app.get('/api/status/media/:id', isAuth, async (req, res) => {
+    try {
+        const sid = parseInt(req.params.id, 10);
+        const uid = req.session.user.id;
+        const r = await pool.query(
+            `SELECT s.media, s.media_mime, s.privacy, s.user_id FROM status_posts s WHERE s.id = $1 AND s.expires_at > NOW()`,
+            [sid]
+        );
+        const post = r.rows[0];
+        if (!post || !post.media) return res.status(404).json({ error: 'Not found' });
+        let allowed = post.user_id === uid || post.privacy === 'public';
+        if (!allowed && post.privacy === 'friends') allowed = await areFriends(uid, post.user_id);
+        if (!allowed) return res.status(403).json({ error: 'Not allowed' });
+        res.setHeader('Content-Type', post.media_mime || 'application/octet-stream');
+        res.setHeader('Cache-Control', 'private, max-age=3600');
+        res.send(post.media);
+    } catch (e) { res.status(500).json({ error: 'Could not load media' }); }
+});
+
+app.get('/status', isAuth, (req, res) => {
+    res.locals.seo.title = 'Prepium | Status';
+    res.render('status', { user: req.session.user });
+});
+
+app.get('/chat', isAuth, (req, res) => {
+    res.locals.seo.title = 'Prepium | Chats';
+    res.render('chat', { user: req.session.user });
+});
+
+app.get('/chat/:id', isAuth, (req, res) => {
+    res.locals.seo.title = 'Prepium | Chat';
+    res.render('chat-thread', { user: req.session.user, convId: parseInt(req.params.id, 10) || 0 });
+});
+
 
 // Serve the Socket.IO client explicitly so it also works on serverless
 // deployments where the exported Express app is not attached to an HTTP server.
@@ -8602,8 +9282,44 @@ app.use((err, req, res, next) => {
 const httpServer = http.createServer(app);
 try {
     const { Server } = require('socket.io');
-    const io = new Server(httpServer);
-    io.on('connection', () => {});
+    const cookieSignature = require('cookie-signature');
+    io = new Server(httpServer, { cors: { origin: true, credentials: true } });
+    io.use((socket, next) => {
+        try {
+            const raw = socket.handshake.headers.cookie || '';
+            let sid = null;
+            raw.split(';').forEach(part => {
+                const eq = part.indexOf('=');
+                if (eq !== -1 && part.slice(0, eq).trim() === 'connect.sid') {
+                    sid = decodeURIComponent(part.slice(eq + 1).trim());
+                }
+            });
+            if (!sid) return next(new Error('no session'));
+            if (sid.startsWith('s:')) sid = sid.slice(2);
+            const unsigned = cookieSignature.unsign(sid, SESSION_SECRET);
+            if (!unsigned) return next(new Error('bad signature'));
+            sessionStore.get(unsigned, (err, sess) => {
+                if (err || !sess || !sess.user) return next(new Error('unauthorized'));
+                socket.userId = sess.user.id;
+                next();
+            });
+        } catch (e) { next(new Error('unauthorized')); }
+    });
+    io.on('connection', (socket) => {
+        const uid = socket.userId;
+        socket.join('user_' + uid);
+        pool.query('UPDATE conversation_members SET last_active_at = NOW() WHERE user_id = $1', [uid]).catch(() => {});
+        socket.on('chat:typing', (data) => {
+            const cid = parseInt(data && data.conversationId, 10);
+            if (!cid) return;
+            const now = Date.now();
+            if (socket.lastTyping && now - socket.lastTyping < 2000) return;
+            socket.lastTyping = now;
+            emitToMembers(cid, 'chat:typing', { conversationId: cid, userId: uid }, uid);
+        });
+        socket.on('disconnect', () => {});
+    });
+    console.log('[Socket.IO] Ready');
 } catch (e) {
     console.error('[Socket.IO] Failed to initialize:', e.message);
 }

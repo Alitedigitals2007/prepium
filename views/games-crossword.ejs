@@ -50,6 +50,7 @@
             background: var(--surface-solid);
             border-radius: 2px;
             overflow: hidden;
+            box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.1);
         }
         .xw-cell.block { background: #1e293b; }
         .xw-cell.active-word { background: var(--brand-soft); }
@@ -109,6 +110,19 @@
         .hist-main { flex: 1; color: var(--text-secondary); font-weight: 600; }
         .hist-score { font-weight: 800; color: #b91c1c; }
         .empty-hist { padding: 1.1rem 0.85rem; text-align: center; font-size: 0.72rem; color: var(--text-muted); }
+
+        .start-overlay { position: fixed; inset: 0; z-index: 55; background: rgba(2, 6, 23, 0.62); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 1rem; }
+        .start-card { background: var(--surface-solid); border-radius: 24px; padding: 1.5rem 1.2rem 1.2rem; max-width: 400px; width: 100%; text-align: center; box-shadow: var(--shadow-xl); animation: cardIn 0.35s var(--ease-spring) both; }
+        @keyframes cardIn { from { opacity: 0; transform: translateY(24px) scale(0.94); } }
+        .start-icon { width: 62px; height: 62px; margin: 0 auto 0.7rem; border-radius: 18px; display: grid; place-items: center; font-size: 1.6rem; color: #fff; background: linear-gradient(135deg, #b91c1c, #ef4444); box-shadow: 0 10px 24px rgba(185, 28, 28, 0.4); }
+        .start-card h2 { font-size: 1.15rem; font-weight: 800; }
+        .start-card > p { font-size: 0.72rem; color: var(--text-muted); margin-top: 3px; }
+        .start-info { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; margin: 1rem 0 0.8rem; }
+        .start-info div { background: var(--bg); border: 1px solid var(--border-solid); border-radius: 12px; padding: 0.6rem 0.3rem; }
+        .start-info b { display: block; font-size: 0.95rem; font-weight: 800; color: var(--text-primary); }
+        .start-info span { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 700; }
+        .start-note { font-size: 0.6rem; color: var(--text-muted); margin-bottom: 0.9rem; }
+        .start-cta { width: 100%; border: none; border-radius: 14px; padding: 0.85rem; font-family: inherit; font-weight: 800; font-size: 0.85rem; background: linear-gradient(135deg, #b91c1c, #ef4444); color: #fff; cursor: pointer; box-shadow: 0 8px 20px rgba(185, 28, 28, 0.35); }
         @media (min-width: 431px) { .app-shell { border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); margin: 0 auto; } }
     </style>
     <%- include('partials/theme-toggle') %>
@@ -464,13 +478,19 @@
         finished = true;
         clearInterval(timer);
         var score = Math.max(50, 1200 - seconds * 2 - reveals * 80);
-        saveResult(score, function () {
+        saveResult(score, function (data) {
+            var xp = data && typeof data.xp_gained === 'number' ? data.xp_gained : null;
+            var xpLine = '';
+            if (xp !== null) {
+                xpLine = '<div style="margin-top:6px;font-weight:800;color:#16a34a">+' + xp + ' XP</div>' +
+                         '<div style="font-size:0.72rem;color:#64748b">Level ' + (data.level || 1) + ' · ' + (data.xp || 0).toLocaleString() + ' XP total</div>';
+            }
             Swal.fire({
                 icon: 'success',
                 title: 'Crossword complete!',
                 html: '<div style="font-size:0.9rem;line-height:1.7">' +
-                      '<b style="font-size:1.6rem;color:#b91c1c">' + score + '</b> points<br>' +
-                      'Time: ' + fmt(seconds) + ' · Reveals: ' + reveals +
+                      '<b style="font-size:1.6rem;color:#b91c1c">' + score + '</b> points' + xpLine +
+                      '<div style="font-size:0.72rem;color:#64748b;margin-top:4px">Time: ' + fmt(seconds) + ' · Reveals: ' + reveals + '</div>' +
                       '</div>',
                 confirmButtonText: 'Play again',
                 confirmButtonColor: '#b91c1c',
@@ -491,7 +511,9 @@
                 game: 'crossword', score: score, outcome: 'win', duration: seconds,
                 metadata: { reveals: reveals, words: WORDS.length }
             })
-        }).then(function () { loadStats(); }).catch(function () {}).finally(function () { if (cb) cb(); });
+        }).then(function (r) { return r.json(); })
+            .then(function (data) { loadStats(); if (cb) cb(data); })
+            .catch(function () { if (cb) cb(null); });
     }
 
     function toast(text, icon) {
@@ -538,12 +560,30 @@
 
     renderGrid();
     loadStats();
-    timer = setInterval(function () {
-        if (finished) return;
-        seconds++;
-        document.getElementById('xwTime').textContent = fmt(seconds);
-    }, 1000);
+    window.beginXw = function () {
+        document.getElementById('startOverlay').style.display = 'none';
+        timer = setInterval(function () {
+            if (finished) return;
+            seconds++;
+            document.getElementById('xwTime').textContent = fmt(seconds);
+        }, 1000);
+    };
 })();
 </script>
+
+<div class="start-overlay" id="startOverlay">
+    <div class="start-card">
+        <div class="start-icon"><i class="fas fa-border-all"></i></div>
+        <h2>Academic Crossword</h2>
+        <p>Solve all 10 words — faster solves earn more XP</p>
+        <div class="start-info">
+            <div><b>10</b><span>Words</span></div>
+            <div><b>12×12</b><span>Grid</span></div>
+            <div><b>+50 XP</b><span>Base reward</span></div>
+        </div>
+        <p class="start-note">Revealing letters costs XP · tap a clue to jump to its word</p>
+        <button class="start-cta" onclick="beginXw()"><i class="fas fa-play"></i> Start puzzle</button>
+    </div>
+</div>
 </body>
 </html>

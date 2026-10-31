@@ -67,12 +67,17 @@
             box-shadow: var(--shadow-md);
         }
         #chessBoard { width: 100%; max-width: 560px; margin: 0 auto; }
-        #chessBoard .board-b72b1 { border-radius: 10px; overflow: hidden; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.18); }
+        #chessBoard .board-b72b1 { border-radius: 10px; overflow: hidden; border: 6px solid #4a3220; box-shadow: 0 16px 34px rgba(15, 23, 42, 0.35), inset 0 0 14px rgba(0, 0, 0, 0.28); }
         #chessBoard .white-1e1d7 { background-color: #f0d9b5; }
         #chessBoard .black-3c85d { background-color: #b58863; }
         #chessBoard .notation-322f9 { font-size: 10px; font-weight: 700; opacity: 0.7; }
+        #chessBoard img.piece-417db { filter: drop-shadow(2px 4px 3px rgba(0, 0, 0, 0.38)); cursor: pointer; }
+        #chessBoard .square-55d63 { position: relative; }
         #chessBoard .square-55d63.hl-last { box-shadow: inset 0 0 0 999px rgba(124, 58, 237, 0.3); }
         #chessBoard .square-55d63.hl-check { box-shadow: inset 0 0 0 999px rgba(220, 38, 38, 0.45); }
+        #chessBoard .square-55d63.sq-sel { box-shadow: inset 0 0 0 999px rgba(37, 99, 235, 0.38); }
+        #chessBoard .square-55d63.sq-dot::after { content: ''; position: absolute; width: 27%; height: 27%; left: 36.5%; top: 36.5%; border-radius: 50%; background: rgba(15, 23, 42, 0.35); box-shadow: 0 1px 3px rgba(0,0,0,0.25); }
+        #chessBoard .square-55d63.sq-cap::after { content: ''; position: absolute; inset: 5%; border-radius: 50%; border: 4px solid rgba(220, 38, 38, 0.6); box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
         .chess-controls { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 0.7rem; }
         .chess-btn {
             border: 1px solid var(--border-solid); border-radius: 11px;
@@ -101,6 +106,27 @@
         .hist-main { flex: 1; color: var(--text-secondary); font-weight: 600; }
         .hist-score { font-weight: 800; color: #7c3aed; }
         .empty-hist { padding: 1.1rem 0.85rem; text-align: center; font-size: 0.72rem; color: var(--text-muted); }
+
+        .start-overlay { position: fixed; inset: 0; z-index: 55; background: rgba(2, 6, 23, 0.62); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 1rem; }
+        .start-card { background: var(--surface-solid); border-radius: 24px; padding: 1.5rem 1.2rem 1.2rem; max-width: 400px; width: 100%; text-align: center; box-shadow: var(--shadow-xl); animation: cardIn 0.35s var(--ease-spring) both; }
+        @keyframes cardIn { from { opacity: 0; transform: translateY(24px) scale(0.94); } }
+        .start-icon { width: 62px; height: 62px; margin: 0 auto 0.7rem; border-radius: 18px; display: grid; place-items: center; font-size: 1.6rem; color: #fff; background: linear-gradient(135deg, #5b21b6, #8b5cf6); box-shadow: 0 10px 24px rgba(124, 58, 237, 0.4); }
+        .start-card h2 { font-size: 1.15rem; font-weight: 800; }
+        .start-card > p { font-size: 0.72rem; color: var(--text-muted); margin-top: 3px; }
+        .start-diffs { display: grid; gap: 8px; margin: 1rem 0 0.7rem; }
+        .start-diff {
+            border: 1.5px solid var(--border-solid); background: var(--bg); border-radius: 15px;
+            padding: 0.75rem 0.9rem; font-family: inherit; cursor: pointer; text-align: left;
+            display: flex; align-items: center; gap: 0.8rem; transition: transform 0.15s var(--ease-out), border-color 0.15s;
+        }
+        .start-diff:hover { transform: translateY(-2px); border-color: #8b5cf6; }
+        .start-diff:active { transform: scale(0.97); }
+        .start-diff b { font-size: 0.88rem; font-weight: 800; color: var(--text-primary); display: block; }
+        .start-diff span { font-size: 0.64rem; color: var(--text-muted); display: block; }
+        .start-diff em { margin-left: auto; font-style: normal; font-size: 0.66rem; font-weight: 800; color: var(--success); background: var(--success-soft); padding: 4px 9px; border-radius: 99px; flex: 0 0 auto; }
+        .start-note { font-size: 0.6rem; color: var(--text-muted); }
+        .level-chip { display: inline-flex; align-items: center; gap: 5px; background: var(--surface-solid); border: 1px solid var(--border-solid); padding: 6px 11px; border-radius: 999px; font-size: 0.66rem; font-weight: 800; color: var(--text-secondary); cursor: pointer; }
+        .level-chip i { color: #8b5cf6; }
         @media (min-width: 431px) { .app-shell { border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); margin: 0 auto; } }
     </style>
     <%- include('partials/theme-toggle') %>
@@ -115,12 +141,8 @@
     </div>
     <div class="page-content">
         <div class="game-top">
-            <div class="game-title">Play vs AI<span>You are White</span></div>
-            <div class="diff-switch">
-                <button class="diff-btn" data-level="easy">Easy</button>
-                <button class="diff-btn active" data-level="medium">Medium</button>
-                <button class="diff-btn" data-level="hard">Hard</button>
-            </div>
+            <div class="game-title">Play vs AI<span>You are White · tap a piece to see its moves</span></div>
+            <button class="level-chip" onclick="reopenStart()"><i class="fas fa-sliders"></i> <span id="levelLabel">Medium</span></button>
         </div>
 
         <div class="game-layout">
@@ -178,6 +200,20 @@
     <%- include('partials/bottom-nav', { activeNav: 'study' }) %>
 </div>
 
+<div class="start-overlay" id="startOverlay">
+    <div class="start-card">
+        <div class="start-icon"><i class="fas fa-chess-knight"></i></div>
+        <h2>Chess vs AI</h2>
+        <p>Choose your difficulty to start earning XP</p>
+        <div class="start-diffs">
+            <button class="start-diff" onclick="pickLevel('easy')"><div><b>Easy</b><span>Plays random moves</span></div><em>+60 XP</em></button>
+            <button class="start-diff" onclick="pickLevel('medium')"><div><b>Medium</b><span>Hunts captures and checks</span></div><em>+90 XP</em></button>
+            <button class="start-diff" onclick="pickLevel('hard')"><div><b>Hard</b><span>Thinks two moves deep</span></div><em>+135 XP</em></button>
+        </div>
+        <p class="start-note">Win +XP · Draw +40% · Loss −15 XP · harder levels earn more</p>
+    </div>
+</div>
+
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
@@ -191,12 +227,14 @@
     var game = new Chess();
     var board = null;
     var level = 'medium';
+    var started = false;
     var aiThinking = false;
     var aiTimer = null;
     var resultSaved = false;
     var startedAt = Date.now();
     var playerColor = 'w';
     var orientation = 'w';
+    var selectedSquare = null;
 
     var statusText = document.getElementById('statusText');
     var statusPill = document.getElementById('statusPill');
@@ -212,35 +250,57 @@
         if (board) { board.destroy(); }
         board = Chessboard('chessBoard', {
             position: game.fen(),
-            draggable: true,
+            draggable: false,
             orientation: orientation === 'w' ? 'white' : 'black',
             pieceTheme: PIECE_THEME,
-            width: boardWidth(),
-            onDragStart: onDragStart,
-            onDrop: onDrop,
-            onSnapEnd: onSnapEnd
+            width: boardWidth()
+        });
+        $('#chessBoard').off('click', '.square-55d63').on('click', '.square-55d63', function () {
+            onSquareTap($(this).attr('data-square'));
         });
     }
 
-    function onDragStart(source, piece) {
-        if (aiThinking || game.game_over() || resultSaved) return false;
-        if (game.turn() !== playerColor) return false;
-        var prefix = playerColor === 'w' ? 'w' : 'b';
-        return piece.charAt(0) === prefix;
+    // ---------- Tap to move ----------
+    function clearSelection() {
+        selectedSquare = null;
+        $('#chessBoard .square-55d63').removeClass('sq-sel sq-dot sq-cap');
     }
 
-    function onDrop(source, target) {
-        var move = game.move({ from: source, to: target, promotion: 'q' });
-        if (move === null) return 'snapback';
-        afterMove();
-        return undefined;
+    function selectSquare(sq) {
+        clearSelection();
+        var moves = game.moves({ square: sq, verbose: true });
+        if (!moves.length) return;
+        selectedSquare = sq;
+        $('#chessBoard .square-' + sq).addClass('sq-sel');
+        moves.forEach(function (m) {
+            $('#chessBoard .square-' + m.to).addClass(m.captured ? 'sq-cap' : 'sq-dot');
+        });
     }
 
-    function onSnapEnd() {
-        board.position(game.fen());
+    function onSquareTap(sq) {
+        if (!sq || !started || aiThinking || game.game_over() || resultSaved) return;
+        if (game.turn() !== playerColor) return;
+        if (selectedSquare && selectedSquare !== sq) {
+            var moves = game.moves({ square: selectedSquare, verbose: true });
+            var target = moves.some(function (m) { return m.to === sq; });
+            if (target) {
+                var move = game.move({ from: selectedSquare, to: sq, promotion: 'q' });
+                clearSelection();
+                if (move) afterMove();
+                return;
+            }
+        }
+        var piece = game.get(sq);
+        if (piece && piece.color === playerColor) {
+            if (selectedSquare === sq) { clearSelection(); return; }
+            selectSquare(sq);
+        } else {
+            clearSelection();
+        }
     }
 
     function afterMove() {
+        clearSelection();
         board.position(game.fen());
         updateStatus();
         updateMoveHistory();
@@ -481,15 +541,22 @@
         }
 
         var duration = Math.floor((Date.now() - startedAt) / 1000);
-        saveResult(score, outcome, duration, function () {
+        saveResult(score, outcome, duration, function (data) {
             var title = outcome === 'win' ? 'You win!' : outcome === 'draw' ? 'Draw' : 'AI wins';
             var icon = outcome === 'win' ? 'success' : outcome === 'draw' ? 'info' : 'error';
+            var xp = data && typeof data.xp_gained === 'number' ? data.xp_gained : null;
+            var xpLine = '';
+            if (xp !== null) {
+                var xpColor = xp >= 0 ? '#16a34a' : '#dc2626';
+                xpLine = '<div style="margin-top:6px;font-weight:800;color:' + xpColor + '">' + (xp >= 0 ? '+' + xp : '−' + Math.abs(xp)) + ' XP</div>' +
+                         '<div style="font-size:0.72rem;color:#64748b">Level ' + (data.level || 1) + ' · ' + (data.xp || 0).toLocaleString() + ' XP total</div>';
+            }
             Swal.fire({
                 icon: icon,
                 title: title,
                 html: '<div style="font-size:0.9rem;line-height:1.7">' +
-                      '<b style="font-size:1.6rem;color:#7c3aed">' + score + '</b> points<br>' +
-                      'Level: ' + level + ' · ' + Math.ceil(game.history().length / 2) + ' moves' +
+                      '<b style="font-size:1.6rem;color:#7c3aed">' + score + '</b> points' + xpLine +
+                      '<div style="font-size:0.72rem;color:#64748b;margin-top:4px">' + level + ' · ' + Math.ceil(game.history().length / 2) + ' moves</div>' +
                       '</div>',
                 confirmButtonText: 'New game',
                 confirmButtonColor: '#7c3aed',
@@ -512,7 +579,9 @@
                 game: 'chess', score: score, outcome: outcome, duration: duration,
                 metadata: { difficulty: level, moves: Math.ceil(game.history().length / 2), plies: game.history().length }
             })
-        }).then(function () { loadStats(); }).catch(function () {}).finally(function () { if (cb) cb(); });
+        }).then(function (r) { return r.json(); })
+            .then(function (data) { loadStats(); if (cb) cb(data); })
+            .catch(function () { if (cb) cb(null); });
     }
 
     // ---------- Controls ----------
@@ -530,7 +599,7 @@
     }
 
     function undoMove() {
-        if (aiThinking || resultSaved) return;
+        if (!started || aiThinking || resultSaved) return;
         var hist = game.history();
         if (!hist.length) return;
         if (hist.length >= 2 && game.turn() === playerColor) { game.undo(); game.undo(); }
@@ -561,13 +630,17 @@
         });
     }
 
-    function setLevel(l) {
+    window.pickLevel = function (l) {
         level = l;
-        document.querySelectorAll('.diff-btn').forEach(function (b) {
-            b.classList.toggle('active', b.dataset.level === l);
-        });
+        started = true;
+        document.getElementById('levelLabel').textContent = l.charAt(0).toUpperCase() + l.slice(1);
+        document.getElementById('startOverlay').style.display = 'none';
         newGame();
-    }
+    };
+
+    window.reopenStart = function () {
+        document.getElementById('startOverlay').style.display = '';
+    };
 
     // ---------- Stats ----------
     function loadStats() {
@@ -607,9 +680,6 @@
         if (board) board.orientation(orientation === 'w' ? 'white' : 'black');
     });
     document.getElementById('resignBtn').addEventListener('click', resign);
-    document.querySelectorAll('.diff-btn').forEach(function (b) {
-        b.addEventListener('click', function () { setLevel(b.dataset.level); });
-    });
     window.addEventListener('resize', function () { if (board) board.resize(); });
 
     document.addEventListener('DOMContentLoaded', function () {

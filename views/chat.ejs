@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <style>
+        .status-bar { height: env(safe-area-inset-top, 0px); }
+        .page-content { padding: 0 1rem 2rem; max-width: 640px; margin: 0 auto; }
+
+        .chat-actions { display: flex; gap: 7px; margin: 0.4rem 0 0.9rem; }
+        .chat-action {
+            flex: 1; border: 1px solid var(--border-solid); border-radius: 13px;
+            padding: 0.7rem 0.4rem; font-family: inherit; font-size: 0.68rem; font-weight: 800;
+            cursor: pointer; background: var(--surface-solid); color: var(--text-secondary);
+            display: flex; align-items: center; justify-content: center; gap: 6px; transition: transform 0.12s;
+        }
+        .chat-action:active { transform: scale(0.96); }
+        .chat-action.primary { background: var(--brand-gradient); color: #fff; border-color: transparent; }
+
+        .conv-row {
+            display: flex; align-items: center; gap: 0.75rem;
+            background: var(--surface-solid); border: 1px solid var(--border-solid);
+            border-radius: 15px; padding: 0.7rem 0.8rem; margin-bottom: 0.55rem;
+            cursor: pointer; transition: transform 0.15s var(--ease-out), box-shadow 0.15s;
+        }
+        .conv-row:active { transform: scale(0.985); }
+        .conv-row:hover { box-shadow: var(--shadow-md); }
+        .conv-avatar { width: 48px; height: 48px; flex: 0 0 48px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 0.95rem; text-transform: uppercase; }
+        .conv-avatar.group { border-radius: 15px; }
+        .conv-main { flex: 1; min-width: 0; }
+        .conv-top { display: flex; align-items: baseline; gap: 0.4rem; }
+        .conv-name { font-size: 0.86rem; font-weight: 800; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+        .conv-time { font-size: 0.58rem; color: var(--text-muted); flex: 0 0 auto; }
+        .conv-bottom { display: flex; align-items: center; gap: 0.4rem; margin-top: 2px; }
+        .conv-preview { font-size: 0.7rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+        .conv-preview.unread { color: var(--text-primary); font-weight: 700; }
+        .conv-unread { min-width: 19px; height: 19px; padding: 0 5px; border-radius: 99px; background: var(--brand-gradient); color: #fff; font-size: 0.6rem; font-weight: 800; display: grid; place-items: center; flex: 0 0 auto; }
+        .tick { font-size: 0.62rem; color: var(--text-muted); flex: 0 0 auto; }
+        .tick.read { color: #38bdf8; }
+
+        .sheet-backdrop { position: fixed; inset: 0; background: rgba(2, 6, 23, 0.55); z-index: 60; display: none; align-items: flex-end; justify-content: center; backdrop-filter: blur(3px); }
+        .sheet-backdrop.open { display: flex; }
+        .sheet {
+            background: var(--surface-solid); width: 100%; max-width: 520px;
+            border-radius: 22px 22px 0 0; padding: 1.1rem 1.1rem 1.5rem;
+            max-height: 82vh; overflow-y: auto;
+        }
+        .sheet h3 { font-size: 0.95rem; font-weight: 800; margin-bottom: 0.7rem; display: flex; align-items: center; justify-content: space-between; }
+        .sheet h3 button { border: none; background: var(--bg); color: var(--text-secondary); width: 30px; height: 30px; border-radius: 50%; cursor: pointer; }
+        .sheet input[type="text"] {
+            width: 100%; padding: 0.72rem 0.9rem; border: 1.5px solid var(--border-solid);
+            border-radius: 12px; background: var(--bg); color: var(--text-primary);
+            font-family: inherit; font-size: 0.85rem; outline: none; margin-bottom: 0.7rem;
+        }
+        .pick-list { max-height: 300px; overflow-y: auto; }
+        .pick-row { display: flex; align-items: center; gap: 0.65rem; padding: 0.5rem 0.4rem; border-radius: 11px; cursor: pointer; }
+        .pick-row:hover { background: var(--bg); }
+        .pick-row img, .pick-row .avatar { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 0.8rem; }
+        .pick-check { margin-left: auto; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border-solid); display: grid; place-items: center; color: transparent; font-size: 0.6rem; }
+        .pick-row.selected .pick-check { background: var(--brand); border-color: var(--brand); color: #fff; }
+        .sheet-cta { width: 100%; border: none; border-radius: 13px; padding: 0.8rem; font-family: inherit; font-weight: 800; font-size: 0.8rem; background: var(--brand-gradient); color: #fff; cursor: pointer; margin-top: 0.8rem; }
+
+        .empty-note { padding: 2.2rem 1rem; text-align: center; color: var(--text-muted); font-size: 0.78rem; }
+        .empty-note i { display: block; font-size: 1.6rem; margin-bottom: 0.5rem; opacity: 0.5; }
+        @media (min-width: 431px) { .app-shell { border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); margin: 0 auto; } }
+    </style>
+    <%- include('partials/theme-toggle') %>
+</head>
+<body>
+<%- include('partials/sidebar') %>
+<div class="app-shell">
+    <div class="status-bar"></div>
+    <div class="header-nav">
+        <a href="/dashboard" class="back-circle"><i class="fas fa-arrow-left"></i></a>
+        <div class="header-title">Chats</div>
+    </div>
+    <div class="page-content">
+        <div class="chat-actions">
+            <button class="chat-action primary" id="newChatBtn"><i class="fas fa-comment-medical"></i> New chat</button>
+            <button class="chat-action" id="newGroupBtn"><i class="fas fa-users"></i> New group</button>
+        </div>
+        <div id="convList"><div class="empty-note"><i class="fas fa-spinner fa-spin"></i>Loading…</div></div>
+    </div>
+    <%- include('partials/bottom-nav', { activeNav: 'chats' }) %>
+</div>
+
+<div class="sheet-backdrop" id="sheetBackdrop">
+    <div class="sheet">
+        <h3><span id="sheetTitle">New chat</span><button onclick="closeSheet()"><i class="fas fa-xmark"></i></button></h3>
+        <input type="text" id="groupName" placeholder="Group name" style="display:none">
+        <div class="pick-list" id="pickList"></div>
+        <button class="sheet-cta" id="sheetCta">Start chat</button>
+    </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+(function () {
+    'use strict';
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&':'&'+'amp;','<':'&'+'lt;','>':'&'+'gt;','"':'&'+'quot;',"'":'&#39;'}[c]; }); }
+    function avatarColor(id) { return 'hsl(' + ((id * 137.5) % 360) + ', 62%, 45%)'; }
+    function initials(name) { return String(name || '?').trim().split(/\s+/).slice(0, 2).map(function (w) { return w.charAt(0); }).join(''); }
+    function fmtTime(v) {
+        var d = new Date(v);
+        if (isNaN(d)) return '';
+        var now = new Date();
+        if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+        return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    }
+
+    var socket = null;
+    try {
+        socket = io({ transports: ['polling', 'websocket'] });
+        socket.on('chat:message', function (data) { if (data && data.conversationId) refresh(); });
+        socket.on('chat:members', function () { refresh(); });
+    } catch (e) {}
+
+    function refresh() {
+        fetch('/api/chat/conversations', { headers: { Accept: 'application/json' } })
+            .then(function (r) { return r.json(); })
+            .then(renderList)
+            .catch(function () {
+                document.getElementById('convList').innerHTML = '<div class="empty-note"><i class="fas fa-triangle-exclamation"></i>Could not load chats.</div>';
+            });
+    }
+
+    function renderList(d) {
+        var convs = d.conversations || [];
+        var el = document.getElementById('convList');
+        if (!convs.length) {
+            el.innerHTML = '<div class="empty-note"><i class="fas fa-comments"></i>No chats yet.<br>Start one with a friend.</div>';
+            return;
+        }
+        el.innerHTML = convs.map(function (c) {
+            var tick = '';
+            if (c.last_sender_me && c.last_at) tick = '<i class="fas fa-check-double tick"></i>';
+            return '<div class="conv-row" onclick="location.href=\'/chat/' + c.id + '\'">' +
+                '<div class="conv-avatar' + (c.type === 'group' ? ' group' : '') + '" style="background:' + avatarColor(c.id) + '">' +
+                (c.type === 'group' ? '<i class="fas fa-users"></i>' : esc(initials(c.title))) + '</div>' +
+                '<div class="conv-main">' +
+                '<div class="conv-top"><span class="conv-name">' + esc(c.title) + '</span><span class="conv-time">' + fmtTime(c.last_at) + '</span></div>' +
+                '<div class="conv-bottom">' + tick +
+                '<span class="conv-preview' + (c.unread ? ' unread' : '') + '">' + esc(c.last_preview) + '</span>' +
+                (c.unread ? '<span class="conv-unread">' + (c.unread > 99 ? '99+' : c.unread) + '</span>' : '') +
+                '</div></div></div>';
+        }).join('');
+    }
+
+    var friends = [];
+    var sheetMode = 'chat';
+    var selected = {};
+
+    function openSheet(mode) {
+        sheetMode = mode;
+        selected = {};
+        document.getElementById('groupName').style.display = mode === 'group' ? '' : 'none';
+        document.getElementById('groupName').value = '';
+        document.getElementById('sheetTitle').textContent = mode === 'group' ? 'New group' : 'New chat';
+        document.getElementById('sheetCta').textContent = mode === 'group' ? 'Create group' : 'Start chat';
+        var list = document.getElementById('pickList');
+        if (!friends.length) {
+            list.innerHTML = '<div class="empty-note">Add friends first from the Friends page.</div>';
+        } else {
+            list.innerHTML = friends.map(function (f) {
+                return '<div class="pick-row" data-id="' + f.id + '" onclick="togglePick(' + f.id + ')">' +
+                    '<div class="avatar" style="background:' + avatarColor(f.id) + '">' + esc(initials(f.fullname)) + '</div>' +
+                    '<div><div style="font-size:0.8rem;font-weight:700">' + esc(f.fullname) + '</div>' +
+                    '<div style="font-size:0.6rem;color:var(--text-muted)">Level ' + (f.level || 1) + '</div></div>' +
+                    '<div class="pick-check"><i class="fas fa-check"></i></div></div>';
+            }).join('');
+        }
+        document.getElementById('sheetBackdrop').classList.add('open');
+    }
+
+    window.closeSheet = function () { document.getElementById('sheetBackdrop').classList.remove('open'); };
+    window.togglePick = function (id) {
+        if (sheetMode === 'chat') {
+            fetch('/api/chat/conversations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: id }) })
+                .then(function (r) { return r.json(); })
+                .then(function (d) { if (d.success) window.location.href = '/chat/' + d.id; });
+            return;
+        }
+        selected[id] = !selected[id];
+        document.querySelectorAll('.pick-row').forEach(function (row) {
+            row.classList.toggle('selected', !!selected[parseInt(row.dataset.id, 10)]);
+        });
+    };
+
+    document.getElementById('newChatBtn').addEventListener('click', function () { openSheet('chat'); });
+    document.getElementById('newGroupBtn').addEventListener('click', function () { openSheet('group'); });
+    document.getElementById('sheetBackdrop').addEventListener('click', function (e) { if (e.target === this) closeSheet(); });
+    document.getElementById('sheetCta').addEventListener('click', function () {
+        if (sheetMode !== 'group') return;
+        var name = document.getElementById('groupName').value.trim();
+        var memberIds = Object.keys(selected).filter(function (k) { return selected[k]; }).map(Number);
+        if (!name) { Swal.fire({ icon: 'warning', title: 'Enter a group name', confirmButtonColor: '#2563eb' }); return; }
+        if (!memberIds.length) { Swal.fire({ icon: 'warning', title: 'Select at least one friend', confirmButtonColor: '#2563eb' }); return; }
+        fetch('/api/chat/conversations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name, memberIds: memberIds }) })
+            .then(function (r) { return r.json(); })
+            .then(function (d) { if (d.success) window.location.href = '/chat/' + d.id; });
+    });
+
+    fetch('/api/friends', { headers: { Accept: 'application/json' } })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { friends = d.friends || []; })
+        .catch(function () {});
+
+    refresh();
+})();
+</script>
+</body>
+</html>

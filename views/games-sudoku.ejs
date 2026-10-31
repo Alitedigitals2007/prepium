@@ -70,8 +70,10 @@
             font-weight: 700;
             color: var(--brand);
             cursor: pointer;
-            transition: background 0.12s;
+            transition: background 0.12s, transform 0.1s;
+            text-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
         }
+        .cell:active { transform: scale(0.9); }
         .cell.given { color: var(--text-primary); font-weight: 800; background: var(--brand-soft); cursor: default; }
         .cell.peer { background: color-mix(in srgb, var(--brand) 7%, var(--surface-solid)); }
         .cell.selected { background: var(--brand); color: #fff; }
@@ -135,6 +137,25 @@
             font-size: 0.78rem; font-weight: 700; color: var(--text-secondary);
             gap: 8px;
         }
+
+        .start-overlay { position: fixed; inset: 0; z-index: 55; background: rgba(2, 6, 23, 0.62); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 1rem; }
+        .start-card { background: var(--surface-solid); border-radius: 24px; padding: 1.5rem 1.2rem 1.2rem; max-width: 400px; width: 100%; text-align: center; box-shadow: var(--shadow-xl); animation: cardIn 0.35s var(--ease-spring) both; }
+        @keyframes cardIn { from { opacity: 0; transform: translateY(24px) scale(0.94); } }
+        .start-icon { width: 62px; height: 62px; margin: 0 auto 0.7rem; border-radius: 18px; display: grid; place-items: center; font-size: 1.6rem; color: #fff; background: var(--brand-gradient); box-shadow: 0 10px 24px rgba(37, 99, 235, 0.4); }
+        .start-card h2 { font-size: 1.15rem; font-weight: 800; }
+        .start-card > p { font-size: 0.72rem; color: var(--text-muted); margin-top: 3px; }
+        .start-diffs { display: grid; gap: 8px; margin: 1rem 0 0.7rem; }
+        .start-diff {
+            border: 1.5px solid var(--border-solid); background: var(--bg); border-radius: 15px;
+            padding: 0.75rem 0.9rem; font-family: inherit; cursor: pointer; text-align: left;
+            display: flex; align-items: center; gap: 0.8rem; transition: transform 0.15s var(--ease-out), border-color 0.15s;
+        }
+        .start-diff:hover { transform: translateY(-2px); border-color: var(--brand); }
+        .start-diff:active { transform: scale(0.97); }
+        .start-diff b { font-size: 0.88rem; font-weight: 800; color: var(--text-primary); display: block; }
+        .start-diff span { font-size: 0.64rem; color: var(--text-muted); display: block; }
+        .start-diff em { margin-left: auto; font-style: normal; font-size: 0.66rem; font-weight: 800; color: var(--success); background: var(--success-soft); padding: 4px 9px; border-radius: 99px; flex: 0 0 auto; }
+        .start-note { font-size: 0.6rem; color: var(--text-muted); }
         @media (min-width: 431px) { .app-shell { border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); margin: 0 auto; } }
     </style>
     <%- include('partials/theme-toggle') %>
@@ -200,6 +221,20 @@
         </div>
     </div>
     <%- include('partials/bottom-nav', { activeNav: 'study' }) %>
+</div>
+
+<div class="start-overlay" id="startOverlay">
+    <div class="start-card">
+        <div class="start-icon"><i class="fas fa-table-cells"></i></div>
+        <h2>Sudoku</h2>
+        <p>Pick a difficulty to start earning XP</p>
+        <div class="start-diffs">
+            <button class="start-diff" onclick="pickDifficulty('easy')"><div><b>Easy</b><span>40 givens · relaxed</span></div><em>+40 XP</em></button>
+            <button class="start-diff" onclick="pickDifficulty('medium')"><div><b>Medium</b><span>32 givens · thinking required</span></div><em>+60 XP</em></button>
+            <button class="start-diff" onclick="pickDifficulty('hard')"><div><b>Hard</b><span>26 givens · for experts</span></div><em>+90 XP</em></button>
+        </div>
+        <p class="start-note">Faster solves and fewer mistakes earn bonus XP</p>
+    </div>
 </div>
 
 <script>
@@ -459,16 +494,19 @@
                 game: 'sudoku', score: score, outcome: 'win', duration: seconds,
                 metadata: { difficulty: difficulty, mistakes: mistakes, hints: hints }
             })
-        }).then(function () { loadStats(); }).catch(function () {}).finally(function () { if (cb) cb(); });
+        }).then(function (r) { return r.json(); })
+            .then(function (data) { loadStats(); if (cb) cb(data); })
+            .catch(function () { if (cb) cb(null); });
     }
 
-    function setDifficulty(d) {
+    window.pickDifficulty = function (d) {
         difficulty = d;
         document.querySelectorAll('.diff-btn').forEach(function (b) {
             b.classList.toggle('active', b.dataset.diff === d);
         });
+        document.getElementById('startOverlay').style.display = 'none';
         newGame();
-    }
+    };
 
     function loadStats() {
         fetch('/api/games/stats', { headers: { Accept: 'application/json' } })
@@ -531,7 +569,6 @@
     });
 
     loadStats();
-    newGame();
 })();
 </script>
 </body>

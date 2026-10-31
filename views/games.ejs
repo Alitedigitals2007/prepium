@@ -61,6 +61,11 @@
         }
         .hero-stat b { display: block; font-size: 1.2rem; font-weight: 800; line-height: 1.1; }
         .hero-stat span { display: block; font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.09em; opacity: 0.85; margin-top: 0.15rem; }
+        .hero-xp { margin-top: 0.9rem; position: relative; z-index: 1; }
+        .hero-xp-top { display: flex; align-items: center; justify-content: space-between; font-size: 0.62rem; font-weight: 700; opacity: 0.9; margin-bottom: 4px; }
+        .xp-link { color: #fff; text-decoration: none; font-weight: 800; display: inline-flex; align-items: center; gap: 4px; opacity: 0.95; }
+        .hero-xp-bar { height: 8px; border-radius: 99px; background: rgba(255,255,255,0.22); overflow: hidden; }
+        .hero-xp-bar i { display: block; height: 100%; border-radius: 99px; background: #fff; transition: width 0.6s var(--ease-out); }
 
         .section-title {
             display: flex; align-items: center; justify-content: space-between;
@@ -186,9 +191,14 @@
                 </div>
             </div>
             <div class="hero-stats">
+                <div class="hero-stat"><b id="myLevel">1</b><span>Level</span></div>
                 <div class="hero-stat"><b id="totalPlays">0</b><span>Games played</span></div>
                 <div class="hero-stat"><b id="totalWins">0</b><span>Wins</span></div>
                 <div class="hero-stat"><b id="bestOverall">0</b><span>Best score</span></div>
+            </div>
+            <div class="hero-xp">
+                <div class="hero-xp-top"><span id="xpLabel">0 XP</span><a href="/friends?tab=leaderboard" class="xp-link">Leaderboard <i class="fas fa-arrow-right"></i></a></div>
+                <div class="hero-xp-bar"><i id="xpBar" style="width:0%"></i></div>
             </div>
         </div>
 
@@ -284,6 +294,11 @@
             document.getElementById('totalPlays').textContent = totalPlays;
             document.getElementById('totalWins').textContent = totalWins;
             document.getElementById('bestOverall').textContent = bestOverall;
+            var xp = data.xp || 0, level = data.level || 1;
+            var cur = data.current_level_xp || 0, next = data.next_level_xp || 100;
+            document.getElementById('myLevel').textContent = level;
+            document.getElementById('xpLabel').textContent = xp.toLocaleString() + ' XP · ' + (next - xp).toLocaleString() + ' to level ' + (level + 1);
+            document.getElementById('xpBar').style.width = Math.max(0, Math.min(100, Math.round(((xp - cur) / Math.max(1, next - cur)) * 100))) + '%';
 
             document.querySelectorAll('.game-card').forEach(function (card) {
                 var s = stats[card.dataset.game] || { plays: 0, best_score: 0 };
