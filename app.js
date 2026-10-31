@@ -8473,12 +8473,39 @@ app.get('/chat/:id', isAuth, (req, res) => {
 });
 
 
+// Resolve the Socket.IO browser client without relying on package "exports"
+// (socket.io no longer exposes ./client-dist/* via require.resolve).
+function resolveSocketIoClient() {
+    const candidates = [];
+    try {
+        candidates.push(path.join(path.dirname(require.resolve('socket.io/package.json')), 'client-dist', 'socket.io.min.js'));
+    } catch (e) {}
+    try {
+        candidates.push(path.join(__dirname, 'node_modules', 'socket.io', 'client-dist', 'socket.io.min.js'));
+    } catch (e) {}
+    for (const p of candidates) {
+        try { if (fs.existsSync(p)) return p; } catch (e) {}
+    }
+    return null;
+}
+const SOCKET_IO_CLIENT_PATH = resolveSocketIoClient();
+
 // Serve the Socket.IO client explicitly so it also works on serverless
 // deployments where the exported Express app is not attached to an HTTP server.
 app.get('/socket.io/socket.io.js', (req, res, next) => {
-    try {
-        res.sendFile(require.resolve('socket.io/client-dist/socket.io.min.js'));
-    } catch (e) { next(); }
+    if (!SOCKET_IO_CLIENT_PATH) { console.error('[Socket.IO] client bundle not found'); return next(); }
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.sendFile(SOCKET_IO_CLIENT_PATH);
+});
+
+// Mount the Socket.IO engine on Express as well. On serverless hosts (Vercel)
+// the exported app is not served by our own httpServer, so the polling
+// handshake would otherwise 404 and the client could never connect.
+app.use((req, res, next) => {
+    if (req.url && req.url.indexOf('/socket.io/') === 0 && io) {
+        try { return io.engine.handleRequest(req, res); } catch (e) { return next(e); }
+    }
+    next();
 });
 
 // 404 handler (must be registered after all routes)
