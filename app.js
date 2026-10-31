@@ -1,4 +1,5 @@
 const express = require('express');
+const http = require('http');
 const helmet = require('helmet');
 const nodemailer = require('nodemailer');
 const bcrypt = require('bcryptjs');
@@ -13,30 +14,29 @@ const path = require('path');
 const crypto = require('crypto');
 const { Pool } = require('pg');
 
+// Session secret: use the configured value, or a random per-process secret as a
+// safe fallback (sessions will not survive restarts in that case).
+if (!process.env.SESSION_SECRET) {
+    console.warn('[Session] SESSION_SECRET is not set — using an ephemeral secret. Set it in production.');
+}
+const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
+
 // Premium price (configurable via env)
 const PREMIUM_PRICE = parseInt(process.env.PREMIUM_PRICE) || 2000;
 
 const pdfParse = require('pdf-parse');
 
-const upload = multer({ 
-    storage: multer.diskStorage({
-        destination: (req, file, cb) => {
-            const dir = path.join(__dirname, 'uploads', 'materials');
-            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-            cb(null, dir);
-        },
-        filename: (req, file, cb) => {
-            const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname);
-            cb(null, uniqueName);
-        }
-    }),
-    limits: { fileSize: 100 * 1024 * 1024 }
+// Memory storage: Vercel's filesystem is read-only/ephemeral, so uploads are
+// persisted in Postgres instead of local disk.
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 25 * 1024 * 1024 }
 });
 
 // Memory storage for timetable extraction (need buffer)
 const uploadMemory = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 100 * 1024 * 1024 }
+    limits: { fileSize: 25 * 1024 * 1024 }
 });
 
 const pgSession = require('connect-pg-simple')(session);
@@ -59,6 +59,15 @@ function rateLimit(maxRequests = 10, windowMs = 60000) {
     };
 }
 
+// Prevent the in-memory limiter from growing without bound.
+const rateLimitCleanup = setInterval(() => {
+    const now = Date.now();
+    for (const key of Object.keys(rateLimitStore)) {
+        if (now - rateLimitStore[key].start > 10 * 60 * 1000) delete rateLimitStore[key];
+    }
+}, 5 * 60 * 1000);
+if (rateLimitCleanup.unref) rateLimitCleanup.unref();
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
@@ -76,9 +85,13 @@ pool.on('error', (err) => {
 
 // Keep the (free-tier) database awake — Neon suspends after ~5 min idle,
 // and a cold start can exceed the connection timeout and kill requests.
-setInterval(() => {
-    pool.query('SELECT 1').catch(() => {});
-}, 120000);
+// Only useful on a long-running server; skip on serverless.
+if (!process.env.VERCEL) {
+    const keepAlive = setInterval(() => {
+        pool.query('SELECT 1').catch(() => {});
+    }, 120000);
+    if (keepAlive.unref) keepAlive.unref();
+}
 
 // Test database connection on startup
 (async () => {
@@ -383,7 +396,7 @@ const transporter = (process.env.EMAIL_USER && process.env.EMAIL_PASS)
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
-app.disable('view cache');
+app.set('view cache', process.env.NODE_ENV === 'production');
 
 // Paystack webhook needs raw body BEFORE express.json() consumes it
 app.post('/paystack-webhook', express.raw({ type: '*/*' }), async (req, res) => {
@@ -450,8 +463,8 @@ app.post('/paystack-webhook', express.raw({ type: '*/*' }), async (req, res) => 
     }
 });
 
-app.use(express.json({ limit: '200mb' }));
-app.use(express.urlencoded({ extended: true, limit: '200mb' }));
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Add this line directly ABOVE your app.use(session({...})) middleware declaration
@@ -463,7 +476,7 @@ app.use(helmet({
 }));
 
 app.use(session({
-    secret: process.env.SESSION_SECRET,
+    secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     store: new pgSession({
@@ -496,19 +509,6 @@ const isAuth = (req, res, next) => {
         return res.status(401).json({ success: false, message: 'Not authenticated' });
     }
     res.redirect('/login');
-};
-
-// Middleware to check payment status
-const hasPaid = async (req, res, next) => {
-    if (!req.session.user) return res.redirect('/login');
-    try {
-        const r = await pool.query('SELECT has_paid FROM users WHERE id = $1', [req.session.user.id]);
-        if (r.rows[0]?.has_paid) {
-            req.session.user.has_paid = true;
-            return next();
-        }
-    } catch (_) { }
-    res.redirect('/dashboard');
 };
 
 const requirePaid = async (req, res, next) => {
@@ -546,6 +546,13 @@ const isAdmin = (req, res, next) => {
     // If they aren't an admin, they stay out
     res.status(403).send("Access Denied: Admins Only");
 };
+
+// Constant-time string comparison (hashes first so lengths always match)
+function safeEqual(a, b) {
+    const ha = crypto.createHash('sha256').update(String(a || '')).digest();
+    const hb = crypto.createHash('sha256').update(String(b || '')).digest();
+    return crypto.timingSafeEqual(ha, hb);
+}
 
 // ======================== SEO Middleware ========================
 const BASE_URL = 'https://theprepium.vercel.app';
@@ -596,40 +603,6 @@ app.get('/sitemap.xml', async function (req, res) {
   } catch (e) {
     res.type('application/xml').status(500).send('<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>');
   }
-});
-
-// Generate Test (The Logic)
-app.post('/start-test', isAuth, hasPaid, async (req, res) => {
-    const { subjectIds, numQuestions } = req.body; // array of IDs
-    const query = `
-        SELECT q.*, s.name as subject_name 
-        FROM questions q 
-        JOIN subjects s ON q.subject_id = s.id 
-        WHERE q.subject_id = ANY($1) 
-        ORDER BY RANDOM() 
-        LIMIT $2`;
-    
-    const testQuestions = await pool.query(query, [subjectIds, numQuestions]);
-    req.session.currentTest = testQuestions.rows;
-    res.render('test-screen', { questions: testQuestions.rows });
-});
-
-// Submit Test
-app.post('/submit-test', isAuth, async (req, res) => {
-    const userAnswers = req.body.answers; // object {questionId: selectedOption}
-    const questions = req.session.currentTest;
-    let score = 0;
-
-    questions.forEach(q => {
-        if (userAnswers[q.id] === q.correct_option) {
-            score++;
-        }
-    });
-
-    await pool.query('INSERT INTO results (user_id, score, total_questions) VALUES ($1, $2, $3)', 
-        [req.session.user.id, score, questions.length]);
-
-    res.render('score-screen', { score, total: questions.length, questions, userAnswers });
 });
 
 // Front Page
@@ -946,7 +919,13 @@ function featureLock(key) {
         return res.redirect('/dashboard?msg=' + encodeURIComponent('This feature is locked for your school by the administrator'));
       }
       next();
-    } catch (_) { next(); }
+    } catch (err) {
+      // Fail closed: if entitlements cannot be verified, do not grant access.
+      console.error('[featureLock]', err.message);
+      const isAPI = req.xhr || (req.headers.accept && req.headers.accept.includes('json')) || req.path.startsWith('/api/');
+      if (isAPI) return res.status(503).json({ success: false, message: 'Could not verify feature access. Try again.' });
+      return res.status(503).send('Could not verify feature access. Please try again later.');
+    }
   };
 }
 
@@ -1422,10 +1401,9 @@ app.get('/upgrade', isAuth, async (req, res) => {
 // ==========================================
 
 // JSON API for getting subjects based on student's university
-app.get('/api/subjects', async (req, res) => {
+app.get('/api/subjects', isAuth, async (req, res) => {
     try {
-        // Assume user object has university_id from signup
-        const userUni = req.session.user.university_id; 
+        const userUni = req.session.user.university_id;
         const result = await pool.query('SELECT * FROM subjects WHERE university_id = $1', [userUni]);
         res.json(result.rows);
     } catch (err) {
@@ -1433,11 +1411,15 @@ app.get('/api/subjects', async (req, res) => {
     }
 });
 
-// JSON API (To get questions for a subject)
-app.get('/api/questions/:subject_id', async (req, res) => {
+// JSON API (To get questions for a subject) — never expose the answer key
+app.get('/api/questions/:subject_id', isAuth, async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM questions WHERE subject_id = $1', [req.params.subject_id]);
-        res.json(result.rows); 
+        const result = await pool.query(
+            `SELECT id, subject_id, question_text, option_a, option_b, option_c, option_d
+             FROM questions WHERE subject_id = $1`,
+            [req.params.subject_id]
+        );
+        res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: "Failed to fetch questions" });
     }
@@ -1759,7 +1741,7 @@ app.post('/api/materials/upload', isAuth, upload.single('file'), async (req, res
         const file = req.file;
 
         await pool.query(`
-            INSERT INTO student_materials (user_id, name, description, file_type, file_size, file_path)
+            INSERT INTO student_materials (user_id, name, description, file_type, file_size, file_data)
             VALUES ($1, $2, $3, $4, $5, $6)
         `, [
             userId,
@@ -1767,14 +1749,13 @@ app.post('/api/materials/upload', isAuth, upload.single('file'), async (req, res
             description || '',
             file.mimetype,
             file.size,
-            file.path
+            file.buffer
         ]);
 
         res.json({ success: true, message: 'Material uploaded successfully' });
     } catch (err) {
         console.error('Material upload error:', err);
-        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-        res.status(500).json({ success: false, message: 'Upload failed: ' + err.message });
+        res.status(500).json({ success: false, message: 'Upload failed. Please try again.' });
     }
 });
 
@@ -1798,19 +1779,25 @@ app.get('/api/materials', isAuth, async (req, res) => {
 app.get('/api/materials/:id/view', isAuth, async (req, res) => {
     try {
         const result = await pool.query(
-            'SELECT file_path, file_type, name FROM student_materials WHERE id = $1 AND user_id = $2',
+            'SELECT file_data, file_path, file_type, name FROM student_materials WHERE id = $1 AND user_id = $2',
             [req.params.id, req.session.user.id]
         );
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Material not found' });
         }
         const file = result.rows[0];
-        if (!file.file_path || !fs.existsSync(file.file_path)) {
-            return res.status(404).json({ error: 'File not found on disk' });
+        const safeName = String(file.name || 'material').replace(/[^\w.\- ]/g, '_');
+        res.setHeader('Content-Type', file.file_type || 'application/octet-stream');
+        res.setHeader('Content-Disposition', `inline; filename="${safeName}"`);
+
+        if (file.file_data) {
+            return res.send(file.file_data);
         }
-        res.setHeader('Content-Type', file.file_type);
-        res.setHeader('Content-Disposition', `inline; filename="${file.name}"`);
-        res.sendFile(file.file_path);
+        // Backwards compatibility for files stored on disk before this change.
+        if (file.file_path && fs.existsSync(file.file_path)) {
+            return res.sendFile(file.file_path);
+        }
+        return res.status(404).json({ error: 'File data not found' });
     } catch (err) {
         console.error('View file error:', err);
         res.status(500).json({ error: 'Error loading file' });
@@ -2137,94 +2124,17 @@ app.get('/ambassador/login', (req, res) => {
     res.redirect('/login');
 });
 
-// POST: Process Ambassador Login (locked with Refer & Earn)
-app.post('/ambassador/login', async (req, res) => {
-    return res.status(403).json({ success: false, error: 'Refer & Earn is currently disabled' });
-    const { unique_code } = req.body;
-    try {
-        const result = await pool.query('SELECT * FROM ambassadors WHERE unique_code = $1', [unique_code]);
-        
-        if (result.rows.length > 0) {
-            // Save the ambassador to session
-            req.session.ambassador = result.rows[0];
-            res.redirect('/ambassador/dashboard');
-        } else {
-            res.send("Invalid Ambassador ID. <a href='/ambassador/login'>Try again</a>");
-        }
-    } catch (err) {
-        res.status(500).send("Login error.");
-    }
+// Ambassador login is disabled; the Refer & Earn system replaces it.
+app.post('/ambassador/login', (req, res) => {
+    res.status(403).json({ success: false, error: 'Refer & Earn is currently disabled' });
 });
 
-app.get('/ambassador/dashboard', async (req, res) => {
-    return res.redirect('/dashboard');
-    if (!req.session.ambassador) return res.redirect('/ambassador/login');
-
-    try {
-        const code = req.session.ambassador.unique_code;
-        
-        // 1. Fetch latest stats with a fallback of 0 for any missing/null columns
-        const ambData = await pool.query(
-            `SELECT 
-                id, 
-                name, 
-                unique_code, 
-                bank_details, 
-                COALESCE(total_referrals, 0) AS total_referrals, 
-                COALESCE(total_earned, 0) AS total_earned, 
-                COALESCE(total_withdrawn, 0) AS total_withdrawn 
-             FROM ambassadors 
-             WHERE unique_code = $1`, 
-            [code]
-        );
-
-        if (ambData.rows.length === 0) {
-            return res.redirect('/ambassador/login?error=Invalid session');
-        }
-
-        const ambassador = ambData.rows[0];
-
-        // Ensure these are treated as numbers and calculate available balance
-        const earned = Number(ambassador.total_earned) || 0;
-        const withdrawn = Number(ambassador.total_withdrawn) || 0;
-        
-        ambassador.current_balance = earned - withdrawn;
-        ambassador.total_earned = earned;
-        ambassador.total_withdrawn = withdrawn;
-
-        // 2. Fetch all referred users matching the unique_code exactly
-        const referrals = await pool.query(
-            `SELECT fullname, email, has_paid 
-             FROM users 
-             WHERE LOWER(TRIM(unique_code)) = LOWER(TRIM($1)) 
-             ORDER BY created_at DESC`, 
-            [code]
-        );
-
-        res.render('ambassador-dashboard', {
-            ambassador: ambassador,
-            referrals: referrals.rows
-        });
-    } catch (err) {
-        console.error("Dashboard route error:", err);
-        res.status(500).send("Error loading ambassador dashboard.");
-    }
+app.get('/ambassador/dashboard', (req, res) => {
+    res.redirect('/dashboard');
 });
 
-// POST: Update Ambassador Payout details (locked with Refer & Earn)
-app.post('/ambassador/update-bank', async (req, res) => {
-    return res.status(403).json({ success: false, error: 'Refer & Earn is currently disabled' });
-    if (!req.session.ambassador) return res.status(403).send("Unauthorized");
-    const { bank_details } = req.body;
-    try {
-        await pool.query(
-            'UPDATE ambassadors SET bank_details = $1 WHERE unique_code = $2', 
-            [bank_details, req.session.ambassador.unique_code]
-        );
-        res.redirect('/ambassador/dashboard?msg=Account details updated');
-    } catch (err) {
-        res.status(500).send("Update failed.");
-    }
+app.post('/ambassador/update-bank', (req, res) => {
+    res.status(403).json({ success: false, error: 'Refer & Earn is currently disabled' });
 });
 
 // GET: Admin View - Manage Ambassadors
@@ -2462,7 +2372,7 @@ app.get('/admin/login', (req, res) => {
 });
 
 // POST: Process Admin Login Credentials
-app.post('/admin/login', async (req, res) => {
+app.post('/admin/login', rateLimit(5, 60000), async (req, res) => {
     const { email, password } = req.body;
 
     try {
@@ -2474,7 +2384,7 @@ app.post('/admin/login', async (req, res) => {
             return res.render('admin-login', { error: "Admin login not configured." });
         }
 
-        if (email === adminEmail && password === adminPassword) {
+        if (safeEqual(email, adminEmail) && safeEqual(password, adminPassword)) {
             req.session.user = { 
                 id: 0, 
                 fullname: 'Admin', 
@@ -4200,16 +4110,29 @@ Return ONLY valid JSON array:
 
 app.post('/api/submit-arena', isAuth, async (req, res) => {
     const sessionUser = req.session.user;
-    const { attemptId, score } = req.body;
+    const { attemptId, answers } = req.body;
     const userId = sessionUser.id;
     const username = sessionUser.fullname;
 
     try {
         const attempt = await pool.query(
-            'SELECT id FROM daily_challenge_attempts WHERE id = $1 AND user_id = $2 AND completed = false',
+            'SELECT id, questions FROM daily_challenge_attempts WHERE id = $1 AND user_id = $2 AND completed = false',
             [attemptId, userId]
         );
         if (!attempt.rows[0]) return res.status(403).json({ error: 'No active challenge.' });
+
+        const questions = Array.isArray(attempt.rows[0].questions) ? attempt.rows[0].questions : [];
+        if (!Array.isArray(answers) || answers.length !== questions.length) {
+            return res.status(400).json({ error: 'Invalid answers submitted.' });
+        }
+
+        // Score is computed server-side from the stored answer key; never trust the client.
+        let score = 0;
+        questions.forEach((q, i) => {
+            const given = typeof answers[i] === 'string' ? answers[i].trim().toUpperCase() : '';
+            const correct = String(q.correct_option || '').trim().toUpperCase();
+            if (given && given === correct) score += 10;
+        });
 
         await pool.query(
             'UPDATE daily_challenge_attempts SET score = $1, completed = true WHERE id = $2',
@@ -5587,7 +5510,7 @@ app.get('/api/daily-task/weekly-report', isAuth, async (req, res) => {
     }
 });
 
-app.post('/upload-pdf', uploadMemory.single('lecture_note'), async (req, res) => {
+app.post('/upload-pdf', isAuth, requirePaid, rateLimit(10, 60000), uploadMemory.single('lecture_note'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: "No file uploaded." });
@@ -6343,10 +6266,15 @@ async function checkDeadlineNotifications() {
     }
 }
 
-// Run the deadline checker every 5 minutes
-setInterval(checkDeadlineNotifications, 5 * 60 * 1000);
-// Also run once on startup (after a short delay to let the server fully start)
-setTimeout(checkDeadlineNotifications, 10000);
+// Background jobs only run on a long-lived server, not on serverless functions.
+if (!process.env.VERCEL) {
+    // Run the deadline checker every 5 minutes
+    const deadlineTimer = setInterval(checkDeadlineNotifications, 5 * 60 * 1000);
+    if (deadlineTimer.unref) deadlineTimer.unref();
+    // Also run once on startup (after a short delay to let the server fully start)
+    const deadlineBoot = setTimeout(checkDeadlineNotifications, 10000);
+    if (deadlineBoot.unref) deadlineBoot.unref();
+}
 
 // ─── WEEKLY LEADERBOARD RESET ───────────────────────────────────────────────
 function getWeekKey(d) {
@@ -6372,9 +6300,13 @@ async function resetWeeklyLeaderboard() {
         console.error('[Leaderboard] Reset error:', e.message);
     }
 }
-// Check every 30 minutes
-setInterval(resetWeeklyLeaderboard, 30 * 60 * 1000);
-setTimeout(resetWeeklyLeaderboard, 5000);
+// Check every 30 minutes (long-running servers only)
+if (!process.env.VERCEL) {
+    const leaderboardTimer = setInterval(resetWeeklyLeaderboard, 30 * 60 * 1000);
+    if (leaderboardTimer.unref) leaderboardTimer.unref();
+    const leaderboardBoot = setTimeout(resetWeeklyLeaderboard, 5000);
+    if (leaderboardBoot.unref) leaderboardBoot.unref();
+}
 
 // ======================== STUDY HUB ROUTES ========================
 
@@ -6666,8 +6598,9 @@ async function studyPromptFast(prompt) {
 })();
 
 // ==================== DB MANAGER ====================
-const DB_PIN = process.env.DB_MANAGER_PIN || '1030';
-const DB_PASS = process.env.DB_MANAGER_PASS || 'prepiumdb';
+// No insecure defaults: the manager stays disabled unless both are configured.
+const DB_PIN = process.env.DB_MANAGER_PIN;
+const DB_PASS = process.env.DB_MANAGER_PASS;
 
 app.get('/admin/db-manager', isAdmin, async (req, res) => {
   try {
@@ -6682,8 +6615,11 @@ app.get('/admin/db-manager', isAdmin, async (req, res) => {
 });
 
 app.post('/admin/db-manager/verify-pin', isAdmin, async (req, res) => {
+  if (!DB_PIN || !DB_PASS) {
+    return res.status(503).json({ success: false, error: 'DB manager is not configured' });
+  }
   const { pin, password } = req.body;
-  if (pin === DB_PIN && (!password || password === DB_PASS)) {
+  if (safeEqual(pin, DB_PIN) && safeEqual(password, DB_PASS)) {
     res.json({ success: true });
   } else {
     res.json({ success: false });
@@ -6702,22 +6638,28 @@ app.get('/admin/db-manager/data/:table', isAdmin, async (req, res) => {
 app.post('/admin/db-manager/update', isAdmin, async (req, res) => {
   try {
     const { table, columns, row, pkCol, pkVal } = req.body;
-    const safeTable = table.replace(/[^a-zA-Z0-9_]/g, '');
-    const sets = columns.filter(c => c !== pkCol).map((c, i) => `"${c}" = $${i + 1}`);
-    const vals = columns.filter(c => c !== pkCol).map(c => row[c] === '' ? null : row[c]);
+    const ident = (v) => String(v || '').replace(/[^a-zA-Z0-9_]/g, '');
+    const safeTable = ident(table);
+    const safePk = ident(pkCol);
+    const safeCols = (Array.isArray(columns) ? columns : []).map(ident).filter(c => c && c !== safePk);
+    if (!safeTable || !safePk || !safeCols.length) {
+      return res.status(400).json({ success: false, error: 'Invalid table, primary key, or columns' });
+    }
+    const sets = safeCols.map((c, i) => `"${c}" = $${i + 1}`);
+    const vals = safeCols.map(c => row[c] === '' ? null : row[c]);
     vals.push(pkVal);
-    const idx = sets.length + 1;
-    await pool.query(`UPDATE "${safeTable}" SET ${sets.join(', ')} WHERE "${pkCol}" = $${idx}`, vals);
+    await pool.query(`UPDATE "${safeTable}" SET ${sets.join(', ')} WHERE "${safePk}" = $${vals.length}`, vals);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
 app.post('/admin/db-manager/query', isAdmin, async (req, res) => {
   try {
-    const { sql } = req.body;
-    const lower = sql.trim().toLowerCase();
-    if (!/^\s*(select|show|describe|explain)\b/i.test(sql)) {
-      return res.status(400).json({ success: false, error: 'Only SELECT queries allowed' });
+    const sql = String(req.body.sql || '').trim().replace(/;\s*$/, '');
+    // Only a single read-only statement; block stacking, comments and file/system functions.
+    if (!/^\s*(select|show|describe)\b/i.test(sql) || /;/.test(sql) || /--|\/\*/.test(sql) ||
+        /\b(pg_read_file|pg_ls_dir|pg_read_binary_file|lo_import|lo_export|copy|dblink)\b/i.test(sql)) {
+      return res.status(400).json({ success: false, error: 'Only a single read-only SELECT/SHOW/DESCRIBE query is allowed' });
     }
     const result = await pool.query(sql);
     const columns = result.fields ? result.fields.map(f => f.name) : [];
@@ -6725,7 +6667,101 @@ app.post('/admin/db-manager/query', isAdmin, async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
-// ==================== STUDY DASHBOARD ====================
+// ==================== GAMES HUB ====================
+const GAME_TYPES = ['sudoku', 'scramble', 'chess', 'crossword'];
+const GAME_OUTCOMES = ['win', 'loss', 'draw', 'completed', 'abandoned'];
+
+(async function initGameResults() {
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS game_results (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      game VARCHAR(20) NOT NULL,
+      score INTEGER NOT NULL DEFAULT 0,
+      outcome VARCHAR(20) NOT NULL DEFAULT 'completed',
+      duration_seconds INTEGER NOT NULL DEFAULT 0,
+      metadata JSONB NOT NULL DEFAULT '{}',
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_game_results_user ON game_results(user_id, created_at DESC)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_game_results_game ON game_results(user_id, game, score DESC)`);
+    console.log('[Games] Results table ready');
+  } catch (e) { console.error('[Games] Init:', e.message); }
+})();
+
+async function getGameStats(userId) {
+  const stats = await pool.query(
+    `SELECT game,
+            COUNT(*)::int AS plays,
+            COALESCE(MAX(score), 0)::int AS best_score,
+            COALESCE(SUM(CASE WHEN outcome = 'win' THEN 1 ELSE 0 END), 0)::int AS wins,
+            MAX(created_at) AS last_played
+     FROM game_results WHERE user_id = $1 GROUP BY game`,
+    [userId]
+  );
+  const recent = await pool.query(
+    `SELECT id, game, score, outcome, duration_seconds, metadata, created_at
+     FROM game_results WHERE user_id = $1 ORDER BY created_at DESC LIMIT 12`,
+    [userId]
+  );
+  return { stats: stats.rows, recent: recent.rows };
+}
+
+app.get('/api/games/stats', isAuth, async (req, res) => {
+  try {
+    res.json({ success: true, ...(await getGameStats(req.session.user.id)) });
+  } catch (e) {
+    console.error('[Games] Stats error:', e.message);
+    res.status(500).json({ success: false, error: 'Could not load game stats' });
+  }
+});
+
+app.get('/api/games/history', isAuth, async (req, res) => {
+  try {
+    const game = String(req.query.game || '');
+    const params = [req.session.user.id];
+    let sql = `SELECT id, game, score, outcome, duration_seconds, metadata, created_at
+               FROM game_results WHERE user_id = $1`;
+    if (GAME_TYPES.includes(game)) { params.push(game); sql += ' AND game = $2'; }
+    sql += ' ORDER BY created_at DESC LIMIT 50';
+    const r = await pool.query(sql, params);
+    res.json({ success: true, history: r.rows });
+  } catch (e) {
+    res.status(500).json({ success: false, error: 'Could not load game history' });
+  }
+});
+
+app.post('/api/games/result', isAuth, async (req, res) => {
+  try {
+    const { game, score, outcome, duration, metadata } = req.body || {};
+    if (!GAME_TYPES.includes(game)) {
+      return res.status(400).json({ success: false, error: 'Unknown game' });
+    }
+    const safeScore = Math.max(0, Math.min(1000000, parseInt(score, 10) || 0));
+    const safeDuration = Math.max(0, Math.min(86400, parseInt(duration, 10) || 0));
+    const safeOutcome = GAME_OUTCOMES.includes(outcome) ? outcome : 'completed';
+    let meta = {};
+    if (metadata && typeof metadata === 'object' && !Array.isArray(metadata)) {
+      meta = metadata;
+    }
+    const metaJson = JSON.stringify(meta);
+    if (metaJson.length > 4096) {
+      return res.status(400).json({ success: false, error: 'Metadata too large' });
+    }
+
+    const inserted = await pool.query(
+      `INSERT INTO game_results (user_id, game, score, outcome, duration_seconds, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, created_at`,
+      [req.session.user.id, game, safeScore, safeOutcome, safeDuration, metaJson]
+    );
+
+    res.json({ success: true, id: inserted.rows[0].id, created_at: inserted.rows[0].created_at, score: safeScore });
+  } catch (e) {
+    console.error('[Games] Save error:', e.message);
+    res.status(500).json({ success: false, error: 'Could not save result' });
+  }
+});
+
 app.get('/games', isAuth, async (req, res) => {
   res.locals.seo.title = 'Prepium | Games Hub';
   res.render('games', { user: req.session.user });
@@ -7951,6 +7987,23 @@ async function ensureMigrationColumns() {
   } catch(e) { console.error('[Squads] Init:', e.message); }
 })();
 
+// Friendships (used by /api/friends endpoints)
+(async function initFriendships() {
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS friendships (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      friend_id INTEGER NOT NULL,
+      status VARCHAR(20) NOT NULL DEFAULT 'pending',
+      created_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE (user_id, friend_id)
+    )`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_friendships_user ON friendships(user_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_friendships_friend ON friendships(friend_id)`);
+    console.log('[Friends] Table ready');
+  } catch(e) { console.error('[Friends] Init:', e.message); }
+})();
+
 // Public forms (NAPS style score collectors — standalone, no login)
 (async function initPublicForms() {
   try {
@@ -8444,48 +8497,122 @@ app.post('/admin/library/delete/:id', isAdmin, async (req, res) => {
 // ======================== END COURSE LIBRARY ========================
 
 
-if (require.main === module) {
-    const PORT = process.env.PORT || 3000;
-    app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
-    });
+// ==================== SOCIAL FEATURES ====================
+async function acceptFriendship(uid, friendId) {
+    await pool.query(
+        'UPDATE friendships SET status = $1 WHERE user_id = $2 AND friend_id = $3',
+        ['accepted', friendId, uid]
+    );
+    await pool.query(
+        `INSERT INTO friendships (user_id, friend_id, status) VALUES ($1, $2, $3)
+         ON CONFLICT (user_id, friend_id) DO UPDATE SET status = EXCLUDED.status`,
+        [uid, friendId, 'accepted']
+    );
 }
 
-app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
-  res.status(500).send('Something went wrong. Please try again later.');
-});
-
-// ==================== SOCIAL FEATURES ====================
 // Send friend request
 app.post('/api/friends/request', isAuth, async (req, res) => {
     try {
-        const { friendId } = req.body;
+        const friendId = parseInt(req.body.friendId, 10);
         const uid = req.session.user.id;
-        if (!friendId || parseInt(friendId) === uid) return res.status(400).json({ success: false, error: 'Invalid friend ID' });
-        await pool.query('INSERT INTO friendships (user_id, friend_id, status) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', [uid, parseInt(friendId), 'pending']);
+        if (!friendId || friendId === uid) return res.status(400).json({ success: false, error: 'Invalid friend ID' });
+
+        const target = await pool.query('SELECT id FROM users WHERE id = $1', [friendId]);
+        if (!target.rows[0]) return res.status(404).json({ success: false, error: 'User not found' });
+
+        // If they already requested us, accept instead of creating a duplicate.
+        const reverse = await pool.query(
+            'SELECT id FROM friendships WHERE user_id = $1 AND friend_id = $2 AND status = $3',
+            [friendId, uid, 'pending']
+        );
+        if (reverse.rows[0]) {
+            await acceptFriendship(uid, friendId);
+            return res.json({ success: true, accepted: true });
+        }
+
+        await pool.query(
+            'INSERT INTO friendships (user_id, friend_id, status) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
+            [uid, friendId, 'pending']
+        );
         res.json({ success: true });
-    } catch(e){ res.status(500).json({ success: false, error: e.message }); }
+    } catch(e){ res.status(500).json({ success: false, error: 'Could not send request' }); }
 });
 
 // Accept friend request
 app.post('/api/friends/accept', isAuth, async (req, res) => {
     try {
-        const { friendId } = req.body;
+        const friendId = parseInt(req.body.friendId, 10);
         const uid = req.session.user.id;
-        await pool.query('UPDATE friendships SET status = $1 WHERE user_id = $2 AND friend_id = $3', ['accepted', uid, parseInt(friendId)]);
+        if (!friendId || friendId === uid) return res.status(400).json({ success: false, error: 'Invalid friend ID' });
+
+        const pending = await pool.query(
+            'SELECT id FROM friendships WHERE user_id = $1 AND friend_id = $2 AND status = $3',
+            [friendId, uid, 'pending']
+        );
+        if (!pending.rows[0]) return res.status(404).json({ success: false, error: 'No pending request' });
+
+        await acceptFriendship(uid, friendId);
         res.json({ success: true });
-    } catch(e){ res.status(500).json({ success: false, error: e.message }); }
+    } catch(e){ res.status(500).json({ success: false, error: 'Could not accept request' }); }
 });
 
 // Get friends list
 app.get('/api/friends', isAuth, async (req, res) => {
     try {
         const uid = req.session.user.id;
-        const r = await pool.query('SELECT u.id, u.fullname, u.email FROM friendships f JOIN users u ON f.friend_id = u.id WHERE f.user_id = $1 AND f.status = $2', [uid, 'accepted']);
-        res.json({ friends: r.rows });
-    } catch(e){ res.status(500).json({ error: e.message }); }
+        const r = await pool.query(
+            `SELECT u.id, u.fullname, u.email
+             FROM friendships f
+             JOIN users u ON u.id = CASE WHEN f.user_id = $1 THEN f.friend_id ELSE f.user_id END
+             WHERE (f.user_id = $1 OR f.friend_id = $1) AND f.status = $2`,
+            [uid, 'accepted']
+        );
+        const seen = new Set();
+        const friends = r.rows.filter(u => (seen.has(u.id) ? false : (seen.add(u.id), true)));
+        res.json({ friends });
+    } catch(e){ res.status(500).json({ error: 'Could not load friends' }); }
 });
 
+// Serve the Socket.IO client explicitly so it also works on serverless
+// deployments where the exported Express app is not attached to an HTTP server.
+app.get('/socket.io/socket.io.js', (req, res, next) => {
+    try {
+        res.sendFile(require.resolve('socket.io/client-dist/socket.io.min.js'));
+    } catch (e) { next(); }
+});
+
+// 404 handler (must be registered after all routes)
+app.use((req, res) => {
+    if (req.path.startsWith('/api/')) {
+        return res.status(404).json({ success: false, error: 'Not found' });
+    }
+    res.status(404).type('text/plain').send('Not found');
+});
+
+// Central error handler (must be the last middleware)
+app.use((err, req, res, next) => {
+    console.error('Unhandled error:', err);
+    if (res.headersSent) return next(err);
+    if (req.path.startsWith('/api/')) {
+        return res.status(500).json({ success: false, error: 'Something went wrong. Please try again later.' });
+    }
+    res.status(500).send('Something went wrong. Please try again later.');
+});
+
+const httpServer = http.createServer(app);
+try {
+    const { Server } = require('socket.io');
+    const io = new Server(httpServer);
+    io.on('connection', () => {});
+} catch (e) {
+    console.error('[Socket.IO] Failed to initialize:', e.message);
+}
+
+if (require.main === module) {
+    const PORT = process.env.PORT || 3000;
+    httpServer.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+}
 
 module.exports = app;

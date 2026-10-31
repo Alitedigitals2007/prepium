@@ -2,20 +2,106 @@
 <html lang="en">
 <head>
     <%- include('partials/head') %>
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
     <style>
         .status-bar { height: env(safe-area-inset-top, 0px); }
-        .page-content { padding: 0 1.5rem 1.5rem; }
-        .chess-header { font-size:1.3rem;font-weight:800;margin-bottom:0.5rem;text-align:center; }
-        #chessBoard{width:100%;max-width:360px;margin:0 auto;}
-        .chess-controls{display:flex;gap:8px;justify-content:center;margin:1rem 0;}
-        .chess-btn{flex:1;padding:12px;border-radius:var(--radius-sm);border:none;cursor:pointer;font-weight:700;background:var(--brand-gradient);color:white;transition:all 0.15s;}
-        .chess-btn.secondary{flex:1;background:var(--surface-solid);color:var(--text-primary);border:1px solid var(--border);}
-        .chess-btn:hover{transform:scale(1.05);}
-        .status-badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:0.7rem;font-weight:700;margin-left:8px;}
-        .status-badge.white{background:var(--bg);color:var(--text-primary);}
-        .status-badge.black{background:#000;color:#fff;}
-        .history-card{background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-top:1rem;max-height:150px;overflow-y:auto;font-size:0.75rem;color:var(--text-secondary);}
-        @media (min-width:431px){ .app-shell{border-left:1px solid var(--glass-border);border-right:1px solid var(--glass-border);margin:0 auto; }}
+        .page-content { padding: 0 1rem 1.75rem; max-width: 560px; margin: 0 auto; }
+
+        .game-layout { display: grid; grid-template-columns: 1fr; grid-template-areas: "stats" "main" "side"; }
+        .layout-stats { grid-area: stats; min-width: 0; }
+        .game-main { grid-area: main; min-width: 0; }
+        .game-side { grid-area: side; min-width: 0; }
+        @media (min-width: 980px) {
+            .page-content { max-width: 1020px; }
+            .game-layout { grid-template-columns: minmax(0, 1fr) 350px; grid-template-areas: "stats stats" "main side"; column-gap: 1.4rem; }
+            .game-side { display: flex; flex-direction: column; gap: 0.9rem; }
+            .game-side .panel { margin-top: 0; }
+            .move-list { max-height: 240px; }
+        }
+
+        .game-top { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin: 0.4rem 0 0.8rem; }
+        .game-title { font-size: 1.2rem; font-weight: 800; letter-spacing: -0.02em; }
+        .game-title span { display: block; font-size: 0.66rem; font-weight: 600; color: var(--text-muted); letter-spacing: 0; margin-top: 1px; }
+        .diff-switch { display: flex; gap: 4px; background: var(--surface-solid); border: 1px solid var(--border-solid); padding: 4px; border-radius: 12px; }
+        .diff-btn { border: none; background: transparent; cursor: pointer; font-family: inherit; font-size: 0.63rem; font-weight: 700; color: var(--text-muted); padding: 6px 10px; border-radius: 8px; transition: all 0.2s var(--ease-out); }
+        .diff-btn.active { background: linear-gradient(135deg, #5b21b6, #8b5cf6); color: #fff; box-shadow: 0 3px 10px rgba(124, 58, 237, 0.3); }
+
+        .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 0.8rem; }
+        .stat-box { background: var(--surface-solid); border: 1px solid var(--border-solid); border-radius: 13px; padding: 0.5rem 0.3rem; text-align: center; }
+        .stat-box b { display: block; font-size: 1rem; font-weight: 800; line-height: 1.1; color: var(--text-primary); }
+        .stat-box span { display: block; font-size: 0.53rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); font-weight: 700; margin-top: 2px; }
+        #statWins { color: var(--success); }
+        #statBest { color: #7c3aed; }
+
+        .status-bar-card {
+            display: flex; align-items: center; gap: 0.6rem;
+            background: var(--surface-solid); border: 1px solid var(--border-solid);
+            border-radius: 13px; padding: 0.6rem 0.8rem; margin-bottom: 0.6rem;
+        }
+        .turn-dot { width: 10px; height: 10px; border-radius: 50%; background: #fff; border: 2px solid #94a3b8; flex: 0 0 10px; }
+        .turn-dot.black { background: #0f172a; border-color: #0f172a; }
+        .status-text { flex: 1; font-size: 0.75rem; font-weight: 700; color: var(--text-primary); }
+        .status-pill { font-size: 0.58rem; font-weight: 800; padding: 3px 9px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.06em; background: var(--brand-soft); color: var(--brand); }
+        .status-pill.check { background: var(--warning-soft); color: var(--warning); }
+        .status-pill.over { background: var(--success-soft); color: var(--success); }
+        .turn-dot.pulse { animation: dotPulse 1s ease-in-out infinite; }
+        @keyframes dotPulse { 50% { transform: scale(1.45); opacity: 0.5; } }
+
+        .captured-row {
+            display: flex; align-items: center; gap: 0.55rem;
+            background: var(--surface-solid); border: 1px solid var(--border-solid);
+            border-radius: 11px; padding: 0.3rem 0.65rem; margin-bottom: 0.45rem;
+            min-height: 36px;
+        }
+        .cap-label { font-size: 0.56rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); flex: 0 0 auto; }
+        .cap-pieces { flex: 1; font-size: 1.15rem; line-height: 1.15; letter-spacing: 1px; min-height: 1.2em; white-space: nowrap; overflow: hidden; }
+        .cap-pieces .pc-w { color: #94a3b8; text-shadow: 0 0 2px rgba(15, 23, 42, 0.45); }
+        .cap-pieces .pc-b { color: var(--text-primary); }
+        .cap-adv { font-size: 0.62rem; font-weight: 800; color: var(--success); flex: 0 0 auto; }
+
+        .board-wrap {
+            background: var(--surface-solid);
+            border: 1px solid var(--border-solid);
+            border-radius: var(--radius-lg);
+            padding: 0.55rem;
+            box-shadow: var(--shadow-md);
+        }
+        #chessBoard { width: 100%; max-width: 560px; margin: 0 auto; }
+        #chessBoard .board-b72b1 { border-radius: 10px; overflow: hidden; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.18); }
+        #chessBoard .white-1e1d7 { background-color: #f0d9b5; }
+        #chessBoard .black-3c85d { background-color: #b58863; }
+        #chessBoard .notation-322f9 { font-size: 10px; font-weight: 700; opacity: 0.7; }
+        #chessBoard .square-55d63.hl-last { box-shadow: inset 0 0 0 999px rgba(124, 58, 237, 0.3); }
+        #chessBoard .square-55d63.hl-check { box-shadow: inset 0 0 0 999px rgba(220, 38, 38, 0.45); }
+        .chess-controls { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 0.7rem; }
+        .chess-btn {
+            border: 1px solid var(--border-solid); border-radius: 11px;
+            padding: 0.68rem 0.3rem; font-family: inherit; font-size: 0.66rem;
+            font-weight: 800; cursor: pointer; background: var(--surface-solid);
+            color: var(--text-secondary); display: flex; align-items: center;
+            justify-content: center; gap: 4px; transition: transform 0.12s;
+        }
+        .chess-btn:active { transform: scale(0.95); }
+        .chess-btn.primary { background: linear-gradient(135deg, #5b21b6, #8b5cf6); color: #fff; border-color: transparent; }
+        .chess-btn.resign { background: var(--danger-soft); color: var(--danger); border-color: transparent; }
+
+        .panel { margin-top: 0.9rem; background: var(--surface-solid); border: 1px solid var(--border-solid); border-radius: var(--radius-lg); overflow: hidden; }
+        .panel-head { display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 0.85rem; border-bottom: 1px solid var(--border); font-size: 0.78rem; font-weight: 800; }
+        .panel-head i { color: #7c3aed; margin-right: 5px; }
+        .panel-head small { font-size: 0.6rem; color: var(--text-muted); font-weight: 600; }
+        .move-list { max-height: 150px; overflow-y: auto; padding: 0.5rem 0.85rem; font-size: 0.7rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+        .move-list .mv { display: inline-block; padding: 2px 5px; margin: 1px; border-radius: 5px; background: var(--bg); }
+        .move-list .mv.last { background: var(--brand-soft); color: var(--brand); font-weight: 800; }
+        .hist-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0.85rem; border-bottom: 1px solid var(--border); font-size: 0.7rem; }
+        .hist-row:last-child { border-bottom: none; }
+        .hist-outcome { font-size: 0.56rem; font-weight: 800; padding: 2px 7px; border-radius: 999px; text-transform: uppercase; }
+        .hist-outcome.win { background: var(--success-soft); color: var(--success); }
+        .hist-outcome.loss { background: var(--danger-soft); color: var(--danger); }
+        .hist-outcome.draw { background: var(--brand-soft); color: var(--brand); }
+        .hist-main { flex: 1; color: var(--text-secondary); font-weight: 600; }
+        .hist-score { font-weight: 800; color: #7c3aed; }
+        .empty-hist { padding: 1.1rem 0.85rem; text-align: center; font-size: 0.72rem; color: var(--text-muted); }
+        @media (min-width: 431px) { .app-shell { border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); margin: 0 auto; } }
     </style>
     <%- include('partials/theme-toggle') %>
 </head>
@@ -28,46 +114,511 @@
         <div class="header-title">Chess</div>
     </div>
     <div class="page-content">
-        <div class="chess-header">Play Solo <span class="status-badge white" id="turnIndicator">White</span></div>
-        <div id="chessBoard"></div>
-        <div class="chess-controls">
-            <button class="chess-btn secondary" onclick="newGame()">New Game</button>
-            <button class="chess-btn" onclick="undoMove()">Undo</button>
-            <button class="chess-btn secondary" onclick="engineMove()">AI Move</button>
+        <div class="game-top">
+            <div class="game-title">Play vs AI<span>You are White</span></div>
+            <div class="diff-switch">
+                <button class="diff-btn" data-level="easy">Easy</button>
+                <button class="diff-btn active" data-level="medium">Medium</button>
+                <button class="diff-btn" data-level="hard">Hard</button>
+            </div>
         </div>
-        <div class="history-card" id="moveHistory"></div>
+
+        <div class="game-layout">
+            <div class="layout-stats">
+                <div class="stat-grid">
+                    <div class="stat-box"><b id="statBest">0</b><span>Best</span></div>
+                    <div class="stat-box"><b id="statPlays">0</b><span>Played</span></div>
+                    <div class="stat-box"><b id="statWins">0</b><span>Wins</span></div>
+                    <div class="stat-box"><b id="statMoves">0</b><span>Moves</span></div>
+                </div>
+            </div>
+
+            <div class="game-main">
+                <div class="status-bar-card">
+                    <span class="turn-dot" id="turnDot"></span>
+                    <span class="status-text" id="statusText">Your turn</span>
+                    <span class="status-pill" id="statusPill">White</span>
+                </div>
+
+                <div class="captured-row">
+                    <span class="cap-label">You</span>
+                    <div class="cap-pieces" id="capYou"></div>
+                    <span class="cap-adv" id="advYou"></span>
+                </div>
+                <div class="captured-row">
+                    <span class="cap-label">AI</span>
+                    <div class="cap-pieces" id="capAi"></div>
+                    <span class="cap-adv" id="advAi"></span>
+                </div>
+
+                <div class="board-wrap">
+                    <div id="chessBoard"></div>
+                </div>
+                <div class="chess-controls">
+                    <button class="chess-btn primary" id="newBtn"><i class="fas fa-rotate"></i> New</button>
+                    <button class="chess-btn" id="undoBtn"><i class="fas fa-rotate-left"></i> Undo</button>
+                    <button class="chess-btn" id="flipBtn"><i class="fas fa-arrows-rotate"></i> Flip</button>
+                    <button class="chess-btn resign" id="resignBtn"><i class="fas fa-flag"></i> Resign</button>
+                </div>
+            </div>
+
+            <aside class="game-side">
+                <div class="panel">
+                    <div class="panel-head"><span><i class="fas fa-list-ol"></i>Moves</span><small id="moveCount">0</small></div>
+                    <div class="move-list" id="moveHistory">No moves yet.</div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-head"><span><i class="fas fa-clock-rotate-left"></i>Recent games</span><small id="histCount"></small></div>
+                    <div id="historyList"><div class="empty-hist">Loading…</div></div>
+                </div>
+            </aside>
+        </div>
     </div>
     <%- include('partials/bottom-nav', { activeNav: 'study' }) %>
 </div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard.js/1.0.0/js/chessboard-1.0.0.min.js"></script>
+<script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
 <script>
-var game=new Chess(),board,null,analysisMode=false;
-function init(){ 
-  board=new Chessboard('chessBoard',{position:'start',draggable:true,onDragStart:onDragStart,onDrop:onDrop});
-  updateTurn(); updateHistory();
-}
-function onDragStart(pos,piece,source,target){
-  if(game.game_over()) return false;
-  if((piece.search(/^k/)!==-1) && board.moves().filter(m=>m.san==='O-O').length+board.moves().filter(m=>m.san==='O-O-O').length>0)return false;
-  return true;
-}
-function onDrop(pos,piece,source,target){
-  var move=board.moves().find(m=>m.san===pos.san);
-  if(!move) return'snapback';
-  game.move(move);
-  board.position(game.fen());
-  if(!game.game_over()) engineMove();
-  updateTurn(); updateHistory();
-}
-function updateTurn(){ document.getElementById('turnIndicator').textContent=game.turn()==='w'?'White':'Black'; document.getElementById('turnIndicator').className=game.turn()==='w'?'status-badge white':'status-badge black'; }
-function updateHistory(){ var hist=game.history(); document.getElementById('moveHistory').textContent='Moves: '+hist.join(', '); }
-function newGame(){ game.reset(); board.start(); updateTurn(); updateHistory(); }
-function undoMove(){ game.undo(); board.position(game.fen()); updateTurn(); updateHistory(); }
-function engineMove(){ var moves=game.moves(); if(moves.length===0)return; var best=moves[Math.floor(Math.random()*moves.length)]; game.move(best); board.position(game.fen()); updateTurn(); updateHistory(); }
-document.addEventListener('DOMContentLoaded',init);
+(function () {
+    'use strict';
+    var PIECE_THEME = 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png';
+    var VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
+    var BASE_SCORE = { easy: 500, medium: 1000, hard: 2000 };
+
+    var game = new Chess();
+    var board = null;
+    var level = 'medium';
+    var aiThinking = false;
+    var aiTimer = null;
+    var resultSaved = false;
+    var startedAt = Date.now();
+    var playerColor = 'w';
+    var orientation = 'w';
+
+    var statusText = document.getElementById('statusText');
+    var statusPill = document.getElementById('statusPill');
+    var turnDot = document.getElementById('turnDot');
+
+    function boardWidth() {
+        var wrap = document.querySelector('.board-wrap');
+        var w = wrap ? wrap.clientWidth : 360;
+        return Math.max(240, Math.min(560, w - 20));
+    }
+
+    function initBoard() {
+        if (board) { board.destroy(); }
+        board = Chessboard('chessBoard', {
+            position: game.fen(),
+            draggable: true,
+            orientation: orientation === 'w' ? 'white' : 'black',
+            pieceTheme: PIECE_THEME,
+            width: boardWidth(),
+            onDragStart: onDragStart,
+            onDrop: onDrop,
+            onSnapEnd: onSnapEnd
+        });
+    }
+
+    function onDragStart(source, piece) {
+        if (aiThinking || game.game_over() || resultSaved) return false;
+        if (game.turn() !== playerColor) return false;
+        var prefix = playerColor === 'w' ? 'w' : 'b';
+        return piece.charAt(0) === prefix;
+    }
+
+    function onDrop(source, target) {
+        var move = game.move({ from: source, to: target, promotion: 'q' });
+        if (move === null) return 'snapback';
+        afterMove();
+        return undefined;
+    }
+
+    function onSnapEnd() {
+        board.position(game.fen());
+    }
+
+    function afterMove() {
+        board.position(game.fen());
+        updateStatus();
+        updateMoveHistory();
+        highlightSquares();
+        updateCaptured();
+        if (checkGameOver()) return;
+        if (game.turn() !== playerColor) scheduleAi();
+    }
+
+    function scheduleAi() {
+        aiThinking = true;
+        statusText.textContent = 'AI is thinking…';
+        statusPill.textContent = 'AI';
+        statusPill.className = 'status-pill';
+        turnDot.classList.add('pulse');
+        clearTimeout(aiTimer);
+        aiTimer = setTimeout(function () {
+            var move = pickAiMove();
+            if (move) game.move(move);
+            aiThinking = false;
+            turnDot.classList.remove('pulse');
+            board.position(game.fen());
+            updateStatus();
+            updateMoveHistory();
+            highlightSquares();
+            updateCaptured();
+            checkGameOver();
+        }, 260);
+    }
+
+    // ---------- AI ----------
+    function evaluate(g) {
+        if (g.in_checkmate()) return g.turn() === 'w' ? 99999 : -99999;
+        if (g.in_draw() || g.in_stalemate() || g.in_threefold_repetition() || g.insufficient_material()) return 0;
+        var score = 0;
+        var b = g.board();
+        for (var r = 0; r < 8; r++) {
+            for (var c = 0; c < 8; c++) {
+                var p = b[r][c];
+                if (!p) continue;
+                var v = VALUES[p.type] || 0;
+                // Small centralisation bonus
+                var center = 3.5;
+                var cd = Math.abs(r - center) + Math.abs(c - center);
+                v += Math.max(0, 6 - cd) * 2;
+                score += p.color === 'b' ? v : -v;
+            }
+        }
+        return score;
+    }
+
+    function search(g, depth, alpha, beta) {
+        if (depth === 0 || g.game_over()) return evaluate(g);
+        var moves = g.moves({ verbose: true });
+        moves.sort(function (a, b) {
+            var av = (a.captured ? (VALUES[a.captured] || 0) : 0) + (a.san.indexOf('#') >= 0 ? 5000 : 0);
+            var bv = (b.captured ? (VALUES[b.captured] || 0) : 0) + (b.san.indexOf('#') >= 0 ? 5000 : 0);
+            return bv - av;
+        });
+        if (g.turn() === 'b') {
+            var best = -Infinity;
+            for (var i = 0; i < moves.length; i++) {
+                g.move(moves[i]);
+                var val = search(g, depth - 1, alpha, beta);
+                g.undo();
+                if (val > best) best = val;
+                if (best > alpha) alpha = best;
+                if (beta <= alpha) break;
+            }
+            return best;
+        }
+        var worst = Infinity;
+        for (var j = 0; j < moves.length; j++) {
+            g.move(moves[j]);
+            var v = search(g, depth - 1, alpha, beta);
+            g.undo();
+            if (v < worst) worst = v;
+            if (worst < beta) beta = worst;
+            if (beta <= alpha) break;
+        }
+        return worst;
+    }
+
+    function pickAiMove() {
+        var moves = game.moves({ verbose: true });
+        if (!moves.length) return null;
+
+        if (level === 'easy') {
+            return moves[Math.floor(Math.random() * moves.length)];
+        }
+
+        if (level === 'medium') {
+            var scored = moves.map(function (m) {
+                var s = 0;
+                if (m.captured) s += (VALUES[m.captured] || 0) / 10;
+                if (m.san.indexOf('#') >= 0) s += 1000;
+                else if (m.san.indexOf('+') >= 0) s += 8;
+                if (m.flags.indexOf('k') >= 0 || m.flags.indexOf('q') >= 0) s += 4;
+                return { m: m, s: s };
+            });
+            var top = scored.reduce(function (a, b) { return b.s > a.s ? b : a; });
+            var bestMoves = scored.filter(function (x) { return x.s === top.s; });
+            return bestMoves[Math.floor(Math.random() * bestMoves.length)].m;
+        }
+
+        // Hard: depth-2 minimax with alpha-beta pruning
+        var bestMove = null;
+        var bestVal = -Infinity;
+        var ordered = moves.slice().sort(function (a, b) {
+            return (b.captured ? (VALUES[b.captured] || 0) : 0) - (a.captured ? (VALUES[a.captured] || 0) : 0);
+        });
+        for (var i = 0; i < ordered.length; i++) {
+            game.move(ordered[i]);
+            var val = search(game, 2, -Infinity, Infinity);
+            game.undo();
+            if (val > bestVal) { bestVal = val; bestMove = ordered[i]; }
+        }
+        return bestMove || moves[0];
+    }
+
+    // ---------- Board visuals ----------
+    var PIECE_GLYPH = {
+        w: { p: '\u2659', n: '\u2658', b: '\u2657', r: '\u2656', q: '\u2655', k: '\u2654' },
+        b: { p: '\u265F', n: '\u265E', b: '\u265D', r: '\u265C', q: '\u265B', k: '\u265A' }
+    };
+    var CAP_ORDER = { q: 0, r: 1, b: 2, n: 3, p: 4 };
+
+    function highlightSquares() {
+        $('#chessBoard .square-55d63').removeClass('hl-last hl-check');
+        var hist = game.history({ verbose: true });
+        if (hist.length) {
+            var m = hist[hist.length - 1];
+            $('#chessBoard .square-' + m.from).addClass('hl-last');
+            $('#chessBoard .square-' + m.to).addClass('hl-last');
+        }
+        if (game.in_check()) {
+            var b = game.board();
+            for (var r = 0; r < 8; r++) {
+                for (var c = 0; c < 8; c++) {
+                    var p = b[r][c];
+                    if (p && p.type === 'k' && p.color === game.turn()) {
+                        $('#chessBoard .square-' + 'abcdefgh'.charAt(c) + (8 - r)).addClass('hl-check');
+                    }
+                }
+            }
+        }
+    }
+
+    function updateCaptured() {
+        var hist = game.history({ verbose: true });
+        var byPlayer = [], byAi = [];
+        for (var i = 0; i < hist.length; i++) {
+            var m = hist[i];
+            if (!m.captured) continue;
+            if (m.color === playerColor) byPlayer.push(m.captured);
+            else byAi.push(m.captured);
+        }
+        byPlayer.sort(function (a, b) { return CAP_ORDER[a] - CAP_ORDER[b]; });
+        byAi.sort(function (a, b) { return CAP_ORDER[a] - CAP_ORDER[b]; });
+        var aiColor = playerColor === 'w' ? 'b' : 'w';
+        document.getElementById('capYou').innerHTML = byPlayer.map(function (t) {
+            return '<span class="pc-' + aiColor + '">' + PIECE_GLYPH[aiColor][t] + '</span>';
+        }).join('');
+        document.getElementById('capAi').innerHTML = byAi.map(function (t) {
+            return '<span class="pc-' + playerColor + '">' + PIECE_GLYPH[playerColor][t] + '</span>';
+        }).join('');
+        var total = function (arr) { return arr.reduce(function (s, t) { return s + (VALUES[t] || 0); }, 0); };
+        var diff = Math.round((total(byPlayer) - total(byAi)) / 100);
+        document.getElementById('advYou').textContent = diff > 0 ? '+' + diff : '';
+        document.getElementById('advAi').textContent = diff < 0 ? '+' + (-diff) : '';
+    }
+
+    // ---------- Status / result ----------
+    function updateStatus() {
+        var mate = game.in_checkmate();
+        var draw = game.in_draw() || game.in_stalemate() || game.in_threefold_repetition() || game.insufficient_material();
+        var check = game.in_check();
+
+        if (mate) {
+            var playerWon = game.turn() !== playerColor;
+            statusText.textContent = playerWon ? 'Checkmate — you win!' : 'Checkmate — AI wins';
+            statusPill.textContent = playerWon ? 'Win' : 'Loss';
+            statusPill.className = 'status-pill over';
+        } else if (draw) {
+            statusText.textContent = 'Game drawn';
+            statusPill.textContent = 'Draw';
+            statusPill.className = 'status-pill over';
+        } else if (aiThinking) {
+            statusText.textContent = 'AI is thinking…';
+            statusPill.textContent = 'AI';
+            statusPill.className = 'status-pill';
+        } else if (game.turn() === playerColor) {
+            statusText.textContent = check ? 'You are in check — defend!' : 'Your turn';
+            statusPill.textContent = 'You';
+            statusPill.className = 'status-pill' + (check ? ' check' : '');
+        } else {
+            statusText.textContent = 'AI turn';
+            statusPill.textContent = 'AI';
+            statusPill.className = 'status-pill';
+        }
+
+        turnDot.className = 'turn-dot' + (game.turn() === 'b' ? ' black' : '');
+        document.getElementById('statMoves').textContent = Math.ceil(game.history().length / 2);
+    }
+
+    function updateMoveHistory() {
+        var hist = game.history();
+        document.getElementById('moveCount').textContent = hist.length ? hist.length + ' plies' : '0';
+        var el = document.getElementById('moveHistory');
+        if (!hist.length) { el.textContent = 'No moves yet.'; return; }
+        var html = '';
+        for (var i = 0; i < hist.length; i++) {
+            if (i % 2 === 0) html += '<span class="mv">' + (i / 2 + 1) + '.</span>';
+            html += '<span class="mv' + (i === hist.length - 1 ? ' last' : '') + '">' + hist[i] + '</span> ';
+        }
+        el.innerHTML = html;
+        el.scrollTop = el.scrollHeight;
+    }
+
+    function checkGameOver() {
+        if (!game.game_over()) return false;
+        if (resultSaved) return true;
+        resultSaved = true;
+        aiThinking = false;
+
+        var outcome, score;
+        if (game.in_checkmate()) {
+            if (game.turn() !== playerColor) {
+                outcome = 'win';
+                score = BASE_SCORE[level] + Math.max(0, 120 - game.history().length * 2);
+            } else {
+                outcome = 'loss';
+                score = Math.max(0, 50 - game.history().length);
+            }
+        } else {
+            outcome = 'draw';
+            score = Math.floor(BASE_SCORE[level] * 0.4) + Math.max(0, 60 - game.history().length * 2);
+        }
+
+        var duration = Math.floor((Date.now() - startedAt) / 1000);
+        saveResult(score, outcome, duration, function () {
+            var title = outcome === 'win' ? 'You win!' : outcome === 'draw' ? 'Draw' : 'AI wins';
+            var icon = outcome === 'win' ? 'success' : outcome === 'draw' ? 'info' : 'error';
+            Swal.fire({
+                icon: icon,
+                title: title,
+                html: '<div style="font-size:0.9rem;line-height:1.7">' +
+                      '<b style="font-size:1.6rem;color:#7c3aed">' + score + '</b> points<br>' +
+                      'Level: ' + level + ' · ' + Math.ceil(game.history().length / 2) + ' moves' +
+                      '</div>',
+                confirmButtonText: 'New game',
+                confirmButtonColor: '#7c3aed',
+                showCancelButton: true,
+                cancelButtonText: 'Games hub'
+            }).then(function (res) {
+                if (res.isConfirmed) newGame();
+                else window.location.href = '/games';
+            });
+        });
+        updateStatus();
+        return true;
+    }
+
+    function saveResult(score, outcome, duration, cb) {
+        fetch('/api/games/result', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                game: 'chess', score: score, outcome: outcome, duration: duration,
+                metadata: { difficulty: level, moves: Math.ceil(game.history().length / 2), plies: game.history().length }
+            })
+        }).then(function () { loadStats(); }).catch(function () {}).finally(function () { if (cb) cb(); });
+    }
+
+    // ---------- Controls ----------
+    function newGame() {
+        clearTimeout(aiTimer);
+        game = new Chess();
+        resultSaved = false;
+        aiThinking = false;
+        startedAt = Date.now();
+        initBoard();
+        updateStatus();
+        updateMoveHistory();
+        highlightSquares();
+        updateCaptured();
+    }
+
+    function undoMove() {
+        if (aiThinking || resultSaved) return;
+        var hist = game.history();
+        if (!hist.length) return;
+        if (hist.length >= 2 && game.turn() === playerColor) { game.undo(); game.undo(); }
+        else { game.undo(); }
+        board.position(game.fen());
+        updateStatus();
+        updateMoveHistory();
+        highlightSquares();
+        updateCaptured();
+    }
+
+    function resign() {
+        if (resultSaved || game.game_over()) return;
+        Swal.fire({
+            icon: 'warning', title: 'Resign this game?',
+            text: 'The result will be saved as a loss.',
+            showCancelButton: true, confirmButtonText: 'Resign', confirmButtonColor: '#dc2626'
+        }).then(function (res) {
+            if (!res.isConfirmed) return;
+            clearTimeout(aiTimer);
+            aiThinking = false;
+            turnDot.classList.remove('pulse');
+            resultSaved = true;
+            var score = Math.max(0, 40 - game.history().length);
+            saveResult(score, 'loss', Math.floor((Date.now() - startedAt) / 1000), function () {
+                Swal.fire({ icon: 'info', title: 'You resigned', text: 'Score: ' + score + ' points', confirmButtonColor: '#7c3aed' });
+            });
+        });
+    }
+
+    function setLevel(l) {
+        level = l;
+        document.querySelectorAll('.diff-btn').forEach(function (b) {
+            b.classList.toggle('active', b.dataset.level === l);
+        });
+        newGame();
+    }
+
+    // ---------- Stats ----------
+    function loadStats() {
+        fetch('/api/games/stats', { headers: { Accept: 'application/json' } })
+            .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+            .then(function (data) {
+                var s = (data.stats || []).find(function (x) { return x.game === 'chess'; }) || { plays: 0, best_score: 0, wins: 0 };
+                document.getElementById('statBest').textContent = s.best_score || 0;
+                document.getElementById('statPlays').textContent = s.plays || 0;
+                document.getElementById('statWins').textContent = s.wins || 0;
+
+                var recent = (data.recent || []).filter(function (r) { return r.game === 'chess'; }).slice(0, 6);
+                var list = document.getElementById('historyList');
+                document.getElementById('histCount').textContent = recent.length ? recent.length + ' recent' : '';
+                if (!recent.length) {
+                    list.innerHTML = '<div class="empty-hist">No games yet. Play your first match.</div>';
+                    return;
+                }
+                list.innerHTML = recent.map(function (r) {
+                    var m = r.metadata || {};
+                    var when = new Date(r.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                    var outcome = (r.outcome || 'draw').toLowerCase();
+                    return '<div class="hist-row"><span class="hist-outcome ' + outcome + '">' + outcome + '</span>' +
+                        '<div class="hist-main">' + (m.difficulty || 'medium') + ' · ' + (m.moves || 0) + ' moves · ' + when + '</div>' +
+                        '<span class="hist-score">' + Number(r.score || 0) + '</span></div>';
+                }).join('');
+            })
+            .catch(function () {
+                document.getElementById('historyList').innerHTML = '<div class="empty-hist">Could not load history.</div>';
+            });
+    }
+
+    document.getElementById('newBtn').addEventListener('click', newGame);
+    document.getElementById('undoBtn').addEventListener('click', undoMove);
+    document.getElementById('flipBtn').addEventListener('click', function () {
+        orientation = orientation === 'w' ? 'b' : 'w';
+        if (board) board.orientation(orientation === 'w' ? 'white' : 'black');
+    });
+    document.getElementById('resignBtn').addEventListener('click', resign);
+    document.querySelectorAll('.diff-btn').forEach(function (b) {
+        b.addEventListener('click', function () { setLevel(b.dataset.level); });
+    });
+    window.addEventListener('resize', function () { if (board) board.resize(); });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        initBoard();
+        updateStatus();
+        updateMoveHistory();
+        loadStats();
+    });
+})();
 </script>
-<%- include('partials/bottom-nav', { activeNav: 'study' }) %>
-</div>
 </body>
 </html>

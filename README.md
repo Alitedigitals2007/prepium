@@ -30,6 +30,11 @@ Prepium is an all-in-one learning platform built for Nigerian university student
 ### Productivity
 - **Timetable** with AI extraction from images/PDFs; **AI Reading Schedule**; **Deadline tracker** with email reminders; **Daily Task dashboard**.
 
+### Games Hub
+- **Sudoku** with generated puzzles, three difficulties, timer, mistakes and hints.
+- **Word Scramble**, **Chess vs AI** (three levels) and an **academic Crossword**.
+- Every result is saved to your account: best scores, games played and recent history sync across devices.
+
 ### School-Based Premium Model
 - Admin marks each university as a **free school** (students get premium automatically) or a **paid school** (students must pay the school's price to unlock premium).
 - Per-school **price** and **locked features** are fully configurable by the admin.
@@ -88,9 +93,13 @@ APP_URL=http://localhost:3000
 ```
 
 ```bash
-node app.js
-# → http://localhost:3000
+npm start          # → http://localhost:3000
+npm run check      # syntax check
 ```
+
+Optional background jobs and the Socket.IO server run on long-lived
+servers. On Vercel (`VERCEL=1`) they are skipped; results and history are
+still persisted in PostgreSQL.
 
 ---
 

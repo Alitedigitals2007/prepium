@@ -1,18 +1,27 @@
 {
-  "name": "test-me",
+  "name": "prepium",
   "version": "1.0.0",
-  "description": "",
+  "description": "AI-powered study companion for Nigerian university students",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "check": "node --check app.js",
+    "test": "node --check app.js"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "education",
+    "study",
+    "quiz",
+    "ai",
+    "nigeria"
+  ],
+  "author": "Prepium",
   "license": "ISC",
   "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
     "bcryptjs": "^3.0.3",
     "connect-pg-simple": "^10.0.0",
     "dotenv": "^17.4.2",
@@ -22,12 +31,10 @@
     "express-session": "^1.19.0",
     "helmet": "^8.3.0",
     "multer": "^2.1.1",
-    "node-fetch": "^3.3.2",
-    "nodemailer": "^8.0.7",
+    "nodemailer": "^10.3.1",
     "pdf-parse": "^1.1.4",
-    "pdf-to-text": "^0.0.7",
     "pdfkit": "^0.19.1",
     "pg": "^8.20.0",
-    "web-push": "^3.6.7"
+    "socket.io": "^4.8.4"
   }
 }

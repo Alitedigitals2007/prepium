@@ -269,7 +269,8 @@ let score = 0;
 let timeLeft = 10;
 let timerInterval = null;
 let answering = false;
-const maxScore = 300;
+let answers = [];
+let maxScore = 300;
 const maxSubjects = 3;
 
 function switchTab(name) {
@@ -320,6 +321,10 @@ async function startChallenge() {
         }
         attemptId = d.attemptId;
         questions = d.questions;
+        answers = [];
+        currentIdx = 0;
+        score = 0;
+        maxScore = questions.length * 10;
         document.querySelector('.card:first-of-type').classList.add('hidden');
         document.getElementById('quizArea').classList.remove('hidden');
         showQuestion();
@@ -374,6 +379,7 @@ function selectOption(choice) {
     if (!answering) return;
     answering = false;
     clearInterval(timerInterval);
+    answers[currentIdx] = choice;
 
     const q = questions[currentIdx];
     const isCorrect = choice === q.correct_option;
@@ -410,10 +416,10 @@ async function submitQuiz() {
         const r = await fetch('/api/submit-arena', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ attemptId, score })
+            body: JSON.stringify({ attemptId, answers })
         });
         const d = await r.json();
-        if (d.success) showResults();
+        if (d.success) { score = d.score; showResults(); }
         else location.reload();
     } catch (e) {
         location.reload();

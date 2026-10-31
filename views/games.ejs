@@ -2,7 +2,170 @@
 <html lang="en">
 <head>
     <%- include('partials/head') %>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard.js/1.0.0/css/chessboard-1.0.0.min.css">
+    <style>
+        .status-bar { height: env(safe-area-inset-top, 0px); }
+        .page-content { padding: 0 1.25rem 2rem; max-width: 720px; margin: 0 auto; }
+
+        .games-hero {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 45%, #7c3aed 100%);
+            color: #fff;
+            border-radius: var(--radius-xl);
+            padding: 1.4rem 1.3rem 1.25rem;
+            margin: 0.5rem 0 1.1rem;
+            box-shadow: 0 16px 40px rgba(37, 99, 235, 0.32);
+        }
+        .games-hero::after {
+            content: '';
+            position: absolute;
+            width: 220px; height: 220px;
+            right: -70px; top: -90px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.14);
+        }
+        .games-hero::before {
+            content: '';
+            position: absolute;
+            width: 130px; height: 130px;
+            right: 40px; bottom: -80px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.09);
+        }
+        .hero-top { display: flex; align-items: center; gap: 0.85rem; position: relative; z-index: 1; }
+        .hero-icon {
+            width: 54px; height: 54px; flex: 0 0 54px;
+            display: grid; place-items: center;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            font-size: 1.45rem;
+            backdrop-filter: blur(6px);
+        }
+        .games-hero h1 { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; }
+        .games-hero p { font-size: 0.78rem; opacity: 0.86; margin-top: 0.15rem; line-height: 1.4; }
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin-top: 1.15rem;
+            position: relative; z-index: 1;
+        }
+        .hero-stat {
+            background: rgba(255, 255, 255, 0.13);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 14px;
+            padding: 0.55rem 0.4rem;
+            text-align: center;
+            backdrop-filter: blur(6px);
+        }
+        .hero-stat b { display: block; font-size: 1.2rem; font-weight: 800; line-height: 1.1; }
+        .hero-stat span { display: block; font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.09em; opacity: 0.85; margin-top: 0.15rem; }
+
+        .section-title {
+            display: flex; align-items: center; justify-content: space-between;
+            font-size: 0.95rem; font-weight: 800; margin: 1.1rem 0 0.65rem;
+            color: var(--text-primary);
+        }
+        .section-title small { font-size: 0.66rem; font-weight: 600; color: var(--text-muted); }
+
+        .game-grid { display: grid; grid-template-columns: 1fr; gap: 0.8rem; }
+        @media (min-width: 520px) { .game-grid { grid-template-columns: 1fr 1fr; } }
+        @media (min-width: 980px) {
+            .page-content { max-width: 1020px; }
+            .game-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+
+        .game-card {
+            position: relative;
+            display: block;
+            overflow: hidden;
+            border-radius: var(--radius-lg);
+            padding: 1.05rem 1rem 0.95rem;
+            color: #fff;
+            text-decoration: none;
+            box-shadow: 0 10px 26px rgba(15, 23, 42, 0.16);
+            transition: transform 0.22s var(--ease-spring), box-shadow 0.22s var(--ease-out);
+        }
+        .game-card:hover, .game-card:focus-visible {
+            transform: translateY(-4px) scale(1.012);
+            box-shadow: 0 18px 38px rgba(15, 23, 42, 0.24);
+        }
+        .game-card:active { transform: scale(0.985); }
+        .game-card::after {
+            content: '';
+            position: absolute;
+            width: 130px; height: 130px; border-radius: 50%;
+            right: -42px; top: -52px;
+            background: rgba(255, 255, 255, 0.16);
+            transition: transform 0.35s var(--ease-out);
+        }
+        .game-card:hover::after { transform: scale(1.18); }
+        .gc-sudoku { background: linear-gradient(135deg, #1d4ed8, #3b82f6); }
+        .gc-scramble { background: linear-gradient(135deg, #047857, #10b981); }
+        .gc-chess { background: linear-gradient(135deg, #5b21b6, #8b5cf6); }
+        .gc-crossword { background: linear-gradient(135deg, #b91c1c, #ef4444); }
+
+        .gc-head { display: flex; align-items: center; gap: 0.7rem; position: relative; z-index: 1; }
+        .gc-icon {
+            width: 42px; height: 42px; flex: 0 0 42px;
+            display: grid; place-items: center;
+            border-radius: 13px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            font-size: 1.1rem;
+        }
+        .gc-title { font-size: 1.02rem; font-weight: 800; line-height: 1.15; }
+        .gc-sub { font-size: 0.68rem; opacity: 0.85; margin-top: 0.1rem; }
+        .gc-meta {
+            position: relative; z-index: 1;
+            display: flex; align-items: center; gap: 0.45rem;
+            margin-top: 0.85rem;
+            font-size: 0.64rem;
+            font-weight: 700;
+        }
+        .gc-pill {
+            background: rgba(255, 255, 255, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            border-radius: 999px;
+            padding: 3px 9px;
+        }
+        .gc-go { margin-left: auto; display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.66rem; opacity: 0.9; }
+        .gc-go i { transition: transform 0.2s var(--ease-out); }
+        .game-card:hover .gc-go i { transform: translateX(3px); }
+
+        .activity-card {
+            background: var(--surface-solid);
+            border: 1px solid var(--border-solid);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+        }
+        .activity-row {
+            display: flex; align-items: center; gap: 0.7rem;
+            padding: 0.7rem 0.85rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .activity-row:last-child { border-bottom: none; }
+        .ar-icon {
+            width: 34px; height: 34px; flex: 0 0 34px;
+            border-radius: 11px; display: grid; place-items: center;
+            font-size: 0.85rem; color: #fff;
+        }
+        .ar-main { flex: 1; min-width: 0; }
+        .ar-title { font-size: 0.78rem; font-weight: 700; color: var(--text-primary); }
+        .ar-sub { font-size: 0.63rem; color: var(--text-muted); margin-top: 1px; }
+        .ar-score { font-size: 0.82rem; font-weight: 800; color: var(--brand); white-space: nowrap; }
+        .ar-outcome { font-size: 0.58rem; font-weight: 700; padding: 2px 7px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .ar-outcome.win { background: var(--success-soft); color: var(--success); }
+        .ar-outcome.loss { background: var(--danger-soft); color: var(--danger); }
+        .ar-outcome.draw, .ar-outcome.completed, .ar-outcome.abandoned { background: var(--brand-soft); color: var(--brand); }
+        .empty-activity { padding: 1.6rem 1rem; text-align: center; color: var(--text-muted); font-size: 0.76rem; }
+        .empty-activity i { display: block; font-size: 1.4rem; margin-bottom: 0.4rem; opacity: 0.5; }
+        .skeleton-row { height: 58px; border-bottom: 1px solid var(--border); background: linear-gradient(90deg, var(--bg), var(--surface-solid), var(--bg)); background-size: 200% 100%; animation: shimmer 1.2s infinite; }
+        @keyframes shimmer { to { background-position: -200% 0; } }
+        @media (min-width: 431px) { .app-shell { border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); margin: 0 auto; } }
+    </style>
     <%- include('partials/theme-toggle') %>
 </head>
 <body>
@@ -14,34 +177,146 @@
         <div class="header-title">Games Hub</div>
     </div>
     <div class="page-content">
-        <div class="stats-row" style="margin:0.5rem 0">
-            <div class="stat-chip" style="flex:2;"><i class="fas fa-fire"></i><div class="num" id="sudokuWins">0</div><div class="lbl">Sudoku</div></div>
-            <div class="stat-chip" style="flex:2;"><i class="fas fa-shuffle"></i><div class="num" id="scrambleWins">0</div><div class="lbl">Scramble</div></div>
-            <div class="stat-chip" style="flex:2;"><i class="fas fa-chess"></i><div class="num" id="chessWins">0</div><div class="lbl">Chess</div></div>
+        <div class="games-hero">
+            <div class="hero-top">
+                <div class="hero-icon"><i class="fas fa-gamepad"></i></div>
+                <div>
+                    <h1>Games Hub</h1>
+                    <p>Take a smart break — train your brain and beat your best score.</p>
+                </div>
+            </div>
+            <div class="hero-stats">
+                <div class="hero-stat"><b id="totalPlays">0</b><span>Games played</span></div>
+                <div class="hero-stat"><b id="totalWins">0</b><span>Wins</span></div>
+                <div class="hero-stat"><b id="bestOverall">0</b><span>Best score</span></div>
+            </div>
         </div>
 
+        <div class="section-title">Pick a game <small>4 available</small></div>
         <div class="game-grid">
-            <a href="/games/sudoku" class="game-card" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;"><i class="fas fa-th"></i><h3>Sudoku</h3><p>Easier puzzle</p></a>
-            <a href="/games/scramble" class="game-card" style="background:linear-gradient(135deg,#059669,#047857);color:white;"><i class="fas fa-shuffle"></i><h3>Word Scramble</h3><p>Academic terms</p></a>
-            <a href="/games/crossword" class="game-card" style="background:linear-gradient(135deg,#dc2626,#b91c1c);color:white;"><i class="fas fa-border-all"></i><h3>Crossword</h3><p>Quick quiz</p></a>
-            <a href="/games/chess" class="game-card" style="background:linear-gradient(135deg,#7c3aed,#6d28c9);color:white;"><i class="fas fa-chess"></i><h3>Chess</h3><p>Play now</p></a>
+            <a href="/games/sudoku" class="game-card gc-sudoku" data-game="sudoku">
+                <div class="gc-head">
+                    <div class="gc-icon"><i class="fas fa-table-cells"></i></div>
+                    <div><div class="gc-title">Sudoku</div><div class="gc-sub">Logic puzzle · 3 difficulties</div></div>
+                </div>
+                <div class="gc-meta">
+                    <span class="gc-pill"><i class="fas fa-play"></i> <span data-plays>0</span> plays</span>
+                    <span class="gc-pill"><i class="fas fa-trophy"></i> <span data-best>0</span></span>
+                    <span class="gc-go">Play <i class="fas fa-arrow-right"></i></span>
+                </div>
+            </a>
+            <a href="/games/scramble" class="game-card gc-scramble" data-game="scramble">
+                <div class="gc-head">
+                    <div class="gc-icon"><i class="fas fa-shuffle"></i></div>
+                    <div><div class="gc-title">Word Scramble</div><div class="gc-sub">Academic terms · Beat the clock</div></div>
+                </div>
+                <div class="gc-meta">
+                    <span class="gc-pill"><i class="fas fa-play"></i> <span data-plays>0</span> plays</span>
+                    <span class="gc-pill"><i class="fas fa-trophy"></i> <span data-best>0</span></span>
+                    <span class="gc-go">Play <i class="fas fa-arrow-right"></i></span>
+                </div>
+            </a>
+            <a href="/games/chess" class="game-card gc-chess" data-game="chess">
+                <div class="gc-head">
+                    <div class="gc-icon"><i class="fas fa-chess-knight"></i></div>
+                    <div><div class="gc-title">Chess</div><div class="gc-sub">Play vs AI · 3 levels</div></div>
+                </div>
+                <div class="gc-meta">
+                    <span class="gc-pill"><i class="fas fa-play"></i> <span data-plays>0</span> plays</span>
+                    <span class="gc-pill"><i class="fas fa-trophy"></i> <span data-best>0</span></span>
+                    <span class="gc-go">Play <i class="fas fa-arrow-right"></i></span>
+                </div>
+            </a>
+            <a href="/games/crossword" class="game-card gc-crossword" data-game="crossword">
+                <div class="gc-head">
+                    <div class="gc-icon"><i class="fas fa-border-all"></i></div>
+                    <div><div class="gc-title">Crossword</div><div class="gc-sub">Academic clues · 10 words</div></div>
+                </div>
+                <div class="gc-meta">
+                    <span class="gc-pill"><i class="fas fa-play"></i> <span data-plays>0</span> plays</span>
+                    <span class="gc-pill"><i class="fas fa-trophy"></i> <span data-best>0</span></span>
+                    <span class="gc-go">Play <i class="fas fa-arrow-right"></i></span>
+                </div>
+            </a>
         </div>
 
-        <div style="margin:1rem 0;display:flex;gap:8px;align-items:center">
-            <span style="font-weight:700">Friends Online:</span>
-            <span id="friendsOnline" style="color:var(--success);font-weight:600">0</span>
+        <div class="section-title">Recent activity <small>Your last 12 games</small></div>
+        <div class="activity-card" id="recentCard">
+            <div class="skeleton-row"></div>
+            <div class="skeleton-row"></div>
+            <div class="skeleton-row"></div>
+        </div>
+
+        <div style="margin:1rem 0 0;display:flex;gap:8px;align-items:center;justify-content:center;font-size:0.72rem;color:var(--text-muted)">
+            <i class="fas fa-user-group"></i>
+            <span>Friends:</span>
+            <span id="friendsOnline" style="color:var(--success);font-weight:700">0</span>
         </div>
     </div>
     <%- include('partials/bottom-nav', { activeNav: 'study' }) %>
 </div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard.js/1.0.0/js/chessboard-1.0.0.min.js"></script>
-<script src="/socket.io/socket.io.js"></script>
 <script>
-// Stats loaded from localStorage
-document.getElementById('sudokuWins').textContent = localStorage.getItem('sudokuWins')||0;
-document.getElementById('scrambleWins').textContent = localStorage.getItem('scrambleWins')||0;
-document.getElementById('chessWins').textContent = localStorage.getItem('chessWins')||0;
+(function () {
+    var GAMES = {
+        sudoku:   { label: 'Sudoku',        icon: 'fa-table-cells', color: 'linear-gradient(135deg,#1d4ed8,#3b82f6)' },
+        scramble: { label: 'Word Scramble', icon: 'fa-shuffle',     color: 'linear-gradient(135deg,#047857,#10b981)' },
+        chess:    { label: 'Chess',         icon: 'fa-chess-knight',color: 'linear-gradient(135deg,#5b21b6,#8b5cf6)' },
+        crossword:{ label: 'Crossword',     icon: 'fa-border-all',  color: 'linear-gradient(135deg,#b91c1c,#ef4444)' }
+    };
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+    function fmtDate(v) {
+        var d = new Date(v);
+        if (isNaN(d)) return '';
+        return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' · ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    }
+
+    fetch('/api/games/stats', { headers: { Accept: 'application/json' } })
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+        .then(function (data) {
+            var stats = {};
+            (data.stats || []).forEach(function (s) { stats[s.game] = s; });
+            var totalPlays = 0, totalWins = 0, bestOverall = 0;
+            Object.keys(stats).forEach(function (g) {
+                totalPlays += stats[g].plays || 0;
+                totalWins += stats[g].wins || 0;
+                bestOverall = Math.max(bestOverall, stats[g].best_score || 0);
+            });
+            document.getElementById('totalPlays').textContent = totalPlays;
+            document.getElementById('totalWins').textContent = totalWins;
+            document.getElementById('bestOverall').textContent = bestOverall;
+
+            document.querySelectorAll('.game-card').forEach(function (card) {
+                var s = stats[card.dataset.game] || { plays: 0, best_score: 0 };
+                card.querySelector('[data-plays]').textContent = s.plays || 0;
+                card.querySelector('[data-best]').textContent = s.best_score || 0;
+            });
+
+            var recent = data.recent || [];
+            var card = document.getElementById('recentCard');
+            if (!recent.length) {
+                card.innerHTML = '<div class="empty-activity"><i class="fas fa-gamepad"></i>No games yet — play one to start your history.</div>';
+                return;
+            }
+            card.innerHTML = recent.map(function (r) {
+                var g = GAMES[r.game] || { label: r.game, icon: 'fa-gamepad', color: '#64748b' };
+                var outcome = (r.outcome || 'completed').toLowerCase();
+                return '<div class="activity-row">' +
+                    '<div class="ar-icon" style="background:' + g.color + '"><i class="fas ' + g.icon + '"></i></div>' +
+                    '<div class="ar-main"><div class="ar-title">' + esc(g.label) + '</div><div class="ar-sub">' + esc(fmtDate(r.created_at)) + '</div></div>' +
+                    '<span class="ar-outcome ' + esc(outcome) + '">' + esc(outcome) + '</span>' +
+                    '<div class="ar-score">' + Number(r.score || 0) + '</div>' +
+                    '</div>';
+            }).join('');
+        })
+        .catch(function () {
+            document.getElementById('recentCard').innerHTML = '<div class="empty-activity"><i class="fas fa-triangle-exclamation"></i>Could not load your game history.</div>';
+        });
+
+    fetch('/api/friends', { headers: { Accept: 'application/json' } })
+        .then(function (r) { return r.ok ? r.json() : { friends: [] }; })
+        .then(function (d) { document.getElementById('friendsOnline').textContent = (d.friends || []).length; })
+        .catch(function () {});
+})();
 </script>
 </body>
 </html>

@@ -80,7 +80,7 @@
             <span class="qmark <%= r.isCorrect ? 'mark-correct' : 'mark-wrong' %>"><%= r.isCorrect ? '✓ Correct' : '✗ Wrong' %></span>
           <% } %>
         </div>
-        <div class="qtext rnz-render" data-tex="<%- String(r.q.question_text || '').replace(/"/g, '&quot;') %>"></div>
+        <div class="qtext rnz-render" data-tex="<%= String(r.q.question_text || '') %>"></div>
         <% if (r.opts && r.opts.length) { %>
           <div class="options">
             <% r.opts.forEach((o, j) => { %>
@@ -92,18 +92,18 @@
                 <%= (att.status === 'submitted' && showScore && chosen && !isAns) ? 'opt-wrong' : '' %>
                 <%= (!(att.status === 'submitted' && showScore && (isAns || (chosen && !isAns)))) ? 'opt-normal' : '' %>
                 <%= chosen ? 'opt-chosen' : '' %>">
-                <%= letter %>. <span class="rnz-render" data-tex="<%- String(o || '').replace(/"/g, '&quot;') %>"><%= o %></span>
+                <%= letter %>. <span class="rnz-render" data-tex="<%= String(o || '') %>"><%= o %></span>
               </span>
             <% }) %>
           </div>
         <% } %>
         <% if (att.status === 'submitted' && showScore) { %>
           <div class="explain">
-            <strong>Student answer:</strong> <span class="rnz-render" data-tex="<%- String(r.given || '').replace(/"/g, '&quot;') %>"><%= r.given ? r.given : '<span class="given-none">no answer</span>' %></span>
-            <% if (r.correctAnswer) { %> &nbsp;·&nbsp; <strong>Correct answer:</strong> <span class="rnz-render" data-tex="<%- String(r.correctAnswer).replace(/"/g, '&quot;') %>"><%= r.correctAnswer %></span><% } %>
+            <strong>Student answer:</strong> <span class="rnz-render" data-tex="<%= String(r.given || '') %>"><%= r.given ? r.given : '(no answer)' %></span>
+            <% if (r.correctAnswer) { %> &nbsp;·&nbsp; <strong>Correct answer:</strong> <span class="rnz-render" data-tex="<%= String(r.correctAnswer) %>"><%= r.correctAnswer %></span><% } %>
           </div>
           <% if (r.q.explanation) { %>
-            <div class="explain"><strong>Explanation:</strong> <span class="rnz-render" data-tex="<%- String(r.q.explanation).replace(/"/g, '&quot;') %>"></span></div>
+            <div class="explain"><strong>Explanation:</strong> <span class="rnz-render" data-tex="<%= String(r.q.explanation || '') %>"></span></div>
           <% } %>
         <% } %>
       </div>
