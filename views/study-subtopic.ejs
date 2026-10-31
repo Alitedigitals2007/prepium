@@ -20,6 +20,9 @@
 .st-hero .hero-actions{display:flex;gap:7px;margin-top:10px;position:relative}
 .st-hero .hero-actions button{padding:5px 10px;border-radius:5px;border:none;background:rgba(255,255,255,0.15);color:white;font-family:inherit;font-size:0.6rem;font-weight:700;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:4px}
 .st-hero .hero-actions button:active{transform:scale(0.95)}
+.complete-pill{margin-left:6px;padding:5px 12px;border-radius:99px;border:1.5px solid rgba(255,255,255,0.5);background:rgba(255,255,255,0.16);color:#fff;font-family:inherit;font-size:0.62rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all .18s}
+.complete-pill:active{transform:scale(0.95)}
+.complete-pill.done{background:#fff;color:#15803d;border-color:#fff}
 /* Session bar */
 .session-bar{background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px}
 .session-bar .st-time{font-size:1.05rem;font-weight:800;font-variant-numeric:tabular-nums;flex:1;color:var(--text-primary)}
@@ -87,13 +90,15 @@
 .mjx-container{display:inline-block;vertical-align:middle;margin:2px 4px 2px 0}
 .MathJax_Display{margin:6px 0!important;overflow-x:auto;overflow-y:hidden}
 .sec-body .mjx-container{margin:2px 6px 2px 0}
-/* Flashcards */
-.fc-card{background:var(--surface-solid);border:1px solid var(--border);border-radius:12px;padding:1.8rem 1rem;text-align:center;min-height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;margin-bottom:8px}
-.fc-card:active{transform:scale(0.98)}
-.fc-front{font-size:0.92rem;font-weight:700;color:var(--text-primary)}
-.fc-back{font-size:0.82rem;font-weight:600;color:var(--text-sub);display:none}
-.fc-card.flipped .fc-front{display:none}
-.fc-card.flipped .fc-back{display:block}
+/* Flashcards — 3D flip */
+.fc-3d{perspective:1000px;margin-bottom:8px}
+.fc-inner{position:relative;transform-style:preserve-3d;transition:transform .55s var(--ease-out);cursor:pointer;border-radius:14px}
+.fc-3d.flipped .fc-inner{transform:rotateY(180deg)}
+.fc-face{backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:14px;overflow:hidden;background:var(--surface-solid);border:1px solid var(--border);box-shadow:var(--shadow-md)}
+.fc-face.back{position:absolute;inset:0;transform:rotateY(180deg);display:flex;align-items:center;justify-content:center;padding:18px 16px;color:#fff}
+.fc-face .fc-front{font-size:0.95rem;font-weight:700;line-height:1.5;color:var(--text-dark);padding:12px 16px 16px}
+.fc-face .fc-back-text{font-size:0.88rem;font-weight:600;line-height:1.55;text-align:center;text-shadow:0 1px 3px rgba(0,0,0,0.3)}
+.fc-flip-hint{text-align:center;font-size:0.6rem;color:var(--text-muted);font-weight:600;margin-top:4px}
 .fc-nav{display:flex;gap:6px;justify-content:center;margin-bottom:8px;flex-wrap:wrap}
 .fc-nav button{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface-solid);font-family:inherit;font-weight:700;font-size:0.72rem;cursor:pointer;color:var(--text-primary);transition:all .12s}
 .fc-nav button:active{transform:scale(0.95)}
@@ -154,7 +159,7 @@
             <h2><%= (subtopic.subtopic_name || subtopic.title) %></h2>
             <div class="st-row">
                 <span class="st-badge" id="statusBadge"><%= subtopic.status %></span>
-                <button onclick="toggleComplete()" id="completeBtn"><i class="fas <%= subtopic.status === 'completed' ? 'fa-check-circle' : 'fa-circle' %>"></i> <%= subtopic.status === 'completed' ? 'Completed' : 'Mark done' %></button>
+                <button onclick="toggleComplete()" id="completeBtn" class="complete-pill <%= subtopic.status === 'completed' ? 'done' : '' %>"><i class="fas <%= subtopic.status === 'completed' ? 'fa-check-circle' : 'fa-circle' %>"></i> <%= subtopic.status === 'completed' ? 'Completed' : 'Mark done' %></button>
                 <span class="st-progress" id="topicProgressText"><% var ttl = (topicSubtopics || []).length; var don = (topicSubtopics || []).filter(function(st){ return st.status === 'completed'; }).length; %><%= don %>/<%= ttl %></span>
             </div>
         </div>
@@ -507,11 +512,15 @@ function loadFlashcards(){
 function showCard(){
     if(!flashcards.length){document.getElementById('fcContainer').innerHTML='<div style="text-align:center;padding:2rem;color:var(--text-muted);font-weight:600">No flashcards yet. Generate some!</div>';return;}
     var c=flashcards[currentCard],cs=getCardColor(c.front);
-    document.getElementById('fcContainer').innerHTML='<div class="fc-card reveal" onclick="this.classList.toggle(\'flipped\')" style="padding:0;overflow:hidden">'+subCardSvg(c,cs)+
-        '<div style="padding:12px 16px 16px"><div class="fc-front" style="font-size:0.95rem;font-weight:700;line-height:1.5;color:var(--text-dark)">'+escapeHtml(c.front||'(empty)')+'</div>'+
-        '<div class="fc-back" style="font-size:0.88rem;font-weight:600;color:var(--text-sub);line-height:1.5">'+escapeHtml(c.back||'(empty)')+'</div></div>'+
+    var grad='linear-gradient(135deg,'+cs[0]+','+cs[1]+')';
+    document.getElementById('fcContainer').innerHTML=
+        '<div class="fc-3d reveal" onclick="this.classList.toggle(\'flipped\')">'+
+        '<div class="fc-inner">'+
+        '<div class="fc-face front">'+subCardSvg(c,cs)+'<div class="fc-front">'+escapeHtml(c.front||'(empty)')+'</div>'+
         '<div style="padding:0 16px 10px;font-size:0.6rem;color:var(--text-muted);font-weight:600">Tap to flip</div></div>'+
-        '<div class="reveal" style="text-align:center;font-size:0.7rem;font-weight:600;color:var(--text-sub);margin-top:4px">'+(currentCard+1)+' / '+flashcards.length+'</div>';
+        '<div class="fc-face back" style="background:'+grad+'"><div class="fc-back-text">'+escapeHtml(c.back||'(empty)')+'</div></div>'+
+        '</div></div>'+
+        '<div class="fc-flip-hint">'+(currentCard+1)+' / '+flashcards.length+' · tap card to flip</div>';
     mathRender(document.getElementById('fcContainer'));
 }
 function prevCard(){if(currentCard>0){currentCard--;showCard();}}
@@ -562,7 +571,8 @@ function toggleComplete(){
         if(d.success){
             if(badge){badge.textContent=newStatus;}
             var btn=document.getElementById('completeBtn');
-            if(btn){btn.innerHTML=newStatus==='completed'?'<i class="fas fa-check-circle"></i> Completed':'<i class="fas fa-circle"></i> Mark done';}
+            if(btn){btn.innerHTML=newStatus==='completed'?'<i class="fas fa-check-circle"></i> Completed':'<i class="fas fa-circle"></i> Mark done';btn.classList.toggle('done',newStatus==='completed');}
+            if(newStatus==='completed')Swal.fire({icon:'success',title:'Marked as completed!',toast:true,position:'top',timer:1500,showConfirmButton:false});
             updateTopicProgress();
         }
     });

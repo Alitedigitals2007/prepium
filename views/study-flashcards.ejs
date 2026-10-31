@@ -11,15 +11,14 @@
         .fc-stats .stat .num { font-size: 1.15rem; font-weight: 800; }
         .fc-stats .stat .lbl { font-size: 0.58rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
 
-        .fc-card { background: var(--surface-solid); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 3rem 1.5rem; text-align: center; min-height: 260px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.4s var(--ease-out); margin-bottom: 12px; box-shadow: var(--shadow-sm); position: relative; }
-        .fc-card:active { transform: scale(0.98); }
-        .fc-card .fc-side { width: 100%; }
-        .fc-card .fc-front { font-size: 1.05rem; font-weight: 700; line-height: 1.5; }
-        .fc-card .fc-back { font-size: 0.95rem; font-weight: 600; color: var(--text-secondary); line-height: 1.5; }
-        .fc-card .tap-hint { position: absolute; bottom: 16px; font-size: 0.6rem; color: var(--text-muted); font-weight: 600; }
-        .fc-card .fc-actions { position: absolute; top: 12px; right: 12px; display: flex; gap: 4px; }
-        .fc-card .fc-actions button { width: 30px; height: 30px; border-radius: 8px; border: none; background: var(--bg); cursor: pointer; color: var(--text-secondary); font-size: 0.7rem; display: flex; align-items: center; justify-content: center; }
-        .fc-card .fc-actions button:hover { background: var(--bg); color: var(--danger); }
+        .fc-3d { perspective: 1200px; margin-bottom: 12px; }
+        .fc-inner { position: relative; transform-style: preserve-3d; transition: transform 0.55s var(--ease-out); cursor: pointer; border-radius: var(--radius-lg); }
+        .fc-3d.flipped .fc-inner { transform: rotateY(180deg); }
+        .fc-face { backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: var(--radius-lg); overflow: hidden; background: var(--surface-solid); border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+        .fc-face.back { position: absolute; inset: 0; transform: rotateY(180deg); display: flex; align-items: center; justify-content: center; padding: 26px 24px; color: #fff; }
+        .fc-face .fc-front { font-size: 1.05rem; font-weight: 700; line-height: 1.5; color: var(--text-primary); }
+        .fc-back-text { font-size: 1rem; font-weight: 700; line-height: 1.55; text-align: center; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); }
+        .fc-hint { text-align: center; font-size: 0.62rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
 
         .fc-nav { display: flex; gap: 8px; justify-content: center; }
         .fc-nav button { padding: 12px 20px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface-solid); font-family: inherit; font-weight: 700; font-size: 0.78rem; cursor: pointer; color: var(--text-primary); transition: var(--transition); display: flex; align-items: center; gap: 6px; }
@@ -171,17 +170,19 @@ function renderCurrentCard() {
     document.getElementById('currentCardNum').textContent = currentIndex + 1;
     var fc = flashcards[currentIndex];
     var colors = getCardColors(fc.front);
-    container.innerHTML = '<div class="fc-card reveal" style="padding:0;overflow:hidden">' +
+    container.innerHTML = '<div class="fc-3d reveal" id="fc3d" onclick="flipCard()">' +
+        '<div class="fc-inner">' +
+        '<div class="fc-face front">' +
         cardSvg(fc, colors) +
-        '<div class="fc-actions" style="position:absolute;top:12px;right:12px;z-index:2"><button onclick="event.stopPropagation();deleteCard(' + fc.id + ')" title="Delete" style="width:30px;height:30px;border-radius:8px;border:none;background:var(--surface);cursor:pointer;color:var(--danger);font-size:0.7rem;display:flex;align-items:center;justify-content:center"><i class="fas fa-trash"></i></button></div>' +
-        '<div style="padding:24px 24px 16px;cursor:pointer;min-height:120px" onclick="flipCard(this)">' +
-        '<div class="fc-side fc-front" style="font-size:1.05rem;font-weight:700;line-height:1.5;color:var(--text-primary)">' + escapeHtml(fc.front || '(empty)') + '</div>' +
-        '<div class="fc-side fc-back" style="font-size:0.95rem;font-weight:600;color:var(--text-secondary);line-height:1.55;display:none">' + escapeHtml(fc.back || '(empty)') + '</div>' +
+        '<button onclick="event.stopPropagation();deleteCard(' + fc.id + ')" title="Delete" style="position:absolute;top:12px;right:12px;z-index:2;width:30px;height:30px;border-radius:9px;border:none;background:rgba(255,255,255,0.85);cursor:pointer;color:var(--danger);font-size:0.7rem;display:flex;align-items:center;justify-content:center"><i class="fas fa-trash"></i></button>' +
+        '<div style="padding:22px 24px 14px;min-height:110px;display:flex;align-items:center"><div class="fc-front">' + escapeHtml(fc.front || '(empty)') + '</div></div>' +
+        '<div style="padding:0 24px 14px;font-size:0.6rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Front · tap to flip</div>' +
         '</div>' +
-        '<div style="padding:0 24px 18px;display:flex;justify-content:space-between;align-items:center">' +
-        '<div style="font-size:0.6rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Tap card to flip</div>' +
-        '<div id="flipStateBadge" style="font-size:0.6rem;color:var(--brand);font-weight:800;text-transform:uppercase;letter-spacing:0.5px">Front</div>' +
-        '</div></div>';
+        '<div class="fc-face back" style="background:linear-gradient(135deg,' + colors[0] + ',' + colors[1] + ')">' +
+        '<div class="fc-back-text">' + escapeHtml(fc.back || '(empty)') + '</div>' +
+        '</div>' +
+        '</div></div>' +
+        '<div class="fc-hint">Card ' + (currentIndex + 1) + ' of ' + flashcards.length + '</div>';
 }
 
 function nextCard() {
@@ -229,19 +230,10 @@ function deleteCard(id) {
     });
 }
 
-function flipCard(el) {
-    var front = el.querySelector('.fc-front');
-    var back = el.querySelector('.fc-back');
-    if (!front || !back) return;
-    if (front.style.display === 'none') {
-        front.style.display = 'block';
-        back.style.display = 'none';
-        var b = document.getElementById('flipStateBadge'); if (b) b.textContent = 'Front';
-    } else {
-        front.style.display = 'none';
-        back.style.display = 'block';
-        var b2 = document.getElementById('flipStateBadge'); if (b2) b2.textContent = 'Back';
-    }
+function flipCard() {
+    var card = document.getElementById('fc3d');
+    if (!card) return;
+    card.classList.toggle('flipped');
 }
 
 function escapeHtml(text) {

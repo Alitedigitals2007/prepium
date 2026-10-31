@@ -1,4 +1,5 @@
 <%- include('install-banner') %>
+<%- include('app-drawer') %>
 <style>
     .bottom-nav.fixed-nav {
         position: fixed !important;
@@ -45,6 +46,8 @@
         if (!d) return;
         d.classList.add('open');
         document.body.style.overflow = 'hidden';
+        var input = document.getElementById('drawerSearch');
+        if (input) { input.value = ''; window.filterDrawer(); setTimeout(function () { input.focus({ preventScroll: true }); }, 120); }
     };
     window.closeDrawer = function () {
         var d = document.getElementById('appDrawer');
@@ -53,14 +56,42 @@
         document.body.style.overflow = '';
     };
     window.filterDrawer = function () {
-        var search = document.getElementById('drawerSearch');
-        if (!search) return;
-        search = search.value.toLowerCase();
+        var input = document.getElementById('drawerSearch');
+        if (!input) return;
+        var q = input.value.toLowerCase().trim();
         var body = document.getElementById('drawerBody');
         if (!body) return;
+
         body.querySelectorAll('.drawer-tile').forEach(function (el) {
-            var text = el.textContent.toLowerCase();
-            el.style.display = text.includes(search) ? '' : 'none';
+            var text = (el.getAttribute('data-name') || '') + ' ' + el.textContent;
+            el.style.display = (!q || text.toLowerCase().indexOf(q) !== -1) ? '' : 'none';
         });
+
+        /* Hide a section header + grid when it has no matching tiles */
+        body.querySelectorAll('.drawer-group-label').forEach(function (label) {
+            var grid = label.nextElementSibling;
+            var hasVisible = false;
+            if (grid) {
+                grid.querySelectorAll('.drawer-tile').forEach(function (t) {
+                    if (t.style.display !== 'none') hasVisible = true;
+                });
+                grid.style.display = hasVisible ? '' : 'none';
+            }
+            label.style.display = hasVisible ? '' : 'none';
+        });
+
+        var featured = document.getElementById('drawerFeatured');
+        if (featured) featured.style.display = q ? 'none' : '';
+
+        var empty = body.querySelector('.drawer-empty');
+        if (empty) {
+            var any = false;
+            body.querySelectorAll('.drawer-tile').forEach(function (t) { if (t.style.display !== 'none') any = true; });
+            empty.style.display = any ? 'none' : '';
+        }
     };
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { window.closeDrawer(); }
+    });
 </script>

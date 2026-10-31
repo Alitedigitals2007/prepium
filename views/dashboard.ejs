@@ -5,191 +5,232 @@
     <script src="https://js.paystack.co/v1/inline.js"></script>
     <style>
         body::before { display: none; }
-        .app-shell { background: var(--bg); backdrop-filter: none; border: none; padding-bottom: 110px; }
-        .dash-content { position: relative; min-height: 100vh; }
+        .app-shell { background: var(--bg); backdrop-filter: none; border: none; padding-bottom: 112px; }
+        .dash-content { position: relative; min-height: 100vh; max-width: 680px; margin: 0 auto; }
 
-        .dash-header { padding: 1.25rem 1.25rem 0.75rem; display: flex; align-items: center; justify-content: space-between; }
-        .dash-header-left { display: flex; align-items: center; gap: 12px; }
-        .dash-avatar { width: 46px; height: 46px; border-radius: 16px; background: var(--brand-gradient); color: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; box-shadow: 0 4px 14px var(--brand-light); }
-        .dash-greeting { font-size: 0.58rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.6px; }
-        .dash-clock-wrap { font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); opacity: 0.7; margin: 1px 0; }
-        .dash-name { font-size: 1.3rem; font-weight: 800; line-height: 1.1; }
-        .dash-header-right { display: flex; align-items: center; gap: 8px; }
-        .hamburger-btn { width: 42px; height: 42px; border-radius: 12px; background: var(--surface-solid); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 1rem; cursor: pointer; transition: var(--transition); }
-        .hamburger-btn:hover { background: var(--bg); border-color: var(--brand); }
-        .hamburger-btn:active { transform: scale(0.92); }
-        .notif-bell { width: 42px; height: 42px; border-radius: 14px; background: var(--surface-solid); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 1rem; cursor: pointer; position: relative; box-shadow: var(--shadow-sm); transition: var(--transition); }
-        .notif-bell:active { transform: scale(0.92); }
-        .notif-dot { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--danger); border: 2px solid var(--surface-solid); }
-        .streak-badge { display: flex; align-items: center; gap: 5px; padding: 8px 14px; border-radius: 12px; background: linear-gradient(135deg,#f97316,#ef4444); color: white; font-weight: 800; font-size: 0.75rem; box-shadow: 0 4px 12px rgba(239,68,68,0.25); }
-        .streak-badge i { font-size: 0.85rem; }
-
-        /* Next action hero card */
-        .next-card { margin: 0 1.25rem 1.5rem; border-radius: 24px; padding: 22px 20px; background: linear-gradient(135deg,#dbeafe,#c7d2fe); color: var(--text-primary); display: flex; align-items: center; gap: 16px; text-decoration: none; box-shadow: 0 6px 20px rgba(59,130,246,0.25); position: relative; overflow: hidden; border: 1px solid var(--border); }
-        .next-card::before { content: ''; position: absolute; top: -40%; right: -10%; width: 200px; height: 200px; border-radius: 50%; background: rgba(255,255,255,0.1); }
-        .next-card .nc-icon { width: 52px; height: 52px; flex: 0 0 52px; border-radius: 16px; background: rgba(59,130,246,0.15); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; position: relative; color: #2563eb; }
-        .next-card .nc-body { flex: 1; min-width: 0; position: relative; }
-        .next-card .nc-kicker { font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; opacity: 0.8; color: #475569; }
-        .next-card .nc-title { font-size: 1.05rem; font-weight: 800; margin: 3px 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #1e293b; }
-        .next-card .nc-sub { font-size: 0.72rem; opacity: 0.8; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #475569; }
-        .next-card .nc-cta { flex-shrink: 0; padding: 10px 18px; border-radius: 14px; background: rgba(59,130,246,0.15); color: #2563eb; font-weight: 800; font-size: 0.75rem; position: relative; }
-
-        /* Onboarding */
-        .onboard-card { margin: 0 1.25rem 1.25rem; border-radius: 20px; padding: 20px 18px; background: var(--surface-solid); border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
-        .onboard-card h3 { font-size: 1rem; font-weight: 800; margin: 0 0 4px; }
-        .onboard-card > p { font-size: 0.75rem; color: var(--text-secondary); margin: 0 0 14px; }
-        .onboard-steps { display: grid; gap: 8px; }
-        .onboard-step { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 14px; background: var(--bg); text-decoration: none; color: inherit; }
-        .onboard-step .os-num { width: 26px; height: 26px; flex: 0 0 26px; border-radius: 50%; background: var(--brand-soft); color: var(--brand); font-weight: 800; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; }
-        .onboard-step .os-body { flex: 1; min-width: 0; }
-        .onboard-step .os-title { font-size: 0.8rem; font-weight: 700; }
-        .onboard-step .os-sub { font-size: 0.66rem; color: var(--text-secondary); }
-        .onboard-step i.fa-chevron-right { font-size: 0.65rem; color: var(--text-muted); }
-
-        .hero-strip { padding: 0 1.25rem 1.5rem; display: flex; flex-wrap: wrap; gap: 10px; }
-        .hero-stat { flex: 1 1 calc(50% - 5px); min-width: 0; background: var(--surface-solid); border-radius: 20px; padding: 16px 10px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); text-align: center; }
-        .hero-stat .stat-icon { width: 42px; height: 42px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; margin-bottom: 8px; }
-        .hero-stat .stat-num { font-size: 1.5rem; font-weight: 800; line-height: 1; }
-        .hero-stat .stat-label { font-size: 0.62rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 3px; }
-
-        .section-head { padding: 0.5rem 1.25rem 0.75rem; display: flex; align-items: center; justify-content: space-between; }
-        .section-head h2 { font-size: 1rem; font-weight: 800; letter-spacing: -0.3px; }
-        .section-head .see-all { font-size: 0.68rem; font-weight: 700; color: var(--brand); cursor: pointer; text-decoration: none; background: none; border: none; font-family: var(--font); }
-
-        /* ── Phone-style app grid ── */
-        .app-grid { padding: 0 1.25rem; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 6px; }
-        .app-tile { display: flex; flex-direction: column; align-items: center; gap: 7px; text-decoration: none; position: relative; }
-        .app-tile:active .at-icon { transform: scale(0.9); }
-        .app-tile .at-icon {
-            width: 56px; height: 56px; border-radius: 17px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.3rem; position: relative;
-            background: var(--surface-solid); border: 1px solid var(--border);
-            box-shadow: var(--shadow-sm); transition: transform 0.15s var(--ease-out);
+        /* ---------- Header ---------- */
+        .dash-header { padding: 1.1rem 1.15rem 0.85rem; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .dash-header-left { display: flex; align-items: center; gap: 11px; min-width: 0; }
+        .menu-btn {
+            width: 44px; height: 44px; flex: 0 0 44px; border-radius: 15px;
+            background: var(--surface-solid); border: 1px solid var(--border-solid);
+            display: grid; place-items: center; color: var(--text-secondary);
+            font-size: 1rem; cursor: pointer; box-shadow: var(--shadow-sm);
+            transition: transform 0.14s var(--ease-out), border-color 0.14s;
         }
-        .app-tile .at-label { font-size: 0.62rem; font-weight: 700; color: var(--text-secondary); text-align: center; line-height: 1.25; max-width: 74px; }
-        .app-tile.locked .at-icon { opacity: 0.55; }
-        .app-tile.locked .at-label { opacity: 0.55; }
-        .app-tile .at-lock {
-            position: absolute; top: -3px; right: 6px;
-            width: 18px; height: 18px; border-radius: 50%;
-            background: var(--surface-solid); border: 1px solid var(--border);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 0.55rem; color: var(--text-muted); box-shadow: var(--shadow-sm);
+        .menu-btn:hover { border-color: var(--brand); color: var(--brand); }
+        .menu-btn:active { transform: scale(0.92); }
+        .dash-avatar {
+            width: 46px; height: 46px; flex: 0 0 46px; border-radius: 16px;
+            background: linear-gradient(135deg, #2563eb, #7c3aed); color: #fff;
+            display: grid; place-items: center; font-weight: 800; font-size: 1.1rem;
+            box-shadow: 0 8px 18px rgba(37, 99, 235, 0.26);
+        }
+        .dash-hello { min-width: 0; }
+        .dash-greeting { font-size: 0.6rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.09em; }
+        .dash-name { font-size: 1.28rem; font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .dash-sub { display: flex; align-items: center; gap: 6px; font-size: 0.62rem; font-weight: 600; color: var(--text-muted); margin-top: 2px; }
+        .dash-sub i { font-size: 0.55rem; }
+        .dash-header-right { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+        .streak-chip {
+            display: flex; align-items: center; gap: 5px; padding: 9px 12px; border-radius: 13px;
+            background: linear-gradient(135deg, #f97316, #ef4444); color: #fff;
+            font-weight: 800; font-size: 0.74rem; box-shadow: 0 5px 14px rgba(239, 68, 68, 0.28);
+        }
+        .bell {
+            width: 44px; height: 44px; border-radius: 15px; position: relative;
+            background: var(--surface-solid); border: 1px solid var(--border-solid);
+            display: grid; place-items: center; color: var(--text-secondary);
+            font-size: 1rem; box-shadow: var(--shadow-sm); text-decoration: none;
+            transition: transform 0.14s var(--ease-out);
+        }
+        .bell:active { transform: scale(0.92); }
+        .bell-dot {
+            position: absolute; top: 9px; right: 9px; min-width: 17px; height: 17px;
+            padding: 0 4px; border-radius: 99px; background: #ef4444; color: #fff;
+            border: 2px solid var(--surface-solid); font-size: 0.5rem; font-weight: 800;
+            display: grid; place-items: center;
         }
 
-        /* Quick dock (phone-style home bar) */
-        .quick-dock { padding: 0 1.25rem; display: flex; justify-content: space-around; margin-bottom: 2rem; }
-        .dock-item { display: flex; flex-direction: column; align-items: center; gap: 5px; text-decoration: none; color: inherit; font-family: var(--font); background: none; border: none; cursor: pointer; flex: 1; max-width: 76px; }
-        .dock-item span { font-size: 0.64rem; font-weight: 600; color: var(--text-secondary); margin-top: 3px; }
-        .dock-item.locked { opacity: 0.55; }
-        .dock-icon { width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; box-shadow: var(--shadow-sm); }
-        .dock-icon.c-blue { background: #dbeafe; color: #2563eb; }
-        .dock-icon.c-green { background: #dcfce7; color: #16a34a; }
-        .dock-icon.c-amber { background: #fef3c7; color: #d97706; }
-        .dock-icon.c-red { background: #fee2e2; color: #dc2626; }
-        .dock-icon.c-grad { background: #c7d2fe; color: #4338ca; }
-        .dock-icon.c-teal { background: #ccfbf1; color: #0d9488; }
-        .dock-icon.c-orange { background: #fed7aa; color: #f59e0b; }
-        .dock-lock { position: absolute; top: -4px; right: 4px; width: 16px; height: 16px; border-radius: 50%; background: var(--surface-solid); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 0.4rem; color: var(--text-muted); }
+        /* ---------- Hero / next action ---------- */
+        .hero-card {
+            margin: 0 1.15rem 1.15rem; border-radius: 26px; padding: 20px;
+            background: linear-gradient(135deg, #1d4ed8 0%, #4f46e5 55%, #7c3aed 100%);
+            color: #fff; position: relative; overflow: hidden;
+            box-shadow: 0 18px 40px rgba(37, 99, 235, 0.32);
+            text-decoration: none; display: block;
+        }
+        .hero-card::before, .hero-card::after {
+            content: ''; position: absolute; border-radius: 50%; background: rgba(255, 255, 255, 0.14);
+        }
+        .hero-card::before { width: 190px; height: 190px; right: -60px; top: -80px; }
+        .hero-card::after { width: 120px; height: 120px; right: 40px; bottom: -80px; background: rgba(255, 255, 255, 0.08); }
+        .hero-kicker {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 0.58rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.09em;
+            background: rgba(255, 255, 255, 0.18); padding: 4px 9px; border-radius: 99px;
+            position: relative; z-index: 1;
+        }
+        .hero-row { display: flex; align-items: center; gap: 14px; margin-top: 12px; position: relative; z-index: 1; }
+        .hero-icon {
+            width: 52px; height: 52px; flex: 0 0 52px; border-radius: 16px;
+            display: grid; place-items: center; font-size: 1.25rem;
+            background: rgba(255, 255, 255, 0.18); border: 1px solid rgba(255, 255, 255, 0.22);
+        }
+        .hero-body { flex: 1; min-width: 0; }
+        .hero-title { font-size: 1.05rem; font-weight: 800; line-height: 1.25; }
+        .hero-sub { font-size: 0.7rem; opacity: 0.82; font-weight: 500; margin-top: 2px; }
+        .hero-cta {
+            flex: 0 0 auto; padding: 10px 15px; border-radius: 13px;
+            background: #fff; color: #2563eb; font-size: 0.72rem; font-weight: 800;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .hero-welcome { position: relative; z-index: 1; }
+        .hero-welcome h2 { font-size: 1.2rem; font-weight: 800; letter-spacing: -0.02em; }
+        .hero-welcome p { font-size: 0.72rem; opacity: 0.85; margin-top: 4px; line-height: 1.5; }
+        .hero-steps { display: grid; gap: 7px; margin-top: 14px; }
+        .hero-step {
+            display: flex; align-items: center; gap: 10px;
+            background: rgba(255, 255, 255, 0.13); border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 14px; padding: 10px 12px; color: #fff; text-decoration: none;
+        }
+        .hero-step .hs-num { width: 24px; height: 24px; flex: 0 0 24px; border-radius: 50%; background: #fff; color: #2563eb; font-size: 0.7rem; font-weight: 800; display: grid; place-items: center; }
+        .hero-step .hs-title { font-size: 0.78rem; font-weight: 700; flex: 1; }
+        .hero-step .hs-sub { display: none; }
+        .hero-step > i { font-size: 0.6rem; opacity: 0.7; }
 
-        /* ── App drawer (all apps) ── */
-        .app-drawer {
-            position: fixed; inset: 0; z-index: 3000;
-            background: var(--bg); display: none;
-            overflow-y: auto; -webkit-overflow-scrolling: touch;
-            padding: 24px 16px 80px;
+        /* ---------- Stats ---------- */
+        .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 0 1.15rem 1.15rem; }
+        .stat-card {
+            background: var(--surface-solid); border: 1px solid var(--border-solid);
+            border-radius: 17px; padding: 12px 6px 11px; text-align: center;
+            box-shadow: var(--shadow-sm);
         }
-        .app-drawer.open { display: block; }
-        .drawer-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; max-width: 640px; margin-left: auto; margin-right: auto; }
-        .drawer-head h2 { font-size: 1.2rem; font-weight: 800; color: var(--text-primary); margin: 0; }
-        .drawer-close { width: 44px; height: 44px; border-radius: 16px; background: var(--surface-solid); border: 1px solid var(--border); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.1rem; }
-        .drawer-search {
-            width: 100%; max-width: 640px; margin: 0 auto 20px; display: block;
-            padding: 13px 18px; border-radius: 16px; border: 1.5px solid var(--border);
-            background: var(--surface-solid); color: var(--text-primary);
-            font-family: var(--font); font-size: 0.92rem; box-sizing: border-box;
-        }
-        .drawer-group-label {
-            font-size: 0.66rem; font-weight: 800; text-transform: uppercase;
-            letter-spacing: 0.08em; color: var(--text-muted);
-            max-width: 640px; margin: 22px auto 12px;
-        }
-        .drawer-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px 8px; max-width: 640px; margin: 0 auto; }
-        .drawer-empty { text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 20px 0; max-width: 640px; margin: 0 auto; }
+        .stat-card i { font-size: 0.9rem; margin-bottom: 5px; display: block; }
+        .stat-card b { display: block; font-size: 1.15rem; font-weight: 800; color: var(--text-primary); line-height: 1; }
+        .stat-card span { display: block; font-size: 0.52rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
 
-        /* Today rows */
-        .today-list { padding: 0 1.25rem; display: grid; gap: 8px; }
-        .today-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--surface-solid); border: 1px solid var(--border); box-shadow: var(--shadow-sm); text-decoration: none; color: inherit; }
-        .today-row .tr-icon { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; background: var(--brand-soft); color: var(--brand); }
+        /* ---------- Sections ---------- */
+        .section-head { padding: 0.35rem 1.15rem 0.7rem; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .section-head h2 { font-size: 0.98rem; font-weight: 800; letter-spacing: -0.02em; color: var(--text-primary); }
+        .section-head .see-all { font-size: 0.66rem; font-weight: 800; color: var(--brand); text-decoration: none; background: none; border: none; font-family: var(--font); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+
+        /* ---------- Quick actions ---------- */
+        .quick-scroll { display: flex; gap: 9px; padding: 0 1.15rem 1.15rem; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        .quick-scroll::-webkit-scrollbar { display: none; }
+        .quick-tile {
+            flex: 0 0 auto; width: 82px; scroll-snap-align: start;
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+            text-decoration: none; color: inherit; position: relative;
+        }
+        .quick-tile .qt-icon {
+            width: 58px; height: 58px; border-radius: 19px; display: grid; place-items: center;
+            color: #fff; font-size: 1.25rem;
+            box-shadow: inset 0 -5px 0 rgba(0, 0, 0, 0.16), inset 0 2px 0 rgba(255, 255, 255, 0.26), 0 7px 16px rgba(15, 23, 42, 0.16);
+            transition: transform 0.15s var(--ease-out);
+        }
+        .quick-tile:active .qt-icon { transform: scale(0.9); }
+        .quick-tile .qt-label { font-size: 0.64rem; font-weight: 700; color: var(--text-secondary); text-align: center; line-height: 1.2; }
+        .quick-tile.locked .qt-icon, .quick-tile.locked .qt-label { opacity: 0.5; }
+        .quick-tile .qt-lock { position: absolute; top: -3px; right: 10px; width: 18px; height: 18px; border-radius: 50%; background: var(--surface-solid); border: 1px solid var(--border-solid); display: grid; place-items: center; font-size: 0.45rem; color: var(--text-muted); }
+        .c-blue { background: linear-gradient(135deg, #2563eb, #3b82f6); }
+        .c-grad { background: linear-gradient(135deg, #4f46e5, #7c3aed); }
+        .c-teal { background: linear-gradient(135deg, #0d9488, #14b8a6); }
+        .c-orange { background: linear-gradient(135deg, #ea580c, #f59e0b); }
+        .c-green { background: linear-gradient(135deg, #059669, #10b981); }
+        .c-red { background: linear-gradient(135deg, #b91c1c, #ef4444); }
+        .c-purple { background: linear-gradient(135deg, #7c3aed, #a855f7); }
+        .c-pink { background: linear-gradient(135deg, #db2777, #ec4899); }
+
+        /* ---------- Today list ---------- */
+        .today-list { padding: 0 1.15rem; display: grid; gap: 8px; }
+        .today-row {
+            display: flex; align-items: center; gap: 12px; padding: 12px 13px;
+            border-radius: 16px; background: var(--surface-solid);
+            border: 1px solid var(--border-solid); box-shadow: var(--shadow-sm);
+            text-decoration: none; color: inherit;
+            transition: transform 0.14s var(--ease-out);
+        }
+        .today-row:active { transform: scale(0.985); }
+        .today-row .tr-icon { width: 40px; height: 40px; flex: 0 0 40px; border-radius: 13px; display: grid; place-items: center; font-size: 0.88rem; background: var(--brand-soft); color: var(--brand); }
         .today-row .tr-body { flex: 1; min-width: 0; }
-        .today-row .tr-title { font-size: 0.8rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .today-row .tr-meta { font-size: 0.66rem; color: var(--text-secondary); font-weight: 600; margin-top: 1px; }
-        .today-row .tr-badge { flex-shrink: 0; }
+        .today-row .tr-title { font-size: 0.8rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-primary); }
+        .today-row .tr-meta { font-size: 0.63rem; color: var(--text-muted); font-weight: 600; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .today-row .tr-badge { flex: 0 0 auto; }
+        .today-row .tr-chevron { font-size: 0.6rem; color: var(--text-muted); flex: 0 0 auto; }
 
-        .quick-resume { padding: 0 1.25rem; }
-        .resume-card { background: var(--surface-solid); border-radius: 18px; padding: 16px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: 14px; text-decoration: none; color: inherit; margin-bottom: 10px; transition: var(--transition); }
-        .resume-card:active { transform: scale(0.98); }
-        .resume-card .rc-icon { width: 44px; height: 44px; border-radius: 14px; background: var(--brand-soft); display: flex; align-items: center; justify-content: center; color: var(--brand); font-size: 1rem; flex-shrink: 0; }
-        .resume-card .rc-body { flex: 1; min-width: 0; }
-        .resume-card .rc-body .rc-title { font-size: 0.82rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .resume-card .rc-body .rc-meta { font-size: 0.65rem; color: var(--text-secondary); font-weight: 600; margin-top: 1px; }
-        .resume-card .rc-progress { width: 40px; text-align: right; font-size: 0.75rem; font-weight: 800; color: var(--brand); }
+        /* ---------- Challenge banner ---------- */
+        .challenge-card {
+            margin: 0 1.15rem 1.15rem; padding: 16px 18px; border-radius: 20px;
+            background: linear-gradient(135deg, #f97316, #ef4444); color: #fff;
+            display: flex; align-items: center; gap: 13px; text-decoration: none;
+            box-shadow: 0 12px 28px rgba(239, 68, 68, 0.28); position: relative; overflow: hidden;
+        }
+        .challenge-card::after { content: ''; position: absolute; width: 140px; height: 140px; border-radius: 50%; right: -40px; top: -70px; background: rgba(255, 255, 255, 0.12); }
+        .challenge-icon { width: 44px; height: 44px; flex: 0 0 44px; border-radius: 14px; background: rgba(255, 255, 255, 0.2); display: grid; place-items: center; font-size: 1.1rem; position: relative; z-index: 1; }
+        .challenge-body { flex: 1; position: relative; z-index: 1; }
+        .challenge-body h3 { font-size: 0.9rem; font-weight: 800; }
+        .challenge-body p { font-size: 0.66rem; opacity: 0.86; margin-top: 1px; }
+        .challenge-go { position: relative; z-index: 1; font-size: 0.62rem; font-weight: 800; background: #fff; color: #ea580c; padding: 8px 13px; border-radius: 11px; }
 
-        .daily-banner { margin: 0 1.25rem 1.25rem; padding: 18px 20px; border-radius: 20px; background: linear-gradient(135deg,var(--accent),var(--brand)); color: white; display: flex; align-items: center; justify-content: space-between; text-decoration: none; box-shadow: 0 6px 20px var(--brand-light); position: relative; overflow: hidden; }
-        .daily-banner::before { content: ''; position: absolute; top: -40%; right: -20%; width: 160px; height: 160px; border-radius: 50%; background: rgba(255,255,255,0.08); }
-        .daily-banner .db-left { display: flex; align-items: center; gap: 12px; position: relative; }
-        .daily-banner .db-icon { width: 40px; height: 40px; border-radius: 12px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
-        .daily-banner .db-text h4 { font-size: 0.88rem; font-weight: 800; margin: 0; }
-        .daily-banner .db-text p { font-size: 0.68rem; opacity: 0.85; margin: 2px 0 0; font-weight: 500; }
-        .daily-banner .db-arrow { font-size: 0.8rem; opacity: 0.7; position: relative; }
+        /* ---------- Premium ---------- */
+        .premium-card {
+            margin: 0 1.15rem 1.15rem; padding: 17px 18px; border-radius: 20px;
+            background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fde68a;
+            display: flex; align-items: center; gap: 13px;
+        }
+        .premium-icon { width: 44px; height: 44px; flex: 0 0 44px; border-radius: 14px; background: linear-gradient(135deg, #f59e0b, #f97316); color: #fff; display: grid; place-items: center; font-size: 1.05rem; box-shadow: 0 6px 14px rgba(245, 158, 11, 0.3); }
+        .premium-body { flex: 1; min-width: 0; }
+        .premium-body h3 { font-size: 0.86rem; font-weight: 800; color: #78350f; }
+        .premium-body p { font-size: 0.66rem; color: #92400e; margin-top: 1px; font-weight: 500; }
+        .premium-btn { flex: 0 0 auto; border: none; border-radius: 11px; padding: 9px 14px; font-family: var(--font); font-size: 0.68rem; font-weight: 800; cursor: pointer; background: linear-gradient(135deg, #f59e0b, #f97316); color: #fff; }
 
-        <% if (!user.has_paid) { %>
-        .upgrade-strip { margin: 0 1.25rem 1.25rem; padding: 18px 20px; border-radius: 20px; background: linear-gradient(135deg,var(--surface-solid) 0%,var(--surface) 100%); color: var(--text-primary); display: flex; align-items: center; gap: 14px; position: relative; overflow: hidden; border: 1px solid var(--border); }
-        .upgrade-strip::before { content: ''; position: absolute; top: -50%; right: -20%; width: 200px; height: 200px; border-radius: 50%; background: var(--brand-light); }
-        .upgrade-strip .us-icon { width: 44px; height: 44px; border-radius: 14px; background: var(--brand-light); display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0; color: var(--brand); }
-        .upgrade-strip .us-content { flex: 1; }
-        .upgrade-strip .us-content h4 { font-size: 0.85rem; font-weight: 800; margin: 0; }
-        .upgrade-strip .us-content p { font-size: 0.7rem; opacity: 0.7; font-weight: 500; margin: 2px 0 0; color: var(--text-secondary); }
-        .upgrade-strip .us-btn { padding: 10px 18px; border-radius: 12px; background: var(--brand); color: white; font-weight: 800; font-size: 0.72rem; border: none; cursor: pointer; flex-shrink: 0; }
-        <% } %>
+        /* ---------- Recent / side ---------- */
+        .card-list { padding: 0 1.15rem; display: grid; gap: 8px; }
+        .mini-card { display: flex; align-items: center; gap: 12px; padding: 11px 13px; border-radius: 15px; background: var(--surface-solid); border: 1px solid var(--border-solid); text-decoration: none; color: inherit; }
+        .mini-card .mc-icon { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 12px; display: grid; place-items: center; background: var(--brand-soft); color: var(--brand); font-size: 0.85rem; }
+        .mini-card .mc-body { flex: 1; min-width: 0; }
+        .mini-card .mc-title { font-size: 0.78rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .mini-card .mc-meta { font-size: 0.62rem; color: var(--text-muted); font-weight: 600; margin-top: 1px; }
+        .mini-card .mc-score { font-size: 0.78rem; font-weight: 800; color: var(--brand); }
+        .empty-row { padding: 0 1.15rem; }
+        .empty-card { padding: 18px; border-radius: 16px; background: var(--surface-solid); border: 1px dashed var(--border-solid); text-align: center; color: var(--text-muted); font-size: 0.74rem; line-height: 1.5; }
+        .empty-card i { display: block; font-size: 1.2rem; margin-bottom: 6px; opacity: 0.5; }
 
-        .bottom-spacer { height: 20px; }
+        .notice-strip { margin: 0 1.15rem 1.15rem; }
 
-        /* ── Desktop ≥1024px ── */
+        /* ---------- Desktop ---------- */
+        .dash-columns { display: block; }
         @media (min-width: 1024px) {
             .app-shell { padding-bottom: 40px; }
-            .dash-content { max-width: 1080px; margin: 0 auto; padding: 0 32px 40px; }
-            .dash-columns { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
+            .dash-content { max-width: 1100px; padding: 0 32px 40px; }
+            .dash-header { padding: 2rem 0 1.1rem; }
+            .hero-card, .challenge-card, .premium-card { margin-left: 0; margin-right: 0; }
+            .stat-grid { padding: 0 0 1.15rem; gap: 12px; }
+            .stat-card { padding: 16px 8px; }
+            .stat-card b { font-size: 1.4rem; }
+            .section-head { padding-left: 0; padding-right: 0; }
+            .quick-scroll { padding-left: 0; padding-right: 0; }
+            .today-list, .card-list { padding-left: 0; padding-right: 0; }
+            .notice-strip { margin-left: 0; margin-right: 0; }
+            .dash-columns { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 26px; align-items: start; }
             .dash-col-main { min-width: 0; }
             .dash-col-side { min-width: 0; }
-            .dash-header { padding: 2rem 0 1rem; }
-            .hero-strip { padding: 0 0 1.25rem; }
-            .hero-stat { flex: 1 1 calc(25% - 6px); }
-            .next-card { margin: 0 0 1.25rem; }
-            .onboard-card { margin: 0 0 1.25rem; }
-            .upgrade-strip { margin: 0 0 1.25rem; }
-            .section-head { padding: 0.5rem 0 0.75rem; }
-            .app-grid { padding: 0; grid-template-columns: repeat(6, 1fr); gap: 20px 8px; }
-            .app-tile .at-icon { width: 64px; height: 64px; }
-            .today-list { padding: 0; }
-            .quick-resume { padding: 0; }
-            .daily-banner { margin: 0 0 1.25rem; }
-            .dash-side-block { background: var(--surface-solid); border: 1px solid var(--border); border-radius: 18px; padding: 16px; box-shadow: var(--shadow-sm); margin-bottom: 16px; }
-            .dash-side-block h3 { font-size: 0.8rem; font-weight: 800; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; color: var(--text-primary); }
-            .dash-side-block h3 i { color: var(--brand); font-size: 0.8rem; }
-            .side-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+            .dash-side-block { background: var(--surface-solid); border: 1px solid var(--border-solid); border-radius: 18px; padding: 15px 16px; box-shadow: var(--shadow-sm); margin-bottom: 14px; }
+            .dash-side-block h3 { font-size: 0.78rem; font-weight: 800; margin: 0 0 9px; display: flex; align-items: center; gap: 7px; color: var(--text-primary); }
+            .dash-side-block h3 i { color: var(--brand); font-size: 0.78rem; }
+            .side-row { display: flex; align-items: center; gap: 9px; padding: 7px 0; }
             .side-row + .side-row { border-top: 1px dashed var(--border-solid); }
             .side-row .sr-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brand); flex-shrink: 0; }
             .side-row .sr-body { flex: 1; min-width: 0; }
-            .side-row .sr-title { font-size: 0.76rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-            .side-row .sr-meta { font-size: 0.64rem; color: var(--text-secondary); font-weight: 600; }
-            .side-empty { font-size: 0.72rem; color: var(--text-muted); line-height: 1.5; }
+            .side-row .sr-title { font-size: 0.75rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .side-row .sr-meta { font-size: 0.62rem; color: var(--text-muted); font-weight: 600; }
+            .side-empty { font-size: 0.7rem; color: var(--text-muted); line-height: 1.5; }
             .dash-mobile-only { display: none !important; }
+            .quick-tile { width: 90px; }
         }
-        @media (max-width: 1023.98px) {
-            .dash-desktop-only { display: none !important; }
-        }
+        @media (max-width: 1023.98px) { .dash-desktop-only { display: none !important; } }
+        @media (max-width: 360px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
     </style>
     <%- include('partials/theme-toggle') %>
 </head>
@@ -198,29 +239,28 @@
 <%- include('partials/sidebar') %>
 <div class="app-shell">
   <div class="dash-content">
+
     <div class="dash-header">
         <div class="dash-header-left">
-            <button class="hamburger-btn" onclick="openDrawer()" aria-label="All apps">
-                <i class="fas fa-bars"></i>
-            </button>
+            <button class="menu-btn" onclick="openDrawer()" aria-label="Open all apps"><i class="fas fa-bars"></i></button>
             <div class="dash-avatar"><%= user.fullname ? user.fullname.charAt(0).toUpperCase() : 'U' %></div>
-            <div>
+            <div class="dash-hello">
                 <div class="dash-greeting" id="greeting-text">Good morning</div>
-                <div class="dash-clock-wrap" id="dashClock">--:--</div>
                 <div class="dash-name"><%= user.fullname ? user.fullname.split(' ')[0] : 'Student' %></div>
+                <div class="dash-sub"><i class="fas fa-clock"></i><span id="dashClock">--:--</span><span>&middot;</span><span>Let&rsquo;s get smarter</span></div>
             </div>
         </div>
         <div class="dash-header-right">
-            <div class="streak-badge"><i class="fas fa-fire"></i> <%= typeof streak !== 'undefined' ? streak : 0 %></div>
-            <a href="/notifications" class="notif-bell" aria-label="Notifications">
+            <div class="streak-chip"><i class="fas fa-fire"></i><%= typeof streak !== 'undefined' ? streak : 0 %></div>
+            <a href="/notifications" class="bell" aria-label="Notifications">
                 <i class="fas fa-bell"></i>
-                <% if (typeof unreadNotifs !== 'undefined' && unreadNotifs > 0) { %><div class="notif-dot"></div><% } %>
+                <% if (typeof unreadNotifs !== 'undefined' && unreadNotifs > 0) { %><span class="bell-dot"><%= unreadNotifs > 9 ? '9+' : unreadNotifs %></span><% } %>
             </a>
         </div>
     </div>
 
     <% if (typeof notice !== 'undefined' && notice && notice.message) { %>
-    <div class="notice-strip" style="margin:0 1.25rem 1.25rem;">
+    <div class="notice-strip">
         <i class="fas fa-bullhorn"></i>
         <span>
             <%= notice.message %>
@@ -230,132 +270,114 @@
     <% } %>
 
     <% if (typeof isNewUser !== 'undefined' && isNewUser) { %>
-    <div class="onboard-card">
-        <h3>Welcome to Prepium, <%= user.fullname ? user.fullname.split(' ')[0] : 'Student' %>!</h3>
-        <p>Set up your academics in three quick steps and get a study plan built around your courses.</p>
-        <div class="onboard-steps">
-            <a href="/study" class="onboard-step">
-                <div class="os-num">1</div>
-                <div class="os-body"><div class="os-title">Add your courses</div><div class="os-sub">Build your Study Hub so the AI tutor knows your syllabus</div></div>
-                <i class="fas fa-chevron-right"></i>
-            </a>
-            <a href="/timetable" class="onboard-step">
-                <div class="os-num">2</div>
-                <div class="os-body"><div class="os-title">Add your timetable</div><div class="os-sub">Snap a photo — AI fills in your class schedule</div></div>
-                <i class="fas fa-chevron-right"></i>
-            </a>
-            <a href="/setup-test" class="onboard-step">
-                <div class="os-num">3</div>
-                <div class="os-body"><div class="os-title">Take your first practice quiz</div><div class="os-sub">Pick your courses and start practising for exams</div></div>
-                <i class="fas fa-chevron-right"></i>
-            </a>
+    <div class="hero-card">
+        <div class="hero-welcome">
+            <span class="hero-kicker"><i class="fas fa-sparkles"></i> Welcome aboard</span>
+            <h2>Hi <%= user.fullname ? user.fullname.split(' ')[0] : 'there' %>, let&rsquo;s set you up</h2>
+            <p>Three quick steps and Prepium builds a study plan around your courses.</p>
+            <div class="hero-steps">
+                <a href="/study" class="hero-step"><span class="hs-num">1</span><span class="hs-title">Add your courses</span><i class="fas fa-chevron-right"></i></a>
+                <a href="/timetable" class="hero-step"><span class="hs-num">2</span><span class="hs-title">Add your timetable</span><i class="fas fa-chevron-right"></i></a>
+                <a href="/study" class="hero-step"><span class="hs-num">3</span><span class="hs-title">Start studying with AI</span><i class="fas fa-chevron-right"></i></a>
+            </div>
         </div>
     </div>
     <% } else if (typeof nextAction !== 'undefined' && nextAction) { %>
-    <a href="<%= nextAction.href %>" class="next-card">
-        <div class="nc-icon"><i class="fas <%= nextAction.icon %>"></i></div>
-        <div class="nc-body">
-            <div class="nc-kicker">Continue studying</div>
-            <div class="nc-title"><%= nextAction.title %></div>
-            <div class="nc-sub"><%= nextAction.sub %></div>
+    <a href="<%= nextAction.href %>" class="hero-card">
+        <span class="hero-kicker"><i class="fas fa-play"></i> Pick up where you left off</span>
+        <div class="hero-row">
+            <div class="hero-icon"><i class="fas <%= nextAction.icon %>"></i></div>
+            <div class="hero-body">
+                <div class="hero-title"><%= nextAction.title %></div>
+                <div class="hero-sub"><%= nextAction.sub %></div>
+            </div>
+            <div class="hero-cta"><%= nextAction.cta %> <i class="fas fa-arrow-right" style="font-size:0.6rem"></i></div>
         </div>
-        <div class="nc-cta"><%= nextAction.cta %></div>
     </a>
     <% } else { %>
-    <a href="/setup-test" class="next-card">
-        <div class="nc-icon"><i class="fas fa-bolt"></i></div>
-        <div class="nc-body">
-            <div class="nc-kicker">Continue studying</div>
-            <div class="nc-title">Start a practice quiz</div>
-            <div class="nc-sub">Pick your courses and test yourself</div>
+    <a href="/study" class="hero-card">
+        <span class="hero-kicker"><i class="fas fa-graduation-cap"></i> Study Hub</span>
+        <div class="hero-row">
+            <div class="hero-icon"><i class="fas fa-book-open"></i></div>
+            <div class="hero-body">
+                <div class="hero-title">Start a study session</div>
+                <div class="hero-sub">Courses, flashcards and an AI tutor</div>
+            </div>
+            <div class="hero-cta">Open <i class="fas fa-arrow-right" style="font-size:0.6rem"></i></div>
         </div>
-        <div class="nc-cta">Start</div>
     </a>
     <% } %>
 
-    <div class="hero-strip">
-        <div class="hero-stat">
-            <div class="stat-icon" style="background:var(--brand-soft);color:var(--brand);"><i class="fas fa-check-circle"></i></div>
-            <div class="stat-num"><%= typeof quizCount !== 'undefined' ? quizCount : 0 %></div>
-            <div class="stat-label">Quizzes Done</div>
+    <div class="stat-grid">
+        <div class="stat-card">
+            <i class="fas fa-bolt" style="color:#2563eb"></i>
+            <b><%= typeof quizCount !== 'undefined' ? quizCount : 0 %></b>
+            <span>Quizzes</span>
         </div>
-        <div class="hero-stat">
-            <div class="stat-icon" style="background:var(--warning-soft);color:var(--warning);"><i class="fas fa-trophy"></i></div>
-            <div class="stat-num"><%= typeof avgScore !== 'undefined' ? avgScore + '%' : '0%' %></div>
-            <div class="stat-label">Avg Score</div>
+        <div class="stat-card">
+            <i class="fas fa-bullseye" style="color:#f59e0b"></i>
+            <b><%= typeof avgScore !== 'undefined' ? avgScore + '%' : '0%' %></b>
+            <span>Avg score</span>
         </div>
-        <div class="hero-stat">
-            <div class="stat-icon" style="background:var(--success-soft);color:var(--success);"><i class="fas fa-book-open"></i></div>
-            <div class="stat-num"><%= typeof studySessions !== 'undefined' ? studySessions : 0 %></div>
-            <div class="stat-label">Study Sessions</div>
+        <div class="stat-card">
+            <i class="fas fa-clock" style="color:#10b981"></i>
+            <b><%= typeof studySessions !== 'undefined' ? studySessions : 0 %></b>
+            <span>Sessions</span>
         </div>
-        <div class="hero-stat">
-            <div class="stat-icon" style="background:var(--success-soft);color:var(--success);"><i class="fas fa-robot"></i></div>
-            <div class="stat-num"><%= typeof aiQuizCount !== 'undefined' ? aiQuizCount : 0 %></div>
-            <div class="stat-label">AI Quizzes</div>
+        <div class="stat-card">
+            <i class="fas fa-clone" style="color:#7c3aed"></i>
+            <b><%= typeof flashcardCount !== 'undefined' ? flashcardCount : 0 %></b>
+            <span>Cards</span>
         </div>
+    </div>
+
+    <div class="section-head">
+        <h2>Quick actions</h2>
+        <button class="see-all" onclick="openDrawer()">All apps <i class="fas fa-chevron-right" style="font-size:0.5rem"></i></button>
+    </div>
+    <div class="quick-scroll">
+        <a href="/study" class="quick-tile">
+            <div class="qt-icon c-grad"><i class="fas fa-graduation-cap"></i></div>
+            <span class="qt-label">Study Hub</span>
+        </a>
+        <a href="/chat" class="quick-tile">
+            <div class="qt-icon c-green"><i class="fas fa-comments"></i></div>
+            <span class="qt-label">Community</span>
+        </a>
+        <a href="/daily-challenge" class="quick-tile">
+            <div class="qt-icon c-orange"><i class="fas fa-fire-alt"></i></div>
+            <span class="qt-label">Challenge</span>
+        </a>
+        <a href="/games" class="quick-tile">
+            <div class="qt-icon c-purple"><i class="fas fa-gamepad"></i></div>
+            <span class="qt-label">Games</span>
+        </a>
+        <a href="/daily-task" class="quick-tile <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>">
+            <% if (!user.has_paid) { %><span class="qt-lock"><i class="fas fa-lock"></i></span><% } %>
+            <div class="qt-icon c-teal"><i class="fas fa-tasks"></i></div>
+            <span class="qt-label">Tasks</span>
+        </a>
+        <a href="/cgpa" class="quick-tile <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>">
+            <% if (!user.has_paid) { %><span class="qt-lock"><i class="fas fa-lock"></i></span><% } %>
+            <div class="qt-icon c-blue"><i class="fas fa-chart-line"></i></div>
+            <span class="qt-label">CGPA</span>
+        </a>
+        <a href="/library" class="quick-tile">
+            <div class="qt-icon c-teal"><i class="fas fa-building-columns"></i></div>
+            <span class="qt-label">Library</span>
+        </a>
+        <button class="quick-tile" onclick="openDrawer()" style="background:none;border:none;font-family:var(--font);cursor:pointer">
+            <div class="qt-icon" style="background:linear-gradient(135deg,#475569,#64748b)"><i class="fas fa-grip"></i></div>
+            <span class="qt-label">All apps</span>
+        </button>
     </div>
 
     <div class="dash-columns">
       <div class="dash-col-main">
-        <% if (!user.has_paid) { %>
-        <% if (migratedLocked) { %>
-        <div class="upgrade-strip" style="background:linear-gradient(135deg,#fdf3e6 0%,var(--surface) 100%);border-color:var(--accent);">
-            <div class="us-icon"><i class="fas fa-rotate-left"></i></div>
-            <div class="us-content">
-                <h4>Recharge Premium</h4>
-                <p>Your free migration period is over — pay &#8358;<%= rechargePrice.toLocaleString() %> to continue</p>
-            </div>
-            <button class="us-btn" onclick="payWithPaystack(event)">Recharge Now</button>
-        </div>
-        <% } else { %>
-        <div class="upgrade-strip">
-            <div class="us-icon"><i class="fas fa-crown"></i></div>
-            <div class="us-content">
-                <h4>Unlock Premium</h4>
-                <p>AI tutors, CGPA tracker & more</p>
-            </div>
-            <button class="us-btn" onclick="location.href='/upgrade'">See Premium</button>
-        </div>
-        <% } %>
-        <% } %>
 
         <div class="section-head">
-            <h2>Quick Access</h2>
-            <button class="see-all" onclick="openDrawer()">All apps <i class="fas fa-chevron-right" style="font-size:0.55rem;"></i></button>
-        </div>
-
-        <div class="quick-dock">
-            <a href="/study" class="dock-item">
-                <div class="dock-icon c-grad"><i class="fas fa-graduation-cap"></i></div>
-                <span>Study</span>
-            </a>
-            <a href="/setup-test" class="dock-item">
-                <div class="dock-icon c-blue"><i class="fas fa-bolt"></i></div>
-                <span>Quiz</span>
-            </a>
-            <a href="/daily-challenge" class="dock-item">
-                <div class="dock-icon c-orange"><i class="fas fa-fire-alt"></i></div>
-                <span>Challenge</span>
-            </a>
-            <a href="/daily-task" class="dock-item">
-                <div class="dock-icon c-teal"><i class="fas fa-tasks"></i></div>
-                <span>Tasks</span>
-            </a>
-            <a href="/ai-quiz" class="dock-item <%= user.has_paid ? '' : 'locked' %>" onclick="<%= user.has_paid ? '' : 'lockedAction(event)' %>">
-                <% if (!user.has_paid) { %><span class="dock-lock"><i class="fas fa-lock"></i></span><% } %>
-                <div class="dock-icon c-green"><i class="fas fa-wand-magic-sparkles"></i></div>
-                <span>AI Quiz</span>
-            </a>
-            <button class="dock-item" onclick="openDrawer()" style="background:none;border:none;font-family:var(--font);">
-                <div class="dock-icon" style="background:var(--bg);color:var(--text-secondary);"><i class="fas fa-grip"></i></div>
-                <span>All Apps</span>
-            </button>
-        </div>
-
-        <div class="section-head" style="padding-top:1.25rem;">
-            <h2>Today & Upcoming</h2>
-            <a href="/deadlines" class="see-all">All deadlines <i class="fas fa-arrow-right" style="font-size:0.6rem;"></i></a>
+            <h2>Today &amp; upcoming</h2>
+            <a href="/deadlines" class="see-all">Deadlines <i class="fas fa-arrow-right" style="font-size:0.5rem"></i></a>
         </div>
 
         <div class="today-list">
@@ -398,49 +420,84 @@
                 <% }); %>
             <% } %>
             <% if ((!todayPlan || !todayPlan.length) && (!pendingTasks) && (!upcomingDeadlinesList || !upcomingDeadlinesList.length)) { %>
-                <div class="today-row" style="cursor:default;">
-                    <div class="tr-icon" style="background:var(--success-soft);color:var(--success);"><i class="fas fa-mug-hot"></i></div>
-                    <div class="tr-body">
-                        <div class="tr-title">Nothing scheduled</div>
-                        <div class="tr-meta">Add deadlines or a reading plan to see them here</div>
-                    </div>
+                <div class="empty-card" style="margin:0;">
+                    <i class="fas fa-mug-hot"></i>
+                    Nothing scheduled — add a deadline or reading plan and it will show up here.
                 </div>
             <% } %>
         </div>
 
         <% if (typeof recentQuiz !== 'undefined' && recentQuiz) { %>
-        <div class="section-head" style="padding-top:1.25rem;">
-            <h2>Recent Activity</h2>
-            <a href="/history" class="see-all">History <i class="fas fa-arrow-right" style="font-size:0.6rem;"></i></a>
+        <div class="section-head" style="padding-top:1.15rem;">
+            <h2>Recent activity</h2>
+            <a href="/history" class="see-all">History <i class="fas fa-arrow-right" style="font-size:0.5rem"></i></a>
         </div>
-        <div class="quick-resume">
-            <a href="/history" class="resume-card">
-                <div class="rc-icon"><i class="fas fa-bolt"></i></div>
-                <div class="rc-body">
-                    <div class="rc-title"><%= recentQuiz.subject || 'Quiz' %></div>
-                    <div class="rc-meta"><%= new Date(recentQuiz.date_taken).toLocaleDateString('en-GB', { day:'numeric', month:'short' }) %></div>
+        <div class="card-list">
+            <a href="/history" class="mini-card">
+                <div class="mc-icon"><i class="fas fa-bolt"></i></div>
+                <div class="mc-body">
+                    <div class="mc-title"><%= recentQuiz.subject || 'Quiz' %></div>
+                    <div class="mc-meta"><%= new Date(recentQuiz.date_taken).toLocaleDateString('en-GB', { day:'numeric', month:'short' }) %></div>
                 </div>
-                <div class="rc-progress"><%= recentQuiz.score %>/<%= recentQuiz.total_questions %></div>
+                <div class="mc-score"><%= recentQuiz.score %>/<%= recentQuiz.total_questions %></div>
             </a>
         </div>
         <% } %>
 
-        <div style="margin-top:1.25rem;" class="dash-mobile-only">
-            <div class="section-head">
-                <h2>Daily Challenge</h2>
-                <a href="/daily-challenge" class="see-all">Join <i class="fas fa-arrow-right" style="font-size:0.6rem;"></i></a>
+        <div class="dash-mobile-only">
+            <% if (typeof weakSubjects !== 'undefined' && weakSubjects.length) { %>
+            <div class="section-head" style="padding-top:1.15rem;">
+                <h2>Topics to improve</h2>
             </div>
-            <a href="/daily-challenge" class="daily-banner">
-                <div class="db-left">
-                    <div class="db-icon"><i class="fas fa-fire-alt"></i></div>
-                    <div class="db-text">
-                        <h4>Today's Challenge</h4>
-                        <p>Compete live with peers</p>
+            <div class="card-list">
+                <% weakSubjects.forEach(function(w) { %>
+                <a href="/study" class="mini-card">
+                    <div class="mc-icon" style="background:var(--warning-soft);color:var(--warning);"><i class="fas fa-bullseye"></i></div>
+                    <div class="mc-body">
+                        <div class="mc-title"><%= w.subject %></div>
+                        <div class="mc-meta">Avg <%= w.avg_pct %>% over <%= w.attempts %> attempt<%= w.attempts === 1 ? '' : 's' %></div>
                     </div>
-                </div>
-                <div class="db-arrow"><i class="fas fa-chevron-right"></i></div>
-            </a>
+                    <i class="fas fa-chevron-right tr-chevron"></i>
+                </a>
+                <% }); %>
+            </div>
+            <% } %>
         </div>
+
+        <div class="section-head" style="padding-top:1.15rem;">
+            <h2>Daily challenge</h2>
+            <a href="/daily-challenge" class="see-all">Leaderboard <i class="fas fa-arrow-right" style="font-size:0.5rem"></i></a>
+        </div>
+        <a href="/daily-challenge" class="challenge-card">
+            <div class="challenge-icon"><i class="fas fa-fire-alt"></i></div>
+            <div class="challenge-body">
+                <h3>Today&rsquo;s challenge is live</h3>
+                <p>10 questions &middot; compete with your peers</p>
+            </div>
+            <div class="challenge-go">Play</div>
+        </a>
+
+        <% if (!user.has_paid) { %>
+        <div class="premium-card">
+            <div class="premium-icon"><i class="fas fa-crown"></i></div>
+            <div class="premium-body">
+                <% if (migratedLocked) { %>
+                <h3>Recharge Premium</h3>
+                <p>Your free migration period is over &mdash; pay &#8358;<%= rechargePrice.toLocaleString() %> to continue</p>
+                <% } else { %>
+                <h3>Unlock Prepium Pro</h3>
+                <p>AI tutor, CGPA tracker, timetable &amp; more</p>
+                <% } %>
+            </div>
+            <% if (migratedLocked) { %>
+            <button class="premium-btn" onclick="payWithPaystack(event)">Recharge</button>
+            <% } else { %>
+            <button class="premium-btn" onclick="location.href='/upgrade'">Explore</button>
+            <% } %>
+        </div>
+        <% } %>
+
+        <div class="bottom-spacer" style="height:12px"></div>
       </div>
 
       <div class="dash-col-side dash-desktop-only">
@@ -456,9 +513,9 @@
                     </div>
                 </div>
                 <% }); %>
-                <a href="/setup-test" style="display:inline-block;margin-top:8px;font-size:0.7rem;font-weight:700;color:var(--brand);text-decoration:none;">Practise these <i class="fas fa-arrow-right" style="font-size:0.6rem;"></i></a>
+                <a href="/study" style="display:inline-block;margin-top:8px;font-size:0.7rem;font-weight:700;color:var(--brand);text-decoration:none;">Practise these <i class="fas fa-arrow-right" style="font-size:0.6rem;"></i></a>
             <% } else { %>
-                <p class="side-empty">Take a couple of practice quizzes and your weakest subjects will show up here automatically.</p>
+                <p class="side-empty">Take a couple of quizzes and your weakest subjects will show up here automatically.</p>
             <% } %>
         </div>
         <div class="dash-side-block">
@@ -478,95 +535,17 @@
             <% } %>
         </div>
         <div class="dash-side-block">
-            <h3><i class="fas fa-fire-alt"></i> Daily Challenge</h3>
-            <p class="side-empty" style="margin-bottom:10px;">A fresh 10-question challenge every day, with a weekly leaderboard.</p>
-            <a href="/daily-challenge" class="btn btn-primary btn-sm" style="text-decoration:none;"><i class="fas fa-play"></i> Play today</a>
+            <h3><i class="fas fa-graduation-cap"></i> Keep going</h3>
+            <p class="side-empty" style="margin-bottom:10px;">You&rsquo;ve completed <b><%= typeof quizCount !== 'undefined' ? quizCount : 0 %></b> quizzes and <b><%= typeof studySessions !== 'undefined' ? studySessions : 0 %></b> study sessions.</p>
+            <a href="/study" class="btn btn-primary btn-sm" style="text-decoration:none;"><i class="fas fa-play"></i> Study now</a>
         </div>
       </div>
     </div>
 
-    <div class="bottom-spacer"></div>
   </div>
 </div>
 
-<!-- App drawer -->
-<div class="app-drawer" id="appDrawer" role="dialog" aria-label="All apps">
-    <div class="drawer-head">
-        <h2>All apps</h2>
-        <button class="drawer-close" onclick="closeDrawer()" aria-label="Close"><i class="fas fa-xmark"></i></button>
-    </div>
-    <input type="search" class="drawer-search" id="drawerSearch" placeholder="Search apps…" oninput="filterDrawer()">
-    <div id="drawerBody">
-        <div class="drawer-group-label">Study</div>
-        <div class="drawer-grid">
-            <a href="/study" class="drawer-tile" data-name="Study Hub"><div class="at-icon c-grad"><i class="fas fa-book-open"></i></div><span class="at-label">Study Hub</span></a>
-            <a href="/games" class="drawer-tile" data-name="Games"><div class="at-icon c-purple"><i class="fas fa-gamepad"></i></div><span class="at-label">Games Hub</span></a>
-            <a href="/setup-test" class="drawer-tile" data-name="Practice Quiz"><div class="at-icon c-blue"><i class="fas fa-bolt"></i></div><span class="at-label">Practice Quiz</span></a>
-            <a href="/subjects" class="drawer-tile" data-name="Subjects"><div class="at-icon c-teal"><i class="fas fa-list"></i></div><span class="at-label">Subjects</span></a>
-            <a href="/ai-quiz" class="drawer-tile <%= user.has_paid ? '' : 'locked' %>" data-name="AI Quiz"><div class="at-icon c-green"><i class="fas fa-wand-magic-sparkles"></i></div><span class="at-label">AI Quiz</span><span class="at-lock"><i class="fas fa-lock"></i></span></a>
-            <a href="/library" class="drawer-tile" data-name="Library"><div class="at-icon c-blue"><i class="fas fa-building-columns"></i></div><span class="at-label">Course Library</span></a>
-            <a href="/study/session" class="drawer-tile" data-name="Session"><div class="at-icon c-purple"><i class="fas fa-play-circle"></i></div><span class="at-label">Study Session</span></a>
-        </div>
-        <div class="drawer-group-label">Academics</div>
-        <div class="drawer-grid">
-            <a href="/cgpa" class="drawer-tile <%= user.has_paid ? '' : 'locked' %>" data-name="CGPA"><div class="at-icon c-blue"><i class="fas fa-chart-line"></i></div><span class="at-label">CGPA Tracker</span><span class="at-lock"><i class="fas fa-lock"></i></span></a>
-            <a href="/timetable" class="drawer-tile <%= user.has_paid ? '' : 'locked' %>" data-name="Timetable"><div class="at-icon c-amber"><i class="fas fa-calendar-alt"></i></div><span class="at-label">Timetable</span><span class="at-lock"><i class="fas fa-lock"></i></span></a>
-            <a href="/reading-timetable" class="drawer-tile <%= user.has_paid ? '' : 'locked' %>" data-name="Reading"><div class="at-icon c-teal"><i class="fas fa-book-dropped"></i></div><span class="at-label">Reading Plan</span><span class="at-lock"><i class="fas fa-lock"></i></span></a>
-            <a href="/deadlines" class="drawer-tile <%= user.has_paid ? '' : 'locked' %>" data-name="Deadlines"><div class="at-icon c-red"><i class="fas fa-calendar-check"></i></div><span class="at-label">Deadlines</span><span class="at-lock"><i class="fas fa-lock"></i></span></a>
-            <a href="/history" class="drawer-tile" data-name="History"><div class="at-icon c-green"><i class="fas fa-chart-bar"></i></div><span class="at-label">History</span></a>
-            <% if (user.has_paid) { %>
-            <a href="/daily-task" class="drawer-tile" data-name="Daily"><div class="at-icon c-grad"><i class="fas fa-tasks"></i></div><span class="at-label">Daily Task</span></a>
-            <% } %>
-        </div>
-        <div class="drawer-group-label">Community</div>
-        <div class="drawer-grid">
-            <a href="/chat" class="drawer-tile" data-name="Chats"><div class="at-icon c-green"><i class="fas fa-comments"></i></div><span class="at-label">Chats</span></a>
-            <a href="/friends" class="drawer-tile" data-name="Friends"><div class="at-icon c-blue"><i class="fas fa-user-group"></i></div><span class="at-label">Friends</span></a>
-            <a href="/status" class="drawer-tile" data-name="Status"><div class="at-icon c-orange"><i class="fas fa-circle-notch"></i></div><span class="at-label">Status</span></a>
-            <a href="/daily-challenge" class="drawer-tile" data-name="Challenge"><div class="at-icon c-orange"><i class="fas fa-fire-alt"></i></div><span class="at-label">Daily Challenge</span></a>
-            <a href="/competition" class="drawer-tile <%= user.has_paid ? '' : 'locked' %>" data-name="Arena"><div class="at-icon c-red"><i class="fas fa-trophy"></i></div><span class="at-label">Live Arena</span><span class="at-lock"><i class="fas fa-lock"></i></span></a>
-            <a href="/squads" class="drawer-tile" data-name="Squads"><div class="at-icon c-purple"><i class="fas fa-users"></i></div><span class="at-label">Squad Streaks</span></a>
-            <a href="/notifications" class="drawer-tile" data-name="Notifications"><div class="at-icon c-teal"><i class="fas fa-bell"></i></div><span class="at-label">Notifications</span></a>
-            <a href="/suggestions" class="drawer-tile" data-name="Feedback"><div class="at-icon c-green"><i class="fas fa-lightbulb"></i></div><span class="at-label">Feedback</span></a>
-        </div>
-        <div class="drawer-group-label">More</div>
-        <div class="drawer-grid">
-            <a href="/upgrade" class="drawer-tile" data-name="Premium"><div class="at-icon c-grad"><i class="fas fa-crown"></i></div><span class="at-label">Premium</span></a>
-            <a href="/install" class="drawer-tile" data-name="Install"><div class="at-icon c-blue"><i class="fas fa-mobile-screen"></i></div><span class="at-label">Install App</span></a>
-            <a href="/profile" class="drawer-tile" data-name="Profile"><div class="at-icon c-teal"><i class="fas fa-user"></i></div><span class="at-label">Profile</span></a>
-            <a href="/guide" class="drawer-tile" data-name="Guide"><div class="at-icon c-grad"><i class="fas fa-book"></i></div><span class="at-label">Guide</span></a>
-            <a href="/refer" class="drawer-tile" data-name="Referral"><div class="at-icon c-orange"><i class="fas fa-hand-holding-heart"></i></div><span class="at-label">Refer &amp; Earn</span></a>
-            <a href="/renaissance" class="drawer-tile" data-name="Renaissance"><div class="at-icon c-purple"><i class="fas fa-seedling"></i></div><span class="at-label">Renaissance</span></a>
-            <a href="/how-it-works" class="drawer-tile" data-name="How It Works"><div class="at-icon c-purple"><i class="fas fa-circle-info"></i></div><span class="at-label">How It Works</span></a>
-            <a href="/terms" class="drawer-tile" data-name="Terms"><div class="at-icon c-grad"><i class="fas fa-file-contract"></i></div><span class="at-label">Terms</span></a>
-            <a href="/privacy" class="drawer-tile" data-name="Privacy"><div class="at-icon c-grad"><i class="fas fa-lock"></i></div><span class="at-label">Privacy</span></a>
-        </div>
-        <p class="drawer-empty">No apps found. Try adjusting your search.</p>
-    </div>
-</div>
-
 <%- include('partials/bottom-nav', { activeNav: 'dashboard' }) %>
-
-</div>
-
-<style>
-    .drawer-tile { display: flex; flex-direction: column; align-items: center; gap: 8px; text-decoration: none; color: inherit; transition: var(--transition); }
-    .drawer-tile:active { transform: scale(0.92); }
-    .drawer-tile .at-icon { width: 56px; height: 56px; border-radius: 18px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.08), inset 0 2px 0 rgba(255, 255, 255, 0.35), var(--shadow-sm); }
-    .drawer-tile .at-label { font-size: 0.7rem; font-weight: 600; color: var(--text-secondary); text-align: center; }
-    .drawer-tile.locked .at-icon { opacity: 0.45; }
-    .drawer-tile.locked .at-label { opacity: 0.45; }
-    .drawer-tile .at-lock { position: static; background: var(--danger-soft); border: 1px solid var(--danger); padding: 2px 4px; border-radius: 50%; font-size: 0.38rem; color: var(--danger); }
-    .drawer-tile .at-icon.c-blue { background: #dbeafe; color: #2563eb; border-color: transparent; }
-    .drawer-tile .at-icon.c-grad { background: #c7d2fe; color: #4338ca; border-color: transparent; }
-    .drawer-tile .at-icon.c-teal { background: #ccfbf1; color: #0d9488; border-color: transparent; }
-    .drawer-tile .at-icon.c-orange { background: #fed7aa; color: #f59e0b; border-color: transparent; }
-    .drawer-tile .at-icon.c-green { background: #dcfce7; color: #16a34a; border-color: transparent; }
-    .drawer-tile .at-icon.c-red { background: #fee2e2; color: #dc2626; border-color: transparent; }
-    .drawer-tile .at-icon.c-purple { background: #e9d5ff; color: #7c3aed; border-color: transparent; }
-    .drawer-tile .at-icon.c-amber { background: #fef3c7; color: #d97706; border-color: transparent; }
-    .drawer-empty { text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 20px 0; max-width: 640px; margin: 0 auto; }
-</style>
 
 <script>
 function lockedAction(e) {
@@ -579,7 +558,6 @@ function payWithPaystack(e, presets) {
     if (e) { e.preventDefault(); }
     if (typeof PaystackPop === 'undefined') { alert('Payment system loading. Please try again.'); return; }
     var pAmount = (presets && presets.amount) || <%= migratedLocked ? rechargePrice : premiumPrice %>;
-    var pCoupon = (presets && presets.coupon) || '';
     Swal.fire({
         title: 'Have a coupon code?',
         input: 'text',
@@ -609,7 +587,7 @@ function payWithPaystack(e, presets) {
             key: '<%= paystack_key %>',
             email: '<%= user.email %>',
             amount: amount,
-            currency: 'NGR',
+            currency: 'NGN',
             callback: function(response) {
                 var ref = response.reference;
                 var dest = '/verify-payment?reference=' + ref;
@@ -622,42 +600,15 @@ function payWithPaystack(e, presets) {
     });
 }
 
-function openDrawer() { document.getElementById('appDrawer').classList.add('open'); document.body.style.overflow = 'hidden'; }
-function closeDrawer() { document.getElementById('appDrawer').classList.remove('open'); document.body.style.overflow = ''; }
-function filterDrawer() {
-    var search = document.getElementById('drawerSearch').value.toLowerCase();
-    var body = document.getElementById('drawerBody');
-    if (body) {
-        body.querySelectorAll('.drawer-tile').forEach(function(el) {
-            var text = el.textContent.toLowerCase();
-            el.style.display = text.includes(search) ? '' : 'none';
-        });
-        body.querySelectorAll('.drawer-group-label, .drawer-empty').forEach(function(el) {
-            el.style.display = Array.from(el.parentElement.children).some(function(sib) { return sib.classList.contains('drawer-tile') && sib.style.display !== 'none'; }) ? '' : 'none';
-        });
-    }
-}
-
 (function() {
     var params = new URLSearchParams(window.location.search);
     var payment = params.get('payment');
     if (payment === 'success') {
-        Swal.fire({ icon: 'success', title: 'Payment Successful!', text: 'Premium unlocked!', timer: 3000, timerProgressBar: true, showConfirmButton: true }).then(() => window.history.replaceState({}, document.title, '/dashboard'));
+        Swal.fire({ icon: 'success', title: 'Payment Successful!', text: 'Premium unlocked!', timer: 3000, timerProgressBar: true, showConfirmButton: true }).then(function() { window.history.replaceState({}, document.title, '/dashboard'); });
     } else if (payment === 'failed') {
-        Swal.fire({ icon: 'error', title: 'Payment Failed', text: 'Please try again', timer: 4000, timerProgressBar: true, showConfirmButton: true }).then(() => window.history.replaceState({}, document.title, '/dashboard'));
+        Swal.fire({ icon: 'error', title: 'Payment Failed', text: 'Please try again', timer: 4000, timerProgressBar: true, showConfirmButton: true }).then(function() { window.history.replaceState({}, document.title, '/dashboard'); });
     }
-    var hour = new Date().getHours();
-    var g = 'Good morning';
-    if (hour < 12) g = 'Good morning';
-    else if (hour < 17) g = 'Good afternoon';
-    else if (hour < 21) g = 'Good evening';
-    else g = 'Good night';
-    var greetEl = document.getElementById('greeting-text');
-    if (greetEl) greetEl.textContent = g;
-    var clk = document.getElementById('dashClock');
-    if (clk) clk.textContent = timeStr;
-});
-    
+
     function updateClock() {
         var now = new Date();
         var h = now.getHours();
@@ -665,9 +616,17 @@ function filterDrawer() {
         var timeStr = (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
         var clk = document.getElementById('dashClock');
         if (clk) clk.textContent = timeStr;
+        var greetEl = document.getElementById('greeting-text');
+        if (greetEl) {
+            var g = 'Good morning';
+            if (h >= 12 && h < 17) g = 'Good afternoon';
+            else if (h >= 17 && h < 21) g = 'Good evening';
+            else if (h >= 21) g = 'Good night';
+            greetEl.textContent = g;
+        }
     }
     updateClock();
-    setInterval(updateClock, 10000);
+    setInterval(updateClock, 30000);
 })();
 </script>
 

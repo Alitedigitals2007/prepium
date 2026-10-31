@@ -6,11 +6,17 @@
         .status-bar { height: env(safe-area-inset-top, 0px); }
         .page-content { padding: 0 1.5rem 1.5rem; }
 
-        .hero-card { background: var(--brand-gradient); border-radius: var(--radius-lg); padding: 20px; margin: 0 1.5rem 1rem; color: white; position: relative; overflow: hidden; }
+        .hero-card { background: var(--brand-gradient); border-radius: var(--radius-lg); padding: 20px; margin: 0 1.5rem 1rem; color: white; position: relative; overflow: hidden; display: flex; align-items: center; gap: 16px; }
         .hero-card::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at top right, rgba(255,255,255,0.15) 0%, transparent 60%); }
-        .hero-card h2 { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.5px; position: relative; margin: 0 0 2px; }
+        .hero-ring { width: 74px; height: 74px; flex: 0 0 74px; position: relative; z-index: 1; }
+        .hero-ring svg { transform: rotate(-90deg); }
+        .hero-ring .hr-bg { stroke: rgba(255,255,255,0.25); }
+        .hero-ring .hr-fill { stroke: #fff; stroke-linecap: round; transition: stroke-dashoffset 0.8s var(--ease-out); }
+        .hero-ring .hr-label { position: absolute; inset: 0; display: grid; place-items: center; font-size: 0.85rem; font-weight: 800; }
+        .hero-main { flex: 1; position: relative; z-index: 1; min-width: 0; }
+        .hero-card h2 { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.5px; position: relative; margin: 0 0 2px; }
         .hero-card .code { font-size: 0.78rem; opacity: 0.85; font-weight: 600; position: relative; margin-bottom: 10px; display: block; }
-        .hero-card .meta-row { display: flex; gap: 16px; position: relative; font-size: 0.72rem; font-weight: 600; opacity: 0.9; }
+        .hero-card .meta-row { display: flex; gap: 16px; position: relative; font-size: 0.72rem; font-weight: 600; opacity: 0.9; flex-wrap: wrap; }
         .hero-card .meta-row i { margin-right: 4px; }
 
         .quick-actions { display: flex; gap: 8px; padding: 0 1.5rem 1rem; }
@@ -80,12 +86,30 @@
         <%- include('partials/drawer-trigger') %>
     </div>
 
+    <%
+        var allSubs = 0, doneSubs = 0;
+        (topics || []).forEach(function(t) {
+            (t.subtopics || []).forEach(function(st) { allSubs++; if (st.status === 'completed') doneSubs++; });
+        });
+        var coursePct = allSubs > 0 ? Math.round(doneSubs / allSubs * 100) : 0;
+        var ringC = 2 * Math.PI * 30;
+    %>
     <div class="hero-card">
-        <h2><%= course ? course.course_name : '' %></h2>
-        <span class="code"><%= course ? course.course_code : '' %></span>
-        <div class="meta-row">
-            <span><i class="fas fa-layer-group"></i> <%= course ? course.unit : 0 %> credits</span>
-            <span><i class="fas fa-list"></i> <%= topics ? topics.length : 0 %> topics</span>
+        <div class="hero-ring">
+            <svg width="74" height="74" viewBox="0 0 74 74">
+                <circle class="hr-bg" cx="37" cy="37" r="30" fill="none" stroke-width="6"/>
+                <circle class="hr-fill" cx="37" cy="37" r="30" fill="none" stroke-width="6" stroke-dasharray="<%= ringC.toFixed(1) %>" stroke-dashoffset="<%= (ringC * (1 - coursePct / 100)).toFixed(1) %>"/>
+            </svg>
+            <div class="hr-label"><%= coursePct %>%</div>
+        </div>
+        <div class="hero-main">
+            <h2><%= course ? course.course_name : '' %></h2>
+            <span class="code"><%= course ? course.course_code : '' %></span>
+            <div class="meta-row">
+                <span><i class="fas fa-layer-group"></i> <%= course ? course.unit : 0 %> credits</span>
+                <span><i class="fas fa-list"></i> <%= topics ? topics.length : 0 %> topics</span>
+                <span><i class="fas fa-check-circle"></i> <%= doneSubs %>/<%= allSubs %> done</span>
+            </div>
         </div>
     </div>
 
@@ -125,6 +149,9 @@
                         </div>
                     </div>
                     <div class="topic-actions">
+                        <button onclick="event.stopPropagation(); toggleTopicComplete(<%= t.id %>, <%= t.completed ? 'false' : 'true' %>, this)" title="<%= t.completed ? 'Mark incomplete' : 'Mark complete' %>">
+                            <i class="<%= t.completed ? 'fas fa-check-circle' : 'far fa-circle' %>" style="color:<%= t.completed ? 'var(--success)' : 'inherit' %>"></i>
+                        </button>
                         <button onclick="event.stopPropagation(); generateSubtopicAI(<%= t.id %>)" title="AI Generate"><i class="fas fa-magic"></i></button>
                         <button class="del-btn" onclick="event.stopPropagation(); deleteTopic(<%= t.id %>)" title="Delete"><i class="fas fa-trash"></i></button>
                     </div>
@@ -133,7 +160,8 @@
                     <% if (t.subtopics && t.subtopics.length > 0) { %>
                         <% t.subtopics.forEach(function(st, j) { %>
                         <div class="subtopic-chip reveal" data-subtopic-id="<%= st.id %>" onclick="openSubtopic(<%= st.id %>)" style="animation-delay:<%= (j % 5) * 0.05 %>s">
-                            <span class="st-name"><%= st.subtopic_name || st.title %></span>
+                            <i class="fas <%= st.status === 'completed' ? 'fa-check-circle' : 'far fa-circle' %>" style="color:<%= st.status === 'completed' ? 'var(--success)' : 'var(--text-muted)' %>;font-size:0.75rem;flex-shrink:0"></i>
+                            <span class="st-name" style="flex:1;min-width:0;<%= st.status === 'completed' ? 'text-decoration:line-through;opacity:0.65' : '' %>"><%= st.subtopic_name || st.title %></span>
                             <span class="status-badge <%= st.status %>"><%= st.status %></span>
                             <div class="chip-actions" onclick="event.stopPropagation()">
                                 <% if (st.status === 'ai-generated') { %>
@@ -206,6 +234,21 @@ function deleteTopic(id) {
                 else Swal.fire({ icon: 'error', text: d.error });
             });
         }
+    });
+}
+
+function toggleTopicComplete(id, completed, btn) {
+    fetch('/api/study/topics/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: id, completed: completed })
+    }).then(r => r.json()).then(function(d) {
+        if (d.success) {
+            var icon = btn.querySelector('i');
+            icon.className = completed ? 'fas fa-check-circle' : 'far fa-circle';
+            icon.style.color = completed ? 'var(--success)' : 'inherit';
+            if (completed) Swal.fire({ icon: 'success', title: 'Topic completed!', toast: true, position: 'top', timer: 1500, showConfirmButton: false });
+        } else Swal.fire({ icon: 'error', text: d.error });
     });
 }
 

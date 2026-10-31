@@ -1523,8 +1523,16 @@ app.get('/dashboard', isStudent, async (req, res) => {
         );
         const userData = userRes.rows[0];
 
-        // 2. Notification Count (Unread)
-        const notifCheck = await pool.query('SELECT COUNT(*) FROM notifications WHERE is_read = false');
+        // 2. Notification Count (Unread) — per user: unread announcements + unread personal
+        const notifCheck = await pool.query(
+            `SELECT
+                (SELECT COUNT(*) FROM notifications n
+                 WHERE NOT EXISTS (
+                     SELECT 1 FROM notification_reads r WHERE r.notification_id = n.id AND r.user_id = $1
+                 ))
+              + (SELECT COUNT(*) FROM user_notifications WHERE user_id = $1 AND is_read = false) AS count`,
+            [userId]
+        );
         const unreadNotifs = parseInt(notifCheck.rows[0].count) || 0;
 
         // 3. Get Recent History
@@ -1621,7 +1629,7 @@ app.get('/dashboard', isStudent, async (req, res) => {
         } else if (flashcardCount > 0) {
             nextAction = { icon: 'fa-clone', title: 'Review your flashcards', sub: flashcardCount + ' card' + (flashcardCount === 1 ? '' : 's') + ' saved across your courses', href: '/study', cta: 'Revise' };
         } else if (weakSubjects.length > 0) {
-            nextAction = { icon: 'fa-bullseye', title: 'Practise ' + weakSubjects[0].subject, sub: 'Average ' + weakSubjects[0].avg_pct + '% over ' + weakSubjects[0].attempts + ' attempts — more practice will help', href: '/setup-test', cta: 'Practise' };
+            nextAction = { icon: 'fa-bullseye', title: 'Practise ' + weakSubjects[0].subject, sub: 'Average ' + weakSubjects[0].avg_pct + '% over ' + weakSubjects[0].attempts + ' attempts — more practice will help', href: '/study', cta: 'Practise' };
         } else if (todayPlan.length > 0) {
             nextAction = { icon: 'fa-book-open', title: "Follow today's reading plan", sub: todayPlan.length + ' session' + (todayPlan.length === 1 ? '' : 's') + ' scheduled for ' + todayName, href: '/reading-timetable', cta: 'Start' };
         } else if (pendingTasks > 0) {
@@ -1664,18 +1672,44 @@ app.get('/notifications', isStudent, async (req, res) => {
     try {
         const userId = req.session.user.id;
 
-        // 1. Fetch notifications
-        const notifRes = await pool.query('SELECT * FROM notifications ORDER BY created_at DESC');
+        // 1. Global announcements with THIS user's read state
+        const globals = await pool.query(
+            `SELECT n.id, n.title, n.message, n.created_at,
+                    (r.user_id IS NOT NULL) AS is_read
+             FROM notifications n
+             LEFT JOIN notification_reads r ON r.notification_id = n.id AND r.user_id = $1
+             ORDER BY n.created_at DESC LIMIT 50`,
+            [userId]
+        );
 
-        // 2. Mark all as read for the user (or globally if it's a general system)
-        await pool.query('UPDATE notifications SET is_read = true'); 
-        // Note: Use 'WHERE user_id = $1' if notifications are private/unique to users
+        // 2. Personal social notifications (friend requests, chats, likes, groups)
+        const personal = await pool.query(
+            `SELECT id, type, title, body AS message, link, is_read, created_at
+             FROM user_notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`,
+            [userId]
+        );
 
-        res.render('student-notifications', { 
-            notifications: notifRes.rows 
-        });
+        // 3. Mark read for THIS user only (after reading current states)
+        await pool.query(
+            `INSERT INTO notification_reads (notification_id, user_id)
+             SELECT n.id, $1 FROM notifications n
+             WHERE NOT EXISTS (
+                 SELECT 1 FROM notification_reads r WHERE r.notification_id = n.id AND r.user_id = $1
+             )
+             ON CONFLICT DO NOTHING`,
+            [userId]
+        );
+        await pool.query('UPDATE user_notifications SET is_read = true WHERE user_id = $1', [userId]);
+
+        // 4. Merge, newest first
+        const items = [
+            ...globals.rows.map(g => ({ kind: 'announcement', id: 'g' + g.id, title: g.title, message: g.message, link: null, is_read: g.is_read, created_at: g.created_at })),
+            ...personal.rows.map(p => ({ kind: p.type, id: 'p' + p.id, title: p.title, message: p.message, link: p.link, is_read: p.is_read, created_at: p.created_at }))
+        ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        res.render('student-notifications', { notifications: items, user: req.session.user });
     } catch (err) {
-        console.error(err);
+        console.error('[Notifications] error:', err.message);
         res.redirect('/dashboard');
     }
 });
@@ -1824,247 +1858,6 @@ app.post('/api/materials/:id/delete', isAuth, async (req, res) => {
     } catch (err) {
         console.error('Delete file error:', err);
         res.status(500).json({ error: 'Delete failed' });
-    }
-});
-
-app.get('/setup-test', isStudent, async (req, res) => {
-    try {
-        const userId = req.session.user.id;
-
-        // 1. Fetch user status and university_id
-        const userQuery = await pool.query(
-            'SELECT has_paid, quiz_attempts, university_id FROM users WHERE id = $1',
-            [userId]
-        );
-        const userStatus = userQuery.rows[0];
-
-        if (!userStatus) return res.redirect('/login');
-
-        // 2. Check if the university_id is missing for this user
-        if (!userStatus.university_id) {
-            console.error(`User ${userId} has no university_id set.`);
-            return res.render('setup-test', {
-                user: { ...req.session.user, ...userStatus },
-                subjects: [],
-                error: "Please update your profile with your institution to see available tests."
-            });
-        }
-
-        // 3. Gatekeeper for free attempts
-        if (!userStatus.has_paid && userStatus.quiz_attempts >= 2) {
-            return res.render('quiz-locked', {
-                user: { ...req.session.user, ...userStatus },
-                message: "You've used up your 2 free quiz attempts. Upgrade to Prepium Pro for unlimited practice tests!",
-                paystack_key: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_your_key',
-                premiumPrice: PREMIUM_PRICE,
-                userEmail: req.session.user.email
-            });
-        }
-
-        // 4. Fetch subjects specifically for this student's university
-        const result = await pool.query(`
-            SELECT s.id, s.name, COUNT(q.id) as total_questions 
-            FROM subjects s
-            INNER JOIN questions q ON s.id = q.subject_id 
-            WHERE q.university_id = $1
-            GROUP BY s.id, s.name
-            ORDER BY s.name ASC
-        `, [userStatus.university_id]);
-        
-        res.render('setup-test', {
-            user: { ...req.session.user, ...userStatus },
-            subjects: result.rows
-        });
-
-    } catch (err) {
-        console.error("Setup Error:", err.message);
-        res.redirect('/dashboard');
-    }
-});
-
-app.post('/start-quiz', isStudent, async (req, res) => {
-    try {
-        const userId = req.session.user.id;
-
-        // 1. Fetch user status to prevent forged route submissions
-        const userQuery = await pool.query(
-            'SELECT has_paid, quiz_attempts FROM users WHERE id = $1',
-            [userId]
-        );
-        const userStatus = userQuery.rows[0];
-
-        if (!userStatus) {
-            return res.redirect('/login');
-        }
-
-        // 2. Gatekeeper: Final server-side check
-        if (!userStatus.has_paid && userStatus.quiz_attempts >= 2) {
-            return res.render('quiz-locked', {
-                user: { ...req.session.user, ...userStatus },
-                message: "You've used up your 2 free quiz attempts. Upgrade to Prepium Pro for unlimited practice tests!",
-                paystack_key: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_your_key',
-                premiumPrice: PREMIUM_PRICE,
-                userEmail: req.session.user.email
-            });
-        }
-
-        // 3. Process the submitted test parameters
-        const { subject_ids, duration } = req.body;
-        const selectedIds = Array.isArray(subject_ids) ? subject_ids : [subject_ids];
-        let summary = [];
-        let totalQs = 0;
-
-        for (const id of selectedIds) {
-            const count = parseInt(req.body[`questions_${id}`]) || 0;
-            if (count > 0) {
-                const result = await pool.query("SELECT name FROM subjects WHERE id = $1", [id]);
-                summary.push({ name: result.rows[0].name, count: count, id: id });
-                totalQs += count;
-            }
-        }
-
-        // 4. Store temporary setup in the session
-        req.session.tempQuiz = {
-            summary,
-            duration,
-            totalQs
-        };
-
-        res.render('quiz-lobby', {
-            user: { ...req.session.user, ...userStatus },
-            setup: req.session.tempQuiz
-        });
-
-    } catch (err) {
-        console.error("Start Quiz Error:", err.message);
-        res.redirect('/setup-test');
-    }
-});
-
-// 1. GET THE QUESTIONS
-app.post('/live-exam', isStudent, async (req, res) => {
-    try {
-        const setup = req.session.tempQuiz;
-        if (!setup) return res.redirect('/setup-test');
-
-        let allQuestions = [];
-        // Pull questions subject by subject to prevent mixing
-        for (const s of setup.summary) {
-            const result = await pool.query(`
-                SELECT q.*, s.name as subject_name 
-                FROM questions q 
-                JOIN subjects s ON q.subject_id = s.id
-                WHERE q.subject_id = $1 ORDER BY RANDOM() LIMIT $2
-            `, [s.id, s.count]);
-            allQuestions = allQuestions.concat(result.rows);
-        }
-
-        req.session.activeQuiz = {
-            questions: allQuestions,
-            startTime: new Date(),
-            duration: setup.duration,
-            endTime: new Date(Date.now() + setup.duration * 60000)
-        };
-
-        res.render('quiz-page', { user: req.session.user, quiz: req.session.activeQuiz });
-    } catch (err) {
-        console.error(err);
-        res.redirect('/dashboard');
-    }
-});
-
-app.post('/submit-exam', isStudent, async (req, res) => {
-    try {
-        // Guard Clause: Ensure session exists
-        if (!req.session.activeQuiz || !req.session.activeQuiz.questions) {
-            console.error("Submission Error: No active quiz found in session.");
-            return res.redirect('/dashboard');
-        }
-
-        // 1. Parse answers safely
-        let userAnswers = [];
-        try {
-            userAnswers = JSON.parse(req.body.answers || "[]");
-        } catch (e) {
-            userAnswers = [];
-        }
-
-        const quizData = req.session.activeQuiz.questions;
-        const timeUsed = req.body.timeUsed || "00:00";
-        const rawSubjectId = quizData[0]?.subject_id || null;
-        const subjectId = rawSubjectId !== null && rawSubjectId !== undefined ? parseInt(rawSubjectId, 10) || null : null;
-        const userId = req.session.user.id;
-
-        let score = 0;
-        let subjectStats = {}; 
-
-        // 2. Grade the exam
-        const results = quizData.map((q, index) => {
-            const dbAnswer = q.correct_option || ""; 
-            const userChoice = userAnswers[index] || ""; // Handle unanswered
-            
-            // Case-insensitive comparison
-            const isCorrect = userChoice && userChoice.toString().toLowerCase() === dbAnswer.toString().toLowerCase();
-            
-            if (isCorrect) score++;
-
-            // Grouping results by subject name
-            const sName = q.subject_name || "General";
-            if (!subjectStats[sName]) {
-                subjectStats[sName] = { correct: 0, total: 0 };
-            }
-            subjectStats[sName].total++;
-            if (isCorrect) subjectStats[sName].correct++;
-
-            return {
-                ...q,
-                userChoice,
-                isCorrect,
-                correctAnswer: dbAnswer 
-            };
-        });
-
-        const totalQuestions = quizData.length;
-        const percentage = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
-
-        // 3. Database Operations
-        try {
-            // Save attempt
-            await pool.query(
-                `INSERT INTO quiz_results (user_id, subject_id, score, total_questions, percentage, time_taken, created_at) 
-                 VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
-                [userId, subjectId, score, totalQuestions, percentage, timeUsed]
-            );
-
-            // Increment trial for free users
-            await pool.query(
-                `UPDATE users 
-                 SET quiz_attempts = quiz_attempts + 1 
-                 WHERE id = $1 AND has_paid = false`,
-                [userId]
-            );
-        } catch (dbErr) {
-            console.error("Database Save Error:", dbErr);
-            // We continue anyway to show the user their result screen
-        }
-
-        // 4. Render Result Screen
-        res.render('quiz-result', {
-            user: req.session.user,
-            score,
-            total: totalQuestions,
-            percentage,
-            subjectStats,
-            results,
-            timeUsed 
-        });
-
-        // 5. CRITICAL: Clean up session AFTER successful render
-        delete req.session.activeQuiz;
-
-    } catch (err) {
-        console.error("Full Submission Error:", err);
-        res.redirect('/dashboard');
     }
 });
 
@@ -4480,13 +4273,6 @@ END:VCARD`;
 
     res.send(vcardContent);
 });
-app.get('/ai-quiz', isAuth, featureLock('ai_quiz'), (req, res) => {
-    res.render('ai-quiz', { 
-        user: req.session.user, 
-        paystack_key: process.env.PAYSTACK_PUBLIC_KEY 
-    });
-});
-
 // ─── ADMIN QUIZ GENERATOR ─────────────────────────────────────────────────
 const isAdminQuiz = (r, res, n) => {
     if (r.session.user && r.session.user.is_admin) return n();
@@ -4607,644 +4393,6 @@ app.post('/api/admin/quiz/publish', isAdminQuiz, async (req, res) => {
         await pool.query('UPDATE admin_quiz_sessions SET status = $1 WHERE id = $2', ['published', req.body.sessionId]);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// ─── RENAISSANCE MOCK EXAMS (ADMIN) ────────────────────────────────────────
-
-app.get('/admin/renaissance', isAdmin, async (req, res) => {
-    try {
-        const groupLink = await getRenaissanceSetting('group_link', '');
-        res.render('admin/renaissance', { user: req.session.user, groupLink, groupLinkJSON: JSON.stringify(groupLink || '') });
-    } catch (e) { res.status(500).send('Error: ' + e.message); }
-});
-
-// List all exams (with counts)
-app.get('/api/admin/renaissance/exams', isAdmin, async (req, res) => {
-    try {
-        const r = await pool.query(`
-            SELECT e.*,
-                   (SELECT COUNT(*) FROM renaissance_questions q WHERE q.exam_id = e.id) as question_count,
-                   (SELECT COUNT(*) FROM renaissance_attempts a WHERE a.exam_id = e.id AND a.status = 'submitted') as attempt_count
-            FROM renaissance_exams e ORDER BY e.created_at DESC`);
-        res.json({ exams: r.rows });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Get one exam with its questions
-app.get('/api/admin/renaissance/exams/:id', isAdmin, async (req, res) => {
-    try {
-        const id = parseInt(req.params.id);
-        const ex = await pool.query('SELECT * FROM renaissance_exams WHERE id = $1', [id]);
-        if (!ex.rows[0]) return res.status(404).json({ error: 'Exam not found' });
-        const qs = await pool.query(
-            'SELECT * FROM renaissance_questions WHERE exam_id = $1 ORDER BY id', [id]);
-        res.json({ exam: ex.rows[0], questions: qs.rows });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Create exam
-app.post('/api/admin/renaissance/exams', isAdmin, async (req, res) => {
-    try {
-        const { title, description, duration_minutes, opens_at, closes_at, show_results_immediately, max_attempts } = req.body;
-        if (!title || !title.trim()) return res.status(400).json({ error: 'Title is required' });
-        const r = await pool.query(`
-            INSERT INTO renaissance_exams (title, description, duration_minutes, opens_at, closes_at, show_results_immediately, max_attempts, created_by)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
-            [title.trim(), description || '', parseInt(duration_minutes) || 30, opens_at || null, closes_at || null, show_results_immediately !== false, Math.max(0, parseInt(max_attempts) || 0), req.session.user.id]);
-        res.json({ success: true, id: r.rows[0].id });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Update exam
-app.post('/api/admin/renaissance/exams/:id', isAdmin, async (req, res) => {
-    try {
-        const id = parseInt(req.params.id);
-        const { title, description, duration_minutes, opens_at, closes_at, show_results_immediately, max_attempts } = req.body;
-        await pool.query(`
-            UPDATE renaissance_exams SET
-              title = COALESCE($1, title),
-              description = COALESCE($2, description),
-              duration_minutes = COALESCE($3, duration_minutes),
-              opens_at = COALESCE($4, opens_at),
-              closes_at = COALESCE($5, closes_at),
-              show_results_immediately = COALESCE($6, show_results_immediately),
-              max_attempts = COALESCE($7, max_attempts)
-            WHERE id = $8`,
-            [title || null, description || null, parseInt(duration_minutes) || null, opens_at || null, closes_at || null, (typeof show_results_immediately === 'boolean') ? show_results_immediately : null, (typeof max_attempts === 'number') ? Math.max(0, max_attempts) : null, id]);
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Delete exam
-app.delete('/api/admin/renaissance/exams/:id', isAdmin, async (req, res) => {
-    try {
-        await pool.query('DELETE FROM renaissance_exams WHERE id = $1', [req.params.id]);
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Publish / close exam
-app.post('/api/admin/renaissance/exams/:id/publish', isAdmin, async (req, res) => {
-    try {
-        const status = req.body.status === 'closed' ? 'closed' : 'published';
-        await pool.query('UPDATE renaissance_exams SET status = $1 WHERE id = $2', [status, req.params.id]);
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Release (or re-hide) results for a delayed-results exam
-app.post('/api/admin/renaissance/exams/:id/release-results', isAdmin, async (req, res) => {
-    try {
-        const released = !!req.body.released;
-        await pool.query('UPDATE renaissance_exams SET results_released = $1 WHERE id = $2', [released, req.params.id]);
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// List attempts for an exam (live: in-progress + submitted)
-app.get('/api/admin/renaissance/exams/:id/attempts', isAdmin, async (req, res) => {
-    try {
-        const id = parseInt(req.params.id);
-        const r = await pool.query(`
-            SELECT a.id, a.user_id, a.score, a.total, a.percentage, a.time_taken, a.status,
-                   a.started_at, a.submitted_at, u.fullname, u.email
-            FROM renaissance_attempts a
-            JOIN users u ON u.id = a.user_id
-            WHERE a.exam_id = $1
-            ORDER BY a.started_at DESC`, [id]);
-        res.json({ attempts: r.rows });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Printable result sheet for one attempt (admin)
-app.get('/admin/renaissance/exams/:id/attempts/:attemptId/print', isAdmin, async (req, res) => {
-    try {
-        const attemptId = parseInt(req.params.attemptId);
-        const attempt = await pool.query(
-            `SELECT a.*, u.fullname, u.email, e.title as exam_title, e.duration_minutes, e.show_results_immediately, e.results_released
-             FROM renaissance_attempts a
-             JOIN users u ON u.id = a.user_id
-             JOIN renaissance_exams e ON e.id = a.exam_id
-             WHERE a.id = $1`, [attemptId]);
-        if (!attempt.rows[0]) return res.status(404).send('Attempt not found');
-        const att = attempt.rows[0];
-        const questions = await pool.query(`
-            SELECT * FROM renaissance_questions
-            WHERE exam_id = $1 ORDER BY id`, [att.exam_id]);
-        const answers = typeof att.answers === 'string' ? JSON.parse(att.answers || '{}') : (att.answers || {});
-        let correct = 0;
-        const review = questions.rows.map((q) => {
-            const opts = Array.isArray(q.options) ? q.options : [];
-            const given = answers[q.id];
-            const isCorrect = q.question_type === 'mcq'
-                ? String(given || '').trim().toUpperCase() === String(q.correct_answer || '').trim().toUpperCase()
-                : String(given || '').trim().toLowerCase() === String(q.correct_answer || '').trim().toLowerCase();
-            if (isCorrect) correct++;
-            return { q, opts, given, isCorrect, correctAnswer: q.correct_answer || '' };
-        });
-        res.render('admin/renaissance-print', {
-            att, review, correct,
-            total: questions.rows.length,
-            submitted: att.status === 'submitted',
-            showScore: att.status === 'submitted' && (att.show_results_immediately || att.results_released)
-        });
-    } catch (e) { res.status(500).send('Error: ' + e.message); }
-});
-
-// Courses
-// Questions (attached directly to an exam)
-app.post('/api/admin/renaissance/questions', isAdmin, async (req, res) => {
-    try {
-        const { exam_id, question_type, question_text, options, correct_answer, explanation, ai_generated } = req.body;
-        if (!exam_id || !question_text || !question_text.trim()) return res.status(400).json({ error: 'Question text is required' });
-        const r = await pool.query(`
-            INSERT INTO renaissance_questions (exam_id, question_type, question_text, options, correct_answer, explanation, ai_generated)
-            VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
-            [exam_id, question_type === 'theory' ? 'theory' : 'mcq', question_text, JSON.stringify(Array.isArray(options) ? options : []), correct_answer || '', explanation || '', !!ai_generated]);
-        res.json({ success: true, id: r.rows[0].id });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.post('/api/admin/renaissance/questions/:id', isAdmin, async (req, res) => {
-    try {
-        const { question_type, question_text, options, correct_answer, explanation, ai_generated } = req.body;
-        await pool.query(`
-            UPDATE renaissance_questions SET
-              question_type = $1, question_text = $2, options = $3, correct_answer = $4, explanation = $5, ai_generated = $6
-            WHERE id = $7`,
-            [question_type === 'theory' ? 'theory' : 'mcq', question_text, JSON.stringify(Array.isArray(options) ? options : []), correct_answer || '', explanation || '', !!ai_generated, req.params.id]);
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.delete('/api/admin/renaissance/questions/:id', isAdmin, async (req, res) => {
-    try {
-        await pool.query('DELETE FROM renaissance_questions WHERE id = $1', [req.params.id]);
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// AI generate answer + explanation for a question
-app.post('/api/admin/renaissance/questions/:id/ai', isAdmin, async (req, res) => {
-    try {
-        const q = await pool.query('SELECT * FROM renaissance_questions WHERE id = $1', [req.params.id]);
-        if (!q.rows[0]) return res.status(404).json({ error: 'Question not found' });
-        const row = q.rows[0];
-        let options = row.options;
-        if (typeof options === 'string') { try { options = JSON.parse(options || '[]'); } catch (_) { options = []; } }
-        if (!Array.isArray(options)) options = [];
-        const result = await renaissanceAIAnswer(row.question_text, options, req.body || {});
-        if (result.error) return res.json({ error: result.error });
-        res.json({ success: true, answer: result.answer, explanation: result.explanation, provider: result.provider });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Parse a full LaTeX question paper into individual questions
-function rnzSplitChunk(work) {
-  const parts = [];
-  if (!work || !work.trim()) return parts;
-  const hasSec = /\\section\*?\{[^}]*\}/.test(work);
-  const hasItem = /\\item\b/.test(work);
-  const hasQuestion = /(?:^|\n)\s*Question\s+\d+\s*[:.)]\s+/i.test(work);
-  const hasNum = /(?:^|\n)\s*\d+\s*[.)]\s+/.test(work);
-
-  if (hasItem) {
-    const chunks = work.split(/\\item\b/);
-    chunks.shift();
-    for (const c of chunks) { parts.push.apply(parts, rnzSplitChunk(c.trim())); }
-  } else if (hasSec) {
-    const arr = work.split(/(\\section\*?\{[^}]*\})/);
-    const pre = String(arr[0] || '').trim();
-    if (pre) parts.push.apply(parts, rnzSplitChunk(pre));
-    for (let i = 2; i < arr.length; i += 2) {
-      const body = String(arr[i] || '').trim();
-      if (body) parts.push.apply(parts, rnzSplitChunk(body));
-    }
-  } else if (hasQuestion || hasNum) {
-    const reQ = /(?:^|\n)\s*Question\s+\d+\s*[:.)]\s+/gi;
-    const reN = /(?:^|\n)\s*\d+\s*[.)]\s+/g;
-    const matches = Array.from(work.matchAll(reQ)).concat(Array.from(work.matchAll(reN))).sort(function (a, b) { return a.index - b.index; });
-    let last = 0;
-    for (const mm of matches) {
-      const seg = work.slice(last, mm.index).trim();
-      if (seg) parts.push.apply(parts, rnzSplitChunk(seg));
-      last = mm.index + mm[0].length;
-    }
-    const tail = work.slice(last).trim();
-    if (tail) parts.push.apply(parts, rnzSplitChunk(tail));
-  } else {
-    parts.push(work.trim());
-  }
-  return parts;
-}
-
-// Locate the line index of an answer-key heading (e.g. "\section*{Answer Key}", "Answers:", "Marking Scheme").
-// Only headings in the second half of the paper are treated as answer keys so a header sheet
-// at the front of the paper never truncates the questions.
-function rnzFindAnswerKey(src) {
-  const lines = String(src || '').split('\n');
-  const half = Math.floor(lines.length / 2);
-  for (let i = half; i < lines.length; i++) {
-    const plain = lines[i]
-      .replace(/\\[a-zA-Z]+\*?/g, ' ')
-      .replace(/[{}\[\]()*\\&]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    if (/^(?:Answer\s*Key|Answers?|Answer\s*Sheet|Solutions?|Solution\s*Key|Marking\s*Scheme)\s*[:.]?\s*$/i.test(plain)) return i;
-  }
-  return -1;
-}
-
-// Parse the answer key body (e.g. a tabular of "1 & B" or lines "1. B") into { questionNumber: letter }.
-function rnzExtractAnswerKey(src) {
-  const map = {};
-  const idx = rnzFindAnswerKey(src);
-  if (idx < 0) return map;
-  let body = String(src).split('\n').slice(idx + 1).join('\n');
-  body = body
-    .replace(/\\hline/g, ' ')
-    .replace(/\\(?:begin|end)\{(?:tabular|table|center|enumerate|itemize|flushleft|flushright)\}/gi, ' ')
-    .replace(/\\(?:textbf|textit|textsc|mathrm|text)\{([^}]*)\}/g, '$1')
-    .replace(/\\(?:newpage|pagebreak|clearpage|noindent|hfill|vfill|rule\{[^}]*\}\{[^}]*\})/gi, ' ')
-    .replace(/&/g, ' ')
-    .replace(/\s+/g, ' ');
-  const re = /(\d+)\s*[.)]?\s+([A-Ea-e])\b/g;
-  let m;
-  while ((m = re.exec(body)) !== null) {
-    const n = parseInt(m[1], 10);
-    if (n >= 1 && n <= 200) map[n] = m[2].toUpperCase();
-  }
-  return map;
-}
-
-// Cut everything from the answer-key heading onwards out of the paper.
-function rnzStripAnswerKey(src) {
-  const idx = rnzFindAnswerKey(src);
-  if (idx < 0) return src;
-  return String(src).split('\n').slice(0, idx).join('\n');
-}
-
-function parseRenaissanceLatex(latex) {
-  let src = String(latex || '');
-  src = src.replace(/^\s*%.*$/gm, '');
-  src = src.replace(/\\documentclass(\[[^\]]*\])?\{[^}]*\}/gi, '');
-  src = src.replace(/\\usepackage(\[[^\]]*\])?\{[^}]*\}/gi, '');
-  src = src.replace(/\\title\{[^}]*\}/gi, '');
-  src = src.replace(/\\author\{[^}]*\}/gi, '');
-  src = src.replace(/\\date\{[^}]*\}/gi, '');
-  src = src.replace(/\\maketitle/gi, '');
-  src = src.replace(/\\begin\{document\}/gi, '');
-  src = src.replace(/\\end\{document\}/gi, '');
-  const answerMap = rnzExtractAnswerKey(src);
-  src = rnzStripAnswerKey(src);
-  src = src.replace(/\\(?:newpage|pagebreak|clearpage)\b/gi, '');
-  // Convert option-list enumerate blocks like \begin{enumerate}[label=\Alph*.] ... \item A ... \end{enumerate}
-  // into plain lettered option lines (A. B. C. ...). Must run BEFORE stripping enumerate tags.
-  src = src.replace(/\\begin\{enumerate\}\s*\[[^\]]*(?:\\[Aa]lph)[^\]]*\]\s*([\s\S]*?)\s*\\end\{enumerate\}/gi, function (m, body) {
-    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    let i = 0;
-    const converted = body.replace(/\\item\b/g, function () {
-      return letters[Math.min(i++, 25)] + '.';
-    });
-    return '\n' + converted + '\n';
-  });
-  src = src.replace(/\\begin\{enumerate\}(?:\s*\[[^\]]*\])?/gi, '');
-  src = src.replace(/\\end\{enumerate\}/gi, '');
-  src = src.replace(/\\begin\{itemize\}(?:\s*\[[^\]]*\])?/gi, '');
-  src = src.replace(/\\end\{itemize\}/gi, '');
-  src = src.replace(/\\begin\{center\}/gi, '');
-  src = src.replace(/\\end\{center\}/gi, '');
-  src = src.replace(/\\hfill/gi, '');
-  // Convert option-style \item (e.g. \item A. text, \item (B) text, \item[C] text) into plain option lines
-  src = src.replace(/\\item\s+(?:[\(]?[A-Ea-e][\.\)]|\[[A-Ea-e]\])\s+/g, function (m) {
-    return m.replace(/\\item\s+/i, '');
-  });
-
-  const chunks = rnzSplitChunk(src);
-  const out = [];
-  let qi = 0;
-  for (const raw of chunks) {
-    let q = String(raw || '').trim();
-    if (!q) continue;
-    q = q.replace(/^\\section\*?\{[^}]*\}\s*/gi, '').trim();
-    const parsed = parseRenaissanceOptions(q);
-    if (!parsed.text) continue;
-    out.push({
-      question_text: parsed.text,
-      options: parsed.options,
-      question_type: parsed.options.length >= 2 ? 'mcq' : 'theory',
-      correct_answer: answerMap[qi + 1] || ''
-    });
-    qi++;
-  }
-  return out;
-}
-
-function parseRenaissanceOptions(q) {
-  const markers = [];
-  const re1 = /(?:^|\n)\s*[\(]?([A-Ea-e])[\.\)]\s+/g;
-  let m;
-  while ((m = re1.exec(q)) !== null) markers.push({ pos: m.index, letter: m[1].toUpperCase(), raw: m[0] });
-  const re2 = /\\([A-Ea-e])\b/g;
-  while ((m = re2.exec(q)) !== null) markers.push({ pos: m.index, letter: m[1].toUpperCase(), raw: m[0] });
-  const re3 = /(?:^|[^A-Za-z0-9])\(([A-Ea-e])\)\s+/g;
-  while ((m = re3.exec(q)) !== null) {
-    const start = m[0][0] === '(' ? m.index : m.index + 1;
-    markers.push({ pos: start, letter: m[1].toUpperCase(), raw: m[0].slice(start - m.index) });
-  }
-  markers.sort(function (a, b) { return a.pos - b.pos; });
-  if (markers.length < 2) return { text: q, options: [] };
-  const first = markers[0];
-  const text = q.slice(0, first.pos).trim();
-  const options = [];
-  for (let i = 0; i < markers.length; i++) {
-    const start = markers[i].pos + markers[i].raw.length;
-    const end = i + 1 < markers.length ? markers[i + 1].pos : q.length;
-    const opt = q.slice(start, end).trim();
-    if (opt) options.push(opt);
-  }
-  return { text, options };
-}
-
-// Bulk import: parse the pasted paper (preview)
-app.post('/api/admin/renaissance/import/parse', isAdmin, async (req, res) => {
-  try {
-    const latex = String(req.body.latex || '');
-    if (!latex.trim()) return res.status(400).json({ error: 'Paste the LaTeX code first' });
-    const questions = parseRenaissanceLatex(latex);
-    if (!questions.length) return res.json({ error: 'No questions detected. Use \\item, numbered questions, or \\section headings.' });
-    res.json({ success: true, questions });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Bulk import: save the parsed questions (optionally AI-fill answers)
-app.post('/api/admin/renaissance/import/save', isAdmin, async (req, res) => {
-  try {
-    const { exam_id, questions, ai_fill } = req.body;
-    if (!exam_id) return res.status(400).json({ error: 'Select an exam first' });
-    if (!Array.isArray(questions) || !questions.length) return res.status(400).json({ error: 'Nothing to import' });
-    let saved = 0;
-    let aiFilled = 0;
-    const ids = [];
-    for (const q of questions) {
-      const text = String(q.question_text || '').trim();
-      if (!text) continue;
-      const r = await pool.query(
-        `INSERT INTO renaissance_questions (exam_id, question_type, question_text, options, correct_answer, explanation, ai_generated)
-         VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
-        [exam_id, q.question_type === 'theory' ? 'theory' : 'mcq', text, JSON.stringify(Array.isArray(q.options) ? q.options : []), q.correct_answer || '', q.explanation || '', false]
-      );
-      ids.push({ id: r.rows[0].id, text, options: q.options || [], correct_answer: q.correct_answer || '' });
-      saved++;
-    }
-    if (ai_fill && saved) {
-      for (const item of ids) {
-        try {
-          const ai = await renaissanceAIAnswer(item.text, item.options);
-          if (ai.answer || ai.explanation) {
-            const keepAnswer = item.correct_answer || ai.answer || '';
-            await pool.query('UPDATE renaissance_questions SET correct_answer = $1, explanation = $2, ai_generated = true WHERE id = $3',
-              [keepAnswer, ai.explanation || '', item.id]);
-            aiFilled++;
-          }
-        } catch (_) {}
-      }
-    }
-    res.json({ success: true, count: saved, aiFilled });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Extract text from a PDF buffer (pure JS, no external binaries)
-async function extractPdfText(buffer) {
-    try {
-        const data = await pdfParse(buffer);
-        return String(data && data.text ? data.text : '');
-    } catch (_) { return ''; }
-}
-
-// Bulk import from a PDF or image (AI vision fallback for scans/photos)
-const RENAISSANCE_OCR_PROMPT = 'Transcribe this question paper into LaTeX question text. Output ONLY the questions as a LaTeX document body using \\item for each question and lines like A. / B. / C. / D. for options. Keep all math in $...$ or \\[...\\] form exactly. If a diagram or circuit is present, include a \\begin{tikzpicture}...\\end{tikzpicture} or \\begin{circuitikz}...\\end{circuitikz} block plus a short % note describing the diagram. Do not include any documentclass, preamble, headings or explanation text.';
-app.post('/api/admin/renaissance/import/file', isAdmin, uploadMemory.single('file'), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    const buffer = req.file.buffer;
-    if (buffer.length > 20 * 1024 * 1024) return res.status(400).json({ error: 'File is too large (max 20MB)' });
-    const mime = String(req.file.mimetype || '').toLowerCase();
-    const ext = path.extname(String(req.file.originalname || '')).toLowerCase();
-    const isPdf = mime === 'application/pdf' || ext === '.pdf';
-    const isImage = /^image\/(png|jpe?g|webp)$/.test(mime) || ['.png', '.jpg', '.jpeg', '.webp'].includes(ext);
-    if (!isPdf && !isImage) return res.status(400).json({ error: 'Only PDF or image files are supported' });
-
-    const base64 = buffer.toString('base64');
-    let raw = '';
-    let source = '';
-
-    if (isPdf) {
-      const text = await extractPdfText(buffer);
-      if (text && text.trim().length > 30) {
-        raw = text.trim();
-        source = 'pdf';
-      } else {
-        const ai = await callGeminiWithImage(RENAISSANCE_OCR_PROMPT, base64, 'application/pdf');
-        if (!ai.success) return res.status(422).json({ error: 'Could not read this PDF (it may be a scanned page). Try uploading a photo of the page instead.' });
-        raw = ai.text;
-        source = 'vision';
-      }
-    } else {
-      const ai = await callGeminiWithImage(RENAISSANCE_OCR_PROMPT, base64, mime || 'image/jpeg');
-      if (!ai.success) return res.status(422).json({ error: 'AI could not read this image. Try a clearer photo or use the PDF/LaTeX option.' });
-      raw = ai.text;
-      source = 'vision';
-    }
-
-    const questions = parseRenaissanceLatex(raw);
-    if (!questions.length) return res.status(422).json({ error: 'No questions could be detected in that file. Try the LaTeX paste option instead.' });
-    res.json({ success: true, questions, raw, source });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Settings (group link)
-app.post('/api/admin/renaissance/settings', isAdmin, async (req, res) => {
-    try {
-        await pool.query('INSERT INTO renaissance_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value',
-            ['group_link', (req.body.group_link || '').trim()]);
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// ─── RENAISSANCE MOCK EXAMS (STUDENT) ──────────────────────────────────────
-
-app.get('/renaissance', isAuth, async (req, res) => {
-    try {
-        const groupLink = await getRenaissanceSetting('group_link', '');
-        const exams = await pool.query(`
-            SELECT e.*,
-                   (SELECT COUNT(*) FROM renaissance_questions q WHERE q.exam_id = e.id) as question_count,
-                   (SELECT COUNT(*) FROM renaissance_attempts a WHERE a.exam_id = e.id AND a.user_id = $1 AND a.status = 'submitted') as my_attempts,
-                   (SELECT COALESCE(jsonb_agg(jsonb_build_object(
-                           'id', a.id, 'score', a.score, 'percentage', a.percentage, 'submitted_at', a.submitted_at)
-                         ORDER BY a.submitted_at DESC), '[]'::jsonb)
-                    FROM renaissance_attempts a
-                    WHERE a.exam_id = e.id AND a.user_id = $1 AND a.status = 'submitted') as my_attempt_list
-            FROM renaissance_exams e
-            WHERE e.status = 'published'
-            ORDER BY e.created_at DESC`, [req.session.user.id]);
-        res.render('renaissance', { user: req.session.user, exams: exams.rows, groupLink });
-    } catch (e) {
-        console.error('Renaissance dashboard error:', e.message);
-        res.status(500).send('Error loading Renaissance');
-    }
-});
-
-app.get('/renaissance/exam/:id', isAuth, async (req, res) => {
-    try {
-        const id = parseInt(req.params.id);
-        const ex = await pool.query('SELECT * FROM renaissance_exams WHERE id = $1 AND status = $2', [id, 'published']);
-        if (!ex.rows[0]) return res.status(404).send('Exam not found or not published');
-        const exam = ex.rows[0];
-
-        const now = new Date();
-        if (exam.opens_at && new Date(exam.opens_at) > now) {
-            return res.render('quiz-locked', { user: req.session.user, message: 'This exam has not opened yet. Please come back when it opens.', paystack_key: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_your_key', premiumPrice: PREMIUM_PRICE, userEmail: req.session.user.email });
-        }
-        if (exam.closes_at && new Date(exam.closes_at) < now) {
-            return res.render('quiz-locked', { user: req.session.user, message: 'This exam is now closed.', paystack_key: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_your_key', premiumPrice: PREMIUM_PRICE, userEmail: req.session.user.email });
-        }
-
-        // Reuse an existing in-progress attempt or create one
-        let attempt = await pool.query(
-            "SELECT * FROM renaissance_attempts WHERE user_id = $1 AND exam_id = $2 AND status = 'in_progress' ORDER BY started_at DESC LIMIT 1",
-            [req.session.user.id, id]);
-        let attemptId;
-        if (attempt.rows[0]) {
-            attemptId = attempt.rows[0].id;
-        } else {
-            // Trial limit: block starting a new attempt once max_attempts submitted attempts are reached
-            const maxAttempts = parseInt(exam.max_attempts) || 0;
-            if (maxAttempts > 0) {
-                const used = await pool.query(
-                    "SELECT COUNT(*)::int as c FROM renaissance_attempts WHERE user_id = $1 AND exam_id = $2 AND status = 'submitted'",
-                    [req.session.user.id, id]);
-                if (used.rows[0].c >= maxAttempts) {
-                    return res.render('quiz-locked', { user: req.session.user, message: 'You have used all ' + maxAttempts + ' allowed attempt' + (maxAttempts === 1 ? '' : 's') + ' for this exam. You cannot take it again.', paystack_key: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_your_key', premiumPrice: PREMIUM_PRICE, userEmail: req.session.user.email });
-                }
-            }
-            const created = await pool.query(
-                'INSERT INTO renaissance_attempts (user_id, exam_id, started_at) VALUES ($1,$2,NOW()) RETURNING id',
-                [req.session.user.id, id]);
-            attemptId = created.rows[0].id;
-        }
-
-        const questions = await pool.query(`
-            SELECT id, question_type, question_text, options
-            FROM renaissance_questions
-            WHERE exam_id = $1 ORDER BY id`, [id]);
-
-        const attemptRow = await pool.query('SELECT started_at FROM renaissance_attempts WHERE id = $1', [attemptId]);
-        const started = attemptRow.rows[0] ? new Date(attemptRow.rows[0].started_at) : new Date();
-        const remaining = Math.max(0, (exam.duration_minutes || 30) * 60 - Math.floor((Date.now() - started.getTime()) / 1000));
-
-        res.render('renaissance-exam', { user: req.session.user, exam, attemptId, questions: questions.rows, remainingSeconds: remaining });
-    } catch (e) {
-        console.error('Renaissance exam error:', e.message);
-        res.status(500).send('Error loading exam');
-    }
-});
-
-app.post('/renaissance/exam/:id/submit', isAuth, async (req, res) => {
-    try {
-        const examId = parseInt(req.params.id);
-        const attemptId = parseInt(req.body.attemptId || req.query.attemptId);
-        const uid = req.session.user.id;
-
-        const attempt = await pool.query(
-            'SELECT * FROM renaissance_attempts WHERE id = $1 AND user_id = $2 AND exam_id = $3 AND status = $4',
-            [attemptId, uid, examId, 'in_progress']);
-        if (!attempt.rows[0]) return res.status(400).json({ error: 'Attempt not found or already submitted' });
-
-        const exam = await pool.query('SELECT * FROM renaissance_exams WHERE id = $1', [examId]);
-        if (!exam.rows[0]) return res.status(404).json({ error: 'Exam not found' });
-
-        const answers = req.body.answers || {};
-        const questions = await pool.query(`
-            SELECT id, correct_answer, question_type
-            FROM renaissance_questions
-            WHERE exam_id = $1`, [examId]);
-
-        let score = 0;
-        const total = questions.rows.length;
-        const graded = questions.rows.map(q => {
-            const userAns = answers[q.id] !== undefined ? String(answers[q.id]).trim() : '';
-            const correctAns = (q.correct_answer || '').trim();
-            let isCorrect = false;
-            if (q.question_type === 'mcq' && correctAns) {
-                isCorrect = userAns.toLowerCase() === correctAns.toLowerCase();
-            } else if (correctAns) {
-                isCorrect = userAns.toLowerCase() === correctAns.toLowerCase();
-            }
-            if (isCorrect) score++;
-            return { id: q.id, question_type: q.question_type, correct_answer: correctAns, user_answer: userAns, is_correct: isCorrect };
-        });
-
-        const started = new Date(attempt.rows[0].started_at);
-        const timeTaken = Math.max(0, Math.round((Date.now() - started.getTime()) / 1000));
-        const pct = total > 0 ? Math.round((score / total) * 10000) / 100 : 0;
-
-        await pool.query(`
-            UPDATE renaissance_attempts SET status = 'submitted', score = $1, total = $2, percentage = $3,
-              time_taken = $4, answers = $5, submitted_at = NOW() WHERE id = $6`,
-            [score, total, pct, timeTaken, JSON.stringify(answers), attemptId]);
-
-        const showNow = !!exam.rows[0].show_results_immediately;
-        res.json({ success: true, attemptId, showNow });
-    } catch (e) {
-        console.error('Renaissance submit error:', e.message);
-        res.status(500).json({ error: e.message });
-    }
-});
-
-app.get('/renaissance/result/:attemptId', isAuth, async (req, res) => {
-    try {
-        const attemptId = parseInt(req.params.attemptId);
-        const attempt = await pool.query(
-            'SELECT * FROM renaissance_attempts WHERE id = $1 AND user_id = $2 AND status = $3',
-            [attemptId, req.session.user.id, 'submitted']);
-        if (!attempt.rows[0]) return res.status(404).send('Result not found');
-
-        const exam = await pool.query('SELECT * FROM renaissance_exams WHERE id = $1', [attempt.rows[0].exam_id]);
-        if (!exam.rows[0]) return res.status(404).send('Exam not found');
-        const ex = exam.rows[0];
-
-        let answers = attempt.rows[0].answers;
-        if (typeof answers === 'string') { try { answers = JSON.parse(answers || '{}'); } catch (_) { answers = {}; } }
-        if (!answers || typeof answers !== 'object' || Array.isArray(answers)) answers = {};
-
-        const canView = true;
-
-        let questions = [];
-        if (canView) {
-            const qs = await pool.query(`
-                SELECT id, question_type, question_text, options, correct_answer, explanation
-                FROM renaissance_questions
-                WHERE exam_id = $1 ORDER BY id`, [ex.id]);
-            questions = qs.rows.map(q => {
-                let options = q.options;
-                if (typeof options === 'string') { try { options = JSON.parse(options || '[]'); } catch (_) { options = []; } }
-                if (!Array.isArray(options)) options = [];
-                return {
-                    ...q,
-                    options,
-                    user_answer: answers[q.id] !== undefined ? String(answers[q.id]) : '',
-                    is_correct: String(answers[q.id] || '').trim().toLowerCase() === (q.correct_answer || '').trim().toLowerCase()
-                };
-            });
-        }
-
-        res.render('renaissance-result', { user: req.session.user, exam: ex, attempt: attempt.rows[0], questions, canView });
-    } catch (e) {
-        console.error('Renaissance result error:', e.message);
-        res.status(500).send('Error loading result');
-    }
 });
 
 // ─── DAILY TASK DASHBOARD ──────────────────────────────────────────────────
@@ -5533,222 +4681,6 @@ app.post('/upload-pdf', isAuth, requirePaid, rateLimit(10, 60000), uploadMemory.
         res.status(500).json({ success: false, message: "Internal server error." });
     }
 });
-
-// POST: Generate quizzes from client-extracted PDF text
-app.post('/generate-ai-quiz', isAuth, requirePaid, rateLimit(12, 60000), async (req, res) => {
-    try {
-        const { pdfText, fileName, num_questions, quiz_duration, question_type, difficulty } = req.body;
-
-        if (!pdfText || !pdfText.trim()) {
-            return res.status(400).json({ success: false, message: "Could not extract text from this PDF. If it is a scanned or image-only document, the text cannot be read — try a PDF with selectable text." });
-        }
-
-        // Detect scanned / image-only PDFs: after stripping whitespace the text
-        // must contain enough real characters to build meaningful questions from.
-        const meaningfulText = pdfText.replace(/\s+/g, '');
-        if (meaningfulText.length < 200) {
-            return res.status(400).json({ success: false, message: "This PDF does not contain enough readable text (it may be scanned or image-only). Try a text-based lecture note." });
-        }
-
-        const numQuestions = parseInt(num_questions) || 5;
-        const quizDuration = parseInt(quiz_duration) || 5;
-        const questionType = question_type || 'obj';
-        const difficultyLevel = difficulty || 'medium';
-        const originalFileName = fileName || 'document';
-
-        console.log(`[AI ENGINE] Generating ${numQuestions} questions from text "${originalFileName}"`);
-
-        let styleInstruction = "";
-        if (questionType === 'obj') {
-            styleInstruction = "You MUST generate ONLY standard 4-choice Multiple Choice Questions. Every item's 'type' field MUST be exactly 'obj'. Options array must have exactly 4 distinct text items.";
-        } else if (questionType === 'german') {
-            styleInstruction = "You MUST generate ONLY Fill-in-the-gap questions containing a blank line (____). Every item's 'type' field MUST be exactly 'german'. Keep the options array completely empty [].";
-        } else if (questionType === 'theory') {
-            styleInstruction = "You MUST generate ONLY open-ended deep conceptual essay questions. Every item's 'type' field MUST be exactly 'theory'. Provide grading keywords. Keep options array completely empty [].";
-        } else {
-            styleInstruction = "You may mix 'obj', 'german', and 'theory' question types throughout the collection layout.";
-        }
-
-        const difficultyMap = { easy: 'basic recall and comprehension level', medium: 'application and analysis level', hard: 'synthesis and evaluation level', expert: 'critical thinking and expert level' };
-        const difficultyText = difficultyMap[difficultyLevel] || 'application and analysis level';
-
-        // Truncate if too long
-        const maxChars = 12000;
-        var cleanText = pdfText;
-        if (cleanText.length > maxChars) cleanText = cleanText.substring(0, maxChars) + "\n...[truncated]";
-
-        // Generate questions via AI
-        let jsonStructure = '';
-        if (questionType === 'obj' || questionType === 'mixed') {
-            jsonStructure = `You MUST respond with a raw JSON array matching this structure:
-[
-  {
-    "type": "${questionType === 'mixed' ? 'obj' : questionType}",
-    "question": "Question text here...",
-    "options": ["Option A text", "Option B text", "Option C text", "Option D text"],
-    "correct": "A",
-    "keywords": ["key1", "key2"],
-    "explanation": "Clear explanation in plain text."
-  }
-]
-For 'obj' type, "correct" MUST be the LETTER of the correct option (A, B, C, or D).`;
-        } else if (questionType === 'german') {
-            jsonStructure = `You MUST respond with a raw JSON array matching this structure:
-[
-  {
-    "type": "german",
-    "question": "Text with a blank like ____ here",
-    "options": [],
-    "correct": "the exact expected answer text",
-    "keywords": ["key1", "key2"],
-    "explanation": "Clear explanation in plain text."
-  }
-]
-For 'german' type, "correct" MUST be the exact word or phrase that fills the blank. "options" MUST be an empty array [].`;
-        } else if (questionType === 'theory') {
-            jsonStructure = `You MUST respond with a raw JSON array matching this structure:
-[
-  {
-    "type": "theory",
-    "question": "Essay question text here...",
-    "options": [],
-    "correct": "key point that should be mentioned",
-    "keywords": ["expected keyword 1", "expected keyword 2"],
-    "explanation": "Clear explanation in plain text."
-  }
-]
-For 'theory' type, "correct" should be the main expected point, "options" MUST be an empty array [], and "keywords" should contain key terms to look for.`;
-        }
-
-        const prompt = `You are an expert academic examiner. Analyze the following document content carefully.
-Generate exactly ${numQuestions} unique, highly relevant academic questions based strictly on its contents.
-
-DIFFICULTY LEVEL: ${difficultyText} — adjust question complexity accordingly.
-
-CRITICAL STYLE RULE: ${styleInstruction}
-
-IMPORTANT: Use JSON key "question" for the question text. Each question MUST include an "explanation" key with a clear explanation.
-
-${jsonStructure}
-
-DOCUMENT CONTENT:
-${cleanText}`;
-
-        const aiRes = await studyPromptJSON(prompt);
-        let responseText = (aiRes.text || '').trim();
-        if (!responseText) throw new Error('Failed to compile quiz questions. Try again.');
-
-        if (responseText.startsWith("```json")) responseText = responseText.replace(/^```json/, "").replace(/```$/, "");
-        if (responseText.startsWith("```")) responseText = responseText.replace(/^```/, "").replace(/```$/, "");
-        responseText = extractJsonItems(responseText);
-
-        let parsedData;
-        try {
-            parsedData = JSON.parse(responseText);
-        } catch (e) {
-            console.error("Failed to parse AI response:", responseText.substring(0, 200));
-            throw new Error("Failed to parse AI response. Try again.");
-        }
-
-        let rawList = Array.isArray(parsedData) ? parsedData : (parsedData.questions || parsedData.quiz || []);
-
-        function cleanOptPrefix(o) { return String(o).replace(/^[A-Da-d1-4][\.\)]\s*/, ''); }
-        function answerLetter(val, opts) {
-            if (!val) return 'A';
-            var s = String(val).trim();
-            var m = s.match(/^([A-Da-d])[\.\)]\s*/);
-            if (m) return m[1].toUpperCase();
-            if (/^[A-Da-d]$/i.test(s)) return s.toUpperCase();
-            var n = parseInt(s);
-            if (!isNaN(n)) return String.fromCharCode(65 + (n >= 1 && n <= 4 ? n - 1 : n));
-            if (Array.isArray(opts)) {
-                for (var i = 0; i < opts.length; i++) {
-                    if (cleanOptPrefix(opts[i]).toLowerCase() === s.toLowerCase() || opts[i].toLowerCase() === s.toLowerCase()) return String.fromCharCode(65 + i);
-                }
-            }
-            return 'A';
-        }
-        let structuredQuiz = rawList.map(q => {
-            var question = q.question || q.text || q.questionText || q.question_text || '';
-            var options = Array.isArray(q.options) && q.options.length ? q.options : (Array.isArray(q.choices) ? q.choices : []);
-            var cleanOpts = options.map(function(o) { return cleanOptPrefix(o); });
-            var t = questionType;
-            if (t === 'mixed') t = q.type || 'obj';
-            return {
-                type: t,
-                question: question,
-                options: cleanOpts,
-                correct: (t === 'german' || t === 'theory') ? (q.correct || q.correctAnswer || q.answer || '') : answerLetter(q.correct || q.correctAnswer || q.answer || q.correct_option || '', cleanOpts),
-                keywords: q.keywords || [],
-                explanation: q.explanation || q.exp || ''
-            };
-        }).filter(q => q.question);
-
-        res.json({ 
-            success: true, 
-            questions: structuredQuiz,
-            quizTitle: `AI-Test (${originalFileName.replace(/\.[^/.]+$/, "")})`,
-            durationSeconds: quizDuration * 60
-        });
-
-    } catch (error) {
-        console.error("Critical AI Quiz Generation Failure:", error);
-        res.status(500).json({ success: false, message: error.message || "Error compiling quiz matrix." });
-    }
-});
-
-// POST: Save and Persist Graded Flexible Score Results
-app.post('/save-ai-quiz-results', isAuth, async (req, res) => {
-    try {
-        const { quizTitle, totalQuestions, correctAnswers, scorePercentage } = req.body;
-        
-        // Safety validation fallback check handling session tracking formats stably
-        const userId = req.session.user ? req.session.user.id : null;
-        
-        if (!userId) {
-            return res.status(401).json({ success: false, message: "Unauthorized account context profile tracking session." });
-        }
-
-        // Stores numeric evaluation scores as floating-point metrics (e.g., 3.5 out of 5 for partial theoretical credit)
-        const insertQuery = `
-            INSERT INTO quiz_results (user_id, subject_id, title, score, total_questions, percentage, created_at)
-            VALUES ($1, NULL, $2, $3, $4, $5, NOW())
-            RETURNING *
-        `;
-
-        await pool.query(insertQuery, [
-            userId,
-            quizTitle,          
-            parseFloat(correctAnswers), 
-            parseInt(totalQuestions),    
-            parseInt(scorePercentage)   
-        ]);
-
-        console.log(`[DATABASE SYNC] AI CBT score logged for Student ID: ${userId} (${correctAnswers}/${totalQuestions})`);
-        res.json({ success: true, message: "Performance metrics logged to PostgreSQL core." });
-
-    } catch (err) {
-        console.error("Critical Database History Sync Error:", err);
-        res.status(500).json({ success: false, message: "Internal server error persisting score profile." });
-    }
-});
-
-app.get('/api/ai-quiz/history', isAuth, async (req, res) => {
-    try {
-        const uid = req.session.user.id;
-        const r = await pool.query(
-            'SELECT id, title, score, total_questions, percentage, created_at FROM quiz_results WHERE user_id = $1 AND subject_id IS NULL ORDER BY created_at DESC LIMIT 30',
-            [uid]
-        );
-        res.json({ success: true, history: r.rows });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-
-
-
 
 function buildCGPA(profile, courses) {
     const scale  = parseInt(profile.grading_scale) || 5;
@@ -6955,6 +5887,20 @@ app.post('/api/study/topics/delete/:id', isAuth, requirePaid, async (req, res) =
     await pool.query('DELETE FROM study_subtopics WHERE topic_id = $1', [req.params.id]);
     await pool.query('DELETE FROM study_topics WHERE id = $1', [req.params.id]);
     res.json({ success: true });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.post('/api/study/topics/update', isAuth, requirePaid, async (req, res) => {
+  try {
+    const id = parseInt(req.body.id, 10);
+    const completed = !!req.body.completed;
+    if (!id) return res.status(400).json({ success: false, error: 'Invalid topic' });
+    const r = await pool.query(
+      'UPDATE study_topics SET completed = $1 WHERE id = $2 AND user_id = $3 RETURNING id, completed',
+      [completed, id, req.session.user.id]
+    );
+    if (!r.rows[0]) return res.status(404).json({ success: false, error: 'Topic not found' });
+    res.json({ success: true, topic: r.rows[0] });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
@@ -8567,6 +7513,7 @@ app.post('/api/friends/request', isAuth, async (req, res) => {
         );
         if (reverse.rows[0]) {
             await acceptFriendship(uid, friendId);
+            notifyUser(friendId, 'friend', 'Friend request accepted', req.session.user.fullname + ' accepted your friend request', '/chat?tab=friends');
             return res.json({ success: true, accepted: true });
         }
 
@@ -8574,6 +7521,7 @@ app.post('/api/friends/request', isAuth, async (req, res) => {
             'INSERT INTO friendships (user_id, friend_id, status) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
             [uid, friendId, 'pending']
         );
+        notifyUser(friendId, 'friend', 'New friend request', req.session.user.fullname + ' sent you a friend request', '/chat?tab=friends');
         res.json({ success: true });
     } catch(e){ res.status(500).json({ success: false, error: 'Could not send request' }); }
 });
@@ -8592,6 +7540,7 @@ app.post('/api/friends/accept', isAuth, async (req, res) => {
         if (!pending.rows[0]) return res.status(404).json({ success: false, error: 'No pending request' });
 
         await acceptFriendship(uid, friendId);
+        notifyUser(friendId, 'friend', 'Friend request accepted', req.session.user.fullname + ' accepted your friend request', '/chat?tab=friends');
         res.json({ success: true });
     } catch(e){ res.status(500).json({ success: false, error: 'Could not accept request' }); }
 });
@@ -8781,8 +7730,12 @@ app.get('/api/friends/leaderboard', isAuth, async (req, res) => {
 });
 
 app.get('/friends', isAuth, (req, res) => {
-    res.locals.seo.title = 'Prepium | Friends';
-    res.render('friends', { user: req.session.user });
+    res.locals.seo.title = 'Prepium | Community';
+    res.render('chat', {
+        user: req.session.user,
+        initialTab: 'friends',
+        initialSub: req.query.tab === 'leaderboard' ? 'leaderboard' : null
+    });
 });
 
 // ---- Chat: conversations ----
@@ -8807,6 +7760,7 @@ app.get('/api/chat/conversations', isAuth, async (req, res) => {
         );
         const convIds = r.rows.map(c => c.id);
         let others = [];
+        let memberTimes = [];
         if (convIds.length) {
             const o = await pool.query(
                 `SELECT cm.conversation_id, u.id, u.fullname
@@ -8815,6 +7769,12 @@ app.get('/api/chat/conversations', isAuth, async (req, res) => {
                 [convIds, uid]
             );
             others = o.rows;
+            const t = await pool.query(
+                `SELECT conversation_id, user_id, last_read_at, last_active_at
+                 FROM conversation_members WHERE conversation_id = ANY($1)`,
+                [convIds]
+            );
+            memberTimes = t.rows;
         }
         const preview = (c) => {
             if (!c.last_at) return 'Say hello 👋';
@@ -8827,13 +7787,21 @@ app.get('/api/chat/conversations', isAuth, async (req, res) => {
             conversations: r.rows.map(c => {
                 const members = others.filter(o => o.conversation_id === c.id);
                 const title = c.type === 'group' ? (c.name || 'Group') : (members[0] ? members[0].fullname : 'Conversation');
+                let lastStatus = null;
+                if (c.last_sender_me && c.last_at) {
+                    const times = memberTimes.filter(m => m.conversation_id === c.id && m.user_id !== uid);
+                    const allRead = times.length && times.every(m => m.last_read_at && new Date(m.last_read_at) >= new Date(c.last_at));
+                    const allActive = times.length && times.every(m => m.last_active_at && new Date(m.last_active_at) >= new Date(c.last_at));
+                    lastStatus = allRead ? 'read' : allActive ? 'delivered' : 'sent';
+                }
                 return {
                     id: c.id, type: c.type, title,
                     member_count: members.length + 1,
                     unread: c.unread,
                     last_preview: preview(c),
                     last_at: c.last_at,
-                    last_sender_me: c.last_sender === uid
+                    last_sender_me: c.last_sender === uid,
+                    last_status: lastStatus
                 };
             })
         });
@@ -8988,6 +7956,16 @@ app.post('/api/chat/conversations/:id/send', isAuth, uploadMemory.single('media'
             status: 'sent'
         };
         emitToMembers(cid, 'chat:message', { conversationId: cid, message }, uid);
+        const others = await pool.query('SELECT user_id FROM conversation_members WHERE conversation_id = $1 AND user_id <> $2', [cid, uid]);
+        for (const m of others.rows) {
+            const dupe = await pool.query(
+                `SELECT 1 FROM user_notifications WHERE user_id = $1 AND type = 'chat' AND is_read = false AND link = $2 LIMIT 1`,
+                [m.user_id, '/chat/' + cid]
+            );
+            if (!dupe.rows[0]) {
+                notifyUser(m.user_id, 'chat', 'New message', req.session.user.fullname + ' sent you a message', '/chat/' + cid);
+            }
+        }
         res.json({ success: true, message });
     } catch (e) {
         console.error('[Chat] Send error:', e.message);
@@ -9067,6 +8045,10 @@ app.post('/api/chat/conversations/:id/members', isAuth, async (req, res) => {
                 [cid, mid]
             );
         }
+        const convName = await pool.query('SELECT name FROM conversations WHERE id = $1', [cid]);
+        for (const mid of userIds) {
+            notifyUser(mid, 'group', 'Added to group', 'You were added to ' + ((convName.rows[0] && convName.rows[0].name) || 'a group'), '/chat/' + cid);
+        }
         emitToMembers(cid, 'chat:members', { conversationId: cid }, uid);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ success: false, error: 'Could not add members' }); }
@@ -9142,10 +8124,11 @@ app.post('/api/status', isAuth, uploadMemory.single('media'), async (req, res) =
             if (!req.file) return res.status(400).json({ success: false, error: 'No image uploaded' });
             if (req.file.size > 8 * 1024 * 1024) return res.status(400).json({ success: false, error: 'Image too large (max 8MB)' });
             if (!/^image\//.test(req.file.mimetype)) return res.status(400).json({ success: false, error: 'Not an image' });
+            const caption = String(req.body.body || '').trim().slice(0, 200);
             await pool.query(
-                `INSERT INTO status_posts (user_id, kind, media, media_mime, privacy, expires_at)
-                 VALUES ($1, 'image', $2, $3, $4, NOW() + INTERVAL '24 hours')`,
-                [uid, req.file.buffer, req.file.mimetype, privacy]
+                `INSERT INTO status_posts (user_id, kind, body, media, media_mime, privacy, expires_at)
+                 VALUES ($1, 'image', $2, $3, $4, $5, NOW() + INTERVAL '24 hours')`,
+                [uid, caption, req.file.buffer, req.file.mimetype, privacy]
             );
         } else {
             return res.status(400).json({ success: false, error: 'Unknown status kind' });
@@ -9237,14 +8220,251 @@ app.get('/api/status/media/:id', isAuth, async (req, res) => {
     } catch (e) { res.status(500).json({ error: 'Could not load media' }); }
 });
 
+// ---- Per-user notifications ----
+(async function initUserNotifications() {
+    try {
+        await pool.query(`CREATE TABLE IF NOT EXISTS user_notifications (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            type VARCHAR(20) NOT NULL,
+            title VARCHAR(140) NOT NULL,
+            body VARCHAR(300),
+            link VARCHAR(200),
+            is_read BOOLEAN NOT NULL DEFAULT false,
+            created_at TIMESTAMP DEFAULT NOW()
+        )`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_notifs ON user_notifications(user_id, created_at DESC)`);
+        await pool.query(`CREATE TABLE IF NOT EXISTS notification_reads (
+            notification_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            read_at TIMESTAMP DEFAULT NOW(),
+            PRIMARY KEY (notification_id, user_id)
+        )`);
+        console.log('[Notifications] Table ready');
+    } catch (e) { console.error('[Notifications] Init:', e.message); }
+})();
+
+async function notifyUser(userId, type, title, body, link) {
+    try {
+        await pool.query(
+            'INSERT INTO user_notifications (user_id, type, title, body, link) VALUES ($1, $2, $3, $4, $5)',
+            [userId, type, title, body || '', link || '']
+        );
+        if (io) io.to('user_' + userId).emit('notify', { type, title });
+    } catch (e) { console.error('[Notify]', e.message); }
+}
+
+app.get('/api/notifications/mine', isAuth, async (req, res) => {
+    try {
+        const uid = req.session.user.id;
+        const r = await pool.query(
+            'SELECT id, type, title, body, link, is_read, created_at FROM user_notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 30',
+            [uid]
+        );
+        const unread = await pool.query('SELECT COUNT(*)::int AS c FROM user_notifications WHERE user_id = $1 AND is_read = false', [uid]);
+        res.json({ success: true, notifications: r.rows, unread: unread.rows[0].c });
+    } catch (e) { res.status(500).json({ success: false, error: 'Could not load notifications' }); }
+});
+
+app.post('/api/notifications/mine/read', isAuth, async (req, res) => {
+    try {
+        await pool.query('UPDATE user_notifications SET is_read = true WHERE user_id = $1', [req.session.user.id]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ success: false, error: 'Could not mark read' }); }
+});
+
+// ---- Feed (posts) ----
+(async function initFeed() {
+    try {
+        await pool.query(`CREATE TABLE IF NOT EXISTS feed_posts (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            body TEXT,
+            image BYTEA,
+            image_mime VARCHAR(100),
+            created_at TIMESTAMP DEFAULT NOW()
+        )`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_feed_posts ON feed_posts(user_id, id DESC)`);
+        await pool.query(`CREATE TABLE IF NOT EXISTS feed_likes (
+            post_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT NOW(),
+            PRIMARY KEY (post_id, user_id)
+        )`);
+        console.log('[Feed] Tables ready');
+    } catch (e) { console.error('[Feed] Init:', e.message); }
+})();
+
+app.post('/api/feed', isAuth, uploadMemory.single('image'), async (req, res) => {
+    try {
+        const uid = req.session.user.id;
+        const body = String(req.body.body || '').trim().slice(0, 1000);
+        const hasImage = !!req.file;
+        if (!body && !hasImage) return res.status(400).json({ success: false, error: 'Write a caption or add a photo' });
+        if (hasImage) {
+            if (req.file.size > 8 * 1024 * 1024) return res.status(400).json({ success: false, error: 'Image too large (max 8MB)' });
+            if (!/^image\//.test(req.file.mimetype)) return res.status(400).json({ success: false, error: 'Not an image' });
+        }
+        await pool.query(
+            'INSERT INTO feed_posts (user_id, body, image, image_mime) VALUES ($1, $2, $3, $4)',
+            [uid, body || null, hasImage ? req.file.buffer : null, hasImage ? req.file.mimetype : null]
+        );
+        res.json({ success: true });
+    } catch (e) {
+        console.error('[Feed] Post error:', e.message);
+        res.status(500).json({ success: false, error: 'Could not create post' });
+    }
+});
+
+app.get('/api/feed', isAuth, async (req, res) => {
+    try {
+        const uid = req.session.user.id;
+        const before = parseInt(req.query.before, 10) || 0;
+        const params = [uid];
+        let where = `(p.user_id = $1 OR p.user_id IN (
+            SELECT CASE WHEN f.user_id = $1 THEN f.friend_id ELSE f.user_id END
+            FROM friendships f WHERE f.status = 'accepted' AND (f.user_id = $1 OR f.friend_id = $1)
+        ))`;
+        if (before) { params.push(before); where += ' AND p.id < $' + (params.length); }
+        const r = await pool.query(
+            `SELECT p.id, p.user_id, p.body, (p.image IS NOT NULL) AS has_image, p.created_at,
+                    u.fullname, COALESCE(u.xp, 0) AS xp,
+                    (SELECT COUNT(*) FROM feed_likes l WHERE l.post_id = p.id)::int AS likes,
+                    EXISTS(SELECT 1 FROM feed_likes l WHERE l.post_id = p.id AND l.user_id = $1) AS liked
+             FROM feed_posts p JOIN users u ON u.id = p.user_id
+             WHERE ${where}
+             ORDER BY p.id DESC LIMIT 20`,
+            params
+        );
+        res.json({
+            success: true,
+            posts: r.rows.map(p => ({
+                id: p.id, user_id: p.user_id, fullname: p.fullname, level: levelForXp(p.xp),
+                body: p.body, has_image: p.has_image, created_at: p.created_at,
+                likes: p.likes, liked: p.liked, mine: p.user_id === uid
+            })),
+            has_more: r.rows.length === 20
+        });
+    } catch (e) {
+        console.error('[Feed] List error:', e.message);
+        res.status(500).json({ success: false, error: 'Could not load feed' });
+    }
+});
+
+app.post('/api/feed/:id/like', isAuth, async (req, res) => {
+    try {
+        const pid = parseInt(req.params.id, 10);
+        const uid = req.session.user.id;
+        const post = await pool.query('SELECT user_id FROM feed_posts WHERE id = $1', [pid]);
+        if (!post.rows[0]) return res.status(404).json({ success: false, error: 'Post not found' });
+        const authorId = post.rows[0].user_id;
+        const canSee = authorId === uid || await areFriends(uid, authorId);
+        if (!canSee) return res.status(403).json({ success: false, error: 'Not allowed' });
+        const existing = await pool.query('SELECT 1 FROM feed_likes WHERE post_id = $1 AND user_id = $2', [pid, uid]);
+        let liked;
+        if (existing.rows[0]) {
+            await pool.query('DELETE FROM feed_likes WHERE post_id = $1 AND user_id = $2', [pid, uid]);
+            liked = false;
+        } else {
+            await pool.query('INSERT INTO feed_likes (post_id, user_id) VALUES ($1, $2)', [pid, uid]);
+            liked = true;
+            if (authorId !== uid) notifyUser(authorId, 'like', 'New like', req.session.user.fullname + ' liked your post', '/chat?tab=feed');
+        }
+        const count = await pool.query('SELECT COUNT(*)::int AS c FROM feed_likes WHERE post_id = $1', [pid]);
+        res.json({ success: true, liked, likes: count.rows[0].c });
+    } catch (e) { res.status(500).json({ success: false, error: 'Could not like post' }); }
+});
+
+app.delete('/api/feed/:id', isAuth, async (req, res) => {
+    try {
+        const pid = parseInt(req.params.id, 10);
+        const uid = req.session.user.id;
+        await pool.query('DELETE FROM feed_posts WHERE id = $1 AND user_id = $2', [pid, uid]);
+        await pool.query('DELETE FROM feed_likes WHERE post_id = $1', [pid]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ success: false, error: 'Could not delete post' }); }
+});
+
+app.get('/api/feed/media/:id', isAuth, async (req, res) => {
+    try {
+        const pid = parseInt(req.params.id, 10);
+        const uid = req.session.user.id;
+        const r = await pool.query('SELECT image, image_mime, user_id FROM feed_posts WHERE id = $1', [pid]);
+        const post = r.rows[0];
+        if (!post || !post.image) return res.status(404).json({ error: 'Not found' });
+        const canSee = post.user_id === uid || await areFriends(uid, post.user_id);
+        if (!canSee) return res.status(403).json({ error: 'Not allowed' });
+        res.setHeader('Content-Type', post.image_mime || 'application/octet-stream');
+        res.setHeader('Cache-Control', 'private, max-age=86400');
+        res.send(post.image);
+    } catch (e) { res.status(500).json({ error: 'Could not load image' }); }
+});
+
+// ---- Public profile (no academic/CGPA data) ----
+app.get('/api/users/:id/profile', isAuth, async (req, res) => {
+    try {
+        const uid = req.session.user.id;
+        const targetId = parseInt(req.params.id, 10);
+        if (!targetId) return res.status(400).json({ success: false, error: 'Invalid user' });
+        const u = await pool.query('SELECT id, fullname, COALESCE(xp, 0) AS xp, created_at FROM users WHERE id = $1', [targetId]);
+        if (!u.rows[0]) return res.status(404).json({ success: false, error: 'User not found' });
+        const target = u.rows[0];
+        const games = await pool.query(
+            `SELECT game, COUNT(*)::int AS plays, COALESCE(MAX(score), 0)::int AS best,
+                    COALESCE(SUM(CASE WHEN outcome = 'win' THEN 1 ELSE 0 END), 0)::int AS wins
+             FROM game_results WHERE user_id = $1 GROUP BY game`,
+            [targetId]
+        );
+        const friendsCount = await pool.query(
+            `SELECT COUNT(*)::int AS c FROM friendships WHERE status = 'accepted' AND (user_id = $1 OR friend_id = $1)`,
+            [targetId]
+        );
+        let relationship = 'none';
+        if (targetId === uid) {
+            relationship = 'self';
+        } else {
+            const rel = await pool.query(
+                `SELECT user_id, status FROM friendships
+                 WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)`,
+                [uid, targetId]
+            );
+            if (rel.rows[0]) {
+                if (rel.rows[0].status === 'accepted') relationship = 'friends';
+                else relationship = rel.rows[0].user_id === uid ? 'request_sent' : 'request_received';
+            }
+        }
+        res.json({
+            success: true,
+            profile: {
+                id: target.id,
+                fullname: target.fullname,
+                xp: target.xp,
+                level: levelForXp(target.xp),
+                joined: target.created_at,
+                games: games.rows,
+                friends_count: friendsCount.rows[0].c,
+                relationship
+            }
+        });
+    } catch (e) {
+        console.error('[Profile] error:', e.message);
+        res.status(500).json({ success: false, error: 'Could not load profile' });
+    }
+});
+
+app.get('/u/:id', isAuth, (req, res) => {
+    res.locals.seo.title = 'Prepium | Profile';
+    res.render('profile-view', { user: req.session.user, profileId: parseInt(req.params.id, 10) || 0 });
+});
+
 app.get('/status', isAuth, (req, res) => {
-    res.locals.seo.title = 'Prepium | Status';
-    res.render('status', { user: req.session.user });
+    res.locals.seo.title = 'Prepium | Community';
+    res.render('chat', { user: req.session.user, initialTab: 'status' });
 });
 
 app.get('/chat', isAuth, (req, res) => {
-    res.locals.seo.title = 'Prepium | Chats';
-    res.render('chat', { user: req.session.user });
+    res.locals.seo.title = 'Prepium | Community';
+    res.render('chat', { user: req.session.user, initialTab: 'chats' });
 });
 
 app.get('/chat/:id', isAuth, (req, res) => {
@@ -9316,6 +8536,47 @@ try {
             if (socket.lastTyping && now - socket.lastTyping < 2000) return;
             socket.lastTyping = now;
             emitToMembers(cid, 'chat:typing', { conversationId: cid, userId: uid }, uid);
+        });
+        socket.on('chat:delivered', async (data) => {
+            const cid = parseInt(data && data.conversationId, 10);
+            if (!cid) return;
+            const mid = parseInt(data && data.messageId, 10) || null;
+            try {
+                await pool.query(
+                    'UPDATE conversation_members SET last_active_at = NOW() WHERE conversation_id = $1 AND user_id = $2',
+                    [cid, uid]
+                );
+                emitToMembers(cid, 'chat:delivered', { conversationId: cid, userId: uid, messageId: mid }, uid);
+            } catch (e) { console.error('[Chat] delivered:', e.message); }
+        });
+        socket.on('call:offer', async (data) => {
+            try {
+                const toUserId = parseInt(data && data.toUserId, 10);
+                if (!toUserId || !data.offer) return;
+                if (!(await areFriends(uid, toUserId))) return;
+                const u = await pool.query('SELECT fullname FROM users WHERE id = $1', [uid]);
+                io.to('user_' + toUserId).emit('call:offer', {
+                    fromUserId: uid,
+                    fromName: u.rows[0] ? u.rows[0].fullname : 'Someone',
+                    callType: data.callType === 'video' ? 'video' : 'audio',
+                    offer: { type: data.offer.type, sdp: data.offer.sdp }
+                });
+            } catch (e) { console.error('[Call] offer:', e.message); }
+        });
+        socket.on('call:answer', (data) => {
+            const toUserId = parseInt(data && data.toUserId, 10);
+            if (!toUserId || !data.answer) return;
+            io.to('user_' + toUserId).emit('call:answer', { fromUserId: uid, answer: { type: data.answer.type, sdp: data.answer.sdp } });
+        });
+        socket.on('call:ice', (data) => {
+            const toUserId = parseInt(data && data.toUserId, 10);
+            if (!toUserId || !data.candidate) return;
+            io.to('user_' + toUserId).emit('call:ice', { fromUserId: uid, candidate: data.candidate });
+        });
+        socket.on('call:end', (data) => {
+            const toUserId = parseInt(data && data.toUserId, 10);
+            if (!toUserId) return;
+            io.to('user_' + toUserId).emit('call:end', { fromUserId: uid });
         });
         socket.on('disconnect', () => {});
     });

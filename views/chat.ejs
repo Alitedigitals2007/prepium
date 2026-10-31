@@ -4,9 +4,19 @@
     <%- include('partials/head') %>
     <style>
         .status-bar { height: env(safe-area-inset-top, 0px); }
-        .page-content { padding: 0 1rem 2rem; max-width: 640px; margin: 0 auto; }
+        .page-content { padding: 0 1rem 2rem; max-width: 680px; margin: 0 auto; }
 
-        .chat-actions { display: flex; gap: 7px; margin: 0.4rem 0 0.9rem; }
+        .tabs { display: flex; gap: 6px; background: var(--surface-solid); border: 1px solid var(--border-solid); padding: 4px; border-radius: 14px; margin: 0.4rem 0 1rem; }
+        .tab-btn { flex: 1; border: none; background: transparent; font-family: inherit; font-size: 0.72rem; font-weight: 800; color: var(--text-muted); padding: 0.55rem 0.4rem; border-radius: 10px; cursor: pointer; position: relative; transition: all 0.2s var(--ease-out); }
+        .tab-btn.active { background: var(--brand-gradient); color: #fff; box-shadow: 0 3px 10px rgba(37, 99, 235, 0.28); }
+        .tab-badge { position: absolute; top: -4px; right: 6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 99px; background: #ef4444; color: #fff; font-size: 0.56rem; font-weight: 800; display: grid; place-items: center; }
+
+        .empty-note { padding: 1.8rem 1rem; text-align: center; color: var(--text-muted); font-size: 0.76rem; }
+        .empty-note i { display: block; font-size: 1.4rem; margin-bottom: 0.45rem; opacity: 0.5; }
+        .section-label { font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin: 0.9rem 0 0.5rem; }
+
+        /* ---- Chats tab ---- */
+        .chat-actions { display: flex; gap: 7px; margin-bottom: 0.9rem; }
         .chat-action {
             flex: 1; border: 1px solid var(--border-solid); border-radius: 13px;
             padding: 0.7rem 0.4rem; font-family: inherit; font-size: 0.68rem; font-weight: 800;
@@ -15,7 +25,6 @@
         }
         .chat-action:active { transform: scale(0.96); }
         .chat-action.primary { background: var(--brand-gradient); color: #fff; border-color: transparent; }
-
         .conv-row {
             display: flex; align-items: center; gap: 0.75rem;
             background: var(--surface-solid); border: 1px solid var(--border-solid);
@@ -37,12 +46,84 @@
         .tick { font-size: 0.62rem; color: var(--text-muted); flex: 0 0 auto; }
         .tick.read { color: #38bdf8; }
 
-        .sheet-backdrop { position: fixed; inset: 0; background: rgba(2, 6, 23, 0.55); z-index: 60; display: none; align-items: flex-end; justify-content: center; backdrop-filter: blur(3px); }
+        /* ---- Status tab ---- */
+        .status-row { display: flex; align-items: center; gap: 0.75rem; background: var(--surface-solid); border: 1px solid var(--border-solid); border-radius: 15px; padding: 0.7rem 0.8rem; margin-bottom: 0.55rem; cursor: pointer; transition: transform 0.15s; }
+        .status-row:active { transform: scale(0.985); }
+        .ring { width: 52px; height: 52px; flex: 0 0 52px; border-radius: 50%; padding: 2.5px; background: linear-gradient(135deg, #22c55e, #16a34a); }
+        .ring.viewed { background: var(--border-solid); }
+        .ring.mine { background: linear-gradient(135deg, #2563eb, #7c3aed); }
+        .ring-inner { width: 100%; height: 100%; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 0.85rem; background: var(--surface-solid); color: var(--text-primary); position: relative; overflow: hidden; }
+        .ring-inner img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+        .ring-inner.add { background: var(--brand-gradient); color: #fff; font-size: 1.1rem; }
+        .st-main { flex: 1; min-width: 0; }
+        .st-name { font-size: 0.84rem; font-weight: 800; color: var(--text-primary); }
+        .st-sub { font-size: 0.62rem; color: var(--text-muted); margin-top: 1px; }
+        .st-count { font-size: 0.58rem; font-weight: 800; padding: 3px 9px; border-radius: 99px; background: var(--brand-soft); color: var(--brand); flex: 0 0 auto; }
+
+        /* ---- Friends tab ---- */
+        .xp-hero {
+            background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 45%, #7c3aed 100%);
+            color: #fff; border-radius: var(--radius-xl);
+            padding: 1.1rem 1.2rem; margin-bottom: 1rem;
+            box-shadow: 0 16px 40px rgba(37, 99, 235, 0.3);
+            display: flex; align-items: center; gap: 1rem;
+        }
+        .xp-level {
+            width: 60px; height: 60px; flex: 0 0 60px; border-radius: 50%;
+            background: rgba(255,255,255,0.16); border: 2px solid rgba(255,255,255,0.35);
+            display: grid; place-items: center; text-align: center;
+        }
+        .xp-level b { font-size: 1.3rem; font-weight: 800; line-height: 1; }
+        .xp-level span { font-size: 0.5rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.85; }
+        .xp-info { flex: 1; min-width: 0; }
+        .xp-info h2 { font-size: 1rem; font-weight: 800; }
+        .xp-info p { font-size: 0.68rem; opacity: 0.85; margin-top: 1px; }
+        .xp-bar { height: 8px; border-radius: 99px; background: rgba(255,255,255,0.22); margin-top: 0.55rem; overflow: hidden; }
+        .xp-bar i { display: block; height: 100%; border-radius: 99px; background: #fff; transition: width 0.6s var(--ease-out); }
+
+        .search-wrap { position: relative; margin-bottom: 0.8rem; }
+        .search-wrap i { position: absolute; left: 0.9rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.85rem; }
+        .search-wrap input {
+            width: 100%; padding: 0.75rem 0.9rem 0.75rem 2.4rem;
+            border: 1.5px solid var(--border-solid); border-radius: 13px;
+            background: var(--surface-solid); color: var(--text-primary);
+            font-family: inherit; font-size: 0.85rem; outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .search-wrap input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-light); }
+
+        .avatar { width: 42px; height: 42px; flex: 0 0 42px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 0.9rem; text-transform: uppercase; }
+        .person-row { display: flex; align-items: center; gap: 0.7rem; background: var(--surface-solid); border: 1px solid var(--border-solid); border-radius: 14px; padding: 0.6rem 0.75rem; margin-bottom: 0.5rem; }
+        .p-main { flex: 1; min-width: 0; }
+        .p-name { font-size: 0.82rem; font-weight: 800; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .p-sub { font-size: 0.62rem; color: var(--text-muted); margin-top: 1px; }
+        .p-actions { display: flex; gap: 5px; flex: 0 0 auto; }
+        .p-btn { border: none; border-radius: 9px; padding: 0.42rem 0.7rem; font-family: inherit; font-size: 0.62rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: transform 0.12s; }
+        .p-btn:active { transform: scale(0.94); }
+        .p-btn.go { background: var(--brand-gradient); color: #fff; }
+        .p-btn.ok { background: var(--success-soft); color: var(--success); }
+        .p-btn.no { background: var(--danger-soft); color: var(--danger); }
+        .p-btn.ghost { background: var(--bg); color: var(--text-secondary); border: 1px solid var(--border-solid); }
+        .rel-chip { font-size: 0.55rem; font-weight: 800; padding: 2px 7px; border-radius: 99px; text-transform: uppercase; letter-spacing: 0.05em; background: var(--brand-soft); color: var(--brand); }
+
+        .lb-row { display: flex; align-items: center; gap: 0.7rem; background: var(--surface-solid); border: 1px solid var(--border-solid); border-radius: 14px; padding: 0.6rem 0.75rem; margin-bottom: 0.5rem; }
+        .lb-row.me { border-color: var(--brand); background: var(--brand-soft); }
+        .lb-rank { width: 30px; height: 30px; flex: 0 0 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 0.78rem; background: var(--bg); color: var(--text-secondary); }
+        .lb-rank.r1 { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #fff; }
+        .lb-rank.r2 { background: linear-gradient(135deg, #cbd5e1, #94a3b8); color: #fff; }
+        .lb-rank.r3 { background: linear-gradient(135deg, #d97706, #b45309); color: #fff; }
+        .lb-xp { text-align: right; }
+        .lb-xp b { font-size: 0.85rem; font-weight: 800; color: var(--brand); display: block; line-height: 1.1; }
+        .lb-xp span { font-size: 0.55rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+        .lvl-chip { font-size: 0.55rem; font-weight: 800; padding: 2px 7px; border-radius: 99px; background: var(--brand-soft); color: var(--brand); }
+
+        /* ---- Sheets (above bottom nav) ---- */
+        .sheet-backdrop { position: fixed; inset: 0; background: rgba(2, 6, 23, 0.55); z-index: 10000; display: none; align-items: flex-end; justify-content: center; backdrop-filter: blur(3px); }
         .sheet-backdrop.open { display: flex; }
         .sheet {
             background: var(--surface-solid); width: 100%; max-width: 520px;
-            border-radius: 22px 22px 0 0; padding: 1.1rem 1.1rem 1.5rem;
-            max-height: 82vh; overflow-y: auto;
+            border-radius: 22px 22px 0 0; padding: 1.1rem 1.1rem 1.6rem;
+            max-height: 84vh; overflow-y: auto;
         }
         .sheet h3 { font-size: 0.95rem; font-weight: 800; margin-bottom: 0.7rem; display: flex; align-items: center; justify-content: space-between; }
         .sheet h3 button { border: none; background: var(--bg); color: var(--text-secondary); width: 30px; height: 30px; border-radius: 50%; cursor: pointer; }
@@ -51,16 +132,108 @@
             border-radius: 12px; background: var(--bg); color: var(--text-primary);
             font-family: inherit; font-size: 0.85rem; outline: none; margin-bottom: 0.7rem;
         }
-        .pick-list { max-height: 300px; overflow-y: auto; }
+        .pick-list { max-height: 280px; overflow-y: auto; }
         .pick-row { display: flex; align-items: center; gap: 0.65rem; padding: 0.5rem 0.4rem; border-radius: 11px; cursor: pointer; }
         .pick-row:hover { background: var(--bg); }
-        .pick-row img, .pick-row .avatar { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 0.8rem; }
-        .pick-check { margin-left: auto; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border-solid); display: grid; place-items: center; color: transparent; font-size: 0.6rem; }
+        .pick-row .avatar { width: 38px; height: 38px; flex: 0 0 38px; font-size: 0.8rem; }
+        .pick-check { margin-left: auto; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border-solid); display: grid; place-items: center; color: transparent; font-size: 0.6rem; flex: 0 0 auto; }
         .pick-row.selected .pick-check { background: var(--brand); border-color: var(--brand); color: #fff; }
-        .sheet-cta { width: 100%; border: none; border-radius: 13px; padding: 0.8rem; font-family: inherit; font-weight: 800; font-size: 0.8rem; background: var(--brand-gradient); color: #fff; cursor: pointer; margin-top: 0.8rem; }
+        .sheet-cta { width: 100%; border: none; border-radius: 13px; padding: 0.85rem; font-family: inherit; font-weight: 800; font-size: 0.8rem; background: var(--brand-gradient); color: #fff; cursor: pointer; margin-top: 0.8rem; }
 
-        .empty-note { padding: 2.2rem 1rem; text-align: center; color: var(--text-muted); font-size: 0.78rem; }
-        .empty-note i { display: block; font-size: 1.6rem; margin-bottom: 0.5rem; opacity: 0.5; }
+        .mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 0.8rem; }
+        .mode-btn { border: 1px solid var(--border-solid); background: var(--bg); color: var(--text-secondary); border-radius: 11px; padding: 0.6rem; font-family: inherit; font-size: 0.7rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .mode-btn.active { background: var(--brand-gradient); color: #fff; border-color: transparent; }
+        #statusText {
+            width: 100%; min-height: 90px; padding: 0.8rem; border: 1.5px solid var(--border-solid);
+            border-radius: 13px; background: var(--bg); color: var(--text-primary);
+            font-family: inherit; font-size: 0.9rem; outline: none; resize: none; margin-bottom: 0.7rem;
+        }
+        .swatches { display: flex; gap: 8px; margin-bottom: 0.8rem; flex-wrap: wrap; }
+        .swatch { width: 32px; height: 32px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: transform 0.12s; }
+        .swatch.active { border-color: var(--text-primary); transform: scale(1.12); }
+        .privacy-row { display: flex; align-items: center; gap: 8px; margin-bottom: 0.9rem; }
+        .privacy-row label { font-size: 0.72rem; font-weight: 700; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; cursor: pointer; padding: 0.45rem 0.7rem; border: 1px solid var(--border-solid); border-radius: 10px; }
+        .privacy-row label.active { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
+        .img-preview { max-height: 200px; border-radius: 13px; margin-bottom: 0.7rem; display: none; width: 100%; object-fit: cover; }
+        .img-preview.show { display: block; }
+
+        /* ---- Status viewer ---- */
+        .viewer { position: fixed; inset: 0; z-index: 10000; background: #000; display: none; flex-direction: column; }
+        .viewer.open { display: flex; }
+        .viewer-top { display: flex; gap: 4px; padding: 10px 12px 6px; }
+        .vbar { flex: 1; height: 3px; border-radius: 99px; background: rgba(255,255,255,0.3); overflow: hidden; }
+        .vbar i { display: block; height: 100%; width: 0%; background: #fff; transition: width 0.1s linear; }
+        .vbar.done i { width: 100%; }
+        .viewer-head { display: flex; align-items: center; gap: 0.6rem; padding: 4px 14px 10px; color: #fff; }
+        .viewer-head .avatar { width: 36px; height: 36px; flex: 0 0 36px; font-size: 0.75rem; }
+        .viewer-head b { font-size: 0.82rem; display: block; }
+        .viewer-head span { font-size: 0.6rem; opacity: 0.75; }
+        .viewer-head .sp { flex: 1; }
+        .viewer-head button { border: none; background: rgba(255,255,255,0.15); color: #fff; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; }
+        .viewer-body { flex: 1; display: grid; place-items: center; padding: 1rem; position: relative; }
+        .viewer-body .txt { color: #fff; font-size: 1.5rem; font-weight: 800; text-align: center; max-width: 90%; line-height: 1.4; text-shadow: 0 2px 12px rgba(0,0,0,0.4); }
+        .viewer-body img { max-width: 100%; max-height: 100%; border-radius: 12px; }
+        .tap-zone { position: absolute; top: 0; bottom: 0; width: 30%; }
+        .tap-zone.left { left: 0; }
+        .tap-zone.right { right: 0; width: 70%; }
+        .viewer-foot { padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; align-items: center; justify-content: center; gap: 10px; color: rgba(255,255,255,0.75); font-size: 0.68rem; }
+
+        /* ---- Notification bell ---- */
+        .bell-btn { position: relative; border: none; background: var(--bg); color: var(--text-secondary); width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: grid; place-items: center; font-size: 0.9rem; flex: 0 0 38px; }
+        .bell-badge { position: absolute; top: -3px; right: -3px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 99px; background: #ef4444; color: #fff; font-size: 0.58rem; font-weight: 800; display: grid; place-items: center; }
+        .notif-row { display: flex; gap: 0.65rem; padding: 0.65rem 0.3rem; border-bottom: 1px solid var(--border); cursor: pointer; align-items: flex-start; }
+        .notif-row:last-child { border-bottom: none; }
+        .notif-row.unread { background: var(--brand-soft); border-radius: 10px; }
+        .notif-icon { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 50%; display: grid; place-items: center; font-size: 0.8rem; background: var(--brand-soft); color: var(--brand); }
+        .notif-icon.chat { background: var(--success-soft); color: var(--success); }
+        .notif-icon.friend { background: var(--warning-soft); color: var(--warning); }
+        .notif-icon.group { background: #e9d5ff; color: #7c3aed; }
+        .notif-icon.like { background: #fee2e2; color: #dc2626; }
+        .notif-main { flex: 1; min-width: 0; }
+        .notif-title { font-size: 0.78rem; font-weight: 800; color: var(--text-primary); }
+        .notif-body { font-size: 0.66rem; color: var(--text-muted); margin-top: 1px; }
+        .notif-time { font-size: 0.56rem; color: var(--text-muted); flex: 0 0 auto; }
+        .notif-seeall { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 0.8rem; padding: 0.7rem; border-radius: 12px; background: var(--bg); color: var(--brand); font-size: 0.72rem; font-weight: 800; text-decoration: none; }
+
+        /* ---- Feed ---- */
+        .composer-card { background: var(--surface-solid); border: 1px solid var(--border-solid); border-radius: 16px; padding: 0.8rem; margin-bottom: 1rem; }
+        #postText {
+            width: 100%; min-height: 64px; border: none; background: transparent; resize: none;
+            font-family: inherit; font-size: 0.85rem; color: var(--text-primary); outline: none;
+        }
+        .post-preview { max-height: 180px; border-radius: 12px; margin: 0.5rem 0; display: none; width: 100%; object-fit: cover; }
+        .post-preview.show { display: block; }
+        .composer-row { display: flex; align-items: center; gap: 6px; margin-top: 0.4rem; }
+        .comp-mini { border: 1px solid var(--border-solid); background: var(--bg); color: var(--text-secondary); border-radius: 10px; padding: 0.5rem 0.7rem; font-family: inherit; font-size: 0.72rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+        .comp-mini:active { transform: scale(0.94); }
+        .comp-mini.primary { background: var(--brand-gradient); color: #fff; border-color: transparent; }
+        .comp-spacer { flex: 1; }
+        .post-card { background: var(--surface-solid); border: 1px solid var(--border-solid); border-radius: 16px; padding: 0.85rem; margin-bottom: 0.8rem; }
+        .post-head { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
+        .post-head .avatar { width: 38px; height: 38px; flex: 0 0 38px; font-size: 0.8rem; cursor: pointer; }
+        .post-name { font-size: 0.8rem; font-weight: 800; color: var(--text-primary); cursor: pointer; }
+        .post-sub { font-size: 0.6rem; color: var(--text-muted); }
+        .post-body { font-size: 0.82rem; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+        .post-img { width: 100%; border-radius: 12px; margin-top: 0.6rem; cursor: pointer; }
+        .post-actions { display: flex; align-items: center; gap: 0.8rem; margin-top: 0.65rem; padding-top: 0.55rem; border-top: 1px solid var(--border); }
+        .post-act { border: none; background: transparent; font-family: inherit; font-size: 0.7rem; font-weight: 800; color: var(--text-muted); cursor: pointer; display: inline-flex; align-items: center; gap: 5px; padding: 4px 6px; border-radius: 8px; }
+        .post-act.liked { color: #dc2626; }
+        .post-act.del { margin-left: auto; color: var(--danger); }
+        .load-more { display: block; margin: 0.4rem auto 0; border: 1px solid var(--border-solid); background: var(--surface-solid); color: var(--brand); font-family: inherit; font-size: 0.72rem; font-weight: 800; padding: 0.6rem 1.2rem; border-radius: 99px; cursor: pointer; }
+
+        /* ---- Status caption ---- */
+        #statusCaption {
+            width: 100%; padding: 0.65rem 0.8rem; border: 1.5px solid var(--border-solid);
+            border-radius: 12px; background: var(--bg); color: var(--text-primary);
+            font-family: inherit; font-size: 0.82rem; outline: none; margin-bottom: 0.7rem; display: none;
+        }
+        #statusCaption.show { display: block; }
+        .v-caption {
+            position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.55); color: #fff; padding: 0.5rem 0.9rem;
+            border-radius: 12px; font-size: 0.8rem; font-weight: 700; max-width: 88%;
+            text-align: center; backdrop-filter: blur(4px); z-index: 2;
+        }
         @media (min-width: 431px) { .app-shell { border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); margin: 0 auto; } }
     </style>
     <%- include('partials/theme-toggle') %>
@@ -71,25 +244,133 @@
     <div class="status-bar"></div>
     <div class="header-nav">
         <a href="/dashboard" class="back-circle"><i class="fas fa-arrow-left"></i></a>
-        <div class="header-title">Chats</div>
+        <div class="header-title">Community</div>
+        <button class="bell-btn" id="notifBell" onclick="openNotifs()" aria-label="Notifications">
+            <i class="fas fa-bell"></i>
+            <span class="bell-badge" id="notifBadge" style="display:none">0</span>
+        </button>
     </div>
     <div class="page-content">
-        <div class="chat-actions">
-            <button class="chat-action primary" id="newChatBtn"><i class="fas fa-comment-medical"></i> New chat</button>
-            <button class="chat-action" id="newGroupBtn"><i class="fas fa-users"></i> New group</button>
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="chats">Chats</button>
+            <button class="tab-btn" data-tab="status">Status</button>
+            <button class="tab-btn" data-tab="feed">Feed</button>
+            <button class="tab-btn" data-tab="friends">Friends<span class="tab-badge" id="reqBadge" style="display:none">0</span></button>
         </div>
-        <div id="convList"><div class="empty-note"><i class="fas fa-spinner fa-spin"></i>Loading…</div></div>
+
+        <div id="tab-chats">
+            <div class="chat-actions">
+                <button class="chat-action primary" id="newChatBtn"><i class="fas fa-comment-medical"></i> New chat</button>
+                <button class="chat-action" id="newGroupBtn"><i class="fas fa-users"></i> New group</button>
+            </div>
+            <div id="convList"><div class="empty-note"><i class="fas fa-spinner fa-spin"></i>Loading…</div></div>
+        </div>
+
+        <div id="tab-status" style="display:none">
+            <div class="status-row" onclick="openStatusSheet()">
+                <div class="ring mine"><div class="ring-inner add"><i class="fas fa-plus"></i></div></div>
+                <div class="st-main">
+                    <div class="st-name">My status</div>
+                    <div class="st-sub">Tap to add a text or photo status</div>
+                </div>
+            </div>
+            <div class="section-label">Recent updates</div>
+            <div id="feed"><div class="empty-note"><i class="fas fa-spinner fa-spin"></i>Loading…</div></div>
+        </div>
+
+        <div id="tab-feedposts" style="display:none">
+            <div class="composer-card">
+                <textarea id="postText" placeholder="Share something with your friends…" maxlength="1000"></textarea>
+                <img class="post-preview" id="postPreview" alt="Preview">
+                <div class="composer-row">
+                    <button class="comp-mini" id="postImgBtn" title="Add photo"><i class="fas fa-image"></i></button>
+                    <input type="file" id="postImgInput" accept="image/*" style="display:none">
+                    <button class="comp-mini ghost" id="refreshFeedBtn" title="Refresh"><i class="fas fa-rotate"></i></button>
+                    <span class="comp-spacer"></span>
+                    <button class="comp-mini primary" id="postSubmitBtn"><i class="fas fa-paper-plane"></i> Post</button>
+                </div>
+            </div>
+            <div id="feedPosts"><div class="empty-note"><i class="fas fa-spinner fa-spin"></i>Loading…</div></div>
+            <button class="load-more" id="loadMoreBtn" style="display:none">Load more</button>
+        </div>
+
+        <div id="tab-friends" style="display:none">
+            <div class="xp-hero">
+                <div class="xp-level"><div><b id="myLevel">1</b><br><span>Level</span></div></div>
+                <div class="xp-info">
+                    <h2 id="myXp">0 XP</h2>
+                    <p id="xpNext">Earn XP by playing games</p>
+                    <div class="xp-bar"><i id="xpBar" style="width:0%"></i></div>
+                </div>
+            </div>
+            <div class="search-wrap">
+                <i class="fas fa-magnifying-glass"></i>
+                <input type="text" id="searchInput" placeholder="Search students by name, email or code…" autocomplete="off">
+            </div>
+            <div id="searchResults"></div>
+            <div class="section-label">My friends</div>
+            <div id="friendsList"><div class="empty-note"><i class="fas fa-spinner fa-spin"></i>Loading…</div></div>
+            <div class="section-label">Friend requests</div>
+            <div id="reqIn"></div>
+            <div id="reqOut"></div>
+            <div class="section-label" id="lbSection">XP leaderboard · you + your friends</div>
+            <div id="lbList"><div class="empty-note"><i class="fas fa-spinner fa-spin"></i>Loading…</div></div>
+        </div>
     </div>
     <%- include('partials/bottom-nav', { activeNav: 'chats' }) %>
 </div>
 
-<div class="sheet-backdrop" id="sheetBackdrop">
+<div class="sheet-backdrop" id="pickSheet">
     <div class="sheet">
-        <h3><span id="sheetTitle">New chat</span><button onclick="closeSheet()"><i class="fas fa-xmark"></i></button></h3>
+        <h3><span id="pickTitle">New chat</span><button onclick="closePickSheet()"><i class="fas fa-xmark"></i></button></h3>
         <input type="text" id="groupName" placeholder="Group name" style="display:none">
         <div class="pick-list" id="pickList"></div>
-        <button class="sheet-cta" id="sheetCta">Start chat</button>
+        <button class="sheet-cta" id="pickCta">Start chat</button>
     </div>
+</div>
+
+<div class="sheet-backdrop" id="statusSheet">
+    <div class="sheet">
+        <h3><span>New status</span><button onclick="closeStatusSheet()"><i class="fas fa-xmark"></i></button></h3>
+        <div class="mode-switch">
+            <button class="mode-btn active" id="modeText"><i class="fas fa-font"></i> Text</button>
+            <button class="mode-btn" id="modeImage"><i class="fas fa-image"></i> Photo</button>
+        </div>
+        <textarea id="statusText" placeholder="What's on your mind?" maxlength="200"></textarea>
+        <div class="swatches" id="swatches"></div>
+        <input type="file" id="statusImg" accept="image/*" style="display:none">
+        <img class="img-preview" id="imgPreview" alt="Preview">
+        <input type="text" id="statusCaption" placeholder="Add a caption…" maxlength="200">
+        <div class="privacy-row">
+            <label class="active" data-privacy="friends"><i class="fas fa-user-group"></i> Friends</label>
+            <label data-privacy="public"><i class="fas fa-globe"></i> Public</label>
+        </div>
+        <button class="sheet-cta" id="postBtn">Share status</button>
+    </div>
+</div>
+
+<div class="sheet-backdrop" id="notifSheet">
+    <div class="sheet">
+        <h3><span>Notifications</span><button onclick="closeNotifs()"><i class="fas fa-xmark"></i></button></h3>
+        <div id="notifList"><div class="empty-note"><i class="fas fa-spinner fa-spin"></i>Loading…</div></div>
+        <a href="/notifications" class="notif-seeall">See all notifications <i class="fas fa-arrow-right"></i></a>
+    </div>
+</div>
+
+<div class="viewer" id="viewer">
+    <div class="viewer-top" id="vBars"></div>
+    <div class="viewer-head">
+        <div class="avatar" id="vAvatar">?</div>
+        <div><b id="vName"></b><span id="vTime"></span></div>
+        <div class="sp"></div>
+        <button id="vDelete" style="display:none" onclick="deleteCurrent()"><i class="fas fa-trash"></i></button>
+        <button onclick="closeViewer()"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="viewer-body" id="vBody">
+        <div class="tap-zone left" onclick="prevStatus()"></div>
+        <div class="tap-zone right" onclick="nextStatus()"></div>
+    </div>
+    <div class="viewer-foot" id="vFoot"></div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -106,14 +387,41 @@
         if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
         return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
     }
+    function ago(v) {
+        var d = new Date(v), s = Math.floor((Date.now() - d) / 1000);
+        if (s < 60) return 'just now';
+        if (s < 3600) return Math.floor(s / 60) + 'm ago';
+        if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+        return Math.floor(s / 86400) + 'd ago';
+    }
 
+    // ---------- Tabs ----------
+    var currentTab = 'chats';
+    var feedLoaded = false;
+    function showTab(tab) {
+        currentTab = tab;
+        document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === tab); });
+        ['chats', 'status', 'feed', 'friends'].forEach(function (t) {
+            var el = document.getElementById(t === 'feed' ? 'tab-feedposts' : 'tab-' + t);
+            if (el) el.style.display = t === tab ? '' : 'none';
+        });
+        if (tab === 'status') loadFeed();
+        if (tab === 'feed' && !feedLoaded) { feedLoaded = true; loadFeedPosts(); }
+    }
+    document.querySelectorAll('.tab-btn').forEach(function (b) {
+        b.addEventListener('click', function () { showTab(b.dataset.tab); });
+    });
+
+    // ---------- Socket ----------
     var socket = null;
     try {
         socket = io({ transports: ['polling', 'websocket'] });
-        socket.on('chat:message', function (data) { if (data && data.conversationId) refresh(); });
-        socket.on('chat:members', function () { refresh(); });
+        socket.on('chat:message', function () { if (currentTab === 'chats') refresh(); });
+        socket.on('chat:members', function () { if (currentTab === 'chats') refresh(); });
+        socket.on('notify', function () { loadNotifBadge(); });
     } catch (e) {}
 
+    // ---------- Chats ----------
     function refresh() {
         fetch('/api/chat/conversations', { headers: { Accept: 'application/json' } })
             .then(function (r) { return r.json(); })
@@ -132,7 +440,10 @@
         }
         el.innerHTML = convs.map(function (c) {
             var tick = '';
-            if (c.last_sender_me && c.last_at) tick = '<i class="fas fa-check-double tick"></i>';
+            if (c.last_sender_me && c.last_at) {
+                var tickCls = 'fas ' + (c.last_status === 'sent' ? 'fa-check' : 'fa-check-double') + ' tick' + (c.last_status === 'read' ? ' read' : '');
+                tick = '<i class="' + tickCls + '"></i>';
+            }
             return '<div class="conv-row" onclick="location.href=\'/chat/' + c.id + '\'">' +
                 '<div class="conv-avatar' + (c.type === 'group' ? ' group' : '') + '" style="background:' + avatarColor(c.id) + '">' +
                 (c.type === 'group' ? '<i class="fas fa-users"></i>' : esc(initials(c.title))) + '</div>' +
@@ -146,19 +457,19 @@
     }
 
     var friends = [];
-    var sheetMode = 'chat';
+    var pickMode = 'chat';
     var selected = {};
 
-    function openSheet(mode) {
-        sheetMode = mode;
+    function openPickSheet(mode) {
+        pickMode = mode;
         selected = {};
         document.getElementById('groupName').style.display = mode === 'group' ? '' : 'none';
         document.getElementById('groupName').value = '';
-        document.getElementById('sheetTitle').textContent = mode === 'group' ? 'New group' : 'New chat';
-        document.getElementById('sheetCta').textContent = mode === 'group' ? 'Create group' : 'Start chat';
+        document.getElementById('pickTitle').textContent = mode === 'group' ? 'New group' : 'New chat';
+        document.getElementById('pickCta').textContent = mode === 'group' ? 'Create group' : 'Start chat';
         var list = document.getElementById('pickList');
         if (!friends.length) {
-            list.innerHTML = '<div class="empty-note">Add friends first from the Friends page.</div>';
+            list.innerHTML = '<div class="empty-note">Add friends first from the Friends tab.</div>';
         } else {
             list.innerHTML = friends.map(function (f) {
                 return '<div class="pick-row" data-id="' + f.id + '" onclick="togglePick(' + f.id + ')">' +
@@ -168,28 +479,28 @@
                     '<div class="pick-check"><i class="fas fa-check"></i></div></div>';
             }).join('');
         }
-        document.getElementById('sheetBackdrop').classList.add('open');
+        document.getElementById('pickSheet').classList.add('open');
     }
 
-    window.closeSheet = function () { document.getElementById('sheetBackdrop').classList.remove('open'); };
+    window.closePickSheet = function () { document.getElementById('pickSheet').classList.remove('open'); };
     window.togglePick = function (id) {
-        if (sheetMode === 'chat') {
+        if (pickMode === 'chat') {
             fetch('/api/chat/conversations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: id }) })
                 .then(function (r) { return r.json(); })
                 .then(function (d) { if (d.success) window.location.href = '/chat/' + d.id; });
             return;
         }
         selected[id] = !selected[id];
-        document.querySelectorAll('.pick-row').forEach(function (row) {
+        document.querySelectorAll('#pickList .pick-row').forEach(function (row) {
             row.classList.toggle('selected', !!selected[parseInt(row.dataset.id, 10)]);
         });
     };
 
-    document.getElementById('newChatBtn').addEventListener('click', function () { openSheet('chat'); });
-    document.getElementById('newGroupBtn').addEventListener('click', function () { openSheet('group'); });
-    document.getElementById('sheetBackdrop').addEventListener('click', function (e) { if (e.target === this) closeSheet(); });
-    document.getElementById('sheetCta').addEventListener('click', function () {
-        if (sheetMode !== 'group') return;
+    document.getElementById('newChatBtn').addEventListener('click', function () { openPickSheet('chat'); });
+    document.getElementById('newGroupBtn').addEventListener('click', function () { openPickSheet('group'); });
+    document.getElementById('pickSheet').addEventListener('click', function (e) { if (e.target === this) closePickSheet(); });
+    document.getElementById('pickCta').addEventListener('click', function () {
+        if (pickMode !== 'group') return;
         var name = document.getElementById('groupName').value.trim();
         var memberIds = Object.keys(selected).filter(function (k) { return selected[k]; }).map(Number);
         if (!name) { Swal.fire({ icon: 'warning', title: 'Enter a group name', confirmButtonColor: '#2563eb' }); return; }
@@ -199,12 +510,508 @@
             .then(function (d) { if (d.success) window.location.href = '/chat/' + d.id; });
     });
 
-    fetch('/api/friends', { headers: { Accept: 'application/json' } })
-        .then(function (r) { return r.json(); })
-        .then(function (d) { friends = d.friends || []; })
-        .catch(function () {});
+    // ---------- Status ----------
+    var groups = [];
+    var COLORS = ['#2563eb', '#7c3aed', '#db2777', '#ea580c', '#16a34a', '#0891b2', '#b91c1c', '#0f172a'];
+    var stMode = 'text', bgColor = COLORS[0], privacy = 'friends', pendingImage = null;
+
+    function loadFeed() {
+        fetch('/api/status/feed', { headers: { Accept: 'application/json' } })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                groups = d.groups || [];
+                var el = document.getElementById('feed');
+                if (!groups.length) {
+                    el.innerHTML = '<div class="empty-note"><i class="fas fa-circle-notch"></i>No statuses yet.<br>Share the first one!</div>';
+                    return;
+                }
+                el.innerHTML = groups.map(function (g, gi) {
+                    var latest = g.statuses[g.statuses.length - 1];
+                    var ringCls = 'ring' + (g.is_me ? ' mine' : (g.all_viewed ? ' viewed' : ''));
+                    var inner = latest.kind === 'image'
+                        ? '<img src="/api/status/media/' + latest.id + '" alt="">'
+                        : esc(initials(g.fullname));
+                    return '<div class="status-row" onclick="openViewer(' + gi + ')">' +
+                        '<div class="' + ringCls + '"><div class="ring-inner">' + inner + '</div></div>' +
+                        '<div class="st-main"><div class="st-name">' + esc(g.fullname) + (g.is_me ? ' (You)' : '') + '</div>' +
+                        '<div class="st-sub">' + ago(latest.created_at) + (latest.privacy === 'public' ? ' · 🌐 Public' : ' · 👥 Friends') + '</div></div>' +
+                        '<span class="st-count">' + g.statuses.length + '</span></div>';
+                }).join('');
+            })
+            .catch(function () {
+                document.getElementById('feed').innerHTML = '<div class="empty-note">Could not load statuses.</div>';
+            });
+    }
+
+    document.getElementById('swatches').innerHTML = COLORS.map(function (c, i) {
+        return '<div class="swatch' + (i === 0 ? ' active' : '') + '" style="background:' + c + '" onclick="pickColor(\'' + c + '\', this)"></div>';
+    }).join('');
+    window.pickColor = function (c, el) {
+        bgColor = c;
+        document.querySelectorAll('.swatch').forEach(function (s) { s.classList.remove('active'); });
+        el.classList.add('active');
+    };
+    document.querySelectorAll('.privacy-row label').forEach(function (l) {
+        l.addEventListener('click', function () {
+            privacy = l.dataset.privacy;
+            document.querySelectorAll('.privacy-row label').forEach(function (x) { x.classList.remove('active'); });
+            l.classList.add('active');
+        });
+    });
+    window.openStatusSheet = function () { document.getElementById('statusSheet').classList.add('open'); };
+    window.closeStatusSheet = function () {
+        document.getElementById('statusSheet').classList.remove('open');
+        pendingImage = null;
+        document.getElementById('imgPreview').classList.remove('show');
+        document.getElementById('statusText').value = '';
+    };
+    document.getElementById('statusSheet').addEventListener('click', function (e) { if (e.target === this) closeStatusSheet(); });
+
+    function setStMode(m) {
+        stMode = m;
+        document.getElementById('modeText').classList.toggle('active', m === 'text');
+        document.getElementById('modeImage').classList.toggle('active', m === 'image');
+        document.getElementById('statusText').style.display = m === 'text' ? '' : 'none';
+        document.getElementById('swatches').style.display = m === 'text' ? '' : 'none';
+        if (stMode === 'image') document.getElementById('statusImg').click();
+        document.getElementById('statusCaption').classList.toggle('show', m === 'image');
+        document.getElementById('statusCaption').value = '';
+    }
+    document.getElementById('modeText').addEventListener('click', function () { setStMode('text'); });
+    document.getElementById('modeImage').addEventListener('click', function () { setStMode('image'); });
+    document.getElementById('statusImg').addEventListener('change', function (e) {
+        var file = e.target.files[0];
+        if (!file) return;
+        pendingImage = file;
+        var prev = document.getElementById('imgPreview');
+        prev.src = URL.createObjectURL(file);
+        prev.classList.add('show');
+    });
+    document.getElementById('postBtn').addEventListener('click', function () {
+        var fd = new FormData();
+        fd.append('privacy', privacy);
+        if (stMode === 'text') {
+            var text = document.getElementById('statusText').value.trim();
+            if (!text) { Swal.fire({ icon: 'warning', title: 'Write something first', confirmButtonColor: '#2563eb' }); return; }
+            fd.append('kind', 'text');
+            fd.append('body', text);
+            fd.append('bg_color', bgColor);
+        } else {
+            if (!pendingImage) { Swal.fire({ icon: 'warning', title: 'Choose a photo first', confirmButtonColor: '#2563eb' }); return; }
+            fd.append('kind', 'image');
+            fd.append('media', pendingImage);
+            fd.append('body', document.getElementById('statusCaption').value.trim());
+        }
+        fetch('/api/status', { method: 'POST', body: fd })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (d.success) { closeStatusSheet(); loadFeed(); Swal.fire({ icon: 'success', title: 'Status shared', toast: true, position: 'top', timer: 1600, showConfirmButton: false }); }
+                else Swal.fire({ icon: 'error', title: d.error || 'Could not post', confirmButtonColor: '#2563eb' });
+            })
+            .catch(function () {});
+    });
+
+    // ---------- Status viewer ----------
+    var vGroup = null, vIndex = 0, vTimer = null, vProgress = null;
+    window.openViewer = function (gi) {
+        vGroup = groups[gi];
+        vIndex = 0;
+        document.getElementById('viewer').classList.add('open');
+        showCurrent();
+    };
+    window.closeViewer = function () {
+        clearTimeout(vTimer);
+        if (vProgress) clearInterval(vProgress);
+        document.getElementById('viewer').classList.remove('open');
+        loadFeed();
+    };
+    function showCurrent() {
+        clearTimeout(vTimer);
+        if (vProgress) clearInterval(vProgress);
+        var s = vGroup.statuses[vIndex];
+        var av = document.getElementById('vAvatar');
+        av.style.background = avatarColor(vGroup.user_id);
+        av.textContent = esc(initials(vGroup.fullname));
+        document.getElementById('vName').textContent = vGroup.fullname + (vGroup.is_me ? ' (You)' : '');
+        document.getElementById('vName').onclick = function () { window.location.href = '/u/' + vGroup.user_id; };
+        document.getElementById('vName').style.cursor = 'pointer';
+        document.getElementById('vTime').textContent = ago(s.created_at) + (s.privacy === 'public' ? ' · 🌐' : ' · 👥');
+        document.getElementById('vDelete').style.display = vGroup.is_me ? '' : 'none';
+        document.getElementById('vFoot').textContent = vGroup.is_me ? ('👁 ' + s.views + ' view' + (s.views === 1 ? '' : 's')) : '';
+        var bars = document.getElementById('vBars');
+        bars.innerHTML = vGroup.statuses.map(function (_, i) {
+            return '<div class="vbar' + (i < vIndex ? ' done' : '') + '"><i></i></div>';
+        }).join('');
+        var body = document.getElementById('vBody');
+        var content = s.kind === 'image'
+            ? '<img src="/api/status/media/' + s.id + '" alt="">' + (s.body ? '<div class="v-caption">' + esc(s.body) + '</div>' : '')
+            : '<div class="txt" style="background:' + esc(s.bg_color) + ';padding:2.2rem 1.8rem;border-radius:24px;max-width:85%">' + esc(s.body) + '</div>';
+        body.querySelectorAll('img, .txt, .v-caption').forEach(function (n) { n.remove(); });
+        body.insertAdjacentHTML('beforeend', content);
+        var bar = bars.children[vIndex].querySelector('i');
+        var dur = s.kind === 'image' ? 6000 : 5000;
+        var start = Date.now();
+        vProgress = setInterval(function () {
+            var pct = Math.min(100, ((Date.now() - start) / dur) * 100);
+            bar.style.width = pct + '%';
+        }, 100);
+        fetch('/api/status/' + s.id + '/view', { method: 'POST' }).catch(function () {});
+        vTimer = setTimeout(nextStatus, dur);
+    }
+    window.nextStatus = function () {
+        if (vIndex < vGroup.statuses.length - 1) { vIndex++; showCurrent(); }
+        else closeViewer();
+    };
+    window.prevStatus = function () {
+        if (vIndex > 0) { vIndex--; showCurrent(); }
+    };
+    window.deleteCurrent = function () {
+        var s = vGroup.statuses[vIndex];
+        Swal.fire({ icon: 'warning', title: 'Delete this status?', showCancelButton: true, confirmButtonColor: '#dc2626' })
+            .then(function (res) {
+                if (!res.isConfirmed) return;
+                fetch('/api/status/' + s.id, { method: 'DELETE' })
+                    .then(function () {
+                        vGroup.statuses.splice(vIndex, 1);
+                        if (!vGroup.statuses.length) closeViewer();
+                        else { if (vIndex >= vGroup.statuses.length) vIndex = vGroup.statuses.length - 1; showCurrent(); }
+                    });
+            });
+    };
+    document.addEventListener('keydown', function (e) {
+        if (!document.getElementById('viewer').classList.contains('open')) return;
+        if (e.key === 'Escape') closeViewer();
+        if (e.key === 'ArrowRight') nextStatus();
+        if (e.key === 'ArrowLeft') prevStatus();
+    });
+
+    // ---------- Friends ----------
+    fetch('/api/games/stats', { headers: { Accept: 'application/json' } })
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+        .then(function (d) {
+            var xp = d.xp || 0, level = d.level || 1;
+            var cur = d.current_level_xp || 0, next = d.next_level_xp || 100;
+            document.getElementById('myLevel').textContent = level;
+            document.getElementById('myXp').textContent = xp.toLocaleString() + ' XP';
+            var pct = Math.max(0, Math.min(100, Math.round(((xp - cur) / Math.max(1, next - cur)) * 100)));
+            document.getElementById('xpBar').style.width = pct + '%';
+            document.getElementById('xpNext').textContent = (next - xp).toLocaleString() + ' XP to level ' + (level + 1);
+        }).catch(function () {});
+
+    function loadFriends() {
+        fetch('/api/friends', { headers: { Accept: 'application/json' } })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                friends = d.friends || [];
+                var list = document.getElementById('friendsList');
+                if (!friends.length) {
+                    list.innerHTML = '<div class="empty-note"><i class="fas fa-user-group"></i>No friends yet — search above to add some.</div>';
+                    return;
+                }
+                list.innerHTML = friends.map(function (f) {
+                    return '<div class="person-row">' +
+                        '<div class="avatar" style="background:' + avatarColor(f.id) + '" onclick="location.href=\'/u/' + f.id + '\'">' + esc(initials(f.fullname)) + '</div>' +
+                        '<div class="p-main"><div class="p-name" style="cursor:pointer" onclick="location.href=\'/u/' + f.id + '\'">' + esc(f.fullname) + '</div>' +
+                        '<div class="p-sub">Level ' + (f.level || 1) + ' · ' + (f.xp || 0).toLocaleString() + ' XP</div></div>' +
+                        '<div class="p-actions">' +
+                        '<button class="p-btn go" onclick="openChat(' + f.id + ')"><i class="fas fa-comment"></i> Chat</button>' +
+                        '<button class="p-btn no" onclick="removeFriend(' + f.id + ')"><i class="fas fa-user-minus"></i></button>' +
+                        '</div></div>';
+                }).join('');
+            })
+            .catch(function () {
+                document.getElementById('friendsList').innerHTML = '<div class="empty-note">Could not load friends.</div>';
+            });
+    }
+
+    var searchTimer = null;
+    document.getElementById('searchInput').addEventListener('input', function (e) {
+        clearTimeout(searchTimer);
+        var q = e.target.value.trim();
+        if (q.length < 2) { document.getElementById('searchResults').innerHTML = ''; return; }
+        searchTimer = setTimeout(function () {
+            fetch('/api/friends/search?q=' + encodeURIComponent(q), { headers: { Accept: 'application/json' } })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    var box = document.getElementById('searchResults');
+                    var results = d.results || [];
+                    if (!results.length) { box.innerHTML = '<div class="empty-note">No students found for "' + esc(q) + '".</div>'; return; }
+                    box.innerHTML = '<div class="section-label">Search results</div>' + results.map(function (u) {
+                        var action;
+                        if (u.relationship === 'friends') action = '<span class="rel-chip">Friends</span>';
+                        else if (u.relationship === 'request_sent') action = '<span class="rel-chip">Requested</span>';
+                        else if (u.relationship === 'request_received') action = '<button class="p-btn ok" onclick="acceptFriend(' + u.id + ')"><i class="fas fa-check"></i> Accept</button>';
+                        else action = '<button class="p-btn go" onclick="addFriend(' + u.id + ')"><i class="fas fa-user-plus"></i> Add</button>';
+                        return '<div class="person-row">' +
+                            '<div class="avatar" style="background:' + avatarColor(u.id) + '" onclick="location.href=\'/u/' + u.id + '\'">' + esc(initials(u.fullname)) + '</div>' +
+                            '<div class="p-main"><div class="p-name" style="cursor:pointer" onclick="location.href=\'/u/' + u.id + '\'">' + esc(u.fullname) + '</div>' +
+                            '<div class="p-sub">Level ' + u.level + ' · ' + esc(u.email) + '</div></div>' +
+                            '<div class="p-actions">' + action + '</div></div>';
+                    }).join('');
+                })
+                .catch(function () {});
+        }, 300);
+    });
+
+    function loadRequests() {
+        fetch('/api/friends/requests', { headers: { Accept: 'application/json' } })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                var incoming = d.incoming || [], outgoing = d.outgoing || [];
+                var badge = document.getElementById('reqBadge');
+                badge.style.display = incoming.length ? '' : 'none';
+                badge.textContent = incoming.length;
+                document.getElementById('reqIn').innerHTML = incoming.length ? incoming.map(function (u) {
+                    return '<div class="person-row">' +
+                        '<div class="avatar" style="background:' + avatarColor(u.id) + '">' + esc(initials(u.fullname)) + '</div>' +
+                        '<div class="p-main"><div class="p-name">' + esc(u.fullname) + '</div><div class="p-sub">' + esc(u.email) + '</div></div>' +
+                        '<div class="p-actions">' +
+                        '<button class="p-btn ok" onclick="acceptFriend(' + u.id + ')"><i class="fas fa-check"></i> Accept</button>' +
+                        '<button class="p-btn no" onclick="removeFriend(' + u.id + ')"><i class="fas fa-xmark"></i></button>' +
+                        '</div></div>';
+                }).join('') : '<div class="empty-note">No pending requests.</div>';
+                document.getElementById('reqOut').innerHTML = outgoing.length ? '<div class="section-label">Sent</div>' + outgoing.map(function (u) {
+                    return '<div class="person-row">' +
+                        '<div class="avatar" style="background:' + avatarColor(u.id) + '">' + esc(initials(u.fullname)) + '</div>' +
+                        '<div class="p-main"><div class="p-name">' + esc(u.fullname) + '</div><div class="p-sub">Waiting for response</div></div>' +
+                        '<div class="p-actions"><button class="p-btn ghost" onclick="removeFriend(' + u.id + ')">Cancel</button></div></div>';
+                }).join('') : '';
+            })
+            .catch(function () {});
+    }
+
+    function loadLeaderboard() {
+        fetch('/api/friends/leaderboard', { headers: { Accept: 'application/json' } })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                var board = d.leaderboard || [];
+                var el = document.getElementById('lbList');
+                if (!board.length) { el.innerHTML = '<div class="empty-note">Play games to earn XP.</div>'; return; }
+                el.innerHTML = board.map(function (row) {
+                    var medal = row.rank <= 3 ? ' r' + row.rank : '';
+                    var trophy = row.rank === 1 ? ' 🥇' : row.rank === 2 ? ' 🥈' : row.rank === 3 ? ' 🥉' : '';
+                    return '<div class="lb-row' + (row.is_me ? ' me' : '') + '">' +
+                        '<div class="lb-rank' + medal + '">' + row.rank + '</div>' +
+                        '<div class="avatar" style="background:' + avatarColor(row.id) + '" onclick="location.href=\'/u/' + row.id + '\'">' + esc(initials(row.fullname)) + '</div>' +
+                        '<div class="p-main"><div class="p-name" style="cursor:pointer" onclick="location.href=\'/u/' + row.id + '\'">' + esc(row.fullname) + (row.is_me ? ' (You)' : '') + trophy + '</div>' +
+                        '<div class="p-sub"><span class="lvl-chip">Lv ' + row.level + '</span> · ' + row.plays + ' games</div></div>' +
+                        '<div class="lb-xp"><b>' + row.xp.toLocaleString() + '</b><span>XP</span></div>' +
+                        '</div>';
+                }).join('');
+            })
+            .catch(function () {
+                document.getElementById('lbList').innerHTML = '<div class="empty-note">Could not load leaderboard.</div>';
+            });
+    }
+
+    window.addFriend = function (id) {
+        fetch('/api/friends/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ friendId: id }) })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (d.accepted) { Swal.fire({ icon: 'success', title: 'You are now friends!', confirmButtonColor: '#2563eb' }); }
+                else { Swal.fire({ icon: 'success', title: 'Request sent', toast: true, position: 'top', timer: 1800, showConfirmButton: false }); }
+                document.getElementById('searchInput').dispatchEvent(new Event('input'));
+                loadRequests();
+                loadFriends();
+            })
+            .catch(function () { Swal.fire({ icon: 'error', title: 'Could not send request', confirmButtonColor: '#2563eb' }); });
+    };
+
+    window.acceptFriend = function (id) {
+        fetch('/api/friends/accept', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ friendId: id }) })
+            .then(function (r) { return r.json(); })
+            .then(function () {
+                Swal.fire({ icon: 'success', title: 'Friend added', toast: true, position: 'top', timer: 1800, showConfirmButton: false });
+                loadRequests();
+                loadFriends();
+                loadLeaderboard();
+            })
+            .catch(function () {});
+    };
+
+    window.removeFriend = function (id) {
+        Swal.fire({ icon: 'warning', title: 'Remove this friend?', showCancelButton: true, confirmButtonText: 'Remove', confirmButtonColor: '#dc2626' })
+            .then(function (res) {
+                if (!res.isConfirmed) return;
+                fetch('/api/friends/remove', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ friendId: id }) })
+                    .then(function () { loadFriends(); loadRequests(); loadLeaderboard(); });
+            });
+    };
+
+    window.openChat = function (id) {
+        fetch('/api/chat/conversations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: id }) })
+            .then(function (r) { return r.json(); })
+            .then(function (d) { if (d.success) window.location.href = '/chat/' + d.id; })
+            .catch(function () {});
+    };
+
+    // ---------- Notifications ----------
+    function loadNotifBadge() {
+        fetch('/api/notifications/mine', { headers: { Accept: 'application/json' } })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                var badge = document.getElementById('notifBadge');
+                var n = d.unread || 0;
+                badge.style.display = n ? '' : 'none';
+                badge.textContent = n > 9 ? '9+' : n;
+            })
+            .catch(function () {});
+    }
+
+    window.openNotifs = function () {
+        document.getElementById('notifSheet').classList.add('open');
+        fetch('/api/notifications/mine', { headers: { Accept: 'application/json' } })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                var list = d.notifications || [];
+                var el = document.getElementById('notifList');
+                if (!list.length) {
+                    el.innerHTML = '<div class="empty-note"><i class="fas fa-bell"></i>No notifications yet.</div>';
+                } else {
+                    var icons = { friend: 'fa-user-group', chat: 'fa-comment', group: 'fa-users', like: 'fa-heart' };
+                    el.innerHTML = list.map(function (n) {
+                        var ic = icons[n.type] || 'fa-bell';
+                        return '<div class="notif-row' + (n.is_read ? '' : ' unread') + '" onclick="gotoNotif(\'' + esc(n.link || '') + '\')">' +
+                            '<div class="notif-icon ' + esc(n.type) + '"><i class="fas ' + ic + '"></i></div>' +
+                            '<div class="notif-main"><div class="notif-title">' + esc(n.title) + '</div>' +
+                            '<div class="notif-body">' + esc(n.body || '') + '</div></div>' +
+                            '<span class="notif-time">' + ago(n.created_at) + '</span></div>';
+                    }).join('');
+                }
+                fetch('/api/notifications/mine/read', { method: 'POST' }).then(loadNotifBadge).catch(function () {});
+            })
+            .catch(function () {
+                document.getElementById('notifList').innerHTML = '<div class="empty-note">Could not load notifications.</div>';
+            });
+    };
+    window.closeNotifs = function () { document.getElementById('notifSheet').classList.remove('open'); };
+    document.getElementById('notifSheet').addEventListener('click', function (e) { if (e.target === this) closeNotifs(); });
+    window.gotoNotif = function (link) {
+        closeNotifs();
+        if (link) window.location.href = link;
+    };
+
+    // ---------- Feed posts ----------
+    var oldestPostId = 0, feedHasMore = false, pendingPostImage = null;
+
+    function loadFeedPosts(append) {
+        var url = '/api/feed' + (append && oldestPostId ? '?before=' + oldestPostId : '');
+        fetch(url, { headers: { Accept: 'application/json' } })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                var posts = d.posts || [];
+                var el = document.getElementById('feedPosts');
+                if (!append) el.innerHTML = '';
+                if (!posts.length && !append) {
+                    el.innerHTML = '<div class="empty-note"><i class="fas fa-newspaper"></i>No posts yet.<br>Share the first one above!</div>';
+                    document.getElementById('loadMoreBtn').style.display = 'none';
+                    return;
+                }
+                if (posts.length) oldestPostId = posts[posts.length - 1].id;
+                feedHasMore = !!d.has_more;
+                document.getElementById('loadMoreBtn').style.display = feedHasMore ? '' : 'none';
+                el.insertAdjacentHTML('beforeend', posts.map(renderPost).join(''));
+            })
+            .catch(function () {
+                if (!append) document.getElementById('feedPosts').innerHTML = '<div class="empty-note">Could not load feed.</div>';
+            });
+    }
+
+    function renderPost(p) {
+        var img = p.has_image ? '<img class="post-img" src="/api/feed/media/' + p.id + '" loading="lazy" alt="" onclick="viewPostImage(this.src)">' : '';
+        var body = p.body ? '<div class="post-body">' + esc(p.body) + '</div>' : '';
+        var del = p.mine ? '<button class="post-act del" onclick="deletePost(' + p.id + ')"><i class="fas fa-trash"></i></button>' : '';
+        return '<div class="post-card" id="post-' + p.id + '">' +
+            '<div class="post-head">' +
+            '<div class="avatar" style="background:' + avatarColor(p.user_id) + '" onclick="location.href=\'/u/' + p.user_id + '\'">' + esc(initials(p.fullname)) + '</div>' +
+            '<div><div class="post-name" onclick="location.href=\'/u/' + p.user_id + '\'">' + esc(p.fullname) + '</div>' +
+            '<div class="post-sub">Lv ' + p.level + ' · ' + ago(p.created_at) + '</div></div>' +
+            '</div>' +
+            body + img +
+            '<div class="post-actions">' +
+            '<button class="post-act' + (p.liked ? ' liked' : '') + '" onclick="likePost(' + p.id + ', this)"><i class="' + (p.liked ? 'fas' : 'far') + ' fa-heart"></i> <span>' + p.likes + '</span></button>' +
+            del +
+            '</div></div>';
+    }
+
+    window.likePost = function (id, btn) {
+        fetch('/api/feed/' + id + '/like', { method: 'POST' })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (!d.success) return;
+                btn.classList.toggle('liked', d.liked);
+                btn.querySelector('i').className = (d.liked ? 'fas' : 'far') + ' fa-heart';
+                btn.querySelector('span').textContent = d.likes;
+            })
+            .catch(function () {});
+    };
+
+    window.deletePost = function (id) {
+        Swal.fire({ icon: 'warning', title: 'Delete this post?', showCancelButton: true, confirmButtonColor: '#dc2626' })
+            .then(function (res) {
+                if (!res.isConfirmed) return;
+                fetch('/api/feed/' + id, { method: 'DELETE' })
+                    .then(function () {
+                        var el = document.getElementById('post-' + id);
+                        if (el) el.remove();
+                    });
+            });
+    };
+
+    window.viewPostImage = function (src) {
+        Swal.fire({ imageUrl: src, imageAlt: 'Photo', showConfirmButton: false, background: '#000' });
+    };
+
+    document.getElementById('refreshFeedBtn').addEventListener('click', function () { oldestPostId = 0; loadFeedPosts(false); });
+    document.getElementById('loadMoreBtn').addEventListener('click', function () { loadFeedPosts(true); });
+    document.getElementById('postImgBtn').addEventListener('click', function () { document.getElementById('postImgInput').click(); });
+    document.getElementById('postImgInput').addEventListener('change', function (e) {
+        var file = e.target.files[0];
+        e.target.value = '';
+        if (!file) return;
+        pendingPostImage = file;
+        var prev = document.getElementById('postPreview');
+        prev.src = URL.createObjectURL(file);
+        prev.classList.add('show');
+    });
+    document.getElementById('postSubmitBtn').addEventListener('click', function () {
+        var text = document.getElementById('postText').value.trim();
+        if (!text && !pendingPostImage) { Swal.fire({ icon: 'warning', title: 'Write a caption or add a photo', confirmButtonColor: '#2563eb' }); return; }
+        var fd = new FormData();
+        if (text) fd.append('body', text);
+        if (pendingPostImage) fd.append('image', pendingPostImage);
+        fetch('/api/feed', { method: 'POST', body: fd })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (d.success) {
+                    document.getElementById('postText').value = '';
+                    pendingPostImage = null;
+                    document.getElementById('postPreview').classList.remove('show');
+                    oldestPostId = 0;
+                    loadFeedPosts(false);
+                    Swal.fire({ icon: 'success', title: 'Posted', toast: true, position: 'top', timer: 1500, showConfirmButton: false });
+                } else Swal.fire({ icon: 'error', title: d.error || 'Could not post', confirmButtonColor: '#2563eb' });
+            })
+            .catch(function () {});
+    });
+
+    // ---------- Init ----------
+    var initialTab = <%- JSON.stringify(typeof initialTab !== 'undefined' ? initialTab : 'chats') %>;
+    if (['chats', 'status', 'friends'].indexOf(initialTab) !== -1) showTab(initialTab);
+    var initialSub = <%- JSON.stringify(typeof initialSub !== 'undefined' ? initialSub : null) %>;
+    if (initialSub === 'leaderboard') {
+        setTimeout(function () {
+            var el = document.getElementById('lbSection');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 400);
+    }
 
     refresh();
+    loadRequests();
+    loadLeaderboard();
+    loadFriends();
+    loadFeed();
+    loadNotifBadge();
 })();
 </script>
 </body>

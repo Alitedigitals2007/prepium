@@ -1310,3 +1310,6 @@ textarea { resize: vertical; min-height: 100px; }
 .notice-strip i { color: var(--brand); margin-top: 2px; }
 .notice-strip.warning { background: var(--warning-soft); border-color: rgba(217, 119, 6, 0.2); }
 .notice-strip.warning i { color: var(--warning); }
+
+/* Keep dialogs and sheets above the bottom nav (z-index 9999) */
+.swal2-container { z-index: 10001 !important; }

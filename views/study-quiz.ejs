@@ -6,10 +6,12 @@
         .status-bar { height: env(safe-area-inset-top, 0px); }
         .page-content { padding: 0 1.5rem 1.5rem; }
 
-        .quiz-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; }
+        .quiz-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0 0.6rem; }
         .quiz-header .q-counter { font-size: 0.72rem; font-weight: 700; color: var(--text-secondary); }
         .quiz-header .q-counter span { color: var(--brand); font-size: 1rem; }
         .quiz-timer { font-weight: 800; font-size: 1rem; color: var(--text-primary); display: flex; align-items: center; gap: 6px; }
+        .quiz-progress { height: 7px; background: var(--bg); border-radius: 99px; overflow: hidden; margin-bottom: 1rem; }
+        .quiz-progress i { display: block; height: 100%; border-radius: 99px; background: var(--brand-gradient); transition: width 0.3s var(--ease-out); }
 
         .question-card { background: var(--surface-solid); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1rem; box-shadow: var(--shadow-sm); }
         .question-card .q-num { font-size: 0.65rem; font-weight: 800; color: var(--brand); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
@@ -37,19 +39,32 @@
         .q-nav .prev-btn:disabled { opacity: 0.4; }
 
         .result-card { background: var(--surface-solid); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 2rem; text-align: center; box-shadow: var(--shadow-sm); margin-bottom: 1rem; }
-        .result-card .score-circle { width: 120px; height: 120px; border-radius: 50%; margin: 0 auto 1rem; display: flex; align-items: center; justify-content: center; flex-direction: column; }
-        .result-card .score-circle .score-num { font-size: 2.2rem; font-weight: 800; line-height: 1; }
-        .result-card .score-circle .score-total { font-size: 0.85rem; font-weight: 600; opacity: 0.7; }
-        .result-card .score-label { font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px; }
-        .result-card .score-sub { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; }
+        .score-ring { width: 130px; height: 130px; border-radius: 50%; margin: 0 auto 1rem; display: grid; place-items: center; position: relative; }
+        .score-ring::before { content: ''; position: absolute; inset: 10px; border-radius: 50%; background: var(--surface-solid); }
+        .score-ring .score-inner { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; }
+        .score-ring .score-num { font-size: 2rem; font-weight: 800; line-height: 1; color: var(--text-primary); }
+        .score-ring .score-total { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
+        .score-label { font-size: 0.85rem; font-weight: 800; color: var(--text-primary); margin-bottom: 4px; }
+        .score-sub { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; }
+        .mark-studied-btn {
+            display: inline-flex; align-items: center; gap: 7px; margin-top: 14px;
+            padding: 0.7rem 1.2rem; border-radius: 12px; border: none; cursor: pointer;
+            background: var(--success); color: #fff; font-family: inherit; font-size: 0.76rem; font-weight: 800;
+            box-shadow: 0 6px 16px rgba(22, 163, 74, 0.35); transition: transform 0.12s;
+        }
+        .mark-studied-btn:active { transform: scale(0.95); }
+        .mark-studied-btn:disabled { opacity: 0.6; cursor: default; }
 
         .review-item { background: var(--surface-solid); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 10px; }
-        .review-item .r-q { font-weight: 700; font-size: 0.85rem; margin-bottom: 6px; }
+        .review-item .r-q { font-weight: 700; font-size: 0.85rem; margin-bottom: 6px; line-height: 1.5; }
         .review-item .r-answer { font-size: 0.78rem; font-weight: 600; }
         .review-item .r-answer.correct { color: var(--success); }
         .review-item .r-answer.wrong { color: var(--danger); }
-        .review-item .r-explain { font-size: 0.75rem; color: var(--text-secondary); font-weight: 500; margin-top: 6px; padding: 10px; background: var(--bg); border-radius: 8px; }
+        .review-item .r-explain { font-size: 0.75rem; color: var(--text-secondary); font-weight: 500; margin-top: 6px; padding: 10px; background: var(--bg); border-radius: 8px; line-height: 1.55; }
         .review-item .r-correct-ans { font-size: 0.75rem; font-weight: 700; color: var(--success); margin-top: 4px; }
+        .r-opt { display: inline-block; margin: 3px 6px 3px 0; padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; background: var(--bg); border: 1px solid var(--border); }
+        .r-opt.correct { background: var(--success-soft); border-color: var(--success); color: var(--success); }
+        .r-opt.wrong { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
 
         .hidden { display: none; }
 
@@ -74,6 +89,7 @@
             <div class="quiz-header">
                 <div class="q-counter">Question <span id="currentNum">1</span> of <span id="totalNum"><%= questions ? questions.length : 0 %></span></div>
             </div>
+            <div class="quiz-progress"><i id="quizProgressBar" style="width:<%= questions && questions.length ? Math.round(100 / questions.length) : 100 %>%"></i></div>
 
             <div id="questionsWrapper">
                 <% if (questions && questions.length > 0) { %>
@@ -113,12 +129,15 @@
 
         <div id="resultContainer" class="hidden">
             <div class="result-card">
-                <div class="score-circle" id="scoreCircle">
-                    <div class="score-num" id="scoreNum">0</div>
-                    <div class="score-total" id="scoreTotal">/0</div>
+                <div class="score-ring" id="scoreCircle">
+                    <div class="score-inner">
+                        <div class="score-num" id="scoreNum">0</div>
+                        <div class="score-total" id="scoreTotal">/0</div>
+                    </div>
                 </div>
                 <div class="score-label" id="scoreLabel">Great effort!</div>
                 <div class="score-sub" id="scoreSub">Keep studying to improve</div>
+                <div id="markStudiedWrap"></div>
             </div>
             <div style="display:flex;gap:8px;margin-bottom:1rem;">
                 <button style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--brand-gradient);color:white;font-weight:700;cursor:pointer;" onclick="location.href='/study'"><i class="fas fa-arrow-left"></i> Back to Study</button>
@@ -139,9 +158,11 @@ var currentIndex = 0;
 var answers = {};
 var attemptId = <%= attempt ? attempt.id : 0 %>;
 var timeLimit = <%= attempt ? attempt.time_limit : 0 %>;
+var quizSubtopicId = <%= attempt ? (attempt.subtopic_id || 0) : 0 %>;
 var timerInterval = null;
 var elapsedSeconds = 0;
 var submitClicked = false;
+var markedStudied = false;
 
 <% if (questions && questions.length > 0) { %>
 <% questions.forEach(function(q) { %>
@@ -185,6 +206,7 @@ function showQuestion(idx) {
         c.classList.toggle('hidden', i !== idx);
     });
     document.getElementById('currentNum').textContent = idx + 1;
+    document.getElementById('quizProgressBar').style.width = Math.round(((idx + 1) / totalQuestions) * 100) + '%';
     document.getElementById('prevBtn').disabled = idx === 0;
     var nextBtn = document.getElementById('nextBtn');
     var submitBtn = document.getElementById('submitBtn');
@@ -219,19 +241,50 @@ function submitQuiz() {
         if (d.success) {
             document.getElementById('quizContainer').classList.add('hidden');
             document.getElementById('resultContainer').classList.remove('hidden');
-            document.getElementById('scoreNum').textContent = d.score;
-            document.getElementById('scoreTotal').textContent = '/' + d.total;
-            var pct = Math.round((d.score / d.total) * 100);
+            var pct = d.total > 0 ? Math.round((d.score / d.total) * 100) : 0;
+            var ringColor = pct >= 70 ? '#16a34a' : pct >= 50 ? '#f59e0b' : '#dc2626';
             var circle = document.getElementById('scoreCircle');
-            if (pct >= 70) { circle.style.background = 'var(--success-soft)'; circle.style.color = '#065f46'; document.getElementById('scoreLabel').textContent = 'Excellent!'; document.getElementById('scoreSub').textContent = 'You mastered this topic'; }
-            else if (pct >= 50) { circle.style.background = 'var(--warning-soft)'; circle.style.color = '#92400e'; document.getElementById('scoreLabel').textContent = 'Good effort!'; document.getElementById('scoreSub').textContent = 'Review the areas you missed'; }
-            else { circle.style.background = 'var(--danger-soft)'; circle.style.color = '#991b1b'; document.getElementById('scoreLabel').textContent = 'Keep practicing!'; document.getElementById('scoreSub').textContent = 'Review the material and try again'; }
+            circle.style.background = 'conic-gradient(' + ringColor + ' 0% ' + pct + '%, var(--border-solid) ' + pct + '% 100%)';
+            document.getElementById('scoreLabel').textContent = pct >= 70 ? 'Excellent!' : pct >= 50 ? 'Good effort!' : 'Keep practicing!';
+            document.getElementById('scoreSub').textContent = pct >= 70 ? 'You mastered this topic' : pct >= 50 ? 'Review the areas you missed' : 'Review the material and try again';
+            var shown = 0;
+            var countUp = setInterval(function () {
+                shown++;
+                document.getElementById('scoreNum').textContent = shown;
+                if (shown >= d.score) clearInterval(countUp);
+            }, Math.max(80, 400 / Math.max(1, d.score)));
+            if (d.score === 0) document.getElementById('scoreNum').textContent = 0;
+            document.getElementById('scoreTotal').textContent = '/' + d.total;
+            if (quizSubtopicId && pct >= 70) {
+                document.getElementById('markStudiedWrap').innerHTML =
+                    '<button class="mark-studied-btn" id="markStudiedBtn" onclick="markStudied()"><i class="fas fa-check-double"></i> Mark subtopic as studied</button>';
+            }
             loadResults();
         } else {
             Swal.fire({ icon: 'error', text: d.error });
             submitClicked = false;
         }
     });
+}
+
+function markStudied() {
+    if (markedStudied || !quizSubtopicId) return;
+    markedStudied = true;
+    var btn = document.getElementById('markStudiedBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…'; }
+    fetch('/api/study/subtopics/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: quizSubtopicId, status: 'completed' })
+    }).then(r => r.json()).then(function (d) {
+        if (d.success) {
+            if (btn) { btn.innerHTML = '<i class="fas fa-check-circle"></i> Marked as studied!'; }
+            Swal.fire({ icon: 'success', title: 'Subtopic completed!', toast: true, position: 'top', timer: 1800, showConfirmButton: false });
+        } else {
+            markedStudied = false;
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check-double"></i> Mark subtopic as studied'; }
+        }
+    }).catch(function () { markedStudied = false; if (btn) { btn.disabled = false; } });
 }
 
 function loadResults() {

@@ -3,95 +3,88 @@
 <head>
     <%- include('partials/head') %>
     <style>
-        /* Header */
-        header { 
-            padding: 2rem 1.5rem 1.5rem; 
-            display: flex; align-items: center; gap: 15px;
-        }
-        
-        .back-link {
-            width: 45px; height: 45px; background: var(--bg); border: 1.5px solid var(--border);
-            border-radius: 14px; display: flex; align-items: center; justify-content: center;
-            color: var(--text-primary); text-decoration: none; font-size: 1.2rem;
-        }
+        .status-bar { height: env(safe-area-inset-top, 0px); }
+        .page-content { padding: 0 1.1rem 2rem; max-width: 640px; margin: 0 auto; }
 
-        .header-title h1 { font-size: 1.5rem; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
-
-        /* Notification List */
-        .notif-container { padding: 0 1.5rem; }
-        
         .notif-card {
-            background: var(--surface-solid); border-radius: 24px; padding: 20px;
-            border: 1px solid var(--border); margin-bottom: 12px;
-            display: flex; gap: 15px; position: relative;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.01);
+            background: var(--surface-solid); border-radius: 18px; padding: 0.9rem 0.95rem;
+            border: 1px solid var(--border-solid); margin-bottom: 0.6rem;
+            display: flex; gap: 0.8rem; align-items: flex-start;
+            box-shadow: var(--shadow-sm); transition: transform 0.15s var(--ease-out);
         }
-
-        /* Unread State */
-        .notif-card.unread { 
-            border-left: 4px solid var(--brand);
-            background: var(--brand-light);
-        }
+        .notif-card.clickable { cursor: pointer; }
+        .notif-card.clickable:active { transform: scale(0.985); }
+        .notif-card.unread { border-left: 4px solid var(--brand); background: var(--brand-light); }
 
         .notif-icon {
-            width: 44px; height: 44px; min-width: 44px; border-radius: 14px;
-            background: var(--bg); display: flex; align-items: center;
-            justify-content: center; font-size: 1.1rem; color: var(--text-secondary);
+            width: 42px; height: 42px; min-width: 42px; border-radius: 13px;
+            display: grid; place-items: center; font-size: 0.95rem;
+            background: var(--brand-soft); color: var(--brand);
         }
-        .unread .notif-icon { background: var(--surface-solid); color: var(--brand); }
+        .notif-icon.friend { background: var(--warning-soft); color: var(--warning); }
+        .notif-icon.chat { background: var(--success-soft); color: var(--success); }
+        .notif-icon.group { background: #e9d5ff; color: #7c3aed; }
+        .notif-icon.like { background: #fee2e2; color: #dc2626; }
+        .notif-icon.announcement { background: var(--brand-soft); color: var(--brand); }
 
-        .notif-content { flex: 1; }
-        .notif-header { display: flex; justify-content: space-between; align-items: flex-start; }
-        
-        .notif-title { font-weight: 800; font-size: 0.95rem; color: var(--text-primary); display: block; margin-bottom: 4px; }
-        .notif-msg { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin: 0; font-weight: 500; }
-        
-        .notif-time { 
-            font-size: 0.65rem; color: var(--text-secondary); font-weight: 700; 
-            margin-top: 10px; display: block; text-transform: uppercase; letter-spacing: 0.5px;
-        }
+        .notif-content { flex: 1; min-width: 0; }
+        .notif-top { display: flex; align-items: flex-start; gap: 0.5rem; }
+        .notif-title { font-weight: 800; font-size: 0.84rem; color: var(--text-primary); flex: 1; }
+        .notif-msg { font-size: 0.74rem; color: var(--text-secondary); line-height: 1.5; margin: 2px 0 0; word-break: break-word; }
+        .notif-time { font-size: 0.58rem; color: var(--text-muted); font-weight: 700; white-space: nowrap; flex: 0 0 auto; padding-top: 2px; }
+        .notif-go { font-size: 0.62rem; font-weight: 800; color: var(--brand); margin-top: 6px; display: inline-flex; align-items: center; gap: 4px; }
 
+        .empty-state { padding: 3rem 1.5rem; text-align: center; color: var(--text-muted); }
+        .empty-state i { font-size: 2.2rem; opacity: 0.4; display: block; margin-bottom: 0.7rem; }
+        .empty-state h3 { font-size: 1rem; font-weight: 800; color: var(--text-secondary); margin: 0 0 4px; }
+        .empty-state p { font-size: 0.76rem; margin: 0; }
+        @media (min-width: 431px) { .app-shell { border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); margin: 0 auto; } }
     </style>
     <%- include('partials/theme-toggle') %>
 </head>
 <body>
 <%- include('partials/sidebar') %>
-
-    <div class="app-shell">
-        <header>
-            <a href="/dashboard" class="back-link"><i class="fas fa-chevron-left"></i></a>
-            <div class="header-title">
-                <h1>Alerts</h1>
-            </div>
-        </header>
-
-        <div class="notif-container">
-            <% if(notifications && notifications.length > 0) { %>
-                <% notifications.forEach(n => { %>
-                    <div class="notif-card <%= n.is_read ? '' : 'unread' %>">
-                        <div class="notif-icon">
-                            <i class="fas <%= n.is_read ? 'fa-envelope-open' : 'fa-envelope' %>"></i>
-                        </div>
-                        <div class="notif-content">
-                            <b class="notif-title"><%= n.title %></b>
-                            <p class="notif-msg"><%= n.message %></p>
+<div class="app-shell">
+    <div class="status-bar"></div>
+    <div class="header-nav">
+        <a href="/dashboard" class="back-circle"><i class="fas fa-arrow-left"></i></a>
+        <div class="header-title">Notifications</div>
+    </div>
+    <div class="page-content">
+        <% if (notifications && notifications.length > 0) { %>
+            <% notifications.forEach(n => { %>
+                <div class="notif-card <%= n.is_read ? '' : 'unread' %> <%= n.link ? 'clickable' : '' %>"
+                     <%= n.link ? `onclick="window.location.href='${n.link}'"` : '' %>>
+                    <div class="notif-icon <%= n.kind %>">
+                        <% if (n.kind === 'friend') { %><i class="fas fa-user-group"></i>
+                        <% } else if (n.kind === 'chat') { %><i class="fas fa-comment"></i>
+                        <% } else if (n.kind === 'group') { %><i class="fas fa-users"></i>
+                        <% } else if (n.kind === 'like') { %><i class="fas fa-heart"></i>
+                        <% } else { %><i class="fas fa-bullhorn"></i>
+                        <% } %>
+                    </div>
+                    <div class="notif-content">
+                        <div class="notif-top">
+                            <span class="notif-title"><%= n.title %></span>
                             <span class="notif-time">
                                 <%= new Date(n.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) %>
+                                · <%= new Date(n.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) %>
                             </span>
                         </div>
+                        <p class="notif-msg"><%= n.message || '' %></p>
+                        <% if (n.link) { %><span class="notif-go">Open <i class="fas fa-arrow-right"></i></span><% } %>
                     </div>
-                <% }) %>
-            <% } else { %>
-                <div class="empty-state">
-                    <i class="fas fa-bell-slash"></i>
-                    <h3>No notifications</h3>
-                    <p>Updates about exams and performance will appear here.</p>
                 </div>
-            <% } %>
-        </div>
-
-        <%- include('partials/bottom-nav', { activeNav: 'profile' }) %>
+            <% }) %>
+        <% } else { %>
+            <div class="empty-state">
+                <i class="fas fa-bell-slash"></i>
+                <h3>No notifications</h3>
+                <p>Friend requests, messages, likes and announcements will appear here.</p>
+            </div>
+        <% } %>
     </div>
-
+    <%- include('partials/bottom-nav', { activeNav: 'profile' }) %>
+</div>
 </body>
 </html>

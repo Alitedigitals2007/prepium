@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <style>
+        .status-bar { height: env(safe-area-inset-top, 0px); }
+        .page-content { padding: 0 1.1rem 2rem; max-width: 640px; margin: 0 auto; }
+
+        .profile-hero {
+            background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 45%, #7c3aed 100%);
+            color: #fff; border-radius: var(--radius-xl);
+            padding: 1.5rem 1.2rem 1.3rem; margin: 0.5rem 0 1rem;
+            box-shadow: 0 16px 40px rgba(37, 99, 235, 0.3);
+            text-align: center; position: relative; overflow: hidden;
+        }
+        .profile-hero::after {
+            content: ''; position: absolute; width: 200px; height: 200px; border-radius: 50%;
+            right: -60px; top: -80px; background: rgba(255, 255, 255, 0.12);
+        }
+        .big-avatar {
+            width: 84px; height: 84px; margin: 0 auto 0.7rem; border-radius: 50%;
+            display: grid; place-items: center; font-weight: 800; font-size: 1.7rem;
+            background: rgba(255, 255, 255, 0.2); border: 3px solid rgba(255, 255, 255, 0.4);
+            position: relative; z-index: 1; text-transform: uppercase;
+        }
+        .profile-hero h1 { font-size: 1.25rem; font-weight: 800; position: relative; z-index: 1; }
+        .profile-hero .lvl-line { font-size: 0.72rem; opacity: 0.9; margin-top: 3px; position: relative; z-index: 1; }
+        .profile-hero .joined { font-size: 0.6rem; opacity: 0.7; margin-top: 4px; position: relative; z-index: 1; }
+        .profile-actions { display: flex; gap: 7px; justify-content: center; margin-top: 0.9rem; position: relative; z-index: 1; flex-wrap: wrap; }
+        .pa-btn { border: none; border-radius: 12px; padding: 0.62rem 1rem; font-family: inherit; font-size: 0.72rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: transform 0.12s; }
+        .pa-btn:active { transform: scale(0.95); }
+        .pa-btn.light { background: rgba(255, 255, 255, 0.2); color: #fff; border: 1px solid rgba(255, 255, 255, 0.35); }
+        .pa-btn.solid { background: #fff; color: #2563eb; }
+        .pa-btn.danger { background: rgba(220, 38, 38, 0.9); color: #fff; }
+
+        .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 1rem; }
+        .stat-box { background: var(--surface-solid); border: 1px solid var(--border-solid); border-radius: 14px; padding: 0.65rem 0.3rem; text-align: center; }
+        .stat-box b { display: block; font-size: 1.05rem; font-weight: 800; color: var(--text-primary); line-height: 1.1; }
+        .stat-box span { display: block; font-size: 0.53rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); font-weight: 700; margin-top: 2px; }
+
+        .panel { background: var(--surface-solid); border: 1px solid var(--border-solid); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 1rem; }
+        .panel-head { padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--border); font-size: 0.78rem; font-weight: 800; display: flex; align-items: center; gap: 6px; }
+        .panel-head i { color: var(--brand); }
+        .game-row { display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 0.9rem; border-bottom: 1px solid var(--border); }
+        .game-row:last-child { border-bottom: none; }
+        .gr-icon { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 10px; display: grid; place-items: center; color: #fff; font-size: 0.8rem; }
+        .gr-main { flex: 1; }
+        .gr-name { font-size: 0.78rem; font-weight: 800; color: var(--text-primary); }
+        .gr-sub { font-size: 0.6rem; color: var(--text-muted); }
+        .gr-best { font-size: 0.72rem; font-weight: 800; color: var(--brand); }
+
+        .empty-note { padding: 1.4rem 1rem; text-align: center; color: var(--text-muted); font-size: 0.75rem; }
+        .loading-wrap { padding: 3rem 1rem; text-align: center; color: var(--text-muted); font-size: 0.8rem; }
+        @media (min-width: 431px) { .app-shell { border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); margin: 0 auto; } }
+    </style>
+    <%- include('partials/theme-toggle') %>
+</head>
+<body>
+<%- include('partials/sidebar') %>
+<div class="app-shell">
+    <div class="status-bar"></div>
+    <div class="header-nav">
+        <a href="/chat" class="back-circle"><i class="fas fa-arrow-left"></i></a>
+        <div class="header-title">Profile</div>
+    </div>
+    <div class="page-content" id="profileContent">
+        <div class="loading-wrap"><i class="fas fa-spinner fa-spin"></i> Loading profile…</div>
+    </div>
+    <%- include('partials/bottom-nav', { activeNav: 'chats' }) %>
+</div>
+
+<script>
+(function () {
+    'use strict';
+    var PID = <%- JSON.stringify(profileId) %>;
+    var ME = <%- JSON.stringify(user.id) %>;
+
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&':'&'+'amp;','<':'&'+'lt;','>':'&'+'gt;','"':'&'+'quot;',"'":'&#39;'}[c]; }); }
+    function avatarColor(id) { return 'hsl(' + ((id * 137.5) % 360) + ', 62%, 45%)'; }
+    function initials(name) { return String(name || '?').trim().split(/\s+/).slice(0, 2).map(function (w) { return w.charAt(0); }).join(''); }
+
+    var GAME_META = {
+        sudoku:    { label: 'Sudoku',        icon: 'fa-table-cells',    color: 'linear-gradient(135deg,#1d4ed8,#3b82f6)' },
+        scramble:  { label: 'Word Scramble', icon: 'fa-shuffle',        color: 'linear-gradient(135deg,#047857,#10b981)' },
+        chess:     { label: 'Chess',         icon: 'fa-chess-knight',   color: 'linear-gradient(135deg,#5b21b6,#8b5cf6)' },
+        crossword: { label: 'Crossword',     icon: 'fa-border-all',     color: 'linear-gradient(135deg,#b91c1c,#ef4444)' }
+    };
+
+    function render(p) {
+        var totalPlays = 0, totalWins = 0, best = 0;
+        (p.games || []).forEach(function (g) { totalPlays += g.plays; totalWins += g.wins; best = Math.max(best, g.best); });
+
+        var actions = '';
+        if (p.relationship === 'self') {
+            actions = '<span class="pa-btn light"><i class="fas fa-user"></i> This is you</span>';
+        } else if (p.relationship === 'friends') {
+            actions = '<button class="pa-btn solid" onclick="messageUser()"><i class="fas fa-comment"></i> Message</button>' +
+                      '<button class="pa-btn danger" onclick="removeFriend()"><i class="fas fa-user-minus"></i> Remove</button>';
+        } else if (p.relationship === 'request_sent') {
+            actions = '<span class="pa-btn light"><i class="fas fa-clock"></i> Request sent</span>' +
+                      '<button class="pa-btn danger" onclick="removeFriend()"><i class="fas fa-xmark"></i> Cancel</button>';
+        } else if (p.relationship === 'request_received') {
+            actions = '<button class="pa-btn solid" onclick="acceptFriend()"><i class="fas fa-check"></i> Accept friend</button>';
+        } else {
+            actions = '<button class="pa-btn solid" onclick="addFriend()"><i class="fas fa-user-plus"></i> Add friend</button>';
+        }
+
+        var gameRows = (p.games || []).map(function (g) {
+            var meta = GAME_META[g.game] || { label: g.game, icon: 'fa-gamepad', color: '#64748b' };
+            return '<div class="game-row">' +
+                '<div class="gr-icon" style="background:' + meta.color + '"><i class="fas ' + meta.icon + '"></i></div>' +
+                '<div class="gr-main"><div class="gr-name">' + esc(meta.label) + '</div>' +
+                '<div class="gr-sub">' + g.plays + ' plays · ' + g.wins + ' wins</div></div>' +
+                '<div class="gr-best">Best ' + g.best + '</div></div>';
+        }).join('');
+
+        var joined = p.joined ? new Date(p.joined).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) : '';
+
+        document.getElementById('profileContent').innerHTML =
+            '<div class="profile-hero">' +
+                '<div class="big-avatar" style="background:' + avatarColor(p.id) + '">' + esc(initials(p.fullname)) + '</div>' +
+                '<h1>' + esc(p.fullname) + '</h1>' +
+                '<div class="lvl-line">Level ' + p.level + ' · ' + p.xp.toLocaleString() + ' XP</div>' +
+                (joined ? '<div class="joined"><i class="fas fa-calendar"></i> Joined ' + esc(joined) + '</div>' : '') +
+                '<div class="profile-actions">' + actions + '</div>' +
+            '</div>' +
+            '<div class="stat-grid">' +
+                '<div class="stat-box"><b>' + totalPlays + '</b><span>Games</span></div>' +
+                '<div class="stat-box"><b>' + totalWins + '</b><span>Wins</span></div>' +
+                '<div class="stat-box"><b>' + best + '</b><span>Best score</span></div>' +
+                '<div class="stat-box"><b>' + p.friends_count + '</b><span>Friends</span></div>' +
+            '</div>' +
+            '<div class="panel">' +
+                '<div class="panel-head"><i class="fas fa-gamepad"></i> Game stats</div>' +
+                (gameRows || '<div class="empty-note">No games played yet.</div>') +
+            '</div>';
+    }
+
+    function load() {
+        fetch('/api/users/' + PID + '/profile', { headers: { Accept: 'application/json' } })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (!d.success) {
+                    document.getElementById('profileContent').innerHTML = '<div class="empty-note"><i class="fas fa-user-slash"></i>' + esc(d.error || 'Profile not found') + '</div>';
+                    return;
+                }
+                render(d.profile);
+            })
+            .catch(function () {
+                document.getElementById('profileContent').innerHTML = '<div class="empty-note">Could not load profile.</div>';
+            });
+    }
+
+    window.addFriend = function () {
+        fetch('/api/friends/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ friendId: PID }) })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (d.accepted) Swal.fire({ icon: 'success', title: 'You are now friends!', confirmButtonColor: '#2563eb' });
+                else Swal.fire({ icon: 'success', title: 'Request sent', toast: true, position: 'top', timer: 1800, showConfirmButton: false });
+                load();
+            });
+    };
+
+    window.acceptFriend = function () {
+        fetch('/api/friends/accept', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ friendId: PID }) })
+            .then(function () { load(); });
+    };
+
+    window.removeFriend = function () {
+        Swal.fire({ icon: 'warning', title: 'Remove this friend?', showCancelButton: true, confirmButtonText: 'Remove', confirmButtonColor: '#dc2626' })
+            .then(function (res) {
+                if (!res.isConfirmed) return;
+                fetch('/api/friends/remove', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ friendId: PID }) })
+                    .then(function () { load(); });
+            });
+    };
+
+    window.messageUser = function () {
+        fetch('/api/chat/conversations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: PID }) })
+            .then(function (r) { return r.json(); })
+            .then(function (d) { if (d.success) window.location.href = '/chat/' + d.id; });
+    };
+
+    load();
+})();
+</script>
+</body>
+</html>
