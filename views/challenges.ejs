@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text-primary); min-height: 100vh; }
+        .app-shell { display: flex; min-height: 100vh; }
+        .main-area { flex: 1; padding: 1.5rem; overflow-y: auto; max-width: 900px; margin: 0 auto; width: 100%; }
+        .header-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2rem; }
+        .header-title { font-weight: 800; font-size: 1rem; }
+        .back-circle { width: 38px; height: 38px; border-radius: 50%; background: var(--surface-solid); border: 1px solid var(--border-solid); display: flex; align-items: center; justify-content: center; color: var(--text-primary); }
+        .page-subhead p { font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 1.2rem; }
+        .card { background: var(--surface-solid); border-radius: 20px; padding: 22px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); margin-bottom: 1rem; }
+        .ch-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+        .ch-title { font-weight: 800; font-size: 0.95rem; }
+        .ch-desc { font-size: 0.78rem; color: var(--text-secondary); margin-top: 3px; line-height: 1.45; }
+        .ch-badges { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+        .badge { font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; padding: 4px 10px; border-radius: 20px; background: var(--bg); color: var(--text-secondary); border: 1px solid var(--border-solid); }
+        .badge.xp { color: #10b981; background: rgba(16,185,129,0.1); border-color: transparent; }
+        .ch-bar { height: 8px; background: var(--bg); border-radius: 8px; overflow: hidden; margin-top: 14px; }
+        .ch-fill { height: 100%; background: linear-gradient(90deg, var(--brand), #1d4ed8); border-radius: 8px; transition: width 0.4s; }
+        .ch-fill.done { background: linear-gradient(90deg, #10b981, #059669); }
+        .ch-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 0.72rem; color: var(--text-secondary); font-weight: 700; }
+        .btn { padding: 10px 20px; border-radius: 12px; border: none; font-family: inherit; font-weight: 700; font-size: 0.78rem; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+        .btn-primary { background: linear-gradient(135deg, var(--brand), #1d4ed8); color: white; }
+        .btn-outline { background: var(--surface-solid); border: 1.5px solid var(--border-solid); color: var(--text-primary); }
+        .lb-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; font-size: 0.78rem; }
+        .lb-row .me { color: var(--brand); font-weight: 800; }
+        .lb-rank { width: 22px; color: var(--text-secondary); font-weight: 700; }
+        .daily-cta { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+        .done-check { color: #10b981; font-weight: 800; font-size: 0.8rem; }
+    </style>
+    <%- include('partials/theme-toggle') %>
+</head>
+<body>
+<%- include('partials/sidebar') %>
+<div class="app-shell">
+    <div class="main-area">
+        <div class="header-nav">
+            <a href="/dashboard" class="back-circle"><i class="fas fa-arrow-left"></i></a>
+            <div class="header-title">Prepium Challenges</div>
+            <%- include('partials/drawer-trigger') %>
+        </div>
+
+        <div class="page-subhead"><p>One arena, many arenas — daily, weekly, seasonal, solo or with your people. XP flows from one ledger.</p></div>
+
+        <div class="card">
+            <div class="daily-cta">
+                <div>
+                    <div style="font-weight:800; font-size:0.92rem;"><i class="fas fa-fire-alt" style="color:#f97316;"></i> Daily Challenge</div>
+                    <div style="font-size:0.76rem; color:var(--text-secondary); margin-top:2px;">15 questions, 3 subjects max, resets at midnight.</div>
+                </div>
+                <% if (dailyDone) { %>
+                    <span class="done-check"><i class="fas fa-circle-check"></i> Done today</span>
+                <% } else { %>
+                    <a class="btn btn-primary" href="/daily-challenge">Play now</a>
+                <% } %>
+            </div>
+        </div>
+
+        <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <div style="font-weight:800; font-size:0.92rem;"><i class="fas fa-bolt" style="color:#f59e0b;"></i> Your XP</div>
+                <div style="font-size:0.74rem; color:var(--text-secondary); margin-top:2px;">Earned across every Prepium activity — traceable, duplicate-proof.</div>
+            </div>
+            <div style="font-size:1.5rem; font-weight:800; background:linear-gradient(135deg, var(--brand), #1d4ed8); -webkit-background-clip:text; -webkit-text-fill-color:transparent;"><%= xp %></div>
+        </div>
+
+        <% challenges.forEach(function (c) { %>
+            <div class="card">
+                <div class="ch-head">
+                    <div style="flex:1;">
+                        <div class="ch-title"><%= c.title %></div>
+                        <div class="ch-desc"><%= c.description %></div>
+                        <div class="ch-badges">
+                            <span class="badge"><%= c.cadence %></span>
+                            <span class="badge"><%= c.scope %></span>
+                            <span class="badge xp">+<%= c.xp_reward %> XP</span>
+                        </div>
+                    </div>
+                    <% if (c.completed) { %>
+                        <span class="done-check"><i class="fas fa-circle-check"></i> Complete</span>
+                    <% } else if (!c.joined) { %>
+                        <button class="btn btn-primary" onclick="join(<%= c.id %>)">Join</button>
+                    <% } %>
+                </div>
+                <% if (c.joined) { %>
+                    <div class="ch-bar"><div class="ch-fill <%= c.completed ? 'done' : '' %>" style="width:<%= c.pct %>%"></div></div>
+                    <div class="ch-foot">
+                        <span><%= c.progress %>/<%= c.target %> <%= c.metric.replace('_', ' ') %></span>
+                        <% if (c.leaders.length > 1) { %>
+                            <span><i class="fas fa-trophy" style="color:#f59e0b;"></i> <%= c.leaders[0].name %></span>
+                        <% } %>
+                    </div>
+                    <% if (c.leaders.length > 1) { %>
+                        <div style="margin-top:10px; border-top:1px solid var(--border-solid); padding-top:8px;">
+                            <% c.leaders.forEach(function (l, i) { %>
+                                <div class="lb-row">
+                                    <span class="lb-rank"><%= i + 1 %>.</span>
+                                    <span class="<%= l.is_me ? 'me' : '' %>"><%= l.name %></span>
+                                    <span style="margin-left:auto; color:var(--text-secondary);"><%= l.progress %></span>
+                                </div>
+                            <% }); %>
+                        </div>
+                    <% } %>
+                <% } %>
+            </div>
+        <% }); %>
+
+        <%- include('partials/bottom-nav', { activeNav: activeNav }) %>
+    </div>
+</div>
+<script>
+    function join(id) {
+        fetch('/api/challenges/' + id + '/join', { method: 'POST' })
+            .then(function (r) { return r.json(); })
+            .then(function (d) { if (d.success) window.location.reload(); });
+    }
+</script>
+</body>
+</html>

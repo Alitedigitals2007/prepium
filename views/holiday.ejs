@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text-primary); min-height: 100vh; }
+        .app-shell { display: flex; min-height: 100vh; }
+        .main-area { flex: 1; padding: 1.5rem; overflow-y: auto; max-width: 900px; margin: 0 auto; width: 100%; }
+        .header-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2rem; }
+        .header-title { font-weight: 800; font-size: 1rem; }
+        .back-circle { width: 38px; height: 38px; border-radius: 50%; background: var(--surface-solid); border: 1px solid var(--border-solid); display: flex; align-items: center; justify-content: center; color: var(--text-primary); }
+        .page-subhead p { font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 1.2rem; }
+        .card { background: var(--surface-solid); border-radius: 20px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); margin-bottom: 1rem; }
+        .hero { text-align: center; padding: 30px 20px; }
+        .hero-icon { font-size: 3.2rem; margin-bottom: 10px; }
+        .hero h2 { font-weight: 800; margin-bottom: 6px; }
+        .hero p { font-size: 0.82rem; color: var(--text-secondary); max-width: 420px; margin: 0 auto 18px; line-height: 1.55; }
+        .btn { padding: 12px 26px; border-radius: 14px; border: none; font-family: inherit; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary { background: linear-gradient(135deg, var(--brand), #1d4ed8); color: white; }
+        .btn-outline { background: var(--surface-solid); border: 1.5px solid var(--border-solid); color: var(--text-primary); }
+        .goal { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--bg); border-radius: 14px; margin-bottom: 8px; }
+        .goal-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--surface-solid); display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--brand); }
+        .goal-info { flex: 1; min-width: 0; }
+        .goal-title { font-weight: 700; font-size: 0.84rem; }
+        .goal-meta { font-size: 0.68rem; color: var(--text-secondary); text-transform: capitalize; }
+        .goal-bar { height: 5px; background: var(--border-solid); border-radius: 6px; margin-top: 5px; overflow: hidden; }
+        .goal-fill { height: 100%; background: linear-gradient(90deg, var(--brand), #1d4ed8); border-radius: 6px; }
+        .goal.done .goal-title { text-decoration: line-through; color: var(--text-secondary); }
+        .gbtn { width: 30px; height: 30px; border-radius: 10px; border: 1px solid var(--border-solid); background: var(--surface-solid); color: var(--text-primary); cursor: pointer; font-weight: 800; }
+        input[type="text"], select { padding: 11px 14px; border-radius: 12px; border: 1.5px solid var(--border-solid); background: var(--bg); color: var(--text-primary); font-family: inherit; font-size: 0.84rem; }
+        .empty-state { text-align: center; padding: 30px 20px; color: var(--text-secondary); }
+        .xp-toast { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); background: #10b981; color: white; padding: 10px 20px; border-radius: 30px; font-weight: 800; font-size: 0.8rem; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+        .xp-toast.show { opacity: 1; }
+    </style>
+    <%- include('partials/theme-toggle') %>
+</head>
+<body>
+<%- include('partials/sidebar') %>
+<div class="xp-toast" id="xpToast"></div>
+<div class="app-shell">
+    <div class="main-area">
+        <div class="header-nav">
+            <a href="/dashboard" class="back-circle"><i class="fas fa-arrow-left"></i></a>
+            <div class="header-title">Holiday Mode</div>
+            <%- include('partials/drawer-trigger') %>
+        </div>
+
+        <div class="page-subhead"><p>Stay sharp between semesters — your progress carries over when you return</p></div>
+
+        <div class="card">
+            <div class="hero">
+                <div class="hero-icon"><%= active ? '🏖️' : '📚' %></div>
+                <h2><%= active ? 'Holiday Mode is ON' : 'Holiday Mode is off' %></h2>
+                <p><% if (active) { %>Prepium is now optimised for holiday goals: revision, skills, projects, reading and rest. Nothing is lost — switch back anytime and your academic tools return exactly as you left them.<% } else { %>Activate Holiday Mode during breaks to keep growing without the pressure of coursework. Set goals across revision, skills, projects, reading, challenges, opportunities and community.<% } %></p>
+                <button class="btn <%= active ? 'btn-outline' : 'btn-primary' %>" onclick="toggleMode()">
+                    <i class="fas <%= active ? 'fa-graduation-cap' : 'fa-umbrella-beach' %>"></i>
+                    <%= active ? 'Return to academic mode' : 'Activate Holiday Mode' %>
+                </button>
+                <% if (active && source === 'recommended') { %>
+                    <p style="font-size:0.7rem; color:var(--text-secondary); margin-top:10px;">Recommended by Prepium based on your academic calendar.</p>
+                <% } %>
+            </div>
+        </div>
+
+        <% if (active) { %>
+            <div class="card">
+                <h3 style="font-weight:800; font-size:0.95rem; margin-bottom:14px;"><i class="fas fa-bullseye" style="color:var(--brand);"></i> Holiday goals</h3>
+                <% if (goals.length === 0) { %>
+                    <div class="empty-state">
+                        <i class="fas fa-list-check"></i>
+                        <p style="font-size:0.82rem;">No goals yet. Add one below — each completed goal earns <strong>+50 XP</strong>.</p>
+                    </div>
+                <% } %>
+                <% goals.forEach(function (g) { %>
+                    <div class="goal <%= g.is_done ? 'done' : '' %>">
+                        <div class="goal-icon"><i class="fas <%= { revision:'fa-book-open', skills:'fa-graduation-cap', projects:'fa-diagram-project', reading:'fa-book', challenges:'fa-fire', opportunities:'fa-briefcase', community:'fa-users' }[g.goal_type] || 'fa-star' %>"></i></div>
+                        <div class="goal-info">
+                            <div class="goal-title"><%= g.title %></div>
+                            <div class="goal-meta"><%= g.goal_type.replace('_', ' ') %> · <%= g.progress_value %>/<%= g.target_value %></div>
+                            <div class="goal-bar"><div class="goal-fill" style="width:<%= Math.min(100, Math.round((g.progress_value / g.target_value) * 100)) %>%"></div></div>
+                        </div>
+                        <% if (!g.is_done) { %>
+                            <button class="gbtn" onclick="addProgress(<%= g.id %>, 1)">+1</button>
+                            <button class="gbtn" onclick="deleteGoal(<%= g.id %>)" title="Delete"><i class="fas fa-trash-can" style="font-size:0.7rem;"></i></button>
+                        <% } else { %>
+                            <i class="fas fa-circle-check" style="color:#10b981;"></i>
+                        <% } %>
+                    </div>
+                <% }); %>
+
+                <div style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;">
+                    <input type="text" id="goalTitle" placeholder="New goal — e.g. Finish 3 chapters of GST" style="flex:1; min-width:200px;" maxlength="200">
+                    <select id="goalType">
+                        <option value="revision">Revision</option>
+                        <option value="skills">Skills</option>
+                        <option value="projects">Projects</option>
+                        <option value="reading">Reading</option>
+                        <option value="challenges">Challenges</option>
+                        <option value="opportunities">Opportunities</option>
+                        <option value="community">Community</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="addGoal()"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+        <% } %>
+
+        <%- include('partials/bottom-nav', { activeNav: activeNav }) %>
+    </div>
+</div>
+<script>
+    function toast(msg) {
+        var t = document.getElementById('xpToast');
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(function () { t.classList.remove('show'); }, 2200);
+    }
+    function toggleMode() {
+        fetch('/api/holiday/toggle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ activate: <%= active ? 'false' : 'true' %> })
+        }).then(function () { window.location.reload(); });
+    }
+    function addGoal() {
+        var title = document.getElementById('goalTitle').value.trim();
+        if (!title) return;
+        fetch('/api/holiday/goals', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: title, goal_type: document.getElementById('goalType').value, target_value: 5 })
+        }).then(function () { window.location.reload(); });
+    }
+    function addProgress(id, delta) {
+        fetch('/api/holiday/goals/' + id + '/progress', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ delta: delta })
+        }).then(function (r) { return r.json(); }).then(function (d) {
+            if (d.success && d.xp_awarded) toast('+' + d.xp_awarded + ' XP — goal complete!');
+            setTimeout(function () { window.location.reload(); }, d.xp_awarded ? 900 : 0);
+        });
+    }
+    function deleteGoal(id) {
+        fetch('/api/holiday/goals/' + id + '/delete', { method: 'POST' }).then(function () { window.location.reload(); });
+    }
+</script>
+</body>
+</html>

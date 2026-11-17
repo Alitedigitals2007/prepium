@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node app.js",
     "check": "node --check app.js",
-    "test": "node --check app.js"
+    "migrate": "node scripts/migrate.js",
+    "test": "node --check app.js && node tests/run.js"
   },
   "keywords": [
     "education",

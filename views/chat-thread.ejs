@@ -267,7 +267,7 @@
         socket.on('call:offer', function (data) {
             if (!data || !data.offer) return;
             if (callState !== 'idle') {
-                socket.emit('call:end', { toUserId: data.fromUserId });
+                socket.emit('call:busy-signal', { toUserId: data.fromUserId, callType: data.callType });
                 return;
             }
             callPeer = data.fromUserId;
@@ -301,6 +301,21 @@
             if (wasLive && window.Swal) {
                 Swal.fire({ icon: 'info', title: 'Call ended', toast: true, position: 'top', timer: 1600, showConfirmButton: false });
             }
+        });
+        socket.on('call:decline', function (data) {
+            if (!data || (callPeer && data.fromUserId && data.fromUserId !== callPeer)) return;
+            resetCall();
+            if (window.Swal) Swal.fire({ icon: 'info', title: 'Call declined', text: (data.fromName || peerName || 'They') + ' declined your call.', confirmButtonColor: '#2563eb' });
+        });
+        socket.on('call:busy', function (data) {
+            if (!data || (callPeer && data.fromUserId && data.fromUserId !== callPeer)) return;
+            resetCall();
+            if (window.Swal) Swal.fire({ icon: 'info', title: 'Busy', text: (peerName || 'They') + ' is on another call. Try again later.', confirmButtonColor: '#2563eb' });
+        });
+        socket.on('call:unavailable', function (data) {
+            if (!data || (callPeer && data.toUserId && data.toUserId !== callPeer)) return;
+            resetCall();
+            if (window.Swal) Swal.fire({ icon: 'info', title: 'Not available', text: (peerName || 'They') + ' is offline right now. They will see a missed-call notification.', confirmButtonColor: '#2563eb' });
         });
     } catch (e) {}
 
@@ -673,7 +688,7 @@
 
     window.declineCall = function () {
         stopRing();
-        if (callPeer && socket) socket.emit('call:end', { toUserId: callPeer });
+        if (callPeer && socket) socket.emit('call:decline', { toUserId: callPeer, callType: callType });
         resetCall();
     };
 

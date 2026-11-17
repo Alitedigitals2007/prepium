@@ -203,16 +203,26 @@
                 <a href="/games" class="drawer-tile" data-name="Games Hub"><div class="at-icon c-purple"><i class="fas fa-gamepad"></i></div><span class="at-label">Games Hub</span></a>
                 <a href="/library" class="drawer-tile" data-name="Course Library"><div class="at-icon c-blue"><i class="fas fa-building-columns"></i></div><span class="at-label">Course Library</span></a>
                 <a href="/daily-challenge" class="drawer-tile" data-name="Daily Challenge"><div class="at-icon c-orange"><i class="fas fa-fire-alt"></i></div><span class="at-label">Daily Challenge</span></a>
+                <a href="/challenges" class="drawer-tile" data-name="Prepium Challenges"><div class="at-icon c-red"><i class="fas fa-medal"></i></div><span class="at-label">Challenges</span></a>
                 <a href="/history" class="drawer-tile" data-name="Quiz History"><div class="at-icon c-green"><i class="fas fa-clock-rotate-left"></i></div><span class="at-label">History</span></a>
             </div>
 
             <div class="drawer-group-label">Academics</div>
             <div class="drawer-grid">
                 <a href="/cgpa" class="drawer-tile <%= isPremium ? '' : 'locked' %>" data-name="CGPA Tracker"><div class="at-icon c-blue"><i class="fas fa-chart-line"></i></div><span class="at-label">CGPA Tracker</span><% if (!isPremium) { %><span class="at-lock"><i class="fas fa-lock"></i></span><% } %></a>
+                <a href="/insights" class="drawer-tile" data-name="Academic Insights"><div class="at-icon c-teal"><i class="fas fa-brain"></i></div><span class="at-label">Academic Insights</span></a>
                 <a href="/timetable" class="drawer-tile <%= isPremium ? '' : 'locked' %>" data-name="Timetable"><div class="at-icon c-amber"><i class="fas fa-calendar-alt"></i></div><span class="at-label">Timetable</span><% if (!isPremium) { %><span class="at-lock"><i class="fas fa-lock"></i></span><% } %></a>
                 <a href="/reading-timetable" class="drawer-tile <%= isPremium ? '' : 'locked' %>" data-name="Reading Plan"><div class="at-icon c-teal"><i class="fas fa-book-dropped"></i></div><span class="at-label">Reading Plan</span><% if (!isPremium) { %><span class="at-lock"><i class="fas fa-lock"></i></span><% } %></a>
                 <a href="/deadlines" class="drawer-tile <%= isPremium ? '' : 'locked' %>" data-name="Deadlines"><div class="at-icon c-red"><i class="fas fa-calendar-check"></i></div><span class="at-label">Deadlines</span><% if (!isPremium) { %><span class="at-lock"><i class="fas fa-lock"></i></span><% } %></a>
                 <a href="/daily-task" class="drawer-tile <%= isPremium ? '' : 'locked' %>" data-name="Daily Task"><div class="at-icon c-grad"><i class="fas fa-tasks"></i></div><span class="at-label">Daily Task</span><% if (!isPremium) { %><span class="at-lock"><i class="fas fa-lock"></i></span><% } %></a>
+            </div>
+
+            <div class="drawer-group-label">Grow</div>
+            <div class="drawer-grid">
+                <a href="/skills" class="drawer-tile" data-name="Skills Centre"><div class="at-icon c-green"><i class="fas fa-seedling"></i></div><span class="at-label">Skills Centre</span></a>
+                <a href="/opportunities" class="drawer-tile" data-name="Opportunities Centre"><div class="at-icon c-amber"><i class="fas fa-briefcase"></i></div><span class="at-label">Opportunities</span></a>
+                <a href="/wrapped" class="drawer-tile" data-name="Prepium Wrapped"><div class="at-icon c-pink"><i class="fas fa-gift"></i></div><span class="at-label">Wrapped</span></a>
+                <a href="/holiday" class="drawer-tile" data-name="Holiday Mode"><div class="at-icon c-orange"><i class="fas fa-umbrella-beach"></i></div><span class="at-label">Holiday Mode</span></a>
             </div>
 
             <div class="drawer-group-label">Community</div>

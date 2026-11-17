@@ -68,6 +68,10 @@ const rateLimitCleanup = setInterval(() => {
 }, 5 * 60 * 1000);
 if (rateLimitCleanup.unref) rateLimitCleanup.unref();
 
+// Helper for async routes: guarantees rejected handler promises reach the
+// central error handler (registered at the end of this file).
+const asyncRoute = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
@@ -82,6 +86,23 @@ const pool = new Pool({
 pool.on('error', (err) => {
     console.error('[DB] Pool error:', err.message);
 });
+
+// Shared, trusted calculation + XP modules (single source of truth).
+const cgpaLib = require('./lib/cgpa');
+const xpLib = require('./lib/xp');
+const { runMigrations } = require('./scripts/migrate');
+
+// Apply version-controlled migrations on boot (idempotent, tracked in
+// schema_migrations). Never throws — a failed migration is logged so the
+// app can still boot, but the failure is visible.
+(async () => {
+    try {
+        await runMigrations(pool);
+        console.log('[DB] Migrations up to date');
+    } catch (err) {
+        console.error('[DB] Migration error:', err.message);
+    }
+})();
 
 // Keep the (free-tier) database awake — Neon suspends after ~5 min idle,
 // and a cold start can exceed the connection timeout and kill requests.
@@ -1201,23 +1222,15 @@ app.get('/profile', isAuth, async (req, res) => {
 
         // Grade Value Points Map mapping scale logic seamlessly
         const scale = cgpaProfile ? parseInt(cgpaProfile.grading_scale) : 5;
-        const gradePointsMap = scale === 4 
-            ? { 'A': 4, 'B': 3, 'C': 2, 'D': 1, 'E': 0, 'F': 0 }
-            : { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1, 'F': 0 };
 
-        let totalUnits = cgpaProfile ? parseInt(cgpaProfile.prev_units) : 0;
-        let totalPoints = cgpaProfile ? parseFloat(cgpaProfile.prev_gp) : 0.00;
-
-        coursesRes.rows.forEach(course => {
-            const units = parseInt(course.credit_units) || 0;
-            const gradeLetter = (course.grade || 'F').toUpperCase();
-            const pointValue = gradePointsMap[gradeLetter] !== undefined ? gradePointsMap[gradeLetter] : 0;
-            
-            totalUnits += units;
-            totalPoints += (units * pointValue);
+        // Shared trusted calculation (lib/cgpa.js) — same values as the tracker
+        const cgpaStats = cgpaLib.computeCGPA({
+            scale,
+            prevUnits: cgpaProfile ? cgpaProfile.prev_units : 0,
+            prevPoints: cgpaProfile ? cgpaProfile.prev_gp : 0,
+            courses: coursesRes.rows
         });
-
-        const calculatedCGPA = totalUnits > 0 ? parseFloat((totalPoints / totalUnits).toFixed(2)) : 0.00;
+        const calculatedCGPA = cgpaStats.cgpaNumber;
 
         // 5. Get login streak data
         const streakRes = await pool.query('SELECT * FROM login_streaks WHERE user_id = $1', [userId]);
@@ -3945,6 +3958,11 @@ app.post('/api/submit-arena', isAuth, async (req, res) => {
             [userId, username, score]
         );
 
+        // Award XP through the shared traceable ledger (duplicate-proof).
+        try { await awardDailyChallengeXP(userId, attemptId, score, questions.length); } catch (e) {
+            console.error('[XP] daily challenge award:', e.message);
+        }
+
         res.json({ success: true, score });
     } catch (err) {
         console.error("ARENA_SUBMIT_ERROR:", err);
@@ -4683,56 +4701,14 @@ app.post('/upload-pdf', isAuth, requirePaid, rateLimit(10, 60000), uploadMemory.
 });
 
 function buildCGPA(profile, courses) {
-    const scale  = parseInt(profile.grading_scale) || 5;
-    const gpMap5 = { A: 5, B: 4, C: 3, D: 2, E: 1, F: 0 };
-    const gpMap4 = { A: 4, B: 3, C: 2, D: 1, E: 0, F: 0 };
-    const gpMap  = scale === 5 ? gpMap5 : gpMap4;
-
-    // Carry forward the balance-imported quality points
-    let totalUnits  = parseInt(profile.prev_units) || 0;
-    let totalPoints = parseFloat(profile.prev_gp)  || 0;
-
-    const gradeCounts = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
-
-    courses.forEach(c => {
-        const g = (c.grade || 'F').toUpperCase();
-        if (gradeCounts.hasOwnProperty(g)) gradeCounts[g]++;
-        // Only count visible courses
-        if (!c.is_hidden) {
-            const u  = parseInt(c.credit_units) || 0;
-            const pt = gpMap[g] !== undefined ? gpMap[g] : 0;
-            totalUnits  += u;
-            totalPoints += pt * u;
-        }
+    // Delegates to the shared, trusted calculation module (lib/cgpa.js) so the
+    // tracker, forecasts, AI context and transcripts always agree.
+    return cgpaLib.computeCGPA({
+        scale: profile.grading_scale,
+        prevUnits: profile.prev_units,
+        prevPoints: profile.prev_gp,
+        courses
     });
-
-    const cgpa = totalUnits > 0
-        ? parseFloat((totalPoints / totalUnits).toFixed(2))
-        : 0;
-
-    // Degree class
-    let degreeClass = 'Pass';
-    let divBadge    = 'none';
-    if (scale === 5) {
-        if      (cgpa >= 4.50) { degreeClass = 'First Class Honours';  divBadge = 'first'; }
-        else if (cgpa >= 3.50) { degreeClass = 'Second Class (Upper)'; divBadge = 'upper'; }
-        else if (cgpa >= 2.40) { degreeClass = 'Second Class (Lower)'; divBadge = 'lower'; }
-        else if (cgpa >= 1.50) { degreeClass = 'Third Class';          divBadge = 'third'; }
-        else if (cgpa >= 1.00) { degreeClass = 'Pass';                 divBadge = 'none';  }
-        else                   { degreeClass = 'Fail';                 divBadge = 'fail';  }
-    } else {
-        if      (cgpa >= 3.50) { degreeClass = 'First Class Honours';  divBadge = 'first'; }
-        else if (cgpa >= 3.00) { degreeClass = 'Second Class (Upper)'; divBadge = 'upper'; }
-        else if (cgpa >= 2.00) { degreeClass = 'Second Class (Lower)'; divBadge = 'lower'; }
-        else if (cgpa >= 1.50) { degreeClass = 'Third Class';          divBadge = 'third'; }
-        else if (cgpa >= 1.00) { degreeClass = 'Pass';                 divBadge = 'none';  }
-        else                   { degreeClass = 'Fail';                 divBadge = 'fail';  }
-    }
-
-    const arcPct    = Math.min(cgpa / scale, 1);
-    const arcOffset = parseFloat((251.2 * (1 - arcPct)).toFixed(1));
-
-    return { cgpa: cgpa.toFixed(2), totalUnits, totalPoints, degreeClass, divBadge, gradeCounts, arcOffset, scale };
 }
 
 // A. GET: DASHBOARD LOADER
@@ -6409,16 +6385,16 @@ app.post('/api/cgpa/forecast', isAuth, requirePaid, featureLock('cgpa'), async (
     const profile = await pool.query('SELECT * FROM public.cgpa_profiles WHERE user_id = $1', [uid]);
     if (!profile.rows[0]) return res.json({ error: 'No profile' });
     const p = profile.rows[0];
-    const scale = p.grading_scale || 5;
-    const gpMap = scale === 5 ? { A:5, B:4, C:3, D:2, E:1, F:0 } : { A:4, B:3, C:2, D:1, F:0 };
+    const scale = cgpaLib.normalizeScale(p.grading_scale);
+    const gpMap = cgpaLib.GP_MAPS[scale];
     const visible = await pool.query('SELECT * FROM public.cgpa_courses WHERE user_id = $1 AND deleted = false AND is_hidden = false', [uid]);
 
-    let curUnits = parseInt(p.prev_units) || 0;
-    let curPoints = parseFloat(p.prev_gp) || 0;
-    visible.rows.forEach(c => { const u = parseInt(c.credit_units)||0; curUnits += u; curPoints += (gpMap[c.grade]||0) * u; });
-    const currentCGPA = curUnits > 0 ? (curPoints / curUnits) : 0;
+    const base = cgpaLib.computeCGPA({ scale, prevUnits: p.prev_units, prevPoints: p.prev_gp, courses: visible.rows });
+    const curUnits = base.totalUnits;
+    const curPoints = base.totalPoints;
+    const currentCGPA = base.cgpaNumber;
 
-    // Generate what-if scenarios
+    // Generate what-if scenarios (grade improvements on weak courses)
     const scenarios = [];
     const grades = scale === 5 ? ['A','B','C','D','E','F'] : ['A','B','C','D','F'];
     const targetCourses = visible.rows.filter(c => c.grade === 'F' || c.grade === 'E' || c.grade === 'D');
@@ -6429,7 +6405,7 @@ app.post('/api/cgpa/forecast', isAuth, requirePaid, featureLock('cgpa'), async (
         let newUnits = curUnits;
         targetCourses.forEach(c => {
           const u = parseInt(c.credit_units)||0;
-          newPoints -= (gpMap[c.grade]||0) * u;
+          newPoints -= (cgpaLib.gradePoint(c.grade, scale)) * u;
           newPoints += (gpMap[g]||0) * u;
         });
         const newCGPA = newUnits > 0 ? (newPoints / newUnits) : 0;
@@ -6437,13 +6413,15 @@ app.post('/api/cgpa/forecast', isAuth, requirePaid, featureLock('cgpa'), async (
       }
     }
 
-    // What CGPA if add X new courses with all A's
+    // What CGPA if add X new courses with all A's (uses the same trusted math)
     const addScenarios = [];
     for (let extra of [3, 5, 10]) {
       const addUnits = extra * 3;
-      const addPoints = addUnits * (gpMap['A']||5);
-      const newCGPA = (curPoints + addPoints) / (curUnits + addUnits);
-      addScenarios.push({ courses: extra, units: addUnits, cgpa: newCGPA.toFixed(2) });
+      const forecast = cgpaLib.forecastCGPA({
+        scale, prevUnits: p.prev_units, prevPoints: p.prev_gp, courses: visible.rows,
+        extraCourses: Array.from({ length: extra }, () => ({ grade: 'A', credit_units: 3 }))
+      });
+      addScenarios.push({ courses: extra, units: addUnits, cgpa: forecast.cgpa });
     }
 
     // Target CGPA calculation
@@ -6471,6 +6449,7 @@ app.post('/api/cgpa/ai-predict', isAuth, requirePaid, featureLock('cgpa'), rateL
     if (courses.rows.length === 0) return res.json({ success: false, error: 'Log at least one course to get a prediction.' });
     const prompt = `You are an academic advisor. The student has the following academic profile on a ${p.grading_scale || 5}-point scale:
 Level: ${p.current_level || 'unknown'} ${p.department || ''}
+Authoritative current CGPA (calculated server-side, use as-is): ${cgpaLib.computeCGPA({ scale: p.grading_scale, prevUnits: p.prev_units, prevPoints: p.prev_gp, courses: courses.rows }).cgpa}
 Recent courses (code | title | units | grade | level-sem):
 ${courses.rows.map(c => '- ' + c.course_code + ' | ' + (c.title||'') + ' | ' + c.credit_units + 'u | ' + c.grade + ' | L' + c.level_scope + 'S' + c.semester).join('\n')}
 
@@ -6489,16 +6468,15 @@ app.post('/api/cgpa/ai-whatif', isAuth, requirePaid, featureLock('cgpa'), async 
     const profile = await pool.query('SELECT * FROM public.cgpa_profiles WHERE user_id = $1', [uid]);
     if (!profile.rows[0]) return res.json({ success: false, error: 'Set up your CGPA profile first.' });
     const p = profile.rows[0];
-    const scale = p.grading_scale || 5;
-    const gpMap = scale === 5 ? { A:5, B:4, C:3, D:2, E:1, F:0 } : { A:4, B:3, C:2, D:1, F:0 };
+    const scale = cgpaLib.normalizeScale(p.grading_scale);
     const courses = await pool.query("SELECT credit_units, grade FROM public.cgpa_courses WHERE user_id = $1 AND deleted = false AND is_hidden = false", [uid]);
-    let curUnits = parseInt(p.prev_units) || 0;
-    let curPoints = parseFloat(p.prev_gp) || 0;
-    courses.rows.forEach(c => { const u = parseInt(c.credit_units)||0; curUnits += u; curPoints += (gpMap[c.grade]||0) * u; });
-    const curCGPA = curUnits > 0 ? (curPoints / curUnits) : 0;
-    const addU = parseInt(units) || 0;
-    const addPts = (gpMap[String(anticipatedGrade).toUpperCase()] || 0) * addU;
-    const newCGPA = (curPoints + addPts) / (curUnits + addU);
+    const base = cgpaLib.computeCGPA({ scale, prevUnits: p.prev_units, prevPoints: p.prev_gp, courses: courses.rows });
+    const curCGPA = base.cgpaNumber;
+    const forecast = cgpaLib.forecastCGPA({
+        scale, prevUnits: p.prev_units, prevPoints: p.prev_gp, courses: courses.rows,
+        extraCourses: [{ grade: anticipatedGrade, credit_units: parseInt(units) || 0 }]
+    });
+    const newCGPA = forecast.cgpaNumber;
     const warn = newCGPA < curCGPA ? 'This would lower your CGPA. Consider aiming higher if possible.' : 'Good — this move improves your cumulative GPA.';
     const advicePrompt = `You are an academic advisor. The student asks: "If I take "${courseName}" (${addU} units) and aim for grade ${anticipatedGrade}, what's the impact?" Their current CGPA is ${curCGPA.toFixed(2)} / ${scale}. New CGPA would be ${newCGPA.toFixed(2)}. Give a 3-sentence plain-text answer about the impact and what to focus on to actually achieve ${anticipatedGrade}. No markdown, no asterisks.`;
     const aiRes = await studyPromptSmart(advicePrompt);
@@ -6516,30 +6494,32 @@ app.post('/api/cgpa/bulk-whatif', isAuth, requirePaid, featureLock('cgpa'), asyn
     const profile = await pool.query('SELECT * FROM public.cgpa_profiles WHERE user_id = $1', [uid]);
     if (!profile.rows[0]) return res.json({ success: false, error: 'Set up your CGPA profile first.' });
     const p = profile.rows[0];
-    const scale = p.grading_scale || 5;
-    const gpMap = scale === 5 ? { A:5, B:4, C:3, D:2, E:1, F:0 } : { A:4, B:3, C:2, D:1, F:0 };
+    const scale = cgpaLib.normalizeScale(p.grading_scale);
     const courses = await pool.query("SELECT credit_units, grade FROM public.cgpa_courses WHERE user_id = $1 AND deleted = false AND is_hidden = false", [uid]);
-    let curUnits = parseInt(p.prev_units) || 0;
-    let curPoints = parseFloat(p.prev_gp) || 0;
-    courses.rows.forEach(c => { const u = parseInt(c.credit_units)||0; curUnits += u; curPoints += (gpMap[c.grade]||0) * u; });
-    const curCGPA = curUnits > 0 ? (curPoints / curUnits) : 0;
-    let addUnits = 0, addPoints = 0;
+    const base = cgpaLib.computeCGPA({ scale, prevUnits: p.prev_units, prevPoints: p.prev_gp, courses: courses.rows });
+    const curCGPA = base.cgpaNumber;
+    let addUnits = 0;
     const detail = [];
+    const extraCourses = [];
     for (const c of whatifCourses) {
       const u = parseInt(c.units) || 3;
       const g = String(c.grade || 'A').toUpperCase();
       addUnits += u;
-      addPoints += (gpMap[g] || 0) * u;
+      extraCourses.push({ grade: g, credit_units: u });
       detail.push({ name: c.name || 'Course', units: u, grade: g });
     }
-    const newCGPA = (curPoints + addPoints) / (curUnits + addUnits);
+    const forecast = cgpaLib.forecastCGPA({
+      scale, prevUnits: p.prev_units, prevPoints: p.prev_gp, courses: courses.rows,
+      extraCourses
+    });
+    const newCGPA = forecast.cgpaNumber;
     res.json({
       success: true,
       currentCGPA: curCGPA.toFixed(2),
       newCGPA: newCGPA.toFixed(2),
       change: (newCGPA - curCGPA).toFixed(3),
-      totalUnits: curUnits,
-      newTotalUnits: curUnits + addUnits,
+      totalUnits: base.totalUnits,
+      newTotalUnits: forecast.totalUnits,
       detail
     });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
@@ -6557,7 +6537,15 @@ app.post('/api/cgpa/ai-chat', isAuth, requirePaid, featureLock('cgpa'), rateLimi
     let ctx = '';
     if (profile.rows[0]) {
       const p = profile.rows[0];
+      const trusted = cgpaLib.computeCGPA({
+        scale: p.grading_scale,
+        prevUnits: p.prev_units,
+        prevPoints: p.prev_gp,
+        courses: courses.rows
+      });
       ctx += 'Context: Student academic profile — current level ' + (p.current_level || 'unknown') + ', ' + (p.department || '') + ', scale ' + (p.grading_scale || 5) + '.\n';
+      // Trusted server-side calculation — the AI must quote this value, never invent one.
+      ctx += 'Authoritative current CGPA (calculated server-side): ' + trusted.cgpa + ' / ' + trusted.scale + ' (' + trusted.degreeClass + '). If asked for their CGPA, use exactly this value.\n';
     }
     if (courses.rows.length) {
       ctx += 'Recent courses (code | units | grade | lvl-sem):\n' + courses.rows.map(c => '- ' + c.course_code + ' | ' + c.credit_units + 'u | ' + c.grade + ' | L' + c.level_scope + 'S' + c.semester).join('\n') + '\n';
@@ -6580,29 +6568,17 @@ app.get('/api/cgpa/transcript', isAuth, requirePaid, featureLock('cgpa'), async 
     const user = await pool.query('SELECT fullname, email FROM users WHERE id = $1', [uid]);
     const profile = await pool.query('SELECT * FROM public.cgpa_profiles WHERE user_id = $1', [uid]);
     const courses = await pool.query('SELECT * FROM public.cgpa_courses WHERE user_id = $1 AND deleted = false ORDER BY level_scope ASC, semester ASC', [uid]);
-    const scale = profile.rows[0] ? (profile.rows[0].grading_scale || 5) : 5;
-    const gpMap = scale === 5 ? { A:5, B:4, C:3, D:2, E:1, F:0 } : { A:4, B:3, C:2, D:1, F:0 };
-    let totalUnits = parseInt(profile.rows[0]?.prev_units) || 0;
-    let totalPoints = parseFloat(profile.rows[0]?.prev_gp) || 0;
-    const semesterData = {};
-    courses.rows.forEach(c => {
-      const key = `L${c.level_scope} S${c.semester}`;
-      if (!semesterData[key]) semesterData[key] = { level: c.level_scope, semester: c.semester, courses: [], units: 0, points: 0 };
-      const u = parseInt(c.credit_units)||0;
-      const pts = (gpMap[c.grade]||0) * u;
-      if (!c.is_hidden) { semesterData[key].units += u; semesterData[key].points += pts; totalUnits += u; totalPoints += pts; }
-      semesterData[key].courses.push({ code: c.course_code, title: c.title, units: c.credit_units, grade: c.grade, excluded: c.is_hidden });
+    const scale = cgpaLib.normalizeScale(profile.rows[0] ? profile.rows[0].grading_scale : 5);
+    const breakdown = cgpaLib.buildSemesterBreakdown({
+      scale,
+      prevUnits: profile.rows[0]?.prev_units,
+      prevPoints: profile.rows[0]?.prev_gp,
+      courses: courses.rows
     });
-    const cgpa = totalUnits > 0 ? (totalPoints / totalUnits) : 0;
-    let degreeClass = '';
-    if (scale === 5) { if (cgpa >= 4.5) degreeClass = 'First Class Honours'; else if (cgpa >= 3.5) degreeClass = 'Second Class (Upper)'; else if (cgpa >= 2.4) degreeClass = 'Second Class (Lower)'; else if (cgpa >= 1.5) degreeClass = 'Third Class'; else degreeClass = 'Pass'; }
-    else { if (cgpa >= 3.5) degreeClass = 'First Class Honours'; else if (cgpa >= 3.0) degreeClass = 'Second Class (Upper)'; else if (cgpa >= 2.0) degreeClass = 'Second Class (Lower)'; else if (cgpa >= 1.5) degreeClass = 'Third Class'; else degreeClass = 'Pass'; }
+    const { semesters, totals, totalPassed } = breakdown;
+    const cgpa = totals.cgpaNumber;
+    const degreeClass = totals.degreeClass;
 
-    const semesters = Object.values(semesterData).sort((a,b) => a.level - b.level || a.semester - b.semester);
-    let totalPassed = 0;
-    semesters.forEach(s => {
-      s.courses.forEach(c => { if (c.grade !== 'F' && !c.excluded) totalPassed++; });
-    });
     const refNum = 'PPT/' + new Date().getFullYear() + '/' + String(uid).slice(-4) + '/' + String(Date.now()).slice(-6);
 
     res.json({
@@ -6611,7 +6587,7 @@ app.get('/api/cgpa/transcript', isAuth, requirePaid, featureLock('cgpa'), async 
       currentLevel: profile.rows[0]?.current_level || '',
       gradingScale: scale,
       semesters,
-      totalUnits, totalPassed, cgpa: cgpa.toFixed(2), degreeClass,
+      totalUnits: totals.totalUnits, totalPassed, cgpa: totals.cgpa, degreeClass,
       refNumber: refNum,
       generatedAt: new Date().toISOString()
     });
@@ -6625,24 +6601,16 @@ app.get('/api/cgpa/transcript/pdf', isAuth, requirePaid, async (req, res) => {
     const user = await pool.query('SELECT fullname, email FROM users WHERE id = $1', [uid]);
     const profile = await pool.query('SELECT * FROM public.cgpa_profiles WHERE user_id = $1', [uid]);
     const courses = await pool.query('SELECT * FROM public.cgpa_courses WHERE user_id = $1 AND deleted = false ORDER BY level_scope ASC, semester ASC', [uid]);
-    const scale = profile.rows[0] ? (profile.rows[0].grading_scale || 5) : 5;
-    const gpMap = scale === 5 ? { A:5, B:4, C:3, D:2, E:1, F:0 } : { A:4, B:3, C:2, D:1, F:0 };
-    let totalUnits = parseInt(profile.rows[0]?.prev_units) || 0;
-    let totalPoints = parseFloat(profile.rows[0]?.prev_gp) || 0;
-    const semesterData = {};
-    courses.rows.forEach(c => {
-      const key = `L${c.level_scope} S${c.semester}`;
-      if (!semesterData[key]) semesterData[key] = { level: c.level_scope, semester: c.semester, courses: [], units: 0, points: 0 };
-      const u = parseInt(c.credit_units)||0;
-      const pts = (gpMap[c.grade]||0) * u;
-      if (!c.is_hidden) { semesterData[key].units += u; semesterData[key].points += pts; totalUnits += u; totalPoints += pts; }
-      semesterData[key].courses.push({ code: c.course_code, title: c.title, units: c.credit_units, grade: c.grade, excluded: c.is_hidden });
+    const scale = cgpaLib.normalizeScale(profile.rows[0] ? profile.rows[0].grading_scale : 5);
+    const breakdown = cgpaLib.buildSemesterBreakdown({
+      scale,
+      prevUnits: profile.rows[0]?.prev_units,
+      prevPoints: profile.rows[0]?.prev_gp,
+      courses: courses.rows
     });
-    const cgpa = totalUnits > 0 ? (totalPoints / totalUnits) : 0;
-    let degreeClass = '';
-    if (scale === 5) { if (cgpa >= 4.5) degreeClass = 'First Class Honours'; else if (cgpa >= 3.5) degreeClass = 'Second Class (Upper)'; else if (cgpa >= 2.4) degreeClass = 'Second Class (Lower)'; else if (cgpa >= 1.5) degreeClass = 'Third Class'; else degreeClass = 'Pass'; }
-    else { if (cgpa >= 3.5) degreeClass = 'First Class Honours'; else if (cgpa >= 3.0) degreeClass = 'Second Class (Upper)'; else if (cgpa >= 2.0) degreeClass = 'Second Class (Lower)'; else if (cgpa >= 1.5) degreeClass = 'Third Class'; else degreeClass = 'Pass'; }
-    const semesters = Object.values(semesterData).sort((a,b) => a.level - b.level || a.semester - b.semester);
+    const semesters = breakdown.semesters;
+    const cgpa = breakdown.totals.cgpaNumber;
+    const degreeClass = breakdown.totals.degreeClass;
     const refNum = 'PPT/' + new Date().getFullYear() + '/' + String(uid).slice(-4) + '/' + String(Date.now()).slice(-6);
     const studentName = user.rows[0]?.fullname || 'Student';
     const dept = profile.rows[0]?.department || '';
@@ -6707,7 +6675,7 @@ app.get('/api/cgpa/transcript/pdf', isAuth, requirePaid, async (req, res) => {
     doc.fillColor('#dbeafe').font('Helvetica').fontSize(10).text('/ ' + scale + '.00', M + 22 + 122, heroTop + 50);
     doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(10);
     doc.text(degreeClass || 'Pass', M + W - 190, heroTop + 34, { width: 170, align: 'right', ellipsis: true });
-    doc.fillColor('#dbeafe').font('Helvetica').fontSize(7.5).text('TOTAL UNITS: ' + totalUnits + '    |    TOTAL POINTS: ' + totalPoints.toFixed(1), M + W - 190, heroTop + 54, { width: 170, align: 'right' });
+    doc.fillColor('#dbeafe').font('Helvetica').fontSize(7.5).text('TOTAL UNITS: ' + breakdown.totals.totalUnits + '    |    TOTAL POINTS: ' + breakdown.totals.totalPoints.toFixed(1), M + W - 190, heroTop + 54, { width: 170, align: 'right' });
 
     doc.y = heroTop + heroH + 20;
 
@@ -6857,20 +6825,10 @@ app.get('/api/cgpa/courses/export', isAuth, requirePaid, async (req, res) => {
 
 // ======================== END STUDY HUB ROUTES ========================
 
-// Global error handler - catches multer and other errors, returns JSON
-app.use((err, req, res, next) => {
-    console.error('Global error handler:', err);
-    if (err instanceof multer.MulterError) {
-        if (err.code === 'LIMIT_FILE_SIZE') {
-            return res.status(413).json({ success: false, message: 'File too large. Maximum size is 100MB.' });
-        }
-        return res.status(413).json({ success: false, message: err.message });
-    }
-    if (err.type === 'entity.too.large') {
-        return res.status(413).json({ success: false, message: 'File too large. Maximum size is 100MB.' });
-    }
-    res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
-});
+// NOTE: There is intentionally NO global error handler here. All errors —
+// including multer upload errors — flow to the single central error handler
+// registered at the very end of this file (after every route/middleware), so
+// errors from early and late routes are handled identically.
 
 const config = {
     maxDuration: 60,
@@ -8457,6 +8415,738 @@ app.get('/u/:id', isAuth, (req, res) => {
     res.render('profile-view', { user: req.session.user, profileId: parseInt(req.params.id, 10) || 0 });
 });
 
+// ======================== HOLIDAY MODE ========================
+// Students activate it manually; Prepium may recommend it when the academic
+// calendar supports it. Returning to academic mode never loses progress.
+app.get('/holiday', isAuth, asyncRoute(async (req, res) => {
+    const uid = req.session.user.id;
+    const [modeRes, goalsRes] = await Promise.all([
+        pool.query('SELECT * FROM holiday_mode WHERE user_id = $1', [uid]),
+        pool.query('SELECT * FROM holiday_goals WHERE user_id = $1 ORDER BY is_done ASC, created_at DESC', [uid])
+    ]);
+    const mode = modeRes.rows[0] || { is_active: false };
+    res.locals.seo.title = 'Prepium | Holiday Mode';
+    res.render('holiday', {
+        user: req.session.user,
+        active: !!mode.is_active,
+        activatedAt: mode.activated_at || null,
+        source: mode.source || 'manual',
+        goals: goalsRes.rows,
+        activeNav: 'holiday'
+    });
+}));
+
+app.post('/api/holiday/toggle', isAuth, asyncRoute(async (req, res) => {
+    const uid = req.session.user.id;
+    const activate = !!(req.body && req.body.activate);
+    const source = (req.body && req.body.source === 'recommended') ? 'recommended' : 'manual';
+    const r = await pool.query(`
+        INSERT INTO holiday_mode (user_id, is_active, activated_at, deactivated_at, source)
+        VALUES ($1, $2, CASE WHEN $2 THEN NOW() ELSE NULL END, CASE WHEN $2 THEN NULL ELSE NOW() END, $3)
+        ON CONFLICT (user_id) DO UPDATE SET
+            is_active = EXCLUDED.is_active,
+            activated_at = CASE WHEN EXCLUDED.is_active THEN NOW() ELSE holiday_mode.activated_at END,
+            deactivated_at = CASE WHEN EXCLUDED.is_active THEN holiday_mode.deactivated_at ELSE NOW() END,
+            source = EXCLUDED.source
+        RETURNING is_active`, [uid, activate, source]);
+    res.json({ success: true, active: r.rows[0].is_active });
+}));
+
+app.post('/api/holiday/goals', isAuth, asyncRoute(async (req, res) => {
+    const uid = req.session.user.id;
+    const types = ['revision', 'skills', 'projects', 'reading', 'challenges', 'opportunities', 'community'];
+    const { title, goal_type, target_value } = req.body || {};
+    if (!title || !String(title).trim()) return res.status(400).json({ success: false, error: 'Goal title is required.' });
+    if (!types.includes(goal_type)) return res.status(400).json({ success: false, error: 'Invalid goal type.' });
+    const tv = Math.max(1, Math.min(1000, parseInt(target_value, 10) || 1));
+    const r = await pool.query(
+        'INSERT INTO holiday_goals (user_id, goal_type, title, target_value) VALUES ($1, $2, $3, $4) RETURNING *',
+        [uid, goal_type, String(title).trim().slice(0, 200), tv]
+    );
+    res.json({ success: true, goal: r.rows[0] });
+}));
+
+app.post('/api/holiday/goals/:id/progress', isAuth, asyncRoute(async (req, res) => {
+    const uid = req.session.user.id;
+    const id = parseInt(req.params.id, 10);
+    const delta = Math.max(-100, Math.min(100, parseInt(req.body && req.body.delta, 10) || 0));
+    const g = await pool.query('SELECT * FROM holiday_goals WHERE id = $1 AND user_id = $2', [id, uid]);
+    if (!g.rows[0]) return res.status(404).json({ success: false, error: 'Goal not found.' });
+    const goal = g.rows[0];
+    const newValue = Math.max(0, Math.min(goal.target_value, (parseInt(goal.progress_value, 10) || 0) + delta));
+    const done = newValue >= goal.target_value;
+    let xpResult = { awarded: false };
+    if (done && !goal.is_done) {
+        xpResult = await xpLib.awardXP(pool, uid, 50, 'holiday_goal', 'goal_' + id, 'Holiday goal completed: ' + goal.title);
+    }
+    const u = await pool.query(
+        'UPDATE holiday_goals SET progress_value = $1, is_done = $2, completed_at = CASE WHEN $2 THEN COALESCE(completed_at, NOW()) ELSE NULL END WHERE id = $3 AND user_id = $4 RETURNING *',
+        [newValue, done, id, uid]
+    );
+    res.json({ success: true, goal: u.rows[0], xp_awarded: xpResult.awarded ? 50 : 0, xp_balance: xpResult.balance });
+}));
+
+app.post('/api/holiday/goals/:id/delete', isAuth, asyncRoute(async (req, res) => {
+    const uid = req.session.user.id;
+    await pool.query('DELETE FROM holiday_goals WHERE id = $1 AND user_id = $2', [parseInt(req.params.id, 10), uid]);
+    res.json({ success: true });
+}));
+
+// ======================== PERSONAL ACADEMIC INTELLIGENCE ========================
+// Deterministic, server-side analysis of the student's own academic activity.
+// Clearly distinguishes "not enough data" from "needs attention" and never
+// invents grades or results.
+function buildAcademicInsights(rows) {
+    const { cgpaRow, results, studyMinutes, streak } = rows;
+    const signals = [];
+    const dataSources = [];
+
+    // CGPA signal (only when the student maintains a CGPA profile)
+    if (cgpaRow && cgpaRow.totalUnits > 0) {
+        dataSources.push('cgpa');
+        const pct = Math.round((cgpaRow.cgpaNumber / cgpaRow.scale) * 100);
+        signals.push({
+            key: 'cgpa', title: 'Cumulative standing',
+            detail: `CGPA ${cgpaRow.cgpa} / ${cgpaRow.scale} (${cgpaRow.degreeClass})`,
+            status: pct >= 60 ? 'good' : (pct >= 45 ? 'watch' : 'attention')
+        });
+    }
+
+    // Quiz/assessment signal — needs at least 3 attempts before judging
+    if (results.length >= 3) {
+        dataSources.push('assessments');
+        const avg = results.reduce((s, r) => s + (r.total > 0 ? (r.score / r.total) : 0), 0) / results.length;
+        const weak = results.filter(r => r.total > 0 && (r.score / r.total) < 0.5);
+        const strong = results.filter(r => r.total > 0 && (r.score / r.total) >= 0.75);
+        signals.push({
+            key: 'assessments', title: 'Assessment performance',
+            detail: `Average ${Math.round(avg * 100)}% across ${results.length} attempts`,
+            status: avg >= 0.6 ? 'good' : (avg >= 0.45 ? 'watch' : 'attention')
+        });
+        if (weak.length >= 2) {
+            const bySubject = {};
+            weak.forEach(r => { const k = r.subject || 'General'; bySubject[k] = (bySubject[k] || 0) + 1; });
+            const weakest = Object.entries(bySubject).sort((a, b) => b[1] - a[1])[0][0];
+            signals.push({
+                key: 'weak_topics', title: 'Area needing attention',
+                detail: `${weak.length} low-scoring attempts — most often in ${weakest}. Prioritise revising it.`,
+                status: 'attention'
+            });
+        }
+        if (strong.length >= 2) {
+            const bySubject = {};
+            strong.forEach(r => { const k = r.subject || 'General'; bySubject[k] = (bySubject[k] || 0) + 1; });
+            const strongest = Object.entries(bySubject).sort((a, b) => b[1] - a[1])[0][0];
+            signals.push({
+                key: 'strong_topics', title: 'Topic strength',
+                detail: `Consistently strong in ${strongest} — keep it warm with spaced revision.`,
+                status: 'good'
+            });
+        }
+    }
+
+    // Study-time signal — needs at least 60 minutes total before judging
+    if (studyMinutes >= 60) {
+        dataSources.push('study_time');
+        const daily = studyMinutes / 14; // last 14 days
+        signals.push({
+            key: 'study_time', title: 'Study consistency',
+            detail: `${studyMinutes} minutes studied in the last 14 days (~${Math.round(daily)} min/day)`,
+            status: daily >= 30 ? 'good' : (daily >= 10 ? 'watch' : 'attention')
+        });
+    } else if (studyMinutes > 0) {
+        dataSources.push('study_time');
+    }
+
+    // Streak signal
+    if (streak >= 3) {
+        dataSources.push('streak');
+        signals.push({
+            key: 'streak', title: 'Momentum',
+            detail: `${streak}-day login streak — consistency compounds.`,
+            status: 'good'
+        });
+    }
+
+    const enoughData = dataSources.length >= 2;
+    const recommendations = [];
+    if (!enoughData) {
+        recommendations.push('Prepium needs more academic activity before it can identify strengths and gaps. Take a few quizzes, log study sessions and keep your CGPA record updated — insights appear automatically, and insufficient data is never reported as poor performance.');
+    } else {
+        if (signals.some(s => s.key === 'weak_topics')) recommendations.push('Schedule focused revision for your weakest subject this week — short daily blocks beat one long cram.');
+        if (signals.some(s => s.key === 'study_time' && s.status !== 'good')) recommendations.push('Increase study consistency: aim for at least 30 minutes on most days.');
+        if (signals.some(s => s.key === 'assessments' && s.status === 'attention')) recommendations.push('Re-attempt practice quizzes on low-scoring topics and review the explanations for every wrong answer.');
+        if (signals.some(s => s.key === 'cgpa' && s.status !== 'good')) recommendations.push('Use the CGPA what-if builder to see exactly which grades would lift your standing.');
+        if (recommendations.length === 0) recommendations.push('You are on a solid track. Keep your routine and add one stretch goal this week — a new Skills Centre path is a good start.');
+    }
+
+    return { enoughData, dataSources, signals, recommendations };
+}
+
+app.get('/insights', isAuth, asyncRoute(async (req, res) => {
+    const uid = req.session.user.id;
+    const [profileRes, resultsRes, studyRes, streakRes, planRes] = await Promise.all([
+        pool.query('SELECT grading_scale, prev_units, prev_gp FROM public.cgpa_profiles WHERE user_id = $1', [uid]),
+        pool.query(`
+            SELECT subject, score, total_questions FROM (
+                SELECT s.name AS subject, r.score, r.total_questions, r.taken_at AS at FROM results r LEFT JOIN subjects s ON r.subject_id = s.id WHERE r.user_id = $1
+                UNION ALL
+                SELECT COALESCE(s2.name, q.title, 'Practice') AS subject, q.score, q.total_questions, q.created_at AS at FROM quiz_results q LEFT JOIN subjects s2 ON q.subject_id = s2.id WHERE q.user_id = $1
+            ) combined ORDER BY at DESC LIMIT 30`, [uid]),
+        pool.query(`SELECT COALESCE(SUM(elapsed_seconds), 0) AS secs FROM study_sessions WHERE user_id = $1 AND status = 'completed' AND created_at > NOW() - INTERVAL '14 days'`, [uid]),
+        pool.query('SELECT current_streak FROM login_streaks WHERE user_id = $1', [uid]),
+        pool.query('SELECT * FROM study_plans WHERE user_id = $1 ORDER BY updated_at DESC LIMIT 1', [uid])
+    ]);
+
+    const cgpaRow = profileRes.rows[0]
+        ? cgpaLib.computeCGPA({
+            scale: profileRes.rows[0].grading_scale,
+            prevUnits: profileRes.rows[0].prev_units,
+            prevPoints: profileRes.rows[0].prev_gp,
+            courses: []
+          })
+        : null;
+
+    const insights = buildAcademicInsights({
+        cgpaRow,
+        results: resultsRes.rows,
+        studyMinutes: Math.round(parseInt(studyRes.rows[0].secs, 10) / 60),
+        streak: parseInt(streakRes.rows[0]?.current_streak, 10) || 0
+    });
+
+    res.locals.seo.title = 'Prepium | Academic Insights';
+    res.render('insights', {
+        user: req.session.user,
+        insights,
+        plan: planRes.rows[0] || null,
+        activeNav: 'insights'
+    });
+}));
+
+// Editable daily/weekly study plans (recommendations are suggestions; the
+// student can edit everything).
+app.post('/api/insights/plan', isAuth, asyncRoute(async (req, res) => {
+    const uid = req.session.user.id;
+    const period = (req.body && req.body.period_type === 'daily') ? 'daily' : 'weekly';
+    let items = Array.isArray(req.body && req.body.items) ? req.body.items : [];
+    items = items.slice(0, 20).map(it => ({
+        title: String(it && it.title || '').trim().slice(0, 160),
+        done: !!(it && it.done)
+    })).filter(it => it.title);
+    const existing = await pool.query('SELECT id FROM study_plans WHERE user_id = $1 ORDER BY updated_at DESC LIMIT 1', [uid]);
+    let plan;
+    if (existing.rows[0]) {
+        plan = await pool.query(
+            'UPDATE study_plans SET title = $1, period_type = $2, items = $3, updated_at = NOW() WHERE id = $4 RETURNING *',
+            [(req.body && req.body.title) || 'My study plan', period, JSON.stringify(items), existing.rows[0].id]
+        );
+    } else {
+        plan = await pool.query(
+            'INSERT INTO study_plans (user_id, title, period_type, items) VALUES ($1, $2, $3, $4) RETURNING *',
+            [uid, (req.body && req.body.title) || 'My study plan', period, JSON.stringify(items)]
+        );
+    }
+    res.json({ success: true, plan: plan.rows[0] });
+}));
+
+// ======================== PREPIUM WRAPPED ========================
+// Weekly / semester / annual learning summaries with shareable cards and
+// privacy controls. CGPA and private academic data are NEVER auto-exposed.
+async function buildWrapped(uid, periodType) {
+    let sinceSql, label;
+    if (periodType === 'weekly') { sinceSql = "NOW() - INTERVAL '7 days'"; label = 'This Week'; }
+    else if (periodType === 'semester') { sinceSql = "NOW() - INTERVAL '4 months'"; label = 'This Semester'; }
+    else { sinceSql = "NOW() - INTERVAL '1 year'"; label = 'This Year'; }
+
+    const [quizzesRes, studyRes, gamesRes, xpRes, streakRes, lessonsRes] = await Promise.all([
+        pool.query(`SELECT COUNT(*) AS c FROM (
+            SELECT 1 FROM results WHERE user_id = $1 AND taken_at >= ${sinceSql}
+            UNION ALL SELECT 1 FROM quiz_results WHERE user_id = $1 AND created_at >= ${sinceSql}
+            UNION ALL SELECT 1 FROM daily_challenge_attempts WHERE user_id = $1 AND created_at >= ${sinceSql} AND completed = true
+        ) q`, [uid]),
+        pool.query(`SELECT COALESCE(SUM(elapsed_seconds), 0) AS secs, COUNT(*) AS sessions FROM study_sessions WHERE user_id = $1 AND status = 'completed' AND created_at >= ${sinceSql}`, [uid]),
+        pool.query(`SELECT COUNT(*) AS plays, COALESCE(SUM(CASE WHEN outcome = 'win' THEN 1 ELSE 0 END), 0) AS wins FROM game_results WHERE user_id = $1 AND created_at >= ${sinceSql}`, [uid]),
+        pool.query(`SELECT COALESCE(SUM(amount), 0) AS total FROM xp_ledger WHERE user_id = $1 AND created_at >= ${sinceSql}`, [uid]),
+        pool.query('SELECT current_streak, longest_streak FROM login_streaks WHERE user_id = $1', [uid]),
+        pool.query(`SELECT COUNT(*) AS c FROM skill_progress WHERE user_id = $1 AND completed_at >= ${sinceSql}`, [uid])
+    ]);
+
+    // Top subjects by attempts (verified activity only)
+    const topRes = await pool.query(`
+        SELECT subject, COUNT(*) AS c, ROUND(AVG(pct) * 100) AS avg_pct FROM (
+            SELECT s.name AS subject, (r.score::float / NULLIF(r.total_questions, 0)) AS pct
+            FROM results r LEFT JOIN subjects s ON r.subject_id = s.id
+            WHERE r.user_id = $1 AND r.taken_at >= ${sinceSql} AND r.total_questions > 0
+            UNION ALL
+            SELECT COALESCE(s2.name, q.title, 'Practice') AS subject, (q.score::float / NULLIF(q.total_questions, 0)) AS pct
+            FROM quiz_results q LEFT JOIN subjects s2 ON q.subject_id = s2.id
+            WHERE q.user_id = $1 AND q.created_at >= ${sinceSql} AND q.total_questions > 0
+        ) t GROUP BY subject ORDER BY c DESC LIMIT 5`, [uid]);
+
+    return {
+        period: periodType,
+        label,
+        quizzes: parseInt(quizzesRes.rows[0].c, 10) || 0,
+        studyMinutes: Math.round(parseInt(studyRes.rows[0].secs, 10) / 60),
+        studySessions: parseInt(studyRes.rows[0].sessions, 10) || 0,
+        gamesPlayed: parseInt(gamesRes.rows[0].plays, 10) || 0,
+        gamesWon: parseInt(gamesRes.rows[0].wins, 10) || 0,
+        xpEarned: parseInt(xpRes.rows[0].total, 10) || 0,
+        streak: parseInt(streakRes.rows[0]?.current_streak, 10) || 0,
+        longestStreak: parseInt(streakRes.rows[0]?.longest_streak, 10) || 0,
+        lessonsCompleted: parseInt(lessonsRes.rows[0].c, 10) || 0,
+        topSubjects: topRes.rows.map(r => ({ subject: r.subject, attempts: parseInt(r.c, 10), avg: parseInt(r.avg_pct, 10) || 0 }))
+    };
+}
+
+app.get('/wrapped', isAuth, asyncRoute(async (req, res) => {
+    const uid = req.session.user.id;
+    const periodType = ['weekly', 'semester', 'annual'].includes(req.query.period) ? req.query.period : 'weekly';
+    const summary = await buildWrapped(uid, periodType);
+    const shares = await pool.query('SELECT id, share_token, period_type, is_public, show_cgpa, created_at FROM wrapped_shares WHERE user_id = $1 ORDER BY created_at DESC LIMIT 10', [uid]);
+    res.locals.seo.title = 'Prepium | Wrapped';
+    res.render('wrapped', {
+        user: req.session.user,
+        summary,
+        shares: shares.rows,
+        activeNav: 'wrapped'
+    });
+}));
+
+app.post('/api/wrapped/share', isAuth, asyncRoute(async (req, res) => {
+    const uid = req.session.user.id;
+    const periodType = ['weekly', 'semester', 'annual'].includes(req.body && req.body.period) ? req.body.period : 'weekly';
+    const summary = await buildWrapped(uid, periodType);
+    // Privacy controls: the share payload only ever contains verified
+    // activity counts. CGPA is included ONLY if the student explicitly opts in.
+    const showCgpa = !!(req.body && req.body.show_cgpa);
+    let cgpa = null;
+    if (showCgpa) {
+        const p = await pool.query('SELECT grading_scale, prev_units, prev_gp FROM public.cgpa_profiles WHERE user_id = $1', [uid]);
+        if (p.rows[0]) {
+            const t = cgpaLib.computeCGPA({ scale: p.rows[0].grading_scale, prevUnits: p.rows[0].prev_units, prevPoints: p.rows[0].prev_gp, courses: [] });
+            if (t.totalUnits > 0) cgpa = { cgpa: t.cgpa, scale: t.scale, degreeClass: t.degreeClass };
+        }
+    }
+    const payload = { ...summary, cgpa };
+    const token = crypto.randomBytes(24).toString('hex');
+    const r = await pool.query(
+        'INSERT INTO wrapped_shares (user_id, share_token, period_type, payload, is_public, show_cgpa) VALUES ($1, $2, $3, $4, true, $5) RETURNING share_token',
+        [uid, token, periodType, JSON.stringify(payload), showCgpa]
+    );
+    res.json({ success: true, token: r.rows[0].share_token, url: '/wrapped/' + r.rows[0].share_token });
+}));
+
+app.post('/api/wrapped/share/:token/visibility', isAuth, asyncRoute(async (req, res) => {
+    const uid = req.session.user.id;
+    const isPublic = !!(req.body && req.body.is_public);
+    const r = await pool.query('UPDATE wrapped_shares SET is_public = $1 WHERE share_token = $2 AND user_id = $3 RETURNING share_token, is_public',
+        [isPublic, req.params.token, uid]);
+    if (!r.rows[0]) return res.status(404).json({ success: false, error: 'Share not found.' });
+    res.json({ success: true, is_public: r.rows[0].is_public });
+}));
+
+app.get('/wrapped/:token', asyncRoute(async (req, res) => {
+    const r = await pool.query('SELECT * FROM wrapped_shares WHERE share_token = $1 AND is_public = true', [req.params.token]);
+    if (!r.rows[0]) return res.status(404).render('public-form-notfound', { user: null });
+    const owner = await pool.query('SELECT fullname FROM users WHERE id = $1', [r.rows[0].user_id]);
+    res.locals.seo.title = 'Prepium | Wrapped';
+    res.render('wrapped-card', {
+        user: req.session.user || null,
+        payload: r.rows[0].payload,
+        ownerName: owner.rows[0] ? owner.rows[0].fullname : 'A student',
+        periodType: r.rows[0].period_type
+    });
+}));
+
+// ======================== SKILLS CENTRE ========================
+const SKILL_SEED = [
+    { slug: 'programming', title: 'Programming Foundations', icon: 'fa-code', tone: 'blue', description: 'Think like a programmer: variables, logic, functions and problem solving.', lessons: [
+        { title: 'What is programming?', summary: 'How instructions become software.', content: 'Programming is writing precise instructions a computer can execute. Start by breaking problems into small steps (input → process → output). Every language shares these building blocks: variables store data, conditionals make decisions, loops repeat work, and functions package reusable logic. Practice: write the steps for making jollof rice as pseudocode — you are already programming.', est: 20, resource: 'https://www.freecodecamp.org/learn/', resourceLabel: 'freeCodeCamp curriculum' },
+        { title: 'Variables & data types', summary: 'Numbers, strings, booleans and why types matter.', content: 'A variable is a labelled box for a value. Common types: numbers (age = 20), strings ("Prepium"), booleans (true/false) and lists. Strong typing prevents bugs: "5" + 3 can be "53" or 8 depending on the language — always know your types. Practice: create variables for your name, level and CGPA target, then print a sentence using them.', est: 25, resource: 'https://javascript.info/variables', resourceLabel: 'JavaScript.info — Variables' },
+        { title: 'Conditionals & loops', summary: 'Make decisions and repeat work efficiently.', content: 'Conditionals (if/else) let code choose paths: if score >= 50 then "Pass" else "Retake". Loops repeat work: for-loops when you know the count, while-loops when you do not. Combine them to grade 100 students automatically. Practice: write a loop that prints 1–20 but replaces multiples of 3 with "Prep".', est: 30, resource: 'https://javascript.info/while-for', resourceLabel: 'JavaScript.info — Loops' },
+        { title: 'Functions & problem decomposition', summary: 'Break big problems into small named steps.', content: 'A function takes inputs, does work, and returns an output. Decomposition — splitting a big problem into small functions — is the core engineering skill. Write calculateGPA(courses) once and reuse it everywhere instead of copy-pasting logic. Practice: write a function that takes a score and returns the Nigerian letter grade.', est: 30, resource: 'https://javascript.info/function-basics', resourceLabel: 'JavaScript.info — Functions' },
+        { title: 'Mini project: CGPA calculator', summary: 'Apply everything in one small build.', content: 'Build a console program that asks for course codes, units and grades, then prints the CGPA and class of degree. Use variables for storage, a loop for input, conditionals for the degree class, and one function per responsibility. This mirrors exactly how the Prepium CGPA tracker works internally.', est: 60, resource: '', resourceLabel: '' }
+    ]},
+    { slug: 'web-development', title: 'Web Development', icon: 'fa-laptop-code', tone: 'green', description: 'Build real websites: HTML, CSS, JavaScript and deployment.', lessons: [
+        { title: 'HTML: the skeleton', summary: 'Structure content with semantic tags.', content: 'HTML describes structure: headings (h1–h6), paragraphs, lists, links, images and forms. Semantic tags (header, nav, main, footer) describe meaning, which helps accessibility and SEO. Every Prepium page you use is HTML underneath. Practice: write a profile card for yourself with a photo, name, department and a list of skills.', est: 25, resource: 'https://developer.mozilla.org/en-US/docs/Learn/HTML', resourceLabel: 'MDN — Learn HTML' },
+        { title: 'CSS: the skin', summary: 'Style, layout, flexbox and responsive design.', content: 'CSS controls appearance: colours, fonts, spacing and layout. The box model wraps every element (content → padding → border → margin). Flexbox aligns items in rows/columns; media queries adapt layouts to phone screens — essential since most Prepium students browse on phones. Practice: style your profile card with a gradient header and centred layout.', est: 35, resource: 'https://developer.mozilla.org/en-US/docs/Learn/CSS', resourceLabel: 'MDN — Learn CSS' },
+        { title: 'JavaScript: the brain', summary: 'Interactivity, events and DOM manipulation.', content: 'JavaScript makes pages respond: click handlers, form validation, live updates. The DOM is the page as a tree of objects you can read and change: document.querySelector(".btn").addEventListener("click", ...). Practice: add a button to your card that toggles dark mode.', est: 40, resource: 'https://javascript.info/document', resourceLabel: 'JavaScript.info — DOM' },
+        { title: 'Mini project: personal portfolio', summary: 'Ship a one-page site about yourself.', content: 'Combine HTML, CSS and JS into a portfolio: hero section, skills grid, contact form with validation. Deploy it free on GitHub Pages or Netlify. A live link is stronger than a certificate — share it in your Prepium profile and with recruiters.', est: 90, resource: 'https://pages.github.com/', resourceLabel: 'GitHub Pages guide' }
+    ]},
+    { slug: 'ui-ux', title: 'UI/UX Design', icon: 'fa-pencil-ruler', tone: 'purple', description: 'Design interfaces people love: research, wireframes, prototypes.', lessons: [
+        { title: 'UX fundamentals', summary: 'Users, goals, journeys and friction.', content: 'UX is how a product works; UI is how it looks. Start with user goals: a student opening Prepium wants today\u2019s task in one tap. Map the journey, remove every unnecessary step, and make the next action obvious. Good UX is invisible — frustration is the only thing users notice. Practice: list 5 friction points in an app you use daily and propose fixes.', est: 25, resource: 'https://www.nngroup.com/articles/ux-basics/', resourceLabel: 'NN Group — UX Basics' },
+        { title: 'Visual hierarchy & layout', summary: 'Guide the eye with size, contrast and spacing.', content: 'Users scan, not read. Establish hierarchy: one primary action per screen, larger/contrastier for what matters first, generous whitespace to group related items. Use a consistent 8px spacing scale and at most 2 font families. Practice: redesign a cluttered screen by ranking its elements and demoting the bottom half.', est: 30, resource: '', resourceLabel: '' },
+        { title: 'Wireframing & prototyping', summary: 'Sketch fast, test early, iterate cheaply.', content: 'Wireframes are low-fidelity sketches of layout; prototypes link screens to simulate flow. Test with 5 real users — most usability problems surface by the fifth person. Fix the biggest issue, retest, repeat. Practice: wireframe a "holiday study planner" screen on paper, then test it with two coursemates.', est: 40, resource: 'https://www.figma.com/resource-library/design-basics/', resourceLabel: 'Figma — Design basics' },
+        { title: 'Mini project: redesign a Prepium screen', summary: 'Apply the full process to a real screen.', content: 'Pick any Prepium screen. Document the current flow, identify 3 problems, sketch alternatives, build a clickable Figma prototype and write a short rationale. This becomes a portfolio piece that demonstrates process, not just pixels.', est: 90, resource: '', resourceLabel: '' }
+    ]},
+    { slug: 'graphic-design', title: 'Graphic Design', icon: 'fa-palette', tone: 'orange', description: 'Colour, typography, layout and brand-quality flyers.', lessons: [
+        { title: 'Design principles', summary: 'Balance, contrast, alignment, repetition, proximity.', content: 'Strong design is principles applied deliberately: contrast makes headlines pop, alignment creates order, proximity groups related items, repetition builds identity. Break a rule only when you can say why. Practice: find two flyers — one effective, one messy — and annotate which principles each follows or breaks.', est: 25, resource: '', resourceLabel: '' },
+        { title: 'Colour & typography', summary: 'Palettes with purpose; fonts that speak.', content: 'Use a limited palette: one dominant, one accent, neutrals for the rest. Check contrast for readability (WCAG). Pair fonts carefully — a display font for headlines, a clean sans for body; never two decorative fonts. Practice: build a 5-colour palette for a campus event and justify each choice.', est: 30, resource: 'https://fonts.google.com/', resourceLabel: 'Google Fonts' },
+        { title: 'Tools of the trade', summary: 'Canva, Figma and Photopea workflows.', content: 'Canva templates teach layout fast; Figma gives precise control; Photopea is a free Photoshop alternative in the browser. Learn layers, masks and export settings (PNG for graphics, SVG for logos, PDF for print). Practice: recreate a movie poster layout using only free assets.', est: 35, resource: 'https://www.photopea.com/', resourceLabel: 'Photopea' },
+        { title: 'Mini project: event flyer set', summary: 'Design a complete flyer + status-size variant.', content: 'Design a flyer for a fictional campus event: strong hierarchy (event name → date/venue → CTA), consistent palette, readable type at phone size. Then adapt it to a 9:16 story format. Deliver both — real clients always need multiple sizes.', est: 60, resource: '', resourceLabel: '' }
+    ]},
+    { slug: 'digital-marketing', title: 'Digital Marketing', icon: 'fa-bullhorn', tone: 'red', description: 'Grow audiences: content, social, analytics and funnels.', lessons: [
+        { title: 'Marketing fundamentals', summary: 'Audience, value proposition and channels.', content: 'Marketing starts with a clear answer to: who is this for, what problem does it solve, and why you over alternatives? Define one target audience narrowly (e.g. "200L engineering students preparing for finals"), craft the message for them, then pick channels they actually use. Practice: write a one-sentence value proposition for a product you love.', est: 25, resource: '', resourceLabel: '' },
+        { title: 'Content & social media', summary: 'Posts that earn attention and action.', content: 'Content marketing earns attention by being useful or entertaining before asking for anything. Hooks in the first line, one idea per post, a clear call to action. Consistency beats virality: 3 good posts weekly for 3 months outperforms one lucky hit. Practice: draft a 7-post series teaching one study skill.', est: 30, resource: '', resourceLabel: '' },
+        { title: 'Analytics & iteration', summary: 'Measure what matters, then improve.', content: 'Track reach (who saw), engagement (who cared: likes, saves, replies) and conversion (who acted: signups, sales). One metric per campaign — the number that decides success. Review weekly, keep what works, cut what does not. Practice: audit a public account\u2019s last 10 posts and identify its best-performing pattern.', est: 30, resource: '', resourceLabel: '' },
+        { title: 'Mini project: 2-week campaign', summary: 'Plan, run and measure a real campaign.', content: 'Pick a goal (grow a WhatsApp group, sell a service, promote an event). Define audience, message, channel and one success metric. Post on schedule for two weeks, log numbers every 3 days, and write a short report: what worked, what flopped, what you would change. This is interview-ready experience.', est: 90, resource: '', resourceLabel: '' }
+    ]},
+    { slug: 'entrepreneurship', title: 'Entrepreneurship', icon: 'fa-lightbulb', tone: 'amber', description: 'From idea to income: validation, money and small business basics.', lessons: [
+        { title: 'Finding real problems', summary: 'Ideas are cheap; validated problems are gold.', content: 'Great businesses solve painful, frequent problems people already pay to fix. Interview 10 potential customers about their workflow before building anything. If they say "that would be nice", keep looking; if they show you their workaround spreadsheet, you have found gold. Practice: list 5 daily frustrations on campus and interview 3 people about one.', est: 30, resource: '', resourceLabel: '' },
+        { title: 'Validating cheaply', summary: 'Test demand before building the full thing.', content: 'Run the smallest possible test: a landing page with a signup button, a WhatsApp pre-order list, a manual service you deliver by hand. The goal is evidence of demand — real money or real commitments — not compliments. Practice: design a one-week validation test for your best idea with a clear success threshold.', est: 30, resource: '', resourceLabel: '' },
+        { title: 'Money basics for founders', summary: 'Pricing, costs, margins and break-even.', content: 'Know your unit economics: what one sale costs you (COGS) versus what you charge. Gross margin = (price − cost) / price. Break-even units = fixed costs / margin per unit. Price on value, not just cost — and always keep records from day one. Practice: price a product you could sell on campus and compute your break-even.', est: 35, resource: '', resourceLabel: '' },
+        { title: 'Mini project: one-page business plan', summary: 'A plan that fits one page and drives action.', content: 'Write: problem, customer, solution, channel, revenue model, costs, first milestone and first experiment. Show it to two experienced people and refine. A plan you can update weekly beats a 40-page document nobody reads.', est: 60, resource: '', resourceLabel: '' }
+    ]},
+    { slug: 'public-speaking', title: 'Public Speaking', icon: 'fa-microphone', tone: 'teal', description: 'Speak with confidence: structure, delivery and handling nerves.', lessons: [
+        { title: 'Structuring a talk', summary: 'Open strong, one core message, close with action.', content: 'Every effective talk has: a hook (question, story, startling fact), a clear single message, 2–3 supporting points with examples, and a close that tells the audience what to do. Write the close first — if you do not know where you are going, no structure will save you. Practice: outline a 3-minute talk on any topic you know well.', est: 25, resource: '', resourceLabel: '' },
+        { title: 'Delivery: voice & body', summary: 'Pace, pauses, posture and eye contact.', content: 'Nervous speakers rush. Slow down 20%, use deliberate pauses after key points, and land eye contact with individuals for full sentences. Gesture from the elbow, keep feet planted. Record yourself once — the gap between how you feel and how you look is smaller than you fear. Practice: record a 60-second intro and watch it back.', est: 30, resource: '', resourceLabel: '' },
+        { title: 'Handling nerves & Q&A', summary: 'Reframe anxiety; buy thinking time gracefully.', content: 'Nerves are energy — channel them into emphasis. Prepare the first 30 seconds word-for-word. For tough questions: pause, restate the question ("So the question is..."), answer in one sentence, then expand. "I do not know, but I will find out" is a strong answer. Practice: have a friend ask 3 hard questions about your talk.', est: 25, resource: '', resourceLabel: '' },
+        { title: 'Mini project: 5-minute recorded talk', summary: 'Deliver, review, refine, redeliver.', content: 'Prepare and record a 5-minute talk on something you care about. Watch it once noting only what to improve, adjust, and record again. Compare takes — the second will surprise you. Share the final version for feedback.', est: 60, resource: '', resourceLabel: '' }
+    ]},
+    { slug: 'research-writing', title: 'Research & Writing', icon: 'fa-pen-fancy', tone: 'indigo', description: 'Academic writing, sources, citations and clear arguments.', lessons: [
+        { title: 'The research process', summary: 'Question → sources → evidence → synthesis.', content: 'Start with a narrow, answerable question. Gather sources from Google Scholar and your library databases, prioritising peer-reviewed work. Read abstracts first, take notes in your own words (prevents plagiarism), and track every source as you go — retroactive citation hunting wastes days. Practice: turn a broad topic ("AI in education") into a researchable question.', est: 30, resource: 'https://scholar.google.com/', resourceLabel: 'Google Scholar' },
+        { title: 'Argument structure', summary: 'Claim, evidence, reasoning — repeat.', content: 'Strong academic paragraphs follow PEEL: Point, Evidence, Explanation, Link. Your claim is only as good as its evidence, and your explanation is where you add value — do not let quotations speak for themselves. Practice: rewrite a weak paragraph ("Many students fail exams") with a claim, a statistic and reasoning.', est: 30, resource: '', resourceLabel: '' },
+        { title: 'Citations & academic integrity', summary: 'APA style and why plagiarism ends careers.', content: 'Cite every idea that is not yours, including paraphrases. APA format: (Author, Year) in text; full reference list alphabetically at the end. Use reference managers — Zotero is free. Plagiarism can void your degree; when unsure, over-cite. Practice: convert three facts you learned this week into proper APA citations.', est: 30, resource: 'https://www.zotero.org/', resourceLabel: 'Zotero' },
+        { title: 'Mini project: 1000-word mini paper', summary: 'A complete short paper with real sources.', content: 'Write a 1000-word paper answering your research question: intro with thesis, 3 PEEL body sections, conclusion with limitations. Include at least 5 credible sources in APA. Edit twice: once for structure, once for sentence-level clarity.', est: 90, resource: '', resourceLabel: '' }
+    ]},
+    { slug: 'video-editing', title: 'Video Editing', icon: 'fa-film', tone: 'rose', description: 'Cut, pace and polish videos people finish watching.', lessons: [
+        { title: 'Editing fundamentals', summary: 'Cuts, pacing and the story spine.', content: 'Editing is storytelling: every cut should have a reason (new idea, new angle, emphasis). Learn J-cuts and L-cuts (audio leads or trails video) for smooth flow. Pace to attention — cut anything that does not advance the story; when in doubt, cut it. Practice: edit a 60-second vlog from raw phone clips.', est: 35, resource: '', resourceLabel: '' },
+        { title: 'Tools: CapCut to Premiere', summary: 'Pick the right tool for each stage.', content: 'CapCut (free, phone) handles social content end-to-end; DaVinci Resolve (free, desktop) is professional-grade colour and editing; Premiere Pro is the industry standard. Learn one deeply before adding another — skills transfer. Practice: build the same 30-second edit in two tools and note the differences.', est: 30, resource: 'https://www.blackmagicdesign.com/products/davinciresolve', resourceLabel: 'DaVinci Resolve (free)' },
+        { title: 'Sound & colour', summary: 'Audio is half the video; colour is the mood.', content: 'Viewers forgive mediocre visuals, never bad audio: normalise levels, cut hums, add music at -20dB under dialogue. Colour grade for consistency first (white balance), mood second (teal-orange is a cliché for a reason). Practice: fix the audio on a noisy clip, then apply one consistent LUT across three clips.', est: 40, resource: '', resourceLabel: '' },
+        { title: 'Mini project: 90-second story', summary: 'A complete short with music, grade and titles.', content: 'Produce a 90-second piece: plan shots, film on your phone (stabilise, light the subject), edit with intentional cuts, mix audio, grade, add minimal titles. Export at the right specs for your target platform. This is your showreel opener.', est: 90, resource: '', resourceLabel: '' }
+    ]}
+];
+
+(async function seedSkillPaths() {
+    try {
+        for (let i = 0; i < SKILL_SEED.length; i++) {
+            const p = SKILL_SEED[i];
+            const r = await pool.query(
+                `INSERT INTO skill_paths (slug, title, description, icon, tone, sort_order)
+                 VALUES ($1, $2, $3, $4, $5, $6)
+                 ON CONFLICT (slug) DO UPDATE SET title = EXCLUDED.title, description = EXCLUDED.description, icon = EXCLUDED.icon, tone = EXCLUDED.tone, sort_order = EXCLUDED.sort_order
+                 RETURNING id`,
+                [p.slug, p.title, p.description, p.icon, p.tone, i]
+            );
+            const pathId = r.rows[0].id;
+            for (let j = 0; j < p.lessons.length; j++) {
+                const l = p.lessons[j];
+                await pool.query(
+                    `INSERT INTO skill_lessons (path_id, title, summary, content, resource_url, resource_label, est_minutes, sort_order)
+                     SELECT $1, $2, $3, $4, $5, $6, $7, $8
+                     WHERE NOT EXISTS (SELECT 1 FROM skill_lessons WHERE path_id = $1 AND title = $2)`,
+                    [pathId, l.title, l.summary, l.content, l.resource || '', l.resourceLabel || '', l.est || 20, j]
+                );
+            }
+        }
+        console.log('[Skills] Paths seeded');
+    } catch (e) { console.error('[Skills] Seed:', e.message); }
+})();
+
+app.get('/skills', isAuth, asyncRoute(async (req, res) => {
+    const uid = req.session.user.id;
+    const paths = await pool.query(`
+        SELECT p.*,
+            (SELECT COUNT(*) FROM skill_lessons l WHERE l.path_id = p.id) AS lesson_count,
+            (SELECT COUNT(*) FROM skill_progress sp JOIN skill_lessons l2 ON sp.lesson_id = l2.id WHERE l2.path_id = p.id AND sp.user_id = $1) AS done_count,
+            (SELECT COUNT(*) FROM skill_enrollments e WHERE e.path_id = p.id AND e.user_id = $1) > 0 AS enrolled
+        FROM skill_paths p ORDER BY p.sort_order ASC`, [uid]);
+    res.locals.seo.title = 'Prepium | Skills Centre';
+    res.render('skills', { user: req.session.user, paths: paths.rows, activeNav: 'skills' });
+}));
+
+app.get('/skills/:slug', isAuth, asyncRoute(async (req, res) => {
+    const uid = req.session.user.id;
+    const pathRes = await pool.query('SELECT * FROM skill_paths WHERE slug = $1', [req.params.slug]);
+    if (!pathRes.rows[0]) return res.status(404).render('public-form-notfound', { user: req.session.user });
+    const skillPath = pathRes.rows[0];
+    await pool.query('INSERT INTO skill_enrollments (user_id, path_id) VALUES ($1, $2) ON CONFLICT (user_id, path_id) DO NOTHING', [uid, skillPath.id]);
+    const [lessonsRes, doneRes, projectsRes] = await Promise.all([
+        pool.query('SELECT * FROM skill_lessons WHERE path_id = $1 ORDER BY sort_order ASC', [skillPath.id]),
+        pool.query('SELECT lesson_id FROM skill_progress WHERE user_id = $1', [uid]),
+        pool.query('SELECT * FROM skill_projects WHERE user_id = $1 AND path_id = $2 ORDER BY created_at DESC', [uid, skillPath.id])
+    ]);
+    const doneIds = new Set(doneRes.rows.map(r => r.lesson_id));
+    const lessons = lessonsRes.rows.map(l => ({ ...l, done: doneIds.has(l.id) }));
+    res.locals.seo.title = 'Prepium | ' + skillPath.title;
+    res.render('skill-path', {
+        user: req.session.user,
+        skillPath,
+        lessons,
+        projects: projectsRes.rows,
+        activeNav: 'skills'
+    });
+}));
+
+app.post('/api/skills/:slug/lessons/:lessonId/complete', isAuth, asyncRoute(async (req, res) => {
+    const uid = req.session.user.id;
+    const lesson = await pool.query(
+        'SELECT l.id, l.title, p.slug FROM skill_lessons l JOIN skill_paths p ON l.path_id = p.id WHERE l.id = $1 AND p.slug = $2',
+        [parseInt(req.params.lessonId, 10), req.params.slug]
+    );
+    if (!lesson.rows[0]) return res.status(404).json({ success: false, error: 'Lesson not found.' });
+    const ins = await pool.query(
+        'INSERT INTO skill_progress (user_id, lesson_id) VALUES ($1, $2) ON CONFLICT (user_id, lesson_id) DO NOTHING RETURNING id',
+        [uid, lesson.rows[0].id]
+    );
+    let xpResult = { awarded: false };
+    if (ins.rows[0]) {
+        xpResult = await xpLib.awardXP(pool, uid, 15, 'skill_lesson', 'lesson_' + lesson.rows[0].id, 'Completed lesson: ' + lesson.rows[0].title);
+    }
+    res.json({ success: true, xp_awarded: xpResult.awarded ? 15 : 0, xp_balance: xpResult.balance });
+}));
+
+app.post('/api/skills/:slug/projects', isAuth, asyncRoute(async (req, res) => {
+    const uid = req.session.user.id;
+    const title = String((req.body && req.body.title) || '').trim().slice(0, 200);
+    const notes = String((req.body && req.body.notes) || '').slice(0, 2000);
+    if (!title) return res.status(400).json({ success: false, error: 'Project title is required.' });
+    const p = await pool.query('SELECT id FROM skill_paths WHERE slug = $1', [req.params.slug]);
+    if (!p.rows[0]) return res.status(404).json({ success: false, error: 'Path not found.' });
+    // Submitting a project marks it done; lesson completion alone never
+    // implies mastery — the project is the practical evidence.
+    const r = await pool.query(
+        "INSERT INTO skill_projects (user_id, path_id, title, notes, status, submitted_at) VALUES ($1, $2, $3, $4, 'submitted', NOW()) RETURNING *",
+        [uid, p.rows[0].id, title, notes]
+    );
+    const xpResult = await xpLib.awardXP(pool, uid, 100, 'skill_project', 'project_' + r.rows[0].id, 'Submitted project: ' + title);
+    res.json({ success: true, project: r.rows[0], xp_awarded: xpResult.awarded ? 100 : 0, xp_balance: xpResult.balance });
+}));
+
+// ======================== PREPIUM CHALLENGES ========================
+// Extends the existing Daily Challenge + Games systems — not a separate
+// platform. Progress is computed from verified activity in existing tables,
+// and XP rewards flow through the shared ledger (no duplicates possible).
+function challengeProgressSql(metric) {
+    if (metric === 'study_minutes') return `SELECT COALESCE(SUM(elapsed_seconds), 0) / 60 FROM study_sessions WHERE user_id = $1 AND status = 'completed' AND created_at >= $2`;
+    if (metric === 'xp') return `SELECT COALESCE(SUM(amount), 0) FROM xp_ledger WHERE user_id = $1 AND created_at >= $2`;
+    if (metric === 'challenge_score') return `SELECT COALESCE(SUM(score), 0) FROM daily_challenge_attempts WHERE user_id = $1 AND completed = true AND created_at >= $2`;
+    return `SELECT (
+        SELECT COUNT(*) FROM results WHERE user_id = $1 AND taken_at >= $2
+      ) + (
+        SELECT COUNT(*) FROM quiz_results WHERE user_id = $1 AND created_at >= $2
+      ) + (
+        SELECT COUNT(*) FROM daily_challenge_attempts WHERE user_id = $1 AND completed = true AND created_at >= $2
+      ) + (
+        SELECT COUNT(*) FROM game_results WHERE user_id = $1 AND created_at >= $2
+      )`;
+}
+
+async function getActiveChallenges(uid) {
+    const defs = await pool.query('SELECT * FROM challenge_defs WHERE is_active = true ORDER BY id ASC');
+    const out = [];
+    for (const d of defs.rows) {
+        const since = d.starts_at || new Date(0);
+        const progressRes = await pool.query(challengeProgressSql(d.metric) + ' AS progress', [uid, since]);
+        const progress = parseInt(progressRes.rows[0].progress, 10) || 0;
+        const part = await pool.query('SELECT * FROM challenge_participants WHERE challenge_id = $1 AND user_id = $2', [d.id, uid]);
+        const joined = !!part.rows[0];
+        const target = parseInt(d.target, 10) || 1;
+        const alreadyCompleted = joined && part.rows[0].completed_at;
+        // Auto-complete + award XP exactly once (ledger unique index guards it)
+        if (joined && !alreadyCompleted && progress >= target) {
+            await pool.query('UPDATE challenge_participants SET progress = $1, completed_at = NOW() WHERE challenge_id = $2 AND user_id = $3', [progress, d.id, uid]);
+            await xpLib.awardXP(pool, uid, parseInt(d.xp_reward, 10) || 100, 'challenge', 'challenge_' + d.id + '_user_' + uid, 'Completed challenge: ' + d.title);
+        } else if (joined) {
+            await pool.query('UPDATE challenge_participants SET progress = $1 WHERE challenge_id = $2 AND user_id = $3 AND completed_at IS NULL', [Math.min(progress, target), d.id, uid]);
+        }
+        // Leaderboard within scope: rank the student against relevant peers
+        // (friends / squad-mates / same department / same university).
+        let leaders = [{ name: 'You', progress: Math.min(progress, target), is_me: true }];
+        if (d.scope !== 'individual') {
+            try {
+                let peerIds = [];
+                if (d.scope === 'friends') {
+                    const r = await pool.query(
+                        `SELECT CASE WHEN user_id = $1 THEN friend_id ELSE user_id END AS id
+                         FROM friendships WHERE (user_id = $1 OR friend_id = $1) AND status = 'accepted'`, [uid]);
+                    peerIds = r.rows.map(x => x.id);
+                } else if (d.scope === 'squad') {
+                    const r = await pool.query(
+                        `SELECT DISTINCT sm2.user_id AS id
+                         FROM squad_members sm1
+                         JOIN squad_members sm2 ON sm1.squad_id = sm2.squad_id
+                         WHERE sm1.user_id = $1 AND sm2.user_id <> $1`, [uid]);
+                    peerIds = r.rows.map(x => x.id);
+                } else if (d.scope === 'department') {
+                    // Department is tracked on cgpa_profiles, not users.
+                    const r = await pool.query(
+                        `SELECT p2.user_id AS id FROM cgpa_profiles p1
+                         JOIN cgpa_profiles p2 ON p2.department = p1.department
+                         WHERE p1.user_id = $1 AND p2.user_id <> $1 LIMIT 50`, [uid]);
+                    peerIds = r.rows.map(x => x.id);
+                } else { // faculty — grouped by university (closest tracked scope)
+                    const r = await pool.query(
+                        'SELECT id FROM users WHERE university_id = (SELECT university_id FROM users WHERE id = $1) AND id <> $1 LIMIT 50', [uid]);
+                    peerIds = r.rows.map(x => x.id);
+                }
+                peerIds = peerIds.slice(0, 50);
+                const peerRows = [];
+                for (const pid of peerIds) {
+                    const pr = await pool.query(challengeProgressSql(d.metric) + ' AS progress', [pid, since]);
+                    const pv = Math.min(parseInt(pr.rows[0].progress, 10) || 0, target);
+                    if (pv > 0) peerRows.push({ progress: pv, id: pid });
+                }
+                peerRows.sort((a, b) => b.progress - a.progress);
+                const topPeers = peerRows.slice(0, 4);
+                if (topPeers.length) {
+                    const names = await pool.query('SELECT id, fullname FROM users WHERE id = ANY($1)', [topPeers.map(p => p.id)]);
+                    const nameMap = {};
+                    names.rows.forEach(n => { nameMap[n.id] = n.fullname.split(' ')[0]; });
+                    leaders = topPeers.map(p => ({ name: nameMap[p.id] || 'Student', progress: p.progress, is_me: false }))
+                        .concat([{ name: 'You', progress: Math.min(progress, target), is_me: true }])
+                        .sort((a, b) => b.progress - a.progress);
+                }
+            } catch (e) { console.error('[Challenges] leaderboard:', e.message); }
+        }
+        out.push({
+            ...d,
+            joined,
+            progress: Math.min(progress, target),
+            completed: !!(joined && (alreadyCompleted || progress >= target)),
+            pct: Math.min(100, Math.round((progress / target) * 100)),
+            leaders
+        });
+    }
+    return out;
+}
+
+app.get('/challenges', isAuth, asyncRoute(async (req, res) => {
+    const uid = req.session.user.id;
+    const challenges = await getActiveChallenges(uid);
+    const [todayRes, xpRes] = await Promise.all([
+        pool.query('SELECT id FROM daily_challenge_attempts WHERE user_id = $1 AND date = CURRENT_DATE AND completed = true', [uid]),
+        pool.query('SELECT COALESCE(xp, 0) AS xp FROM users WHERE id = $1', [uid])
+    ]);
+    res.locals.seo.title = 'Prepium | Challenges';
+    res.render('challenges', {
+        user: req.session.user,
+        challenges,
+        dailyDone: todayRes.rows.length > 0,
+        xp: parseInt(xpRes.rows[0].xp, 10) || 0,
+        activeNav: 'challenges'
+    });
+}));
+
+app.post('/api/challenges/:id/join', isAuth, asyncRoute(async (req, res) => {
+    const uid = req.session.user.id;
+    const d = await pool.query('SELECT * FROM challenge_defs WHERE id = $1 AND is_active = true', [parseInt(req.params.id, 10)]);
+    if (!d.rows[0]) return res.status(404).json({ success: false, error: 'Challenge not found.' });
+    await pool.query('INSERT INTO challenge_participants (challenge_id, user_id) VALUES ($1, $2) ON CONFLICT (challenge_id, user_id) DO NOTHING', [d.rows[0].id, uid]);
+    res.json({ success: true });
+}));
+
+(async function seedChallenges() {
+    try {
+        const seeds = [
+            { slug: 'weekly-quiz-5', title: 'Weekly Warm-up', description: 'Complete 5 quizzes or challenges this week.', cadence: 'weekly', scope: 'individual', metric: 'quizzes', target: 5, xp_reward: 150 },
+            { slug: 'weekly-study-120', title: 'Deep Work Week', description: 'Log 120 minutes of focused study this week.', cadence: 'weekly', scope: 'individual', metric: 'study_minutes', target: 120, xp_reward: 150 },
+            { slug: '30day-xp-1000', title: '30-Day Momentum', description: 'Earn 1000 XP in 30 days across all activities.', cadence: '30day', scope: 'individual', metric: 'xp', target: 1000, xp_reward: 500 },
+            { slug: '7day-challenge-score', title: 'Challenge Streak', description: 'Score 30 total points in Daily Challenges within 7 days.', cadence: '7day', scope: 'friends', metric: 'challenge_score', target: 30, xp_reward: 200 },
+            { slug: 'seasonal-faculty-50', title: 'Faculty Showdown', description: 'Be among the top in your faculty: 50 quizzes this season.', cadence: 'seasonal', scope: 'faculty', metric: 'quizzes', target: 50, xp_reward: 800 }
+        ];
+        for (const s of seeds) {
+            await pool.query(
+                `INSERT INTO challenge_defs (slug, title, description, cadence, scope, metric, target, xp_reward, starts_at, ends_at)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8, DATE_TRUNC('week', NOW()), DATE_TRUNC('week', NOW()) + INTERVAL '7 days')
+                 ON CONFLICT (slug) DO UPDATE SET title = EXCLUDED.title, description = EXCLUDED.description, is_active = true`,
+                [s.slug, s.title, s.description, s.cadence, s.scope, s.metric, s.target, s.xp_reward]
+            );
+        }
+        console.log('[Challenges] Seeded');
+    } catch (e) { console.error('[Challenges] Seed:', e.message); }
+})();
+
+// Daily Challenge completion now awards XP through the shared ledger.
+// (Hooked into the existing submit route below via awardDailyChallengeXP.)
+async function awardDailyChallengeXP(uid, attemptId, score, total) {
+    if (!total || total <= 0) return;
+    const pct = score / total;
+    const amount = pct >= 0.8 ? 60 : pct >= 0.5 ? 40 : 20;
+    return xpLib.awardXP(pool, uid, amount, 'daily_challenge', 'attempt_' + attemptId, 'Daily Challenge: ' + score + '/' + total);
+}
+
+// ======================== OPPORTUNITIES CENTRE ========================
+const OPP_CATEGORIES = ['scholarship', 'bursary', 'internship', 'fellowship', 'competition', 'hackathon', 'graduate', 'volunteering', 'leadership'];
+const OPP_STATUSES = ['saved', 'applied', 'submitted', 'rejected', 'accepted'];
+
+app.get('/opportunities', isAuth, asyncRoute(async (req, res) => {
+    const uid = req.session.user.id;
+    const category = OPP_CATEGORIES.includes(req.query.category) ? req.query.category : null;
+    const [opsRes, savesRes] = await Promise.all([
+        pool.query(
+            category
+                ? 'SELECT * FROM opportunities WHERE is_active = true AND category = $1 ORDER BY (closing_date IS NULL), closing_date ASC, created_at DESC'
+                : 'SELECT * FROM opportunities WHERE is_active = true ORDER BY (closing_date IS NULL), closing_date ASC, created_at DESC',
+            category ? [category] : []
+        ),
+        pool.query('SELECT opportunity_id, status, reminder_at, note FROM opportunity_saves WHERE user_id = $1', [uid])
+    ]);
+    const saveMap = {};
+    savesRes.rows.forEach(s => { saveMap[s.opportunity_id] = s; });
+    const today = new Date().toISOString().slice(0, 10);
+    const ops = opsRes.rows.map(o => ({
+        ...o,
+        save: saveMap[o.id] || null,
+        // Expired or unverified opportunities are never presented as confirmed
+        expired: o.closing_date && o.closing_date < today
+    }));
+    res.locals.seo.title = 'Prepium | Opportunities';
+    res.render('opportunities', {
+        user: req.session.user,
+        ops,
+        categories: OPP_CATEGORIES,
+        activeCategory: category,
+        activeNav: 'opportunities'
+    });
+}));
+
+app.post('/api/opportunities/:id/save', isAuth, asyncRoute(async (req, res) => {
+    const uid = req.session.user.id;
+    const id = parseInt(req.params.id, 10);
+    const status = OPP_STATUSES.includes(req.body && req.body.status) ? req.body.status : 'saved';
+    const reminderAt = (req.body && req.body.reminder_at) ? new Date(req.body.reminder_at) : null;
+    const r = await pool.query(`
+        INSERT INTO opportunity_saves (user_id, opportunity_id, status, reminder_at, note)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (user_id, opportunity_id) DO UPDATE SET
+            status = EXCLUDED.status, reminder_at = EXCLUDED.reminder_at, note = EXCLUDED.note, updated_at = NOW()
+        RETURNING *`,
+        [uid, id, status, reminderAt && !isNaN(reminderAt) ? reminderAt : null, String((req.body && req.body.note) || '').slice(0, 1000)]);
+    res.json({ success: true, save: r.rows[0] });
+}));
+
+app.post('/api/opportunities/:id/unsave', isAuth, asyncRoute(async (req, res) => {
+    const uid = req.session.user.id;
+    await pool.query('DELETE FROM opportunity_saves WHERE user_id = $1 AND opportunity_id = $2', [uid, parseInt(req.params.id, 10)]);
+    res.json({ success: true });
+}));
+
+(async function seedOpportunities() {
+    try {
+        const existing = await pool.query('SELECT COUNT(*) AS c FROM opportunities');
+        if (parseInt(existing.rows[0].c, 10) > 0) return;
+        const year = new Date().getFullYear();
+        const seeds = [
+            { title: 'NNPC/SNEPCo National University Scholarship', category: 'scholarship', organisation: 'NNPC & SNEPCo', description: 'Annual scholarship for full-time Nigerian university undergraduates in relevant disciplines. Covers tuition and stipend.', eligibility: 'Full-time 200L undergraduates with strong grades; specific courses apply.', verification_status: 'unverified' },
+            { title: 'MTN Foundation Scholarship Scheme', category: 'scholarship', organisation: 'MTN Foundation', description: 'Scholarship for high-performing students in public universities and polytechnics.', eligibility: '300L students with CGPA 3.5+/5.0 or equivalent; must not hold another scholarship.', verification_status: 'unverified' },
+            { title: 'Federal Government BEA Scholarship', category: 'scholarship', organisation: 'Federal Ministry of Education', description: 'Bilateral Education Agreement awards for undergraduate study abroad.', eligibility: 'At least 5 distinctions in WAEC/NECO including Mathematics and English.', verification_status: 'unverified' },
+            { title: 'Google Developer Student Clubs Lead', category: 'leadership', organisation: 'Google', description: 'Lead a campus community of peer developers, run workshops and build projects with Google support.', eligibility: 'Enrolled university student; leadership experience helps.', verification_status: 'unverified' },
+            { title: 'She Code Africa Mentorship Program', category: 'fellowship', organisation: 'She Code Africa', description: 'Structured mentorship in tech for African women across coding, design and data tracks.', eligibility: 'Women in African universities; all levels.', verification_status: 'unverified' },
+            { title: 'Hult Prize On-Campus Program', category: 'competition', organisation: 'Hult Prize Foundation', description: 'World\u2019s largest student startup competition with $1M grand prize and campus rounds.', eligibility: 'Teams of university students.', verification_status: 'unverified' },
+            { title: 'Industrial Training Fund (ITF) SIWES Placement', category: 'internship', organisation: 'ITF', description: 'Mandatory industrial training placement for science, engineering and allied students.', eligibility: 'Students enrolled in courses requiring SIWES.', verification_status: 'unverified' }
+        ];
+        for (const s of seeds) {
+            await pool.query(
+                'INSERT INTO opportunities (title, category, organisation, description, eligibility, source_url, closing_date, verification_status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+                [s.title, s.category, s.organisation, s.description, s.eligibility, s.source_url || '', null, s.verification_status]
+            );
+        }
+        console.log('[Opportunities] Seeded');
+    } catch (e) { console.error('[Opportunities] Seed:', e.message); }
+})();
+
 app.get('/status', isAuth, (req, res) => {
     res.locals.seo.title = 'Prepium | Community';
     res.render('chat', { user: req.session.user, initialTab: 'status' });
@@ -8516,14 +9206,43 @@ app.use((req, res) => {
     res.status(404).type('text/plain').send('Not found');
 });
 
-// Central error handler (must be the last middleware)
+// ======================== CENTRAL ERROR HANDLER ========================
+// Single, intentional global error-handling flow. This MUST be the last
+// middleware registered: every route/middleware above it (early or late)
+// forwards errors here via next(err), including:
+//   - multer upload errors (file size / count limits, bad multipart)
+//   - body-parser "entity.too.large" (payload limit)
+//   - async route errors (async handlers are wrapped by asyncRoute below)
+//   - unexpected exceptions thrown synchronously in handlers
+// API routes receive consistent JSON; page routes receive a safe HTML/text
+// response. Diagnostics are logged server-side only — no stack traces or
+// internals are exposed to students.
 app.use((err, req, res, next) => {
-    console.error('Unhandled error:', err);
+    // Log full diagnostics server-side (message + stack), never to the client.
+    console.error('[Error]', req.method, req.originalUrl, '-', err && err.stack ? err.stack : err);
+
     if (res.headersSent) return next(err);
-    if (req.path.startsWith('/api/')) {
-        return res.status(500).json({ success: false, error: 'Something went wrong. Please try again later.' });
+
+    // Multer upload errors -> 413/400 with a safe message
+    if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(413).json({ success: false, message: 'File too large. Maximum size is 25MB.' });
+        }
+        return res.status(400).json({ success: false, message: 'Upload error: ' + err.message });
     }
-    res.status(500).send('Something went wrong. Please try again later.');
+
+    // Body-parser payload limit -> 413 with a safe message
+    if (err && (err.type === 'entity.too.large' || err.statusCode === 413)) {
+        return res.status(413).json({ success: false, message: 'File too large. Maximum size is 25MB.' });
+    }
+
+    // Errors that already carry an intended HTTP status (e.g. session store)
+    const status = (err && err.status >= 400 && err.status <= 599) ? err.status : 500;
+
+    if (req.path.startsWith('/api/')) {
+        return res.status(status).json({ success: false, error: 'Something went wrong. Please try again later.' });
+    }
+    res.status(status).send('Something went wrong. Please try again later.');
 });
 
 const httpServer = http.createServer(app);
@@ -8552,6 +9271,34 @@ try {
             });
         } catch (e) { next(new Error('unauthorized')); }
     });
+
+    // ---- Call state tracking (accurate busy/ended states + history) ----
+    // Maps userId -> peerId while a call is being set up or is active.
+    const activeCalls = new Map();
+    const callStarts = new Map(); // userId -> timestamp when call connected
+    function clearActiveCall(a, b) {
+        const startedAt = callStarts.get(a) || callStarts.get(b);
+        callStarts.delete(a); callStarts.delete(b);
+        if (activeCalls.get(a) === b) activeCalls.delete(a);
+        if (activeCalls.get(b) === a) activeCalls.delete(b);
+        const dur = startedAt ? Math.round((Date.now() - startedAt) / 1000) : 0;
+        return dur;
+    }
+    async function recordCall(callerId, calleeId, callType, status, startedAt, durationSeconds) {
+        await pool.query(
+            'INSERT INTO call_history (caller_id, callee_id, call_type, status, started_at, ended_at, duration_seconds) VALUES ($1, $2, $3, $4, $5, CASE WHEN $4 = \'ended\' THEN NOW() ELSE NULL END, $6)',
+            [callerId, calleeId, callType === 'video' ? 'video' : 'audio', status, startedAt, parseInt(durationSeconds, 10) || 0]
+        );
+    }
+    async function notifyMissedCall(callerId, calleeId, callType) {
+        const u = await pool.query('SELECT fullname FROM users WHERE id = $1', [callerId]);
+        const name = u.rows[0] ? u.rows[0].fullname : 'Someone';
+        await pool.query(
+            'INSERT INTO user_notifications (user_id, type, title, body, link) VALUES ($1, $2, $3, $4, $5)',
+            [calleeId, 'call', 'Missed call', name + ' tried to call you (' + (callType === 'video' ? 'video' : 'audio') + ') but you were offline.', '/chat']
+        );
+    }
+
     io.on('connection', (socket) => {
         const uid = socket.userId;
         socket.join('user_' + uid);
@@ -8581,6 +9328,23 @@ try {
                 const toUserId = parseInt(data && data.toUserId, 10);
                 if (!toUserId || !data.offer) return;
                 if (!(await areFriends(uid, toUserId))) return;
+                // Accurate call states: never pretend a call is ringing when the
+                // recipient is offline or already busy on another call.
+                const recipientRoom = io.sockets.adapter.rooms.get('user_' + toUserId);
+                const online = !!(recipientRoom && recipientRoom.size > 0);
+                if (!online) {
+                    socket.emit('call:unavailable', { toUserId: toUserId, reason: 'offline' });
+                    await recordCall(uid, toUserId, data.callType, 'missed', null, 0).catch(() => {});
+                    await notifyMissedCall(uid, toUserId, data.callType).catch(() => {});
+                    return;
+                }
+                if (activeCalls.has(toUserId)) {
+                    socket.emit('call:busy', { toUserId: toUserId });
+                    await recordCall(uid, toUserId, data.callType, 'busy', null, 0).catch(() => {});
+                    return;
+                }
+                activeCalls.set(uid, toUserId);
+                activeCalls.set(toUserId, uid);
                 const u = await pool.query('SELECT fullname FROM users WHERE id = $1', [uid]);
                 io.to('user_' + toUserId).emit('call:offer', {
                     fromUserId: uid,
@@ -8593,6 +9357,9 @@ try {
         socket.on('call:answer', (data) => {
             const toUserId = parseInt(data && data.toUserId, 10);
             if (!toUserId || !data.answer) return;
+            // Call actually connected — record the start time for duration tracking.
+            callStarts.set(uid, Date.now());
+            callStarts.set(toUserId, Date.now());
             io.to('user_' + toUserId).emit('call:answer', { fromUserId: uid, answer: { type: data.answer.type, sdp: data.answer.sdp } });
         });
         socket.on('call:ice', (data) => {
@@ -8600,12 +9367,37 @@ try {
             if (!toUserId || !data.candidate) return;
             io.to('user_' + toUserId).emit('call:ice', { fromUserId: uid, candidate: data.candidate });
         });
+        // Callee explicitly declines — caller sees an accurate "declined" state.
+        socket.on('call:decline', (data) => {
+            const toUserId = parseInt(data && data.toUserId, 10);
+            if (!toUserId) return;
+            clearActiveCall(uid, toUserId);
+            recordCall(toUserId, uid, data && data.callType, 'declined', null, 0).catch(() => {});
+            io.to('user_' + toUserId).emit('call:decline', { fromUserId: uid });
+        });
+        // Callee reports it is busy (e.g. UI was mid-call when the offer arrived).
+        socket.on('call:busy-signal', (data) => {
+            const toUserId = parseInt(data && data.toUserId, 10);
+            if (!toUserId) return;
+            clearActiveCall(toUserId, uid);
+            recordCall(toUserId, uid, data && data.callType, 'busy', null, 0).catch(() => {});
+            io.to('user_' + toUserId).emit('call:busy', { fromUserId: uid });
+        });
         socket.on('call:end', (data) => {
             const toUserId = parseInt(data && data.toUserId, 10);
             if (!toUserId) return;
+            const dur = clearActiveCall(uid, toUserId);
+            recordCall(uid, toUserId, data && data.callType, 'ended', new Date(), dur).catch(() => {});
             io.to('user_' + toUserId).emit('call:end', { fromUserId: uid });
         });
-        socket.on('disconnect', () => {});
+        socket.on('disconnect', () => {
+            // If the socket was mid-call, free the busy state and inform the peer.
+            const peerId = activeCalls.get(uid);
+            if (peerId) {
+                clearActiveCall(uid, peerId);
+                io.to('user_' + peerId).emit('call:end', { fromUserId: uid });
+            }
+        });
     });
     console.log('[Socket.IO] Ready');
 } catch (e) {

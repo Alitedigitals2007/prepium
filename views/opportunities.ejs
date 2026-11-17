@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text-primary); min-height: 100vh; }
+        .app-shell { display: flex; min-height: 100vh; }
+        .main-area { flex: 1; padding: 1.5rem; overflow-y: auto; max-width: 900px; margin: 0 auto; width: 100%; }
+        .header-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2rem; }
+        .header-title { font-weight: 800; font-size: 1rem; }
+        .back-circle { width: 38px; height: 38px; border-radius: 50%; background: var(--surface-solid); border: 1px solid var(--border-solid); display: flex; align-items: center; justify-content: center; color: var(--text-primary); }
+        .page-subhead p { font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 1rem; }
+        .cat-bar { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 1.2rem; }
+        .cat-chip { padding: 8px 16px; border-radius: 20px; border: 1.5px solid var(--border-solid); background: var(--surface-solid); font-family: inherit; font-weight: 700; font-size: 0.72rem; color: var(--text-secondary); cursor: pointer; white-space: nowrap; text-decoration: none; text-transform: capitalize; }
+        .cat-chip.active { background: linear-gradient(135deg, var(--brand), #1d4ed8); color: white; border-color: transparent; }
+        .op-card { background: var(--surface-solid); border-radius: 20px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); margin-bottom: 1rem; border: 1px solid var(--border-solid); }
+        .op-top { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+        .op-title { font-weight: 800; font-size: 0.92rem; line-height: 1.35; }
+        .op-org { font-size: 0.74rem; color: var(--text-secondary); margin-top: 2px; }
+        .op-desc { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.55; margin-top: 10px; }
+        .op-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+        .badge { font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; padding: 4px 10px; border-radius: 20px; background: var(--bg); color: var(--text-secondary); border: 1px solid var(--border-solid); }
+        .badge.verified { color: #10b981; background: rgba(16,185,129,0.1); border-color: transparent; }
+        .badge.unverified { color: #f59e0b; background: rgba(245,158,11,0.1); border-color: transparent; }
+        .badge.expired { color: #ef4444; background: rgba(239,68,68,0.1); border-color: transparent; }
+        .badge.closing { color: #ef4444; }
+        .op-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; align-items: center; }
+        .btn { padding: 10px 18px; border-radius: 12px; border: none; font-family: inherit; font-weight: 700; font-size: 0.76rem; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+        .btn-primary { background: linear-gradient(135deg, var(--brand), #1d4ed8); color: white; }
+        .btn-outline { background: var(--surface-solid); border: 1.5px solid var(--border-solid); color: var(--text-primary); }
+        .btn-ghost { background: var(--bg); color: var(--text-secondary); }
+        .status-pill { font-size: 0.68rem; font-weight: 800; text-transform: uppercase; padding: 4px 10px; border-radius: 20px; background: rgba(37,99,235,0.1); color: var(--brand); }
+        .empty-state { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
+        .empty-state i { font-size: 2.5rem; margin-bottom: 12px; opacity: 0.4; }
+        .note { font-size: 0.72rem; color: var(--text-secondary); background: var(--bg); padding: 10px 14px; border-radius: 12px; line-height: 1.5; margin-bottom: 1rem; }
+    </style>
+    <%- include('partials/theme-toggle') %>
+</head>
+<body>
+<%- include('partials/sidebar') %>
+<div class="app-shell">
+    <div class="main-area">
+        <div class="header-nav">
+            <a href="/dashboard" class="back-circle"><i class="fas fa-arrow-left"></i></a>
+            <div class="header-title">Opportunities Centre</div>
+            <%- include('partials/drawer-trigger') %>
+        </div>
+
+        <div class="page-subhead"><p>Scholarships, internships, competitions and more — with honest verification status</p></div>
+
+        <div class="note"><i class="fas fa-shield-halved"></i> Always confirm details on the official source page before applying. Items marked <strong>unverified</strong> are leads, not confirmed openings — never presented as current confirmed opportunities.</div>
+
+        <div class="cat-bar">
+            <a class="cat-chip <%= !activeCategory ? 'active' : '' %>" href="/opportunities">All</a>
+            <% categories.forEach(function (c) { %>
+                <a class="cat-chip <%= activeCategory === c ? 'active' : '' %>" href="/opportunities?category=<%= c %>"><%= c %></a>
+            <% }); %>
+        </div>
+
+        <% if (ops.length === 0) { %>
+            <div class="empty-state">
+                <i class="fas fa-briefcase"></i>
+                <p style="font-size:0.85rem;">No opportunities in this category yet.</p>
+            </div>
+        <% } %>
+
+        <% ops.forEach(function (o) { %>
+            <div class="op-card">
+                <div class="op-top">
+                    <div>
+                        <div class="op-title"><%= o.title %></div>
+                        <div class="op-org"><%= o.organisation %></div>
+                    </div>
+                    <% if (o.save) { %><span class="status-pill"><%= o.save.status %></span><% } %>
+                </div>
+                <div class="op-desc"><%= o.description %></div>
+                <div class="op-meta">
+                    <span class="badge"><%= o.category %></span>
+                    <span class="badge <%= o.verification_status %>"><i class="fas <%= o.verification_status === 'verified' ? 'fa-circle-check' : 'fa-triangle-exclamation' %>"></i> <%= o.verification_status %></span>
+                    <% if (o.closing_date) { %>
+                        <span class="badge <%= o.expired ? 'expired' : (o.closing_date < new Date(Date.now() + 7 * 86400000).toISOString().slice(0,10) ? 'closing' : '') %>">
+                            <i class="fas fa-calendar"></i> <%= o.expired ? 'Closed ' + o.closing_date : 'Closes ' + o.closing_date %>
+                        </span>
+                    <% } %>
+                </div>
+                <% if (o.eligibility) { %>
+                    <div class="op-desc" style="margin-top:8px;"><strong>Eligibility:</strong> <%= o.eligibility %></div>
+                <% } %>
+                <div class="op-actions">
+                    <% if (o.source_url) { %>
+                        <a class="btn btn-primary" href="<%= o.source_url %>" target="_blank" rel="noopener"><i class="fas fa-arrow-up-right-from-square"></i> Source</a>
+                    <% } %>
+                    <% if (o.save) { %>
+                        <button class="btn btn-outline" onclick="updateSave(<%= o.id %>, '<%= o.save.status %>')"><i class="fas fa-pen"></i> Update status</button>
+                        <button class="btn btn-ghost" onclick="unsave(<%= o.id %>)">Unsave</button>
+                    <% } else { %>
+                        <button class="btn btn-primary" onclick="save(<%= o.id %>)"><i class="fas fa-bookmark"></i> Save & track</button>
+                    <% } %>
+                </div>
+            </div>
+        <% }); %>
+
+        <%- include('partials/bottom-nav', { activeNav: activeNav }) %>
+    </div>
+</div>
+<script>
+    function save(id) {
+        fetch('/api/opportunities/' + id + '/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'saved' })
+        }).then(function () { window.location.reload(); });
+    }
+    function unsave(id) {
+        fetch('/api/opportunities/' + id + '/unsave', { method: 'POST' })
+            .then(function () { window.location.reload(); });
+    }
+    function updateSave(id, current) {
+        var next = prompt('Update application status (saved / applied / submitted / rejected / accepted):', current);
+        if (!next || next === current) return;
+        next = next.toLowerCase().trim();
+        if (['saved', 'applied', 'submitted', 'rejected', 'accepted'].indexOf(next) === -1) { alert('Invalid status'); return; }
+        fetch('/api/opportunities/' + id + '/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: next })
+        }).then(function () { window.location.reload(); });
+    }
+</script>
+</body>
+</html>

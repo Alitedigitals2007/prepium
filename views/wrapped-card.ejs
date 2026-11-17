@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text-primary); min-height: 100vh; margin: 0; }
+        .wrap { max-width: 520px; margin: 0 auto; padding: 40px 20px; }
+        .card { background: var(--surface-solid); border-radius: 24px; padding: 30px; box-shadow: 0 10px 40px rgba(0,0,0,0.12); }
+        .w-head { text-align: center; margin-bottom: 22px; }
+        .w-head .logo { font-size: 0.7rem; font-weight: 800; letter-spacing: 3px; color: var(--brand); text-transform: uppercase; }
+        .w-head h1 { font-size: 1.5rem; font-weight: 800; margin-top: 4px; }
+        .w-head p { font-size: 0.78rem; color: var(--text-secondary); font-weight: 600; }
+        .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+        .stat { background: var(--bg); border-radius: 16px; padding: 16px; text-align: center; }
+        .stat-v { font-size: 1.4rem; font-weight: 800; background: linear-gradient(135deg, var(--brand), #1d4ed8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .stat-l { font-size: 0.6rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+        .subject-row { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border-solid); font-size: 0.82rem; }
+        .subject-row:last-child { border-bottom: none; }
+        .cgpa-box { text-align: center; background: linear-gradient(135deg, var(--brand), #4f46e5); border-radius: 16px; padding: 18px; color: white; margin-top: 16px; }
+        .cgpa-box .v { font-size: 1.8rem; font-weight: 800; }
+        .cgpa-box .l { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; opacity: 0.85; }
+        .foot { text-align: center; font-size: 0.68rem; color: var(--text-secondary); margin-top: 20px; }
+        .foot a { color: var(--brand); font-weight: 700; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div class="card">
+            <div class="w-head">
+                <div class="logo">Prepium Wrapped</div>
+                <h1><%= ownerName %>'s <%= periodType %> story</h1>
+                <p>Verified Prepium activity — shared voluntarily</p>
+            </div>
+            <div class="stat-grid">
+                <div class="stat"><div class="stat-v"><%= payload.quizzes %></div><div class="stat-l">Quizzes & challenges</div></div>
+                <div class="stat"><div class="stat-v"><%= payload.studyMinutes %>m</div><div class="stat-l">Focused study</div></div>
+                <div class="stat"><div class="stat-v"><%= payload.xpEarned %></div><div class="stat-l">XP earned</div></div>
+                <div class="stat"><div class="stat-v"><%= payload.lessonsCompleted %></div><div class="stat-l">Skill lessons</div></div>
+                <div class="stat"><div class="stat-v"><%= payload.gamesPlayed %></div><div class="stat-l">Games played</div></div>
+                <div class="stat"><div class="stat-v"><%= payload.longestStreak %>d</div><div class="stat-l">Longest streak</div></div>
+            </div>
+            <% if (payload.topSubjects && payload.topSubjects.length) { %>
+                <% payload.topSubjects.forEach(function (t) { %>
+                    <div class="subject-row">
+                        <span style="font-weight:700;"><%= t.subject %></span>
+                        <span style="color:var(--text-secondary); font-size:0.75rem;"><%= t.attempts %> attempts</span>
+                    </div>
+                <% }); %>
+            <% } %>
+            <% if (payload.cgpa) { %>
+                <div class="cgpa-box">
+                    <div class="v"><%= payload.cgpa.cgpa %> / <%= payload.cgpa.scale %></div>
+                    <div class="l">CGPA — shared by choice</div>
+                </div>
+            <% } %>
+            <div class="foot">Made with Prepium · <a href="/">Start your own story</a></div>
+        </div>
+    </div>
+</body>
+</html>

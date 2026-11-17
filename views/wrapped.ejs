@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text-primary); min-height: 100vh; }
+        .app-shell { display: flex; min-height: 100vh; }
+        .main-area { flex: 1; padding: 1.5rem; overflow-y: auto; max-width: 900px; margin: 0 auto; width: 100%; }
+        .header-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2rem; }
+        .header-title { font-weight: 800; font-size: 1rem; }
+        .back-circle { width: 38px; height: 38px; border-radius: 50%; background: var(--surface-solid); border: 1px solid var(--border-solid); display: flex; align-items: center; justify-content: center; color: var(--text-primary); }
+        .page-subhead p { font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 1.2rem; }
+        .tab-bar { display: flex; gap: 8px; margin-bottom: 1.2rem; }
+        .tab-btn { flex: 1; padding: 10px; border-radius: 14px; border: 1.5px solid var(--border-solid); background: var(--surface-solid); font-family: inherit; font-weight: 700; font-size: 0.8rem; color: var(--text-secondary); cursor: pointer; }
+        .tab-btn.active { background: linear-gradient(135deg, var(--brand), #1d4ed8); color: white; border-color: transparent; }
+        .card { background: var(--surface-solid); border-radius: 20px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); margin-bottom: 1rem; }
+        .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .stat { background: var(--bg); border-radius: 16px; padding: 16px; text-align: center; }
+        .stat-v { font-size: 1.4rem; font-weight: 800; background: linear-gradient(135deg, var(--brand), #1d4ed8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .stat-l { font-size: 0.62rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+        .subject-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border-solid); font-size: 0.84rem; }
+        .subject-row:last-child { border-bottom: none; }
+        .btn { padding: 11px 22px; border-radius: 14px; border: none; font-family: inherit; font-weight: 700; font-size: 0.82rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary { background: linear-gradient(135deg, var(--brand), #1d4ed8); color: white; }
+        .btn-outline { background: var(--surface-solid); border: 1.5px solid var(--border-solid); color: var(--text-primary); }
+        .share-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border-solid); font-size: 0.8rem; }
+        .share-row:last-child { border-bottom: none; }
+        .toggle { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
+        .toggle input { opacity: 0; width: 0; height: 0; }
+        .toggle span { position: absolute; inset: 0; background: var(--border-solid); border-radius: 20px; transition: 0.2s; cursor: pointer; }
+        .toggle span:before { content: ''; position: absolute; width: 18px; height: 18px; border-radius: 50%; background: white; top: 3px; left: 3px; transition: 0.2s; }
+        .toggle input:checked + span { background: var(--brand); }
+        .toggle input:checked + span:before { transform: translateX(18px); }
+        .privacy-note { font-size: 0.72rem; color: var(--text-secondary); background: var(--bg); padding: 10px 14px; border-radius: 12px; margin-top: 12px; line-height: 1.5; }
+        .empty-state { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
+        .empty-state i { font-size: 2.5rem; margin-bottom: 12px; opacity: 0.4; }
+    </style>
+    <%- include('partials/theme-toggle') %>
+</head>
+<body>
+<%- include('partials/sidebar') %>
+<div class="app-shell">
+    <div class="main-area">
+        <div class="header-nav">
+            <a href="/dashboard" class="back-circle"><i class="fas fa-arrow-left"></i></a>
+            <div class="header-title">Prepium Wrapped</div>
+            <%- include('partials/drawer-trigger') %>
+        </div>
+
+        <div class="page-subhead"><p>Your verified learning story — only real, recorded activity counts</p></div>
+
+        <div class="tab-bar">
+            <a class="tab-btn <%= summary.period === 'weekly' ? 'active' : '' %>" href="/wrapped?period=weekly">Weekly</a>
+            <a class="tab-btn <%= summary.period === 'semester' ? 'active' : '' %>" href="/wrapped?period=semester">Semester</a>
+            <a class="tab-btn <%= summary.period === 'annual' ? 'active' : '' %>" href="/wrapped?period=annual">Annual</a>
+        </div>
+
+        <div class="card">
+            <h2 style="font-weight:800; margin-bottom:2px;"><%= summary.label %></h2>
+            <p style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:16px;">Everything below is counted from your own Prepium activity.</p>
+            <div class="stat-grid">
+                <div class="stat"><div class="stat-v"><%= summary.quizzes %></div><div class="stat-l">Quizzes & challenges</div></div>
+                <div class="stat"><div class="stat-v"><%= summary.studyMinutes %>m</div><div class="stat-l">Focused study</div></div>
+                <div class="stat"><div class="stat-v"><%= summary.xpEarned %></div><div class="stat-l">XP earned</div></div>
+                <div class="stat"><div class="stat-v"><%= summary.lessonsCompleted %></div><div class="stat-l">Skill lessons</div></div>
+                <div class="stat"><div class="stat-v"><%= summary.gamesPlayed %></div><div class="stat-l">Games played</div></div>
+                <div class="stat"><div class="stat-v"><%= summary.longestStreak %>d</div><div class="stat-l">Longest streak</div></div>
+            </div>
+        </div>
+
+        <% if (summary.topSubjects.length) { %>
+            <div class="card">
+                <h3 style="font-weight:800; font-size:0.95rem; margin-bottom:8px;"><i class="fas fa-fire" style="color:#f59e0b;"></i> Most active subjects</h3>
+                <% summary.topSubjects.forEach(function (t) { %>
+                    <div class="subject-row">
+                        <span style="font-weight:700;"><%= t.subject %></span>
+                        <span style="color:var(--text-secondary); font-size:0.78rem;"><%= t.attempts %> attempts · <%= t.avg %>% avg</span>
+                    </div>
+                <% }); %>
+            </div>
+        <% } %>
+
+        <div class="card">
+            <h3 style="font-weight:800; font-size:0.95rem; margin-bottom:4px;"><i class="fas fa-share-nodes" style="color:var(--brand);"></i> Share this Wrapped</h3>
+            <p style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:14px;">Create a shareable card. You control what it contains.</p>
+            <button class="btn btn-primary" onclick="createShare()"><i class="fas fa-share-nodes"></i> Create share link</button>
+            <div class="privacy-note">
+                <i class="fas fa-lock"></i> <strong>Privacy:</strong> shared cards contain activity counts only. Your CGPA is <strong>never</strong> included unless you explicitly switch it on for a specific card.
+            </div>
+            <% if (shares.length) { %>
+                <div style="margin-top:16px;">
+                    <% shares.forEach(function (s) { %>
+                        <div class="share-row">
+                            <div>
+                                <div style="font-weight:700; text-transform:capitalize;"><%= s.period_type %> card</div>
+                                <a href="/wrapped/<%= s.share_token %>" style="font-size:0.7rem; color:var(--brand); word-break:break-all;">/wrapped/<%= s.share_token %></a>
+                            </div>
+                            <label class="toggle" title="Public visibility">
+                                <input type="checkbox" <%= s.is_public ? 'checked' : '' %> onchange="setVisibility('<%= s.share_token %>', this.checked)">
+                                <span></span>
+                            </label>
+                        </div>
+                    <% }); %>
+                </div>
+            <% } %>
+        </div>
+
+        <%- include('partials/bottom-nav', { activeNav: activeNav }) %>
+    </div>
+</div>
+<script>
+    function createShare() {
+        fetch('/api/wrapped/share', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ period: '<%= summary.period %>', show_cgpa: false })
+        }).then(function (r) { return r.json(); }).then(function (d) {
+            if (d.success) { window.location.reload(); }
+        });
+    }
+    function setVisibility(token, isPublic) {
+        fetch('/api/wrapped/share/' + token + '/visibility', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_public: isPublic })
+        });
+    }
+</script>
+</body>
+</html>

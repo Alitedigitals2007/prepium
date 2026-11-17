@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text-primary); min-height: 100vh; }
+        .app-shell { display: flex; min-height: 100vh; }
+        .main-area { flex: 1; padding: 1.5rem; overflow-y: auto; max-width: 900px; margin: 0 auto; width: 100%; }
+        .header-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2rem; }
+        .header-title { font-weight: 800; font-size: 1rem; }
+        .back-circle { width: 38px; height: 38px; border-radius: 50%; background: var(--surface-solid); border: 1px solid var(--border-solid); display: flex; align-items: center; justify-content: center; color: var(--text-primary); }
+        .page-subhead { margin-bottom: 1.2rem; }
+        .page-subhead p { font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; }
+        .card { background: var(--surface-solid); border-radius: 20px; padding: 22px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); margin-bottom: 1rem; }
+        .signal { display: flex; gap: 14px; align-items: flex-start; padding: 14px 0; border-bottom: 1px solid var(--border-solid); }
+        .signal:last-child { border-bottom: none; }
+        .sig-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1rem; }
+        .sig-good { background: rgba(16,185,129,0.12); color: #10b981; }
+        .sig-watch { background: rgba(245,158,11,0.12); color: #f59e0b; }
+        .sig-attention { background: rgba(239,68,68,0.12); color: #ef4444; }
+        .sig-title { font-weight: 800; font-size: 0.85rem; }
+        .sig-detail { font-size: 0.78rem; color: var(--text-secondary); margin-top: 2px; line-height: 1.45; }
+        .rec { display: flex; gap: 10px; padding: 10px 0; font-size: 0.82rem; line-height: 1.5; color: var(--text-secondary); }
+        .rec i { color: var(--brand); margin-top: 3px; }
+        .badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+        .src-badge { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 4px 10px; border-radius: 20px; background: var(--bg); color: var(--text-secondary); border: 1px solid var(--border-solid); }
+        .plan-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--bg); border-radius: 12px; margin-bottom: 8px; }
+        .plan-item input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--brand); }
+        .plan-item span { font-size: 0.84rem; font-weight: 600; flex: 1; }
+        .plan-item.done span { text-decoration: line-through; color: var(--text-secondary); }
+        .btn { padding: 11px 22px; border-radius: 14px; border: none; font-family: inherit; font-weight: 700; font-size: 0.82rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary { background: linear-gradient(135deg, var(--brand), #1d4ed8); color: white; }
+        .btn-outline { background: var(--surface-solid); border: 1.5px solid var(--border-solid); color: var(--text-primary); }
+        input[type="text"] { width: 100%; padding: 11px 14px; border-radius: 12px; border: 1.5px solid var(--border-solid); background: var(--bg); color: var(--text-primary); font-family: inherit; font-size: 0.85rem; }
+        .empty-state { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
+        .empty-state i { font-size: 2.5rem; margin-bottom: 12px; opacity: 0.4; }
+    </style>
+    <%- include('partials/theme-toggle') %>
+</head>
+<body>
+<%- include('partials/sidebar') %>
+<div class="app-shell">
+    <div class="main-area">
+        <div class="header-nav">
+            <a href="/dashboard" class="back-circle"><i class="fas fa-arrow-left"></i></a>
+            <div class="header-title">Academic Insights</div>
+            <%- include('partials/drawer-trigger') %>
+        </div>
+
+        <div class="page-subhead">
+            <p>Built from your own verified activity — never invented, never guessed</p>
+        </div>
+
+        <% if (!insights.enoughData) { %>
+            <div class="card">
+                <div class="empty-state">
+                    <i class="fas fa-seedling"></i>
+                    <h3 style="font-weight:800; color:var(--text-primary); margin-bottom:6px;">Not enough data yet</h3>
+                    <p style="font-size:0.82rem; max-width:420px; margin:0 auto;">This is <strong>not</strong> a poor-performance report — Prepium simply needs more academic activity before it can identify your strengths and gaps.</p>
+                </div>
+            </div>
+        <% } else { %>
+            <div class="card">
+                <% insights.signals.forEach(function (s) { %>
+                    <div class="signal">
+                        <div class="sig-icon sig-<%= s.status %>"><i class="fas <%= s.status === 'good' ? 'fa-check' : (s.status === 'watch' ? 'fa-eye' : 'fa-triangle-exclamation') %>"></i></div>
+                        <div>
+                            <div class="sig-title"><%= s.title %></div>
+                            <div class="sig-detail"><%= s.detail %></div>
+                        </div>
+                    </div>
+                <% }); %>
+                <div class="badge-row">
+                    Based on: <% insights.dataSources.forEach(function (d) { %><span class="src-badge"><%= d.replace('_', ' ') %></span><% }); %>
+                </div>
+            </div>
+        <% } %>
+
+        <div class="card">
+            <h3 style="font-weight:800; font-size:0.95rem; margin-bottom:8px;"><i class="fas fa-wand-magic-sparkles" style="color:var(--brand);"></i> Recommended priorities</h3>
+            <% insights.recommendations.forEach(function (r) { %>
+                <div class="rec"><i class="fas fa-arrow-right"></i><span><%= r %></span></div>
+            <% }); %>
+        </div>
+
+        <div class="card">
+            <h3 style="font-weight:800; font-size:0.95rem; margin-bottom:4px;"><i class="fas fa-list-check" style="color:var(--brand);"></i> Your study plan</h3>
+            <p style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:14px;">Editable — fully yours. Suggestions are starting points, not commands.</p>
+            <div id="planItems">
+                <% if (plan && plan.items && plan.items.length) { %>
+                    <% plan.items.forEach(function (it, i) { %>
+                        <div class="plan-item">
+                            <input type="checkbox" <%= it.done ? 'checked' : '' %> onchange="toggleItem(<%= i %>, this.checked)">
+                            <span><%= it.title %></span>
+                            <button onclick="removeItem(<%= i %>)" style="background:none;border:none;color:var(--text-secondary);cursor:pointer;"><i class="fas fa-trash-can"></i></button>
+                        </div>
+                    <% }); %>
+                <% } else { %>
+                    <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:10px;">No plan yet — add your first task below.</p>
+                <% } %>
+            </div>
+            <div style="display:flex; gap:8px; margin-top:12px;">
+                <input type="text" id="newItem" placeholder="e.g. Revise CSC 201 Chapter 3" maxlength="160">
+                <button class="btn btn-primary" onclick="addItem()"><i class="fas fa-plus"></i></button>
+            </div>
+            <div style="display:flex; gap:8px; margin-top:10px; align-items:center;">
+                <select id="periodType" style="padding:9px 12px; border-radius:12px; border:1.5px solid var(--border-solid); background:var(--bg); color:var(--text-primary); font-family:inherit; font-size:0.8rem;">
+                    <option value="weekly" <%= plan && plan.period_type === 'weekly' ? 'selected' : '' %>>Weekly plan</option>
+                    <option value="daily" <%= plan && plan.period_type === 'daily' ? 'selected' : '' %>>Daily plan</option>
+                </select>
+                <button class="btn btn-outline" onclick="savePlan()"><i class="fas fa-floppy-disk"></i> Save plan</button>
+            </div>
+        </div>
+
+        <%- include('partials/bottom-nav', { activeNav: activeNav }) %>
+    </div>
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    var planItems = <%= JSON.stringify(plan && plan.items ? plan.items : []) %>;
+    function escHtml(s) {
+        return String(s)
+            .replace(/&/g, '&' + 'amp;')
+            .replace(/</g, '&' + 'lt;')
+            .replace(/>/g, '&' + 'gt;')
+            .replace(/"/g, '&' + 'quot;');
+    }
+    function renderPlan() {
+        var box = document.getElementById('planItems');
+        box.innerHTML = planItems.length ? '' : '<p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:10px;">No plan yet — add your first task below.</p>';
+        planItems.forEach(function (it, i) {
+            var row = document.createElement('div');
+            row.className = 'plan-item' + (it.done ? ' done' : '');
+            row.innerHTML = '<input type="checkbox" ' + (it.done ? 'checked' : '') + ' onchange="toggleItem(' + i + ', this.checked)">' +
+                '<span>' + escHtml(it.title) + '</span>' +
+                '<button onclick="removeItem(' + i + ')" style="background:none;border:none;color:var(--text-secondary);cursor:pointer;"><i class="fas fa-trash-can"></i></button>';
+            box.appendChild(row);
+        });
+    }
+    function toggleItem(i, done) { planItems[i].done = !!done; renderPlan(); savePlan(); }
+    function removeItem(i) { planItems.splice(i, 1); renderPlan(); savePlan(); }
+    function addItem() {
+        var inp = document.getElementById('newItem');
+        var t = inp.value.trim();
+        if (!t) return;
+        planItems.push({ title: t, done: false });
+        inp.value = '';
+        renderPlan();
+        savePlan();
+    }
+    function savePlan() {
+        fetch('/api/insights/plan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: planItems, period_type: document.getElementById('periodType').value })
+        });
+    }
+    renderPlan();
+</script>
+</body>
+</html>
