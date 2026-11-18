@@ -568,6 +568,7 @@
 <%- include('partials/bottom-nav', { activeNav: 'dashboard' }) %>
 
 <script>
+var PS_EMAIL = <%- JSON.stringify(String(user.email || '')) %>;
 function lockedAction(e) {
     if (e) { e.preventDefault(); }
     if (<%= migratedLocked %>) { payWithPaystack(null); return; }
@@ -576,7 +577,12 @@ function lockedAction(e) {
 
 function payWithPaystack(e, presets) {
     if (e) { e.preventDefault(); }
-    if (typeof PaystackPop === 'undefined') { alert('Payment system loading. Please try again.'); return; }
+    var PS_KEY = <%- JSON.stringify(String(paystack_key || '')) %>;
+    if (!PS_KEY || PS_KEY === 'pk_test_your_key') {
+        Swal.fire('Payments unavailable', 'Online payment is not configured right now. Please try again later or send us a message via the Feedback page.', 'warning');
+        return;
+    }
+    if (typeof PaystackPop === 'undefined') { Swal.fire('Please wait', 'Payment system is still loading. Try again in a moment.', 'info'); return; }
     var pAmount = (presets && presets.amount) || <%= migratedLocked ? rechargePrice : premiumPrice %>;
     Swal.fire({
         title: 'Have a coupon code?',
@@ -603,19 +609,25 @@ function payWithPaystack(e, presets) {
             Swal.fire({ icon: 'info', title: info.discountLabel + ' applied!', text: 'You pay \u20A6' + info.amount.toLocaleString(), timer: 2000, showConfirmButton: false });
         }
         var amount = (info.amount || pAmount) * 100;
-        var handler = PaystackPop.setup({
-            key: '<%= paystack_key %>',
-            email: '<%= user.email %>',
-            amount: amount,
-            currency: 'NGN',
-            callback: function(response) {
-                var ref = response.reference;
-                var dest = '/verify-payment?reference=' + ref;
-                if (info.code) dest += '&coupon=' + encodeURIComponent(info.code);
-                window.location.href = dest;
-            },
-            onClose: function() {}
-        });
+        var handler;
+        try {
+            handler = PaystackPop.setup({
+                key: PS_KEY,
+                email: PS_EMAIL,
+                amount: amount,
+                currency: 'NGN',
+                callback: function(response) {
+                    var ref = response.reference;
+                    var dest = '/verify-payment?reference=' + ref;
+                    if (info.code) dest += '&coupon=' + encodeURIComponent(info.code);
+                    window.location.href = dest;
+                },
+                onClose: function() {}
+            });
+        } catch (err) {
+            Swal.fire('Payment error', 'We could not start the payment. Please try again or contact support via Feedback.', 'error');
+            return;
+        }
         setTimeout(function() { handler.openIframe(); }, info.discountLabel ? 2200 : 100);
     });
 }

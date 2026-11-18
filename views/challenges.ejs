@@ -12,26 +12,52 @@
         .back-circle { width: 38px; height: 38px; border-radius: 50%; background: var(--surface-solid); border: 1px solid var(--border-solid); display: flex; align-items: center; justify-content: center; color: var(--text-primary); }
         .page-subhead p { font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 1.2rem; }
         .card { background: var(--surface-solid); border-radius: 20px; padding: 22px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); margin-bottom: 1rem; }
+
+        .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1rem; }
+        .stat-box { background: var(--surface-solid); border-radius: 16px; padding: 14px 8px; text-align: center; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+        .stat-v { font-size: 1.2rem; font-weight: 800; background: linear-gradient(135deg, var(--brand), #1d4ed8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .stat-l { font-size: 0.58rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+
+        .daily-cta { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+        .daily-icon { width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, #f97316, #ea580c); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; box-shadow: 0 4px 10px rgba(249,115,22,0.3); }
+        .done-check { color: #10b981; font-weight: 800; font-size: 0.8rem; white-space: nowrap; }
+
+        .xp-card { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+        .xp-icon { width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; box-shadow: 0 4px 10px rgba(245,158,11,0.3); }
+
+        .holiday-banner { display: flex; align-items: center; gap: 12px; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.3); }
+        .holiday-banner i { color: #10b981; font-size: 1.1rem; }
+
+        .ch-card { position: relative; overflow: hidden; }
+        .ch-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--brand), #1d4ed8); opacity: 0; transition: opacity 0.2s; }
+        .ch-card:hover::before { opacity: 1; }
+        .ch-card.done-card::before { opacity: 1; background: linear-gradient(90deg, #10b981, #059669); }
         .ch-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
         .ch-title { font-weight: 800; font-size: 0.95rem; }
         .ch-desc { font-size: 0.78rem; color: var(--text-secondary); margin-top: 3px; line-height: 1.45; }
-        .ch-badges { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
-        .badge { font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; padding: 4px 10px; border-radius: 20px; background: var(--bg); color: var(--text-secondary); border: 1px solid var(--border-solid); }
+        .ch-badges { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+        .badge { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; padding: 4px 10px; border-radius: 20px; background: var(--bg); color: var(--text-secondary); border: 1px solid var(--border-solid); display: inline-flex; align-items: center; gap: 4px; }
         .badge.xp { color: #10b981; background: rgba(16,185,129,0.1); border-color: transparent; }
-        .ch-bar { height: 8px; background: var(--bg); border-radius: 8px; overflow: hidden; margin-top: 14px; }
+        .ch-progress-head { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; font-size: 0.68rem; font-weight: 700; color: var(--text-secondary); }
+        .ch-bar { height: 8px; background: var(--bg); border-radius: 8px; overflow: hidden; margin-top: 5px; }
         .ch-fill { height: 100%; background: linear-gradient(90deg, var(--brand), #1d4ed8); border-radius: 8px; transition: width 0.4s; }
         .ch-fill.done { background: linear-gradient(90deg, #10b981, #059669); }
         .ch-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 0.72rem; color: var(--text-secondary); font-weight: 700; }
+
+        .leaderboard { margin-top: 12px; border-top: 1px solid var(--border-solid); padding-top: 10px; }
+        .lb-title { font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 6px; }
+        .lb-row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; font-size: 0.78rem; border-radius: 10px; }
+        .lb-row.me { background: rgba(37,99,235,0.08); font-weight: 700; }
+        .lb-rank { width: 22px; color: var(--text-secondary); font-weight: 800; font-size: 0.72rem; }
+        .lb-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .lb-row .me-name { color: var(--brand); font-weight: 800; }
+        .lb-score { color: var(--text-secondary); font-weight: 700; font-size: 0.72rem; }
+
         .btn { padding: 10px 20px; border-radius: 12px; border: none; font-family: inherit; font-weight: 700; font-size: 0.78rem; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
-        .btn-primary { background: linear-gradient(135deg, var(--brand), #1d4ed8); color: white; }
-        .btn-outline { background: var(--surface-solid); border: 1.5px solid var(--border-solid); color: var(--text-primary); }
-        .lb-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; font-size: 0.78rem; }
-        .lb-row .me { color: var(--brand); font-weight: 800; }
-        .lb-rank { width: 22px; color: var(--text-secondary); font-weight: 700; }
-        .daily-cta { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-        .done-check { color: #10b981; font-weight: 800; font-size: 0.8rem; }
+        .btn-primary { background: linear-gradient(135deg, var(--brand), #1d4ed8); color: white; box-shadow: 0 4px 10px rgba(37,99,235,0.25); }
         .empty-state { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
         .empty-state i { font-size: 2.5rem; margin-bottom: 12px; opacity: 0.4; }
+        @media (max-width: 560px) { .stats-row { grid-template-columns: repeat(3, 1fr); } }
     </style>
     <%- include('partials/theme-toggle') %>
 </head>
@@ -47,9 +73,15 @@
 
         <div class="page-subhead"><p>One arena, many arenas — daily, weekly, seasonal, solo or with your people. XP flows from one ledger.</p></div>
 
+        <div class="stats-row">
+            <div class="stat-box"><div class="stat-v"><%= challenges.filter(function(c){ return c.joined && !c.completed; }).length %></div><div class="stat-l">Active</div></div>
+            <div class="stat-box"><div class="stat-v"><%= challenges.filter(function(c){ return c.completed; }).length %></div><div class="stat-l">Completed</div></div>
+            <div class="stat-box"><div class="stat-v"><%= xp %></div><div class="stat-l">Your XP</div></div>
+        </div>
+
         <% if (holidayActive) { %>
-            <div class="card" style="display:flex; align-items:center; gap:12px; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3);">
-                <i class="fas fa-umbrella-beach" style="color:#10b981; font-size:1.1rem;"></i>
+            <div class="card holiday-banner">
+                <i class="fas fa-umbrella-beach"></i>
                 <div style="font-size:0.78rem; line-height:1.5;">
                     <strong>Holiday Mode is on.</strong> Every daily challenge and challenge you complete counts toward your <a href="/holiday" style="color:var(--brand); font-weight:700;">holiday goals</a>.
                 </div>
@@ -58,9 +90,12 @@
 
         <div class="card">
             <div class="daily-cta">
-                <div>
-                    <div style="font-weight:800; font-size:0.92rem;"><i class="fas fa-fire-alt" style="color:#f97316;"></i> Daily Challenge</div>
-                    <div style="font-size:0.76rem; color:var(--text-secondary); margin-top:2px;">15 questions, 3 subjects max, resets at midnight.</div>
+                <div style="display:flex; gap:12px; align-items:center;">
+                    <div class="daily-icon"><i class="fas fa-fire-alt"></i></div>
+                    <div>
+                        <div style="font-weight:800; font-size:0.92rem;">Daily Challenge</div>
+                        <div style="font-size:0.76rem; color:var(--text-secondary); margin-top:2px;">15 questions, 3 subjects max, resets at midnight.</div>
+                    </div>
                 </div>
                 <% if (dailyDone) { %>
                     <span class="done-check"><i class="fas fa-circle-check"></i> Done today</span>
@@ -68,14 +103,6 @@
                     <a class="btn btn-primary" href="/daily-challenge">Play now</a>
                 <% } %>
             </div>
-        </div>
-
-        <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
-            <div>
-                <div style="font-weight:800; font-size:0.92rem;"><i class="fas fa-bolt" style="color:#f59e0b;"></i> Your XP</div>
-                <div style="font-size:0.74rem; color:var(--text-secondary); margin-top:2px;">Earned across every Prepium activity — traceable, duplicate-proof.</div>
-            </div>
-            <div style="font-size:1.5rem; font-weight:800; background:linear-gradient(135deg, var(--brand), #1d4ed8); -webkit-background-clip:text; -webkit-text-fill-color:transparent;"><%= xp %></div>
         </div>
 
         <% if (!challenges.length) { %>
@@ -87,16 +114,17 @@
                 </div>
             </div>
         <% } %>
+
         <% challenges.forEach(function (c) { %>
-            <div class="card">
+            <div class="card ch-card <%= c.completed ? 'done-card' : '' %>">
                 <div class="ch-head">
                     <div style="flex:1;">
                         <div class="ch-title"><%= c.title %></div>
                         <div class="ch-desc"><%= c.description %></div>
                         <div class="ch-badges">
-                            <span class="badge"><%= c.cadence %></span>
-                            <span class="badge"><%= c.scope %></span>
-                            <span class="badge xp">+<%= c.xp_reward %> XP</span>
+                            <span class="badge"><i class="fas fa-clock"></i><%= c.cadence %></span>
+                            <span class="badge"><i class="fas fa-<%= c.scope === 'individual' ? 'user' : (c.scope === 'friends' ? 'user-group' : (c.scope === 'squad' ? 'people-group' : 'school')) %>"></i><%= c.scope %></span>
+                            <span class="badge xp"><i class="fas fa-bolt"></i>+<%= c.xp_reward %> XP</span>
                         </div>
                     </div>
                     <% if (c.completed) { %>
@@ -106,20 +134,22 @@
                     <% } %>
                 </div>
                 <% if (c.joined) { %>
+                    <div class="ch-progress-head"><span>Progress</span><span><%= c.pct %>%</span></div>
                     <div class="ch-bar"><div class="ch-fill <%= c.completed ? 'done' : '' %>" style="width:<%= c.pct %>%"></div></div>
                     <div class="ch-foot">
                         <span><%= c.progress %>/<%= c.target %> <%= c.metric.replace('_', ' ') %></span>
                         <% if (c.leaders.length > 1) { %>
-                            <span><i class="fas fa-trophy" style="color:#f59e0b;"></i> <%= c.leaders[0].name %></span>
+                            <span><i class="fas fa-trophy" style="color:#f59e0b;"></i> <%= c.leaders[0].name %> leads</span>
                         <% } %>
                     </div>
                     <% if (c.leaders.length > 1) { %>
-                        <div style="margin-top:10px; border-top:1px solid var(--border-solid); padding-top:8px;">
+                        <div class="leaderboard">
+                            <div class="lb-title"><i class="fas fa-trophy" style="color:#f59e0b;"></i> Leaderboard</div>
                             <% c.leaders.forEach(function (l, i) { %>
-                                <div class="lb-row">
-                                    <span class="lb-rank"><%= i + 1 %>.</span>
-                                    <span class="<%= l.is_me ? 'me' : '' %>"><%= l.name %></span>
-                                    <span style="margin-left:auto; color:var(--text-secondary);"><%= l.progress %></span>
+                                <div class="lb-row <%= l.is_me ? 'me' : '' %>">
+                                    <span class="lb-rank"><%= i < 3 ? ['🥇','🥈','🥉'][i] : (i + 1) + '.' %></span>
+                                    <span class="lb-name <%= l.is_me ? 'me-name' : '' %>"><%= l.is_me ? 'You' : l.name %></span>
+                                    <span class="lb-score"><%= l.progress %></span>
                                 </div>
                             <% }); %>
                         </div>

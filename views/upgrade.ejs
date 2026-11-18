@@ -561,23 +561,35 @@
 
         function payWithPaystack(e) {
             if (e) e.preventDefault();
+            if (!PAYSTACK_KEY || PAYSTACK_KEY === 'pk_test_your_key') {
+                if (typeof Swal !== 'undefined') Swal.fire('Payments unavailable', 'Online payment is not configured right now. Please try again later or send us a message via the Feedback page.', 'warning');
+                else alert('Payments are temporarily unavailable. Please try again later.');
+                return;
+            }
             if (typeof PaystackPop === 'undefined') {
                 if (typeof Swal !== 'undefined') Swal.fire('Please wait', 'Payment system is still loading. Try again in a moment.', 'info');
+                else alert('Payment system is still loading. Please try again in a moment.');
                 return;
             }
             var baseAmount = MIGRATED_LOCKED ? RECHARGE_PRICE : PREMIUM_PRICE;
             var finish = function (info) {
                 var amount = Math.round(info.amount * 100);
-                var handler = PaystackPop.setup({
-                    key: PAYSTACK_KEY,
-                    email: USER_EMAIL,
-                    amount: amount,
-                    currency: 'NGN',
-                    callback: function (response) {
-                        window.location.href = '/verify-payment?reference=' + encodeURIComponent(response.reference) + (info.coupon ? '&coupon=' + encodeURIComponent(info.coupon) : '');
-                    },
-                    onClose: function () { }
-                });
+                var handler;
+                try {
+                    handler = PaystackPop.setup({
+                        key: PAYSTACK_KEY,
+                        email: USER_EMAIL,
+                        amount: amount,
+                        currency: 'NGN',
+                        callback: function (response) {
+                            window.location.href = '/verify-payment?reference=' + encodeURIComponent(response.reference) + (info.coupon ? '&coupon=' + encodeURIComponent(info.coupon) : '');
+                        },
+                        onClose: function () { }
+                    });
+                } catch (err) {
+                    if (typeof Swal !== 'undefined') Swal.fire('Payment error', 'We could not start the payment. Please try again or contact support via Feedback.', 'error');
+                    return;
+                }
                 handler.openIframe();
             };
             if (typeof Swal === 'undefined') { finish({ amount: baseAmount, coupon: null }); return; }

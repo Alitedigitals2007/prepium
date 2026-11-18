@@ -93,16 +93,22 @@ const xpLib = require('./lib/xp');
 const { runMigrations } = require('./scripts/migrate');
 
 // Apply version-controlled migrations on boot (idempotent, tracked in
-// schema_migrations). Never throws — a failed migration is logged so the
-// app can still boot, but the failure is visible.
-(async () => {
+// schema_migrations). The promise is retained so seeds and feature routes can
+// await it — otherwise they race the migration and fail with
+// "relation does not exist" on any database where 001 has not applied yet.
+const migrationsReady = (async () => {
     try {
         await runMigrations(pool);
         console.log('[DB] Migrations up to date');
     } catch (err) {
         console.error('[DB] Migration error:', err.message);
+        throw err;
     }
 })();
+// The gate below surfaces migration failures through the central error
+// handler; this no-op catch just stops Node warning about an unhandled
+// rejection when no request ever awaits the promise.
+migrationsReady.catch(() => {});
 
 // Keep the (free-tier) database awake — Neon suspends after ~5 min idle,
 // and a cold start can exceed the connection timeout and kill requests.
@@ -8526,6 +8532,13 @@ async function progressHolidayGoalsByType(uid, goalType, delta) {
 }
 
 // ======================== PERSONAL ACADEMIC INTELLIGENCE ========================
+// Gate: every new-feature route below depends on migration 001 tables. Await
+// the boot migration before serving them so a cold start can never serve a
+// request before the tables exist (fixes "something went wrong" on first hit).
+app.use(['/insights', '/wrapped', '/skills', '/holiday', '/challenges', '/opportunities'], (req, res, next) => {
+    migrationsReady.then(() => next()).catch(next);
+});
+
 // Deterministic, server-side analysis of the student's own academic activity.
 // Clearly distinguishes "not enough data" from "needs attention" and never
 // invents grades or results.
@@ -8853,6 +8866,7 @@ const SKILL_SEED = [
 
 (async function seedSkillPaths() {
     try {
+        await migrationsReady; // skill tables must exist first
         for (let i = 0; i < SKILL_SEED.length; i++) {
             const p = SKILL_SEED[i];
             const r = await pool.query(
@@ -8867,7 +8881,7 @@ const SKILL_SEED = [
                 const l = p.lessons[j];
                 await pool.query(
                     `INSERT INTO skill_lessons (path_id, title, summary, content, resource_url, resource_label, est_minutes, sort_order)
-                     SELECT $1, $2, $3, $4, $5, $6, $7, $8
+                     SELECT $1::int, $2::varchar, $3::text, $4::text, $5::text, $6::varchar, $7::int, $8::int
                      WHERE NOT EXISTS (SELECT 1 FROM skill_lessons WHERE path_id = $1 AND title = $2)`,
                     [pathId, l.title, l.summary, l.content, l.resource || '', l.resourceLabel || '', l.est || 20, j]
                 );
@@ -8879,14 +8893,27 @@ const SKILL_SEED = [
 
 app.get('/skills', isAuth, asyncRoute(async (req, res) => {
     const uid = req.session.user.id;
-    const paths = await pool.query(`
-        SELECT p.*,
-            (SELECT COUNT(*) FROM skill_lessons l WHERE l.path_id = p.id) AS lesson_count,
-            (SELECT COUNT(*) FROM skill_progress sp JOIN skill_lessons l2 ON sp.lesson_id = l2.id WHERE l2.path_id = p.id AND sp.user_id = $1) AS done_count,
-            (SELECT COUNT(*) FROM skill_enrollments e WHERE e.path_id = p.id AND e.user_id = $1) > 0 AS enrolled
-        FROM skill_paths p ORDER BY p.sort_order ASC`, [uid]);
+    const [pathsRes, xpRes] = await Promise.all([
+        pool.query(`
+            SELECT p.*,
+                (SELECT COUNT(*) FROM skill_lessons l WHERE l.path_id = p.id) AS lesson_count,
+                (SELECT COUNT(*) FROM skill_progress sp JOIN skill_lessons l2 ON sp.lesson_id = l2.id WHERE l2.path_id = p.id AND sp.user_id = $1) AS done_count,
+                (SELECT COUNT(*) FROM skill_projects pr WHERE pr.path_id = p.id AND pr.user_id = $1) AS project_count,
+                (SELECT COUNT(*) FROM skill_enrollments e WHERE e.path_id = p.id AND e.user_id = $1) > 0 AS enrolled
+            FROM skill_paths p ORDER BY p.sort_order ASC`, [uid]),
+        pool.query(`SELECT COALESCE(SUM(amount), 0) AS total FROM xp_ledger WHERE user_id = $1 AND (source_type LIKE 'skill%')`, [uid])
+    ]);
+    const paths = pathsRes.rows;
+    const summary = {
+        paths: paths.length,
+        enrolled: paths.filter(p => p.enrolled).length,
+        lessonsDone: paths.reduce((n, p) => n + (parseInt(p.done_count, 10) || 0), 0),
+        lessonsTotal: paths.reduce((n, p) => n + (parseInt(p.lesson_count, 10) || 0), 0),
+        projects: paths.reduce((n, p) => n + (parseInt(p.project_count, 10) || 0), 0),
+        xp: parseInt(xpRes.rows[0].total, 10) || 0
+    };
     res.locals.seo.title = 'Prepium | Skills Centre';
-    res.render('skills', { user: req.session.user, paths: paths.rows, activeNav: 'skills' });
+    res.render('skills', { user: req.session.user, paths, summary, activeNav: 'skills' });
 }));
 
 app.get('/skills/:slug', isAuth, asyncRoute(async (req, res) => {
@@ -9107,6 +9134,7 @@ app.post('/api/challenges/:id/join', isAuth, asyncRoute(async (req, res) => {
 
 (async function seedChallenges() {
     try {
+        await migrationsReady; // challenge tables must exist first
         const seeds = [
             { slug: 'weekly-quiz-5', title: 'Weekly Warm-up', description: 'Complete 5 quizzes or challenges this week.', cadence: 'weekly', scope: 'individual', metric: 'quizzes', target: 5, xp_reward: 150 },
             { slug: 'weekly-study-120', title: 'Deep Work Week', description: 'Log 120 minutes of focused study this week.', cadence: 'weekly', scope: 'individual', metric: 'study_minutes', target: 120, xp_reward: 150 },
@@ -9193,6 +9221,7 @@ app.post('/api/opportunities/:id/unsave', isAuth, asyncRoute(async (req, res) =>
 
 (async function seedOpportunities() {
     try {
+        await migrationsReady; // opportunity tables must exist first
         const existing = await pool.query('SELECT COUNT(*) AS c FROM opportunities');
         if (parseInt(existing.rows[0].c, 10) > 0) return;
         const year = new Date().getFullYear();
