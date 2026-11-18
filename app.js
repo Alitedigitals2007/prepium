@@ -93,22 +93,55 @@ const xpLib = require('./lib/xp');
 const { runMigrations } = require('./scripts/migrate');
 
 // Apply version-controlled migrations on boot (idempotent, tracked in
-// schema_migrations). The promise is retained so seeds and feature routes can
-// await it — otherwise they race the migration and fail with
-// "relation does not exist" on any database where 001 has not applied yet.
-const migrationsReady = (async () => {
-    try {
-        await runMigrations(pool);
+// schema_migrations). Feature routes and seeds wait on these promises so they
+// can never race the migration ("relation does not exist").
+//
+// Two properties matter on serverless:
+//  1. A failed attempt must NOT be cached forever. The old one-shot
+//     module-level promise kept every warm lambda serving 503s after a
+//     single failure (Neon cold start, connection blip, two lambdas racing
+//     the same migration). Attempts now retry with backoff — triggered by
+//     the timer and by incoming requests.
+//  2. Concurrent cold starts race the same migration file. scripts/migrate.js
+//     serialises them with a transaction-scoped advisory lock and re-checks
+//     schema_migrations, so the loser skips instead of crashing.
+let migrationsCurrent = null;          // latest attempt (rejects on failure)
+let migrationsBackoffMs = 2000;        // doubles per consecutive failure
+let migrationsRetryTimer = null;
+let migrationsLastAttemptAt = 0;
+let migrationsDoneResolve;
+// Resolves the first time migrations succeed on this instance — seeds wait on
+// this, so a late retry still seeds instead of leaving tables empty.
+const migrationsDone = new Promise(resolve => { migrationsDoneResolve = resolve; });
+
+function attemptMigrations() {
+    migrationsLastAttemptAt = Date.now();
+    const attempt = runMigrations(pool);
+    migrationsCurrent = attempt;
+    attempt.then(() => {
         console.log('[DB] Migrations up to date');
-    } catch (err) {
-        console.error('[DB] Migration error:', err.message);
-        throw err;
-    }
-})();
-// The gate below surfaces migration failures through the central error
-// handler; this no-op catch just stops Node warning about an unhandled
-// rejection when no request ever awaits the promise.
-migrationsReady.catch(() => {});
+        migrationsBackoffMs = 2000;
+        migrationsDoneResolve();
+    }, err => {
+        console.error('[DB] Migration error:', err && err.message);
+        scheduleMigrationRetry();
+    });
+    return attempt;
+}
+
+function scheduleMigrationRetry(minDelayMs = 0) {
+    if (migrationsRetryTimer) return;
+    const sinceLast = Date.now() - migrationsLastAttemptAt;
+    const delay = Math.max(minDelayMs, migrationsBackoffMs - sinceLast, 250);
+    migrationsBackoffMs = Math.min(migrationsBackoffMs * 2, 60000);
+    migrationsRetryTimer = setTimeout(() => {
+        migrationsRetryTimer = null;
+        attemptMigrations();
+    }, delay);
+    if (migrationsRetryTimer.unref) migrationsRetryTimer.unref();
+}
+
+attemptMigrations();
 
 // Gate: every new-feature route (pages + JSON APIs) depends on migration 001
 // tables. Await the boot migration before serving them so a cold start can
@@ -117,14 +150,17 @@ migrationsReady.catch(() => {});
 // ordering is guaranteed regardless of where each route is defined below.
 const FEATURE_PATHS = ['/insights', '/wrapped', '/skills', '/holiday', '/challenges', '/opportunities'];
 app.use([...FEATURE_PATHS, ...FEATURE_PATHS.map(p => '/api' + p)], (req, res, next) => {
-    migrationsReady.then(() => next()).catch(() => {
-        // Migration failed — tables cannot exist. Be honest instead of a
-        // generic 500: the deployment log holds the real migration error.
+    migrationsCurrent.then(() => next()).catch(err => {
+        // Retry soon — a request just arrived, so the instance is warm.
+        scheduleMigrationRetry(250);
+        // Surface the concrete reason (SQLSTATE + message) instead of only a
+        // generic hint: the browser now shows what the deployment log shows.
+        const reason = err && err.message ? ` Migration error: ${err.message}` : '';
         const msg = 'Prepium is finishing its database setup. Please refresh in a minute — if this persists, the deployment log shows the migration error.';
         if (req.path.startsWith('/api/') || req.xhr) {
-            return res.status(503).json({ success: false, error: msg, retryable: true });
+            return res.status(503).json({ success: false, error: msg, detail: (err && err.message) || 'unknown', retryable: true });
         }
-        res.status(503).send(msg);
+        res.status(503).send(msg + reason);
     });
 });
 
@@ -8884,7 +8920,7 @@ const SKILL_SEED = [
 
 (async function seedSkillPaths() {
     try {
-        await migrationsReady; // skill tables must exist first
+        await migrationsDone; // skill tables must exist first
         for (let i = 0; i < SKILL_SEED.length; i++) {
             const p = SKILL_SEED[i];
             const r = await pool.query(
@@ -9152,7 +9188,7 @@ app.post('/api/challenges/:id/join', isAuth, asyncRoute(async (req, res) => {
 
 (async function seedChallenges() {
     try {
-        await migrationsReady; // challenge tables must exist first
+        await migrationsDone; // challenge tables must exist first
         const seeds = [
             { slug: 'weekly-quiz-5', title: 'Weekly Warm-up', description: 'Complete 5 quizzes or challenges this week.', cadence: 'weekly', scope: 'individual', metric: 'quizzes', target: 5, xp_reward: 150 },
             { slug: 'weekly-study-120', title: 'Deep Work Week', description: 'Log 120 minutes of focused study this week.', cadence: 'weekly', scope: 'individual', metric: 'study_minutes', target: 120, xp_reward: 150 },
@@ -9239,7 +9275,7 @@ app.post('/api/opportunities/:id/unsave', isAuth, asyncRoute(async (req, res) =>
 
 (async function seedOpportunities() {
     try {
-        await migrationsReady; // opportunity tables must exist first
+        await migrationsDone; // opportunity tables must exist first
         const existing = await pool.query('SELECT COUNT(*) AS c FROM opportunities');
         if (parseInt(existing.rows[0].c, 10) > 0) return;
         const year = new Date().getFullYear();
