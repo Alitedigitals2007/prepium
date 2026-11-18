@@ -8561,9 +8561,16 @@ function buildAcademicInsights(rows) {
     // Quiz/assessment signal — needs at least 3 attempts before judging
     if (results.length >= 3) {
         dataSources.push('assessments');
-        const avg = results.reduce((s, r) => s + (r.total > 0 ? (r.score / r.total) : 0), 0) / results.length;
-        const weak = results.filter(r => r.total > 0 && (r.score / r.total) < 0.5);
-        const strong = results.filter(r => r.total > 0 && (r.score / r.total) >= 0.75);
+        // Rows arrive with total_questions (SQL alias); accept both shapes so a
+        // missing field can never be read as a 0% score.
+        const pctOf = r => {
+            const total = Number(r.total !== undefined ? r.total : r.total_questions) || 0;
+            return total > 0 ? (Number(r.score) || 0) / total : null;
+        };
+        const scored = results.map(pctOf).filter(v => v !== null);
+        const avg = scored.length ? scored.reduce((s, v) => s + v, 0) / scored.length : 0;
+        const weak = results.filter(r => pctOf(r) !== null && pctOf(r) < 0.5);
+        const strong = results.filter(r => pctOf(r) !== null && pctOf(r) >= 0.75);
         signals.push({
             key: 'assessments', title: 'Assessment performance',
             detail: `Average ${Math.round(avg * 100)}% across ${results.length} attempts`,
@@ -9509,3 +9516,6 @@ if (require.main === module) {
 }
 
 module.exports = app;
+// Exposed for regression tests (tests/run.js) — the insights engine must stay
+// honest about score fields (total_questions vs total).
+module.exports.buildAcademicInsights = buildAcademicInsights;

@@ -239,6 +239,46 @@ function mockPool() {
         delete require.cache[appPath];
         const loaded = require('../app.js');
         assert.ok(loaded, 'app.js should export the express app');
+        global.__insightsFn = loaded.buildAcademicInsights;
+    });
+
+    console.log('\ninsights (buildAcademicInsights)');
+
+    await test('rows with total_questions produce a correct average (never 0%)', () => {
+        const fn = global.__insightsFn;
+        assert.ok(typeof fn === 'function', 'app.js should export buildAcademicInsights');
+        const out = fn({
+            cgpaRow: null,
+            results: [
+                { subject: 'MTH', score: 10, total_questions: 10 },
+                { subject: 'MTH', score: 8, total_questions: 10 },
+                { subject: 'CSC', score: 9, total_questions: 10 }
+            ],
+            studyMinutes: 0,
+            streak: 0
+        });
+        const sig = out.signals.find(s => s.key === 'assessments');
+        assert.ok(sig, 'assessments signal should exist');
+        assert.ok(sig.detail.includes('90%'), 'average should be 90%, got: ' + sig.detail);
+        assert.strictEqual(sig.status, 'good');
+    });
+
+    await test('rows using the total alias and missing totals are handled safely', () => {
+        const fn = global.__insightsFn;
+        const out = fn({
+            cgpaRow: null,
+            results: [
+                { subject: 'MTH', score: 5, total: 10 },
+                { subject: 'MTH', score: 4, total: 10 },
+                { subject: 'CSC', score: 3, total_questions: 0 } // invalid total → excluded
+            ],
+            studyMinutes: 0,
+            streak: 0
+        });
+        const sig = out.signals.find(s => s.key === 'assessments');
+        assert.ok(sig, 'assessments signal should exist');
+        assert.ok(sig.detail.includes('45%'), 'average should be 45% from valid rows only, got: ' + sig.detail);
+        assert.strictEqual(sig.status, 'watch');
     });
 
     console.log('\nResults: ' + passed + ' passed, ' + failed + ' failed');
