@@ -3963,6 +3963,10 @@ app.post('/api/submit-arena', isAuth, async (req, res) => {
             console.error('[XP] daily challenge award:', e.message);
         }
 
+        // Holiday Mode: a completed daily challenge counts toward 'challenges'
+        // holiday goals (no-op unless Holiday Mode is active).
+        await progressHolidayGoalsByType(userId, 'challenges', 1);
+
         res.json({ success: true, score });
     } catch (err) {
         console.error("ARENA_SUBMIT_ERROR:", err);
@@ -8492,6 +8496,35 @@ app.post('/api/holiday/goals/:id/delete', isAuth, asyncRoute(async (req, res) =>
     res.json({ success: true });
 }));
 
+// Holiday Mode link: verified challenge activity (daily challenges completed,
+// Prepium Challenges completed) auto-progresses the student's holiday goals of
+// type 'challenges' while Holiday Mode is active. Mirrors the manual progress
+// endpoint — same +50 XP ledger event key per goal, so no double awards.
+async function progressHolidayGoalsByType(uid, goalType, delta) {
+    if (!delta) return;
+    try {
+        const mode = await pool.query('SELECT is_active FROM holiday_mode WHERE user_id = $1', [uid]);
+        if (!mode.rows[0] || !mode.rows[0].is_active) return;
+        const goals = await pool.query(
+            'SELECT id, title, target_value, progress_value FROM holiday_goals WHERE user_id = $1 AND goal_type = $2 AND is_done = false',
+            [uid, goalType]
+        );
+        for (const goal of goals.rows) {
+            const current = parseInt(goal.progress_value, 10) || 0;
+            const newValue = Math.max(0, Math.min(goal.target_value, current + delta));
+            if (newValue === current) continue;
+            const done = newValue >= goal.target_value;
+            if (done) {
+                await xpLib.awardXP(pool, uid, 50, 'holiday_goal', 'goal_' + goal.id, 'Holiday goal completed: ' + goal.title);
+            }
+            await pool.query(
+                'UPDATE holiday_goals SET progress_value = $1, is_done = $2, completed_at = CASE WHEN $2 THEN COALESCE(completed_at, NOW()) ELSE NULL END WHERE id = $3 AND user_id = $4',
+                [newValue, done, goal.id, uid]
+            );
+        }
+    } catch (e) { console.error('[Holiday] auto-progress:', e.message); }
+}
+
 // ======================== PERSONAL ACADEMIC INTELLIGENCE ========================
 // Deterministic, server-side analysis of the student's own academic activity.
 // Clearly distinguishes "not enough data" from "needs attention" and never
@@ -8918,10 +8951,14 @@ app.post('/api/skills/:slug/projects', isAuth, asyncRoute(async (req, res) => {
 // Extends the existing Daily Challenge + Games systems — not a separate
 // platform. Progress is computed from verified activity in existing tables,
 // and XP rewards flow through the shared ledger (no duplicates possible).
+// Each query returns a single aliased column `progress`. The alias must live
+// inside the query (before FROM/WHERE) — appending it at the call site would
+// produce `... WHERE ... AS progress`, a syntax error, which previously broke
+// the whole Challenges page for every metric except `quizzes`.
 function challengeProgressSql(metric) {
-    if (metric === 'study_minutes') return `SELECT COALESCE(SUM(elapsed_seconds), 0) / 60 FROM study_sessions WHERE user_id = $1 AND status = 'completed' AND created_at >= $2`;
-    if (metric === 'xp') return `SELECT COALESCE(SUM(amount), 0) FROM xp_ledger WHERE user_id = $1 AND created_at >= $2`;
-    if (metric === 'challenge_score') return `SELECT COALESCE(SUM(score), 0) FROM daily_challenge_attempts WHERE user_id = $1 AND completed = true AND created_at >= $2`;
+    if (metric === 'study_minutes') return `SELECT (COALESCE(SUM(elapsed_seconds), 0) / 60)::int AS progress FROM study_sessions WHERE user_id = $1 AND status = 'completed' AND created_at >= $2`;
+    if (metric === 'xp') return `SELECT COALESCE(SUM(amount), 0)::int AS progress FROM xp_ledger WHERE user_id = $1 AND created_at >= $2`;
+    if (metric === 'challenge_score') return `SELECT COALESCE(SUM(score), 0)::int AS progress FROM daily_challenge_attempts WHERE user_id = $1 AND completed = true AND created_at >= $2`;
     return `SELECT (
         SELECT COUNT(*) FROM results WHERE user_id = $1 AND taken_at >= $2
       ) + (
@@ -8930,30 +8967,59 @@ function challengeProgressSql(metric) {
         SELECT COUNT(*) FROM daily_challenge_attempts WHERE user_id = $1 AND completed = true AND created_at >= $2
       ) + (
         SELECT COUNT(*) FROM game_results WHERE user_id = $1 AND created_at >= $2
-      )`;
+      ) AS progress`;
+}
+
+// Rolling window per cadence — weekly/7day/30day/seasonal challenges reset
+// automatically (same NOW()-relative approach as Insights and Wrapped), so a
+// fixed boot-time starts_at can never freeze a challenge's window.
+function cadenceSince(d) {
+    const now = new Date();
+    if (d.cadence === 'weekly') {
+        const dt = new Date(now);
+        dt.setUTCDate(dt.getUTCDate() - ((dt.getUTCDay() + 6) % 7));
+        dt.setUTCHours(0, 0, 0, 0);
+        return dt;
+    }
+    if (d.cadence === '7day') return new Date(now.getTime() - 7 * 86400000);
+    if (d.cadence === '30day') return new Date(now.getTime() - 30 * 86400000);
+    if (d.cadence === 'seasonal') {
+        const dt = new Date(now);
+        dt.setUTCMonth(Math.floor(dt.getUTCMonth() / 3) * 3, 1);
+        dt.setUTCHours(0, 0, 0, 0);
+        return dt;
+    }
+    return d.starts_at || new Date(0);
 }
 
 async function getActiveChallenges(uid) {
     const defs = await pool.query('SELECT * FROM challenge_defs WHERE is_active = true ORDER BY id ASC');
     const out = [];
     for (const d of defs.rows) {
-        const since = d.starts_at || new Date(0);
-        const progressRes = await pool.query(challengeProgressSql(d.metric) + ' AS progress', [uid, since]);
+        const since = cadenceSince(d);
+        const progressRes = await pool.query(challengeProgressSql(d.metric), [uid, since]);
         const progress = parseInt(progressRes.rows[0].progress, 10) || 0;
         const part = await pool.query('SELECT * FROM challenge_participants WHERE challenge_id = $1 AND user_id = $2', [d.id, uid]);
         const joined = !!part.rows[0];
         const target = parseInt(d.target, 10) || 1;
         const alreadyCompleted = joined && part.rows[0].completed_at;
+        const done = !!(joined && (alreadyCompleted || progress >= target));
+        // Completed challenges stay pinned at 100% even after their window
+        // rolls over (progress is computed from the current window).
+        const shownProgress = done ? target : Math.min(progress, target);
         // Auto-complete + award XP exactly once (ledger unique index guards it)
         if (joined && !alreadyCompleted && progress >= target) {
             await pool.query('UPDATE challenge_participants SET progress = $1, completed_at = NOW() WHERE challenge_id = $2 AND user_id = $3', [progress, d.id, uid]);
             await xpLib.awardXP(pool, uid, parseInt(d.xp_reward, 10) || 100, 'challenge', 'challenge_' + d.id + '_user_' + uid, 'Completed challenge: ' + d.title);
+            // Holiday Mode: a completed challenge counts toward 'challenges'
+            // holiday goals (no-op unless Holiday Mode is active).
+            await progressHolidayGoalsByType(uid, 'challenges', 1);
         } else if (joined) {
-            await pool.query('UPDATE challenge_participants SET progress = $1 WHERE challenge_id = $2 AND user_id = $3 AND completed_at IS NULL', [Math.min(progress, target), d.id, uid]);
+            await pool.query('UPDATE challenge_participants SET progress = $1 WHERE challenge_id = $2 AND user_id = $3 AND completed_at IS NULL', [shownProgress, d.id, uid]);
         }
         // Leaderboard within scope: rank the student against relevant peers
         // (friends / squad-mates / same department / same university).
-        let leaders = [{ name: 'You', progress: Math.min(progress, target), is_me: true }];
+        let leaders = [{ name: 'You', progress: shownProgress, is_me: true }];
         if (d.scope !== 'individual') {
             try {
                 let peerIds = [];
@@ -8984,7 +9050,7 @@ async function getActiveChallenges(uid) {
                 peerIds = peerIds.slice(0, 50);
                 const peerRows = [];
                 for (const pid of peerIds) {
-                    const pr = await pool.query(challengeProgressSql(d.metric) + ' AS progress', [pid, since]);
+                    const pr = await pool.query(challengeProgressSql(d.metric), [pid, since]);
                     const pv = Math.min(parseInt(pr.rows[0].progress, 10) || 0, target);
                     if (pv > 0) peerRows.push({ progress: pv, id: pid });
                 }
@@ -8995,7 +9061,7 @@ async function getActiveChallenges(uid) {
                     const nameMap = {};
                     names.rows.forEach(n => { nameMap[n.id] = n.fullname.split(' ')[0]; });
                     leaders = topPeers.map(p => ({ name: nameMap[p.id] || 'Student', progress: p.progress, is_me: false }))
-                        .concat([{ name: 'You', progress: Math.min(progress, target), is_me: true }])
+                        .concat([{ name: 'You', progress: shownProgress, is_me: true }])
                         .sort((a, b) => b.progress - a.progress);
                 }
             } catch (e) { console.error('[Challenges] leaderboard:', e.message); }
@@ -9003,9 +9069,9 @@ async function getActiveChallenges(uid) {
         out.push({
             ...d,
             joined,
-            progress: Math.min(progress, target),
-            completed: !!(joined && (alreadyCompleted || progress >= target)),
-            pct: Math.min(100, Math.round((progress / target) * 100)),
+            progress: shownProgress,
+            completed: done,
+            pct: done ? 100 : Math.min(100, Math.round((progress / target) * 100)),
             leaders
         });
     }
@@ -9015,9 +9081,10 @@ async function getActiveChallenges(uid) {
 app.get('/challenges', isAuth, asyncRoute(async (req, res) => {
     const uid = req.session.user.id;
     const challenges = await getActiveChallenges(uid);
-    const [todayRes, xpRes] = await Promise.all([
+    const [todayRes, xpRes, holidayRes] = await Promise.all([
         pool.query('SELECT id FROM daily_challenge_attempts WHERE user_id = $1 AND date = CURRENT_DATE AND completed = true', [uid]),
-        pool.query('SELECT COALESCE(xp, 0) AS xp FROM users WHERE id = $1', [uid])
+        pool.query('SELECT COALESCE(xp, 0) AS xp FROM users WHERE id = $1', [uid]),
+        pool.query('SELECT is_active FROM holiday_mode WHERE user_id = $1', [uid])
     ]);
     res.locals.seo.title = 'Prepium | Challenges';
     res.render('challenges', {
@@ -9025,6 +9092,7 @@ app.get('/challenges', isAuth, asyncRoute(async (req, res) => {
         challenges,
         dailyDone: todayRes.rows.length > 0,
         xp: parseInt(xpRes.rows[0].xp, 10) || 0,
+        holidayActive: !!(holidayRes.rows[0] && holidayRes.rows[0].is_active),
         activeNav: 'challenges'
     });
 }));

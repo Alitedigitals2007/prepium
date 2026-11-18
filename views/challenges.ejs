@@ -30,6 +30,8 @@
         .lb-rank { width: 22px; color: var(--text-secondary); font-weight: 700; }
         .daily-cta { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
         .done-check { color: #10b981; font-weight: 800; font-size: 0.8rem; }
+        .empty-state { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
+        .empty-state i { font-size: 2.5rem; margin-bottom: 12px; opacity: 0.4; }
     </style>
     <%- include('partials/theme-toggle') %>
 </head>
@@ -44,6 +46,15 @@
         </div>
 
         <div class="page-subhead"><p>One arena, many arenas — daily, weekly, seasonal, solo or with your people. XP flows from one ledger.</p></div>
+
+        <% if (holidayActive) { %>
+            <div class="card" style="display:flex; align-items:center; gap:12px; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3);">
+                <i class="fas fa-umbrella-beach" style="color:#10b981; font-size:1.1rem;"></i>
+                <div style="font-size:0.78rem; line-height:1.5;">
+                    <strong>Holiday Mode is on.</strong> Every daily challenge and challenge you complete counts toward your <a href="/holiday" style="color:var(--brand); font-weight:700;">holiday goals</a>.
+                </div>
+            </div>
+        <% } %>
 
         <div class="card">
             <div class="daily-cta">
@@ -67,6 +78,15 @@
             <div style="font-size:1.5rem; font-weight:800; background:linear-gradient(135deg, var(--brand), #1d4ed8); -webkit-background-clip:text; -webkit-text-fill-color:transparent;"><%= xp %></div>
         </div>
 
+        <% if (!challenges.length) { %>
+            <div class="card">
+                <div class="empty-state">
+                    <i class="fas fa-medal"></i>
+                    <h3 style="font-weight:800; color:var(--text-primary); margin-bottom:6px;">No challenges running</h3>
+                    <p style="font-size:0.82rem; max-width:420px; margin:0 auto;">New challenges drop regularly. Meanwhile, the Daily Challenge above is always live — and every completion still earns XP.</p>
+                </div>
+            </div>
+        <% } %>
         <% challenges.forEach(function (c) { %>
             <div class="card">
                 <div class="ch-head">
