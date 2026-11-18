@@ -61,7 +61,7 @@
 
         <div class="card">
             <div class="path-head">
-                <div class="path-icon ic-<%= skillPath.tone %>"><i class="fas <%= skillPath.icon %>"></i></div>
+                <div class="path-icon ic-<%= skillPath.tone || 'blue' %>"><i class="fas <%= skillPath.icon || 'fa-star' %>"></i></div>
                 <div>
                     <div style="font-weight:800; font-size:1.05rem;"><%= skillPath.title %></div>
                     <div style="font-size:0.78rem; color:var(--text-secondary);"><%= skillPath.description %></div>

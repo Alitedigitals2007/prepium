@@ -110,6 +110,24 @@ const migrationsReady = (async () => {
 // rejection when no request ever awaits the promise.
 migrationsReady.catch(() => {});
 
+// Gate: every new-feature route (pages + JSON APIs) depends on migration 001
+// tables. Await the boot migration before serving them so a cold start can
+// never serve a request before the tables exist (fixes "something went wrong"
+// on the first hit). Registered here — before ANY of those routes — so the
+// ordering is guaranteed regardless of where each route is defined below.
+const FEATURE_PATHS = ['/insights', '/wrapped', '/skills', '/holiday', '/challenges', '/opportunities'];
+app.use([...FEATURE_PATHS, ...FEATURE_PATHS.map(p => '/api' + p)], (req, res, next) => {
+    migrationsReady.then(() => next()).catch(() => {
+        // Migration failed — tables cannot exist. Be honest instead of a
+        // generic 500: the deployment log holds the real migration error.
+        const msg = 'Prepium is finishing its database setup. Please refresh in a minute — if this persists, the deployment log shows the migration error.';
+        if (req.path.startsWith('/api/') || req.xhr) {
+            return res.status(503).json({ success: false, error: msg, retryable: true });
+        }
+        res.status(503).send(msg);
+    });
+});
+
 // Keep the (free-tier) database awake — Neon suspends after ~5 min idle,
 // and a cold start can exceed the connection timeout and kill requests.
 // Only useful on a long-running server; skip on serverless.
@@ -8532,13 +8550,6 @@ async function progressHolidayGoalsByType(uid, goalType, delta) {
 }
 
 // ======================== PERSONAL ACADEMIC INTELLIGENCE ========================
-// Gate: every new-feature route below depends on migration 001 tables. Await
-// the boot migration before serving them so a cold start can never serve a
-// request before the tables exist (fixes "something went wrong" on first hit).
-app.use(['/insights', '/wrapped', '/skills', '/holiday', '/challenges', '/opportunities'], (req, res, next) => {
-    migrationsReady.then(() => next()).catch(next);
-});
-
 // Deterministic, server-side analysis of the student's own academic activity.
 // Clearly distinguishes "not enough data" from "needs attention" and never
 // invents grades or results.
@@ -8642,7 +8653,7 @@ app.get('/insights', isAuth, asyncRoute(async (req, res) => {
         pool.query('SELECT grading_scale, prev_units, prev_gp FROM public.cgpa_profiles WHERE user_id = $1', [uid]),
         pool.query(`
             SELECT subject, score, total_questions FROM (
-                SELECT s.name AS subject, r.score, r.total_questions, r.taken_at AS at FROM results r LEFT JOIN subjects s ON r.subject_id = s.id WHERE r.user_id = $1
+                SELECT COALESCE(r.subject, 'Practice') AS subject, r.score, r.total_questions, r.taken_at AS at FROM results r WHERE r.user_id = $1
                 UNION ALL
                 SELECT COALESCE(s2.name, q.title, 'Practice') AS subject, q.score, q.total_questions, q.created_at AS at FROM quiz_results q LEFT JOIN subjects s2 ON q.subject_id = s2.id WHERE q.user_id = $1
             ) combined ORDER BY at DESC LIMIT 30`, [uid]),
@@ -8727,8 +8738,8 @@ async function buildWrapped(uid, periodType) {
     // Top subjects by attempts (verified activity only)
     const topRes = await pool.query(`
         SELECT subject, COUNT(*) AS c, ROUND(AVG(pct) * 100) AS avg_pct FROM (
-            SELECT s.name AS subject, (r.score::float / NULLIF(r.total_questions, 0)) AS pct
-            FROM results r LEFT JOIN subjects s ON r.subject_id = s.id
+            SELECT COALESCE(r.subject, 'Practice') AS subject, (r.score::float / NULLIF(r.total_questions, 0)) AS pct
+            FROM results r
             WHERE r.user_id = $1 AND r.taken_at >= ${sinceSql} AND r.total_questions > 0
             UNION ALL
             SELECT COALESCE(s2.name, q.title, 'Practice') AS subject, (q.score::float / NULLIF(q.total_questions, 0)) AS pct

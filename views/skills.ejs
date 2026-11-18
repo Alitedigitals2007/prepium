@@ -89,7 +89,7 @@
                 <% var pct = p.lesson_count > 0 ? Math.round((p.done_count / p.lesson_count) * 100) : 0; %>
                 <a class="path-card" href="/skills/<%= p.slug %>">
                     <div class="path-top">
-                        <div class="path-icon ic-<%= p.tone %>"><i class="fas <%= p.icon %>"></i></div>
+                        <div class="path-icon ic-<%= p.tone || 'blue' %>"><i class="fas <%= p.icon || 'fa-star' %>"></i></div>
                         <% if (p.lesson_count > 0 && p.done_count >= p.lesson_count) { %>
                             <span class="state-chip chip-done"><i class="fas fa-circle-check"></i> Completed</span>
                         <% } else if (p.enrolled) { %>
